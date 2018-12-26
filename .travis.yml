@@ -5,37 +5,41 @@ sudo: true
 
 language: java
 
-# https://docs.travis-ci.com/user/languages/java#Testing-Against-Multiple-JDKs
-jdk:
-  - openjdk8
-  - oraclejdk8
-  - oraclejdk9
-
 env:
-  - GRADLE_VERSION=5.0-rc-5
+- GRADLE_VERSION=5.0
+
+# https://docs.travis-ci.com/user/languages/java#Testing-Against-Multiple-JDKs
+matrix:
+  fast_finish: true
+  include:
+  - jdk: openjdk11
+  - jdk: openjdk-ea
+  - jdk: oraclejdk11
+  allow_failures:
+  - jdk: openjdk-ea
 
 # As of 2016-06 Travis CI is running an outdated
 # version of Gradle, so this workaround fetches
 # a given version before carrying out the build.
 before_install:
-  - mkdir -pv $HOME/.gradle
+- mkdir -pv $HOME/.gradle
 
-  # Set memory limits for Gradle and Java processes it spawns.
-  - export GRADLE_OPTS="-Xmx1g -Xss8m"
-  - echo 'org.gradle.jvmargs=-Xmx1g' >> $HOME/.gradle/gradle.properties
+# Set memory limits for Gradle and Java processes it spawns.
+- export GRADLE_OPTS="-Xmx1g -Xss8m"
+- echo 'org.gradle.jvmargs=-Xmx1g' >> $HOME/.gradle/gradle.properties
 
-  # Actually download Gradle, unpack it and make it visible in $PATH.
-  - wget -q -O gradle.zip https://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip
-  - unzip -q gradle.zip
-  - export PATH=$PWD/gradle-$GRADLE_VERSION/bin:$PATH
+# Actually download Gradle, unpack it and make it visible in $PATH.
+- wget -q -O gradle.zip https://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip
+- unzip -q gradle.zip
+- export PATH=$PWD/gradle-$GRADLE_VERSION/bin:$PATH
 
 install: gradle assemble
 
 script: gradle check
 
 #after_success:
-#  - gradle jacocoTestReport coveralls
-#  - bash <(curl -s https://codecov.io/bash)
+#- gradle jacocoTestReport coveralls
+#- bash <(curl -s https://codecov.io/bash)
 
 # Do not send notifications via e-mail, this gets
 # annoying pretty fast. Check Travis CI docs at
@@ -47,9 +51,10 @@ notifications:
 # of dependencies according to Travis CI docs, see
 # https://docs.travis-ci.com/user/languages/java#Caching
 before_cache:
-  - rm -fv  $HOME/.gradle/caches/modules-2/modules-2.lock
-  - rm -fvr $HOME/.gradle/caches/*/plugin-resolution/
+- rm -fv  $HOME/.gradle/caches/modules-2/modules-2.lock
+- rm -fvr $HOME/.gradle/caches/*/plugin-resolution/
+
 cache:
   directories:
-    - $HOME/.gradle/caches/$GRADLE_VERSION/
-    - $HOME/.gradle/caches/modules-2/
+  - $HOME/.gradle/caches/$GRADLE_VERSION/
+  - $HOME/.gradle/caches/modules-2/

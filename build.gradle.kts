@@ -18,12 +18,22 @@ repositories {
 dependencies {
     // We need to give the ANTLR Plugin a hint.
     antlr("org.antlr:antlr4:4.7.1")
-    implementation("com.google.guava:guava:26.0-jre")
     implementation("org.antlr:antlr4:4.7.1")
-    compileOnly("org.projectlombok:lombok:1.18.4")
+
+    implementation("com.google.guava:guava:26.0-jre")
+
+    // Logging
+    implementation("org.apache.logging.log4j:log4j-api:2.11.1")
+    implementation("org.apache.logging.log4j:log4j-core:2.11.1")
+
+    // Lombok
+    compileClasspath("org.projectlombok:lombok:1.18.4")
     annotationProcessor("org.projectlombok:lombok:1.18.4")
 
-    testImplementation("junit:junit:4.12")
+    // Testing
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.3.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.3.2")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.3.2")
 }
 
 application {
@@ -47,6 +57,19 @@ tasks.withType<AntlrTask> {
     ))
 }
 
+/*
+tasks.withType<Test> {
+    useJUnitPlatform()
+    testLogging {
+        events("passed", "skipped", "failed")
+    }
+}
+*/
+
+tasks.withType<Wrapper> {
+    gradleVersion = "5.0"
+}
+
 buildScan {
     termsOfServiceUrl = "https://gradle.com/terms-of-service"
     termsOfServiceAgree = "yes"
@@ -62,12 +85,8 @@ spotless {
         // We just bow and abide to Google's rules,
         // trading off individualism for simplicity.
         googleJavaFormat()
-        // TODO: Simplify the following.
-        ignoreErrorForPath("build/generated-src/antlr/**")
-        ignoreErrorForPath("build/generated-src/antlr/main/xyz/leutgeb/lorenz/logs/antlr/SplayLexer.java")
-        ignoreErrorForPath("build/generated-src/antlr/main/xyz/leutgeb/lorenz/logs/antlr/SplayParser.java")
-        ignoreErrorForPath("build/generated-src/antlr/main/xyz/leutgeb/lorenz/logs/antlr/SplayVisitor.java")
-        ignoreErrorForPath("build/generated-src/antlr/main/xyz/leutgeb/lorenz/logs/antlr/SplayBaseVisitor.java")
+        // Explicitly point gjf at src, otherwise it will also check build and find ANTLR generated code.
+        target("src/**/*.java")
     }
     kotlin {
         ktlint()

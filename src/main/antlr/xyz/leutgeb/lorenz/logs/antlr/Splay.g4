@@ -4,45 +4,32 @@ options {
     language = Java;
 }
 
-//@header {
-//}
-
-// Parser
-
 program: (func)* EOF;
 
 // Function declaration (with list of arguments):
-func: name=VARIABLE (args+=VARIABLE)* EQUAL body=expression ;
+func: name=IDENTIFIER (args+=IDENTIFIER)* ASSIGN body=expression ;
 
 // Expressions
-expression : IF condition THEN expression ELSE expression # iteExpression
-           | MATCH expression WITH cases=matchCase+ # matchExpression
-           | variable # variableExpression
-           | constant # constantExpression
+expression : IDENTIFIER # identifier
+           | IF condition THEN truthy=expression ELSE falsy=expression # iteExpression
+           | MATCH expression WITH cases+=matchCase+ # matchExpression
            | tuple # tupleExpression
-           | name=VARIABLE (params+=VARIABLE)* # callExpression
+           | name=IDENTIFIER (params+=expression)* # callExpression
+           | LET name=IDENTIFIER ASSIGN value=expression IN body=expression # letExpression
            ;
 
-condition : expression binop expression ;
-
-constant : integer | nil;
-variable : VARIABLE ;
-integer : NUMBER ;
-nil : NIL ;
-
-pattern : constant | variable | tuple ;
-
-tuple : PAREN_OPEN elements+=tuple_element? (COMMA elements+=tuple_element)* PAREN_CLOSE ;
-
-tuple_element : tuple | variable | constant ;
+// Conditions are expressed by comparing two expressions.
+condition : left=expression op right=expression ;
+op : EQ | NE | LT | LE | GT | GE ;
 
 matchCase : OR pattern ARROW expression ;
 
-binop : EQUAL | UNEQUAL | LESS | GREATER | LESS_OR_EQ | GREATER_OR_EQ;
+pattern : IDENTIFIER | tuple ;
 
-// Lexer
+tuple: PAREN_OPEN elements+=tupleElement? (COMMA elements+=tupleElement)* PAREN_CLOSE ;
+tupleElement: tuple | IDENTIFIER ;
 
-ANONYMOUS_VARIABLE : '_';
+ANONYMOUS_IDENTIFIER : '_';
 DOT : '.';
 COMMA : ',';
 COLON : ':';
@@ -52,12 +39,6 @@ PLUS : '+';
 MINUS : '-';
 TIMES : '*';
 DIV : '/';
-POWER : '**';
-MODULO : '\\';
-BITXOR : '^';
-AT : '@';
-SHARP : '#';
-AMPERSAND : '&';
 QUOTE : '"';
 
 PAREN_OPEN : '(';
@@ -66,22 +47,25 @@ SQUARE_OPEN : '[';
 SQUARE_CLOSE : ']';
 CURLY_OPEN : '{';
 CURLY_CLOSE : '}';
-EQUAL : '=';
-UNEQUAL : '<>' | '!=';
-LESS : '<';
-GREATER : '>';
-LESS_OR_EQ : '<=';
-GREATER_OR_EQ : '>=';
 
+EQ : '==';
+NE : '!=';
+LT : '<';
+LE : '<=';
+GT : '>';
+GE : '>=';
+
+ASSIGN : '=';
+IN : 'in';
 IF : 'if';
 THEN : 'then';
 ELSE : 'else';
 ARROW : '->';
 MATCH : 'match';
 WITH : 'with';
-NIL : 'nil';
+LET : 'let';
 
-VARIABLE : ('a'..'z') ( 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' | '\'' )*;
+IDENTIFIER : ('a'..'z') ( 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' | '\'' )*;
 TYPE : ('A'..'Z') ( 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' )*;
 NUMBER : '0' | ('1'..'9') ('0'..'9')*;
 QUOTED_STRING : QUOTE ( '\\"' | . )*? QUOTE;

@@ -12,10 +12,10 @@ import org.antlr.v4.runtime.misc.ParseCancellationException;
 import xyz.leutgeb.lorenz.logs.antlr.SplayLexer;
 import xyz.leutgeb.lorenz.logs.antlr.SplayParser;
 import xyz.leutgeb.lorenz.logs.ast.Program;
-import xyz.leutgeb.lorenz.logs.visitors.ProgramVisitor;
+import xyz.leutgeb.lorenz.logs.visitor.ProgramVisitor;
 
 public class ProgramParser {
-  public Program parse(String s) {
+  public static Program parse(String s) {
     try {
       return parse(CharStreams.fromString(s));
     } catch (IOException e) {
@@ -31,7 +31,7 @@ public class ProgramParser {
     }
   }
 
-  public Program parse(CharStream stream) throws IOException {
+  public static Program parse(CharStream stream) throws IOException {
     /*
     // In order to require less memory: use unbuffered streams and avoid constructing a full parse tree.
     ASPCore2Lexer lexer = new ASPCore2Lexer(new UnbufferedCharStream(is));
