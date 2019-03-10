@@ -1,10 +1,11 @@
 package xyz.leutgeb.lorenz.logs.unification;
 
 import java.util.HashMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import xyz.leutgeb.lorenz.logs.type.Type;
 
-public class Substitution {
+public class Substitution implements Function<Type, Type> {
   private HashMap<UnificationVariable, Type> subs;
 
   public Substitution() {
@@ -37,6 +38,7 @@ public class Substitution {
     }
   }
 
+  @Override
   public Type apply(Type target) {
     Type t = target;
     for (UnificationVariable var : this.subs.keySet()) {
