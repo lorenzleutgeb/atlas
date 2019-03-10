@@ -2,17 +2,14 @@ package xyz.leutgeb.lorenz.logs.type;
 
 import java.util.Collection;
 import java.util.List;
+import lombok.Value;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 
+@Value
 public class TreeType extends Type {
-  private final Type elementType;
-
-  @java.beans.ConstructorProperties({"elementType"})
-  public TreeType(Type elementType) {
-    this.elementType = elementType;
-  }
+  Type elementType;
 
   @Override
   public String toString() {

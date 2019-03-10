@@ -4,16 +4,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.Value;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 
+@Value
 public class ProductType extends Type {
-  private final List<Type> elements;
-
-  public ProductType(List<Type> elements) {
-    this.elements = elements;
-  }
+  List<Type> elements;
 
   @Override
   public Collection<Equivalence> decompose(Type b) throws TypeMismatch {

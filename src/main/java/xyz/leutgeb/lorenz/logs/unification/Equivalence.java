@@ -1,18 +1,13 @@
 package xyz.leutgeb.lorenz.logs.unification;
 
 import java.util.Collection;
-import lombok.Data;
+import lombok.Value;
 import xyz.leutgeb.lorenz.logs.type.Type;
 
-@Data
+@Value
 public class Equivalence {
-  private final Type left;
-  private final Type right;
-
-  public Equivalence(UnificationVariable left, Type right) {
-    this.left = left;
-    this.right = right;
-  }
+  Type left;
+  Type right;
 
   public Equivalence(Type left, Type right) {
     if (!(left instanceof UnificationVariable) && (right instanceof UnificationVariable)) {

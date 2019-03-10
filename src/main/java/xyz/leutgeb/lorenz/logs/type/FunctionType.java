@@ -2,17 +2,17 @@ package xyz.leutgeb.lorenz.logs.type;
 
 import java.util.Collection;
 import java.util.List;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 
-@Data
+@Value
 @RequiredArgsConstructor
 public class FunctionType extends Type {
-  private final Type from;
-  private final Type to;
+  Type from;
+  Type to;
 
   public FunctionType(List<Type> from, Type to) {
     this.from = new ProductType(from);
@@ -32,11 +32,11 @@ public class FunctionType extends Type {
   }
 
   public Type substitute(UnificationVariable v, Type t) {
-    return new FunctionType(this.from.substitute(v, t), this.to.substitute(v, t));
+    return new FunctionType(from.substitute(v, t), to.substitute(v, t));
   }
 
   public boolean occurs(UnificationVariable v) {
-    return this.from.occurs(v) || this.to.occurs(v);
+    return from.occurs(v) || to.occurs(v);
   }
 
   @Override
