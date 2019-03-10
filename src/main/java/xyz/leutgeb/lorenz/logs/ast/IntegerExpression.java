@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.logs.ast;
 import lombok.Data;
 
 @Data
-public class IntegerExpression extends ConstantExpression {
+@Deprecated
+public class IntegerExpression extends Expression {
   private final Integer value;
 }
