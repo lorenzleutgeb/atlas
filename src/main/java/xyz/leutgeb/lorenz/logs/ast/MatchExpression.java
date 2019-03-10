@@ -28,7 +28,7 @@ public class MatchExpression extends Expression {
         var id = (Identifier) matcher;
         Context sub = new Context(context);
         var fresh = sub.getProblem().fresh();
-        sub.insert(id.getName(), fresh);
+        sub.put(id.getName(), fresh);
         sub.getProblem().add(testType, matcher.infer(sub));
         sub.getProblem().add(result, body.infer(sub));
       } else if (matcher instanceof Tuple) {
@@ -45,7 +45,7 @@ public class MatchExpression extends Expression {
           }
           String name = ((Identifier) tuple.getElements().get(i)).getName();
           var fresh = sub.getProblem().fresh();
-          sub.insert(name, fresh);
+          sub.put(name, fresh);
         }
 
         sub.getProblem().add(testType, it.getMatcher().infer(sub));

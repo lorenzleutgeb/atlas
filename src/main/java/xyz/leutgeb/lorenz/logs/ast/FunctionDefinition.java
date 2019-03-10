@@ -23,12 +23,12 @@ public class FunctionDefinition {
     for (String argument : arguments) {
       Type var = sub.getProblem().fresh();
       from.add(var);
-      sub.insert(argument, var);
+      sub.put(argument, var);
     }
 
     Type to = sub.getProblem().fresh();
     Type result = new FunctionType(from, to);
-    sub.insert(name, result);
+    sub.put(name, result);
 
     sub.getProblem().add(to, body.infer(sub));
 

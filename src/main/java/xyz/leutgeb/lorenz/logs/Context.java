@@ -1,51 +1,54 @@
 package xyz.leutgeb.lorenz.logs;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
+import lombok.Value;
 import lombok.extern.log4j.Log4j2;
 import xyz.leutgeb.lorenz.logs.type.BoolType;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.unification.Problem;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Log4j2
+@Value
 public class Context {
-  public static Context root() {
-    Context root = new Context();
-    root.mapping.put("true", new LinkedList<>(Collections.singletonList((BoolType.INSTANCE))));
-    root.mapping.put("false", new LinkedList<>(Collections.singletonList(BoolType.INSTANCE)));
-    // root.mapping.put("nil", new LinkedList<>(Collections.singletonList(new TypeVar("niltype"))));
-    return root;
+  private static final Context INTERNAL_ROOT = new Context();
+
+  static {
+    INTERNAL_ROOT.mapping.put("true", BoolType.INSTANCE);
+    INTERNAL_ROOT.mapping.put("false", BoolType.INSTANCE);
   }
 
-  private final Context parent;
-  private final HashMap<String, LinkedList<Type>> mapping;
-  private Problem problem;
+  public static Context root() {
+    return new Context(INTERNAL_ROOT, new Problem());
+  }
+
+  Context parent;
+  Map<String, Type> mapping;
+  Problem problem;
 
   public Context(Context parent) {
-    this.parent = parent;
-    this.problem = parent.problem;
-    this.mapping = new HashMap<>();
+    this(parent, parent.problem);
   }
 
   private Context() {
-    this.parent = null;
-    this.problem = new Problem();
+    this(null, new Problem());
+  }
+
+  private Context(Context parent, Problem problem) {
+    this.parent = parent;
+    this.problem = problem;
     this.mapping = new HashMap<>();
   }
 
-  public Problem getProblem() {
-    return this.problem;
-  }
-
   public String toString() {
-    return "Context(" + this.problem.toString() + "," + this.mapping.toString() + ")";
+    return "[" + this.problem.toString() + " " + this.mapping.toString() + "]";
   }
 
   public Type lookup(String key) {
-    LinkedList<Type> t = this.mapping.get(key);
+    Type t = mapping.get(key);
     if (t != null) {
-      return t.peekFirst();
+      return t;
     } else if (parent != null) {
       return parent.lookup(key);
     } else {
@@ -53,28 +56,14 @@ public class Context {
     }
   }
 
-  public void delete(String key) {
-    LinkedList<Type> t = this.mapping.get(key);
-    if (t != null) {
-      t.removeFirst();
-      if (t.isEmpty()) {
-        this.mapping.remove(key);
-      }
-    }
+  public void remove(String key) {
+    mapping.remove(key);
   }
 
-  public void insert(String key, Type value) {
-    log.info(key + " -- " + value + ";");
-    if (lookup(key) != null) {
-      // log.info("Hiding " + key);
-    }
-    LinkedList<Type> t = this.mapping.get(key);
-    if (t != null) {
-      t.addFirst(value);
-    } else {
-      LinkedList<Type> l = new LinkedList<>();
-      l.addFirst(value);
-      this.mapping.put(key, l);
-    }
+  public void put(String key, Type value) {
+    // if (lookup(key) != null) {
+    //   log.info("Hiding " + key);
+    // }
+    mapping.put(key, value);
   }
 }
