@@ -1,30 +1,24 @@
 package xyz.leutgeb.lorenz.logs.type;
 
-import java.util.HashMap;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 
-public class Generalizer {
-  private final HashMap<UnificationVariable, String> mapping;
+import java.util.HashMap;
 
-  private static final String[] GREEK =
-      new String[] {
-        "α", "β", "γ", "δ", "ε", "λ", "μ", "ν", "π", "ω", "ρ", "σ", "τ", "ξ",
-      };
+import static xyz.leutgeb.lorenz.logs.type.TypeVar.GREEK;
+
+public class Generalizer {
+  private final HashMap<UnificationVariable, TypeVar> mapping;
 
   public Generalizer() {
     this.mapping = new HashMap<>(GREEK.length);
   }
 
   public Type generalize(UnificationVariable u) {
-    return new TypeVar(
-        this.mapping.computeIfAbsent(
-            u,
-            k -> {
-              var x = this.mapping.size();
-              if (x < GREEK.length) {
-                return GREEK[x];
-              }
-              return "gen" + x;
-            }));
+    return this.mapping.computeIfAbsent(
+        u,
+        k -> {
+          var x = this.mapping.size();
+          return x < GREEK.length ? GREEK[x] : new TypeVar("gen" + x);
+        });
   }
 }
