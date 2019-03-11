@@ -1,13 +1,12 @@
 package xyz.leutgeb.lorenz.logs;
 
+import java.util.HashMap;
+import java.util.Map;
 import lombok.Value;
 import lombok.extern.log4j.Log4j2;
 import xyz.leutgeb.lorenz.logs.type.BoolType;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.unification.Problem;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @Log4j2
 @Value

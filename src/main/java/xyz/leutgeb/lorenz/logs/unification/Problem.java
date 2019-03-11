@@ -41,8 +41,9 @@ public class Problem {
       }
 
       if (!(e.getLeft() instanceof UnificationVariable)) {
-        throw new UnsupportedOperationException();
+        continue;
       }
+
       var left = (UnificationVariable) e.getLeft();
       e.occurs();
       substitute(left, e.getRight());
