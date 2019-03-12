@@ -30,6 +30,9 @@ dependencies {
     compileClasspath("org.projectlombok:lombok:1.18.4")
     annotationProcessor("org.projectlombok:lombok:1.18.4")
 
+    // Maths
+    implementation("org.hipparchus:hipparchus-core:1.4")
+
     // Testing
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.3.2")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.3.2")
