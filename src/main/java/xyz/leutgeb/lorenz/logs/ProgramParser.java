@@ -88,7 +88,7 @@ public class ProgramParser {
     }
 
     // Construct internal program representation.
-    ProgramVisitor visitor = new ProgramVisitor();
+    ProgramVisitor visitor = new ProgramVisitor(stream.getSourceName());
     return visitor.visitProgram(programContext);
   }
 }

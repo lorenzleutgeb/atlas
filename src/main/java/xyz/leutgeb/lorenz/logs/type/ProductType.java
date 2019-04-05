@@ -3,9 +3,11 @@ package xyz.leutgeb.lorenz.logs.type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
+import xyz.leutgeb.lorenz.logs.unification.Problem;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 
@@ -39,6 +41,12 @@ public class ProductType extends Type {
   public Type generalize(Generalizer g) {
     return new ProductType(
         elements.stream().map(x -> x.generalize(g)).collect(Collectors.toList()));
+  }
+
+  @Override
+  public Type wiggle(Map<TypeVar, UnificationVariable> wiggled, Problem context) {
+    return new ProductType(
+        elements.stream().map(x -> x.wiggle(wiggled, context)).collect(Collectors.toList()));
   }
 
   @Override

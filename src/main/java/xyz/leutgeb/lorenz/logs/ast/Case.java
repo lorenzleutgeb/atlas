@@ -1,10 +1,24 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
-import lombok.Data;
 import lombok.NonNull;
+import lombok.Value;
 
-@Data
-public class Case extends Expression {
-  @NonNull private final Expression matcher;
-  @NonNull private final Expression body;
+@Value
+public class Case extends Syntax {
+  @NonNull Expression matcher;
+  @NonNull Expression body;
+
+  public Case(Source source, @NonNull Expression matcher, @NonNull Expression body) {
+    super(source);
+    this.matcher = matcher;
+    this.body = body;
+  }
+
+  public Case normalize() {
+    if (!matcher.isImmediate()) {
+      throw new UnsupportedOperationException("non-immediate patterns are not supported");
+    }
+
+    return new Case(source, matcher, body.normalizeAndBind());
+  }
 }

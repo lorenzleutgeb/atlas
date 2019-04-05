@@ -1,6 +1,9 @@
 package xyz.leutgeb.lorenz.logs.type;
 
+import java.util.Map;
 import lombok.Value;
+import xyz.leutgeb.lorenz.logs.unification.Problem;
+import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 
 @Value
 public class TypeVar extends Type {
@@ -25,6 +28,11 @@ public class TypeVar extends Type {
       };
 
   String name;
+
+  @Override
+  public Type wiggle(Map<TypeVar, UnificationVariable> wiggled, Problem context) {
+    return wiggled.computeIfAbsent(this, k -> context.fresh());
+  }
 
   public String toString() {
     return name;

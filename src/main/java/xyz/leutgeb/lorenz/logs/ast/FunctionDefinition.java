@@ -2,7 +2,9 @@ package xyz.leutgeb.lorenz.logs.ast;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
 import lombok.Data;
+import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.type.FunctionType;
 import xyz.leutgeb.lorenz.logs.type.Generalizer;
@@ -35,5 +37,10 @@ public class FunctionDefinition {
     // Now we are set for unification!
     var solution = sub.getProblem().solve();
     return (FunctionType) (solution.apply(result)).generalize(new Generalizer());
+  }
+
+  public FunctionDefinition normalize() {
+    var context = new Stack<Pair<Identifier, Expression>>();
+    return new FunctionDefinition(name, arguments, body.normalize(context).bindAll(context));
   }
 }

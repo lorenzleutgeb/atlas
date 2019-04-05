@@ -1,5 +1,7 @@
 package xyz.leutgeb.lorenz.logs;
 
+import static java.util.Collections.enumeration;
+import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static xyz.leutgeb.lorenz.logs.ProgramParser.parse;
@@ -7,6 +9,8 @@ import static xyz.leutgeb.lorenz.logs.type.TypeVar.ALPHA;
 import static xyz.leutgeb.lorenz.logs.type.TypeVar.BETA;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.util.Arrays;
 import java.util.stream.Stream;
 import org.antlr.v4.runtime.CharStreams;
@@ -24,12 +28,30 @@ import xyz.leutgeb.lorenz.logs.type.TypeError;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 public class ParserTest {
+  private static final String COLON = ":";
+
   @ParameterizedTest
-  @ValueSource(strings = {"splay", "insert", "splay_max", "delete"})
-  void suite(final String fileName) throws IOException, UnificationError, TypeError {
-    Program program = parse(CharStreams.fromStream(getClass().getResourceAsStream("/" + fileName)));
+  @ValueSource(
+    strings = {
+      "splay",
+      "splay" + COLON + "insert",
+      "splay_max",
+      "splay" + COLON + "splay_max" + COLON + "delete"
+    }
+  )
+  void suite(final String fileNames) throws IOException, UnificationError, TypeError {
+    Stream<String> fileNameStream = Stream.of(fileNames.split(COLON));
+    Program program =
+        parse(
+            CharStreams.fromStream(
+                new SequenceInputStream(
+                    enumeration(fileNameStream.map(this::open).collect(toUnmodifiableList())))));
     var signature = program.getSignature();
     assertNotNull(program);
+  }
+
+  private InputStream open(String fileName) {
+    return getClass().getResourceAsStream("/" + fileName);
   }
 
   private static FunctionType ft(Type to, Type... from) {
@@ -59,7 +81,10 @@ public class ParserTest {
 
   @Test
   void fiddle() throws Exception {
-    Program program = parse("foo t = match t with | (a, b, c) -> t");
+    // Program program = parse("foo t = match t with | (a, b, c) -> t");
+    Program program =
+        parse(
+            "f x y = x \n\ng x = x \n\nh x y z = match g (f x y) with | (a, b, c) -> let foo = g (f a b) in (foo, b, c)");
     var signature = program.getSignature();
     assertNotNull(program);
   }

@@ -20,9 +20,13 @@ public class Program {
   public Map<FunctionDefinition, Type> getSignature() throws UnificationError, TypeError {
     if (signature == null) {
       signature = new HashMap<>(functionDefinitions.size());
+      var ctx = Context.root();
       for (var fd : functionDefinitions) {
-        var ctx = Context.root();
-        signature.put(fd, fd.infer(ctx));
+        var sub = new Context(ctx);
+        fd = fd.normalize();
+        Type t = fd.infer(sub);
+        signature.put(fd, t);
+        ctx.put(fd.getName(), t);
       }
     }
     return signature;

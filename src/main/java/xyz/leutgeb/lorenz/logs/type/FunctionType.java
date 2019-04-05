@@ -2,9 +2,11 @@ package xyz.leutgeb.lorenz.logs.type;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
+import xyz.leutgeb.lorenz.logs.unification.Problem;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 
@@ -37,6 +39,11 @@ public class FunctionType extends Type {
 
   public boolean occurs(UnificationVariable v) {
     return from.occurs(v) || to.occurs(v);
+  }
+
+  @Override
+  public Type wiggle(Map<TypeVar, UnificationVariable> wiggled, Problem context) {
+    return new FunctionType(from.wiggle(wiggled, context), to.wiggle(wiggled, context));
   }
 
   @Override

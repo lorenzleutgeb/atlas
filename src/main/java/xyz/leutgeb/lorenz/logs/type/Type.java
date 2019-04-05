@@ -1,7 +1,9 @@
 package xyz.leutgeb.lorenz.logs.type;
 
 import java.util.Collection;
+import java.util.Map;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
+import xyz.leutgeb.lorenz.logs.unification.Problem;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 
@@ -19,6 +21,10 @@ public abstract class Type {
   }
 
   public Type generalize(Generalizer g) {
+    return this;
+  }
+
+  public Type wiggle(Map<TypeVar, UnificationVariable> wiggled, Problem context) {
     return this;
   }
 }

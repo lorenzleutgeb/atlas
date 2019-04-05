@@ -5,9 +5,6 @@ import static java.util.stream.Collectors.toList;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.antlr.v4.runtime.Token;
-import org.antlr.v4.runtime.tree.TerminalNode;
-import xyz.leutgeb.lorenz.logs.SymbolTable;
 import xyz.leutgeb.lorenz.logs.antlr.SplayBaseVisitor;
 import xyz.leutgeb.lorenz.logs.antlr.SplayParser;
 import xyz.leutgeb.lorenz.logs.ast.BooleanExpression;
@@ -22,52 +19,30 @@ import xyz.leutgeb.lorenz.logs.ast.MatchExpression;
 import xyz.leutgeb.lorenz.logs.ast.Tuple;
 import xyz.leutgeb.lorenz.logs.ast.TupleElement;
 
-public class ExpressionVisitor extends SplayBaseVisitor<Expression> {
-  private final SymbolTable symbolTable;
+public class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   private final BooleanExpressionVisitor booleanExpressionVisitor = new BooleanExpressionVisitor();
 
-  public ExpressionVisitor(SymbolTable symbolTable) {
-    this.symbolTable = symbolTable;
+  public ExpressionVisitor(String sourceName) {
+    super(sourceName);
   }
 
   private final class BooleanExpressionVisitor extends SplayBaseVisitor<BooleanExpression> {
     @Override
     public BooleanExpression visitCondition(SplayParser.ConditionContext ctx) {
-      Expression l = ExpressionVisitor.this.visit(ctx.left);
-      Expression r = ExpressionVisitor.this.visit(ctx.right);
-      return new BooleanExpression(l, ComparisonOperator.fromToken(ctx.op().getText()), r);
+      var l = ExpressionVisitor.this.visit(ctx.left);
+      var r = ExpressionVisitor.this.visit(ctx.right);
+      return new BooleanExpression(
+          getSource(ctx), l, ComparisonOperator.fromToken(ctx.op().getText()), r);
     }
   }
 
   @Override
   public Expression visitIteExpression(SplayParser.IteExpressionContext ctx) {
-    Expression truthy = visit(ctx.truthy);
-    Expression falsy = visit(ctx.falsy);
     return new IfThenElseExpression(
-        booleanExpressionVisitor.visitCondition(ctx.condition()), truthy, falsy);
-  }
-
-  private void ingestPattern(SplayParser.PatternContext patternContext, SymbolTable symbolTable) {
-    ingestTuple(patternContext.tuple(), symbolTable);
-    ingestIdentifier(patternContext.IDENTIFIER(), patternContext.start, symbolTable);
-  }
-
-  private void ingestTuple(SplayParser.TupleContext variableTupleContext, SymbolTable symbolTable) {
-    if (variableTupleContext == null) {
-      return;
-    }
-    for (SplayParser.TupleElementContext elementContext : variableTupleContext.elements) {
-      ingestTuple(elementContext.tuple(), symbolTable);
-      ingestIdentifier(elementContext.IDENTIFIER(), elementContext.start, symbolTable);
-    }
-  }
-
-  private void ingestIdentifier(TerminalNode variableNode, Token start, SymbolTable symbolTable) {
-    if (variableNode == null) {
-      return;
-    }
-    String variable = variableNode.getText();
-    symbolTable.put(Identifier.get(variable), new SymbolTable.Entry(null, start));
+        getSource(ctx),
+        booleanExpressionVisitor.visitCondition(ctx.condition()),
+        visit(ctx.truthy),
+        visit(ctx.falsy));
   }
 
   @Override
@@ -76,19 +51,22 @@ public class ExpressionVisitor extends SplayBaseVisitor<Expression> {
     for (SplayParser.MatchCaseContext matchCase : ctx.cases) {
       SplayParser.PatternContext patternContext = matchCase.pattern();
       SplayParser.ExpressionContext subExpressionContext = matchCase.expression();
-      SymbolTable symbolTable = new SymbolTable(this.symbolTable);
-      ingestPattern(patternContext, symbolTable);
-      var subExpressionVisitor = new ExpressionVisitor(symbolTable);
+      var subExpressionVisitor = new ExpressionVisitor(getSourceName());
       var subExpression = subExpressionVisitor.visit(subExpressionContext);
       if (patternContext.tuple() != null && patternContext.IDENTIFIER() == null) {
-        cases.add(new Case(visit(patternContext.tuple()), subExpression));
+        cases.add(new Case(getSource(matchCase), visit(patternContext.tuple()), subExpression));
       } else if (patternContext.tuple() == null && patternContext.IDENTIFIER() != null) {
-        cases.add(new Case(Identifier.get(patternContext.IDENTIFIER().getText()), subExpression));
+        cases.add(
+            new Case(
+                getSource(matchCase),
+                Identifier.get(patternContext.IDENTIFIER().getText(), getSource(patternContext)),
+                subExpression));
       } else {
         throw new IllegalArgumentException();
       }
     }
-    return new MatchExpression(visit(ctx.expression()), cases);
+
+    return new MatchExpression(getSource(ctx), visit(ctx.expression()), cases);
   }
 
   @Override
@@ -99,25 +77,15 @@ public class ExpressionVisitor extends SplayBaseVisitor<Expression> {
   @Override
   public Expression visitCallExpression(SplayParser.CallExpressionContext ctx) {
     return new CallExpression(
-        Identifier.get(ctx.name.getText()), ctx.params.stream().map(this::visit).collect(toList()));
+        getSource(ctx),
+        Identifier.get(ctx.name.getText()),
+        ctx.params.stream().map(this::visit).collect(toList()));
   }
 
   @Override
   public Expression visitLetExpression(SplayParser.LetExpressionContext ctx) {
-    SymbolTable symbolTable = new SymbolTable(this.symbolTable);
-    ingestIdentifier(ctx.IDENTIFIER(), ctx.name, symbolTable);
-    var subExpressionVisitor = new ExpressionVisitor(symbolTable);
     return new LetExpression(
-        Identifier.get(ctx.name.getText()), subExpressionVisitor.visit(ctx.body));
-  }
-
-  @Override
-  public Expression visitMatchCase(SplayParser.MatchCaseContext ctx) {
-    SymbolTable symbolTable = new SymbolTable(this.symbolTable);
-    ingestPattern(ctx.pattern(), symbolTable);
-    var subExpressionVisitor = new ExpressionVisitor(symbolTable);
-    return new Case(
-        visitTuple(ctx.pattern().tuple()), subExpressionVisitor.visit(ctx.expression()));
+        getSource(ctx), Identifier.get(ctx.name.getText()), visit(ctx.value), visit(ctx.body));
   }
 
   @Override
@@ -140,6 +108,12 @@ public class ExpressionVisitor extends SplayBaseVisitor<Expression> {
   @Override
   public Tuple visitTuple(SplayParser.TupleContext ctx) {
     return new Tuple(
+        getSource(ctx),
         ctx.elements.stream().map(this::visitTupleElement).collect(Collectors.toList()));
+  }
+
+  @Override
+  public Expression visitParenthesizedExpression(SplayParser.ParenthesizedExpressionContext ctx) {
+    return visit(ctx.expression());
   }
 }

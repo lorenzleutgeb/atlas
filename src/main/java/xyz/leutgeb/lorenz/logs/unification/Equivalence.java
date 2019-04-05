@@ -1,6 +1,7 @@
 package xyz.leutgeb.lorenz.logs.unification;
 
 import java.util.Collection;
+import java.util.Collections;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.type.Type;
 
@@ -30,6 +31,9 @@ public class Equivalence {
   }
 
   public Collection<Equivalence> unify() throws UnificationError {
+    if (left == right) {
+      return Collections.emptyList();
+    }
     return left.decompose(right);
   }
 
