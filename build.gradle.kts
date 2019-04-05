@@ -1,18 +1,20 @@
-import org.gradle.internal.impldep.org.junit.experimental.categories.Categories.CategoryFilter.exclude
-import org.gradle.internal.impldep.org.junit.experimental.categories.Categories.CategoryFilter.include
-
 plugins {
     java
     application
     antlr
 
     id("com.diffplug.gradle.spotless") version "3.16.0"
-    id("com.gradle.build-scan") version "2.0.2"
+    id("com.gradle.build-scan") version "2.2.1"
 }
 
 repositories {
     jcenter()
     mavenCentral()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_12
+    targetCompatibility = JavaVersion.VERSION_12
 }
 
 dependencies {
@@ -70,7 +72,8 @@ tasks.withType<Test> {
 */
 
 tasks.withType<Wrapper> {
-    gradleVersion = "5.2.1"
+    gradleVersion = "5.3"
+    distributionType = Wrapper.DistributionType.ALL
 }
 
 buildScan {
@@ -79,6 +82,7 @@ buildScan {
     if (System.getenv("CI") != null) {
         publishAlways()
         tag("ci")
+        link("Travis CI", System.getenv("TRAVIS_JOB_WEB_URL"))
     }
 }
 
@@ -91,7 +95,9 @@ spotless {
         // Explicitly point gjf at src, otherwise it will also check build and find ANTLR generated code.
         target("src/**/*.java")
     }
-    kotlin {
+    kotlinGradle {
         ktlint()
+
+        target("build.gradle.kts")
     }
 }
