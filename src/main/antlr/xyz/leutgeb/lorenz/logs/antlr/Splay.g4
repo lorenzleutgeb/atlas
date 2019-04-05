@@ -16,6 +16,7 @@ expression : IDENTIFIER # identifier
            | tuple # tupleExpression
            | name=IDENTIFIER (params+=expression)* # callExpression
            | LET name=IDENTIFIER ASSIGN value=expression IN body=expression # letExpression
+           | PAREN_OPEN expression PAREN_CLOSE # parenthesizedExpression
            ;
 
 // Conditions are expressed by comparing two expressions.
