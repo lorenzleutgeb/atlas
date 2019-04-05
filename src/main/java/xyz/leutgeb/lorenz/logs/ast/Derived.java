@@ -19,4 +19,14 @@ public class Derived extends Source {
   public static Derived anf(Source parent) {
     return new Derived(parent, Justification.ANF);
   }
+
+  @Override
+  public Source getRoot() {
+    return parent.getRoot();
+  }
+
+  @Override
+  public String toString() {
+    return getRoot().toString() + "(" + getJustification() + ")";
+  }
 }

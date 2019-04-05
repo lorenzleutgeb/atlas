@@ -10,6 +10,7 @@ import static xyz.leutgeb.lorenz.logs.type.TypeVar.BETA;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.SequenceInputStream;
 import java.util.Arrays;
 import java.util.stream.Stream;
@@ -43,9 +44,11 @@ public class ParserTest {
     Stream<String> fileNameStream = Stream.of(fileNames.split(COLON));
     Program program =
         parse(
-            CharStreams.fromStream(
-                new SequenceInputStream(
-                    enumeration(fileNameStream.map(this::open).collect(toUnmodifiableList())))));
+            CharStreams.fromReader(
+                new InputStreamReader(
+                    new SequenceInputStream(
+                        enumeration(fileNameStream.map(this::open).collect(toUnmodifiableList())))),
+                fileNames));
     var signature = program.getSignature();
     assertNotNull(program);
   }
