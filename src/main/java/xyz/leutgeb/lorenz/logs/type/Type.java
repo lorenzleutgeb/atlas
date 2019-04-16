@@ -3,9 +3,9 @@ package xyz.leutgeb.lorenz.logs.type;
 import java.util.Collection;
 import java.util.Map;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
-import xyz.leutgeb.lorenz.logs.unification.Problem;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
+import xyz.leutgeb.lorenz.logs.unification.UnificiationProblem;
 
 public abstract class Type {
   public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
@@ -24,7 +24,7 @@ public abstract class Type {
     return this;
   }
 
-  public Type wiggle(Map<TypeVar, UnificationVariable> wiggled, Problem context) {
+  public Type wiggle(Map<TypeVar, UnificationVariable> wiggled, UnificiationProblem context) {
     return this;
   }
 }

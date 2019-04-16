@@ -5,7 +5,7 @@ import java.util.ListIterator;
 import java.util.stream.Collectors;
 import xyz.leutgeb.lorenz.logs.type.Type;
 
-public class Problem {
+public class UnificiationProblem {
   private final LinkedList<Equivalence> equivalences = new LinkedList<>();
   private final Substitution solution = new Substitution();
 

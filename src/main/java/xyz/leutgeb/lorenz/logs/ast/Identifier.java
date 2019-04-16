@@ -11,6 +11,9 @@ import lombok.Getter;
 import lombok.NonNull;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
+import xyz.leutgeb.lorenz.logs.Util;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatedType;
+import xyz.leutgeb.lorenz.logs.resources.ZeroAnnotation;
 import xyz.leutgeb.lorenz.logs.type.TreeType;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.type.TypeError;
@@ -48,15 +51,7 @@ public class Identifier extends TupleElement {
   }
 
   public static Identifier getSugar() {
-    return get("∂" + generateSubscript(freshness++));
-  }
-
-  private static String generateSubscript(int i) {
-    StringBuilder sb = new StringBuilder();
-    for (char ch : String.valueOf(i).toCharArray()) {
-      sb.append((char) ('\u2080' + (ch - '0')));
-    }
-    return sb.toString();
+    return get("∂" + Util.generateSubscript(freshness++));
   }
 
   public static Identifier get(String name) {
@@ -91,6 +86,25 @@ public class Identifier extends TupleElement {
   @Override
   public Expression normalize(Stack<Pair<Identifier, Expression>> context) {
     return this;
+  }
+
+  @Override
+  public AnnotatedType inferAnnotations(Context context) throws UnificationError, TypeError {
+    if (this != NIL) {
+      return new AnnotatedType(null, ZeroAnnotation.INSTANCE);
+    }
+    var constraints = context.getConstraints();
+    var result = constraints.heuristic(1);
+    var q = constraints.heuristic(0);
+    for (var e : q.getCoefficients().entrySet()) {
+      var c = e.getKey().get(0);
+      for (int a = 0; a <= c; a++) {
+        int b = c - a;
+        constraints.eq(e.getValue(), result.getOrFresh(constraints, a, b));
+      }
+    }
+
+    return new AnnotatedType(infer(context), result);
   }
 
   public boolean isImmediate() {

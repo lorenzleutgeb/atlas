@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.logs.ast;
 import java.util.Stack;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatedType;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.type.TypeError;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
@@ -19,6 +20,10 @@ public abstract class Expression extends Syntax {
 
   public boolean isImmediate() {
     return false;
+  }
+
+  public AnnotatedType inferAnnotations(Context context) throws UnificationError, TypeError {
+    throw new UnsupportedOperationException("not implemented");
   }
 
   public Expression bindAll(Stack<Pair<Identifier, Expression>> context) {

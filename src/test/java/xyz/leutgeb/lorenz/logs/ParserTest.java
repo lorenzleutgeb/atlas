@@ -85,9 +85,12 @@ public class ParserTest {
   @Test
   void fiddle() throws Exception {
     // Program program = parse("foo t = match t with | (a, b, c) -> t");
-    Program program =
-        parse(
-            "f x y = x \n\ng x = x \n\nh x y z = match g (f x y) with | (a, b, c) -> let foo = g (f a b) in (foo, b, c)");
+    Program program = parse("foo = nil");
+
+    // Program program =
+    //    parse(
+    //        "f x y = x \n\ng x = x \n\nh x y z = match g (f x y) with | (a, b, c) -> let foo = g
+    // (f a b) in (foo, b, c)");
     var signature = program.getSignature();
     assertNotNull(program);
   }

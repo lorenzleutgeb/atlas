@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
-import xyz.leutgeb.lorenz.logs.unification.Problem;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
+import xyz.leutgeb.lorenz.logs.unification.UnificiationProblem;
 
 @Value
 public class ProductType extends Type {
@@ -44,7 +44,7 @@ public class ProductType extends Type {
   }
 
   @Override
-  public Type wiggle(Map<TypeVar, UnificationVariable> wiggled, Problem context) {
+  public Type wiggle(Map<TypeVar, UnificationVariable> wiggled, UnificiationProblem context) {
     return new ProductType(
         elements.stream().map(x -> x.wiggle(wiggled, context)).collect(Collectors.toList()));
   }

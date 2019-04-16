@@ -4,9 +4,10 @@ import java.util.HashMap;
 import java.util.Map;
 import lombok.Value;
 import lombok.extern.log4j.Log4j2;
+import xyz.leutgeb.lorenz.logs.resources.Constraints;
 import xyz.leutgeb.lorenz.logs.type.BoolType;
 import xyz.leutgeb.lorenz.logs.type.Type;
-import xyz.leutgeb.lorenz.logs.unification.Problem;
+import xyz.leutgeb.lorenz.logs.unification.UnificiationProblem;
 
 @Log4j2
 @Value
@@ -19,24 +20,26 @@ public class Context {
   }
 
   public static Context root() {
-    return new Context(INTERNAL_ROOT, new Problem());
+    return new Context(INTERNAL_ROOT, new UnificiationProblem(), new Constraints());
   }
 
   Context parent;
   Map<String, Type> mapping;
-  Problem problem;
+  UnificiationProblem problem;
+  Constraints constraints;
 
   public Context(Context parent) {
-    this(parent, parent.problem);
+    this(parent, parent.problem, parent.constraints);
   }
 
   private Context() {
-    this(null, new Problem());
+    this(null, new UnificiationProblem(), new Constraints());
   }
 
-  private Context(Context parent, Problem problem) {
+  private Context(Context parent, UnificiationProblem problem, Constraints constraints) {
     this.parent = parent;
     this.problem = problem;
+    this.constraints = constraints;
     this.mapping = new HashMap<>();
   }
 

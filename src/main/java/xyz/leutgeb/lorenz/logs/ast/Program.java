@@ -25,6 +25,7 @@ public class Program {
         var sub = new Context(ctx);
         fd = fd.normalize();
         Type t = fd.infer(sub);
+        var at = fd.inferAnnotation(sub);
         signature.put(fd, t);
         ctx.put(fd.getName(), t);
       }

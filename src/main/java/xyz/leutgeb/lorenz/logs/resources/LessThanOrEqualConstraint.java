@@ -1,3 +1,3 @@
 package xyz.leutgeb.lorenz.logs.resources;
 
-public class LessThanOrEqualConstraint {}
+public class LessThanOrEqualConstraint extends Constraint {}

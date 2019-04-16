@@ -5,9 +5,9 @@ import java.util.List;
 import java.util.Map;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
-import xyz.leutgeb.lorenz.logs.unification.Problem;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
+import xyz.leutgeb.lorenz.logs.unification.UnificiationProblem;
 
 @Value
 public class TreeType extends Type {
@@ -34,7 +34,7 @@ public class TreeType extends Type {
   }
 
   @Override
-  public Type wiggle(Map<TypeVar, UnificationVariable> wiggled, Problem context) {
+  public Type wiggle(Map<TypeVar, UnificationVariable> wiggled, UnificiationProblem context) {
     return new TreeType(elementType.wiggle(wiggled, context));
   }
 
