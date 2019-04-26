@@ -4,18 +4,25 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Stack;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.extern.log4j.Log4j2;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatedType;
+import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.type.TypeError;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Log4j2
 public class MatchExpression extends Expression {
   private final Expression test;
+
+  // Invariant: size() == 2, asserted in constructor
   private final List<Case> cases;
 
   public MatchExpression(Source source, Expression test, List<Case> cases) {
@@ -28,10 +35,20 @@ public class MatchExpression extends Expression {
       log.info("Adding case `nil -> nil` to match " + source);
       this.cases.add(new Case(Derived.desugar(source), Identifier.NIL, Identifier.NIL));
     }
+    if (this.cases.size() != 2) {
+      throw new IllegalArgumentException("exactly two cases are required for a match");
+    }
   }
 
   @Override
-  public Type infer(Context context) throws UnificationError, TypeError {
+  public Stream<? extends Expression> getChildren() {
+    var a = cases.stream().map(Case::getBody);
+    var b = cases.stream().map(Case::getMatcher);
+    return Stream.concat(Stream.of(test), Stream.concat(a, b));
+  }
+
+  @Override
+  public Type inferInternal(Context context) throws UnificationError, TypeError {
     final var result = context.getProblem().fresh();
     final var testType = context.getProblem().fresh();
     context.getProblem().add(testType, test.infer(context));
@@ -44,7 +61,7 @@ public class MatchExpression extends Expression {
       // and decompose with the type of test.
       if (matcher instanceof Identifier) {
         var id = (Identifier) matcher;
-        Context sub = new Context(context);
+        var sub = context.child();
         var fresh = sub.getProblem().fresh();
         sub.put(id.getName(), fresh);
         sub.getProblem().add(testType, matcher.infer(sub));
@@ -56,7 +73,7 @@ public class MatchExpression extends Expression {
           throw new UnsupportedOperationException();
         }
 
-        Context sub = new Context(context);
+        var sub = context.child();
         for (int i = 0; i < 3; i++) {
           if (!(tuple.getElements().get(i) instanceof Identifier)) {
             throw new UnsupportedOperationException();
@@ -86,5 +103,35 @@ public class MatchExpression extends Expression {
 
     return new MatchExpression(
         source, id, cases.stream().map(Case::normalize).collect(Collectors.toList()));
+  }
+
+  @Override
+  public AnnotatedType inferAnnotations(Context context, Annotation typingContext)
+      throws UnificationError, TypeError {
+    if (cases.size() != 2) {
+      throw new IllegalStateException("must have exactly two cases");
+    }
+    Optional<Case> nilCase =
+        cases.stream().filter(x -> x.getMatcher().equals(Identifier.NIL)).findAny();
+    Optional<Case> nodeCase =
+        cases.stream().filter(x -> !x.getMatcher().equals(Identifier.NIL)).findAny();
+
+    if (nilCase.isEmpty() || nodeCase.isEmpty()) {
+      throw new IllegalStateException("case missing");
+    }
+
+    // We have exactly two cases inside this match, being the two constructors of trees.
+
+    var qp = nilCase.get().getBody().inferAnnotations(context, typingContext);
+    if (qp.getAnnotation().getSize() != 1) {
+      // TODO(lorenz.leutgeb): Waiting for Georg's response on how this is justified.
+      throw new RuntimeException("annotation of nil case must have size exactly one");
+    }
+
+    // TODO(lorenz.leutgeb): Waiting for Georg's response on whether the size should be m + 2 or m +
+    // 3.
+    var sub = context.getConstraints().heuristic(typingContext.getSize() + 2);
+
+    return super.inferAnnotations(context, typingContext);
   }
 }

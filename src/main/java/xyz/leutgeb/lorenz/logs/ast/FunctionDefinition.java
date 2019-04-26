@@ -8,8 +8,8 @@ import lombok.Data;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatedType;
+import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.type.FunctionType;
-import xyz.leutgeb.lorenz.logs.type.Generalizer;
 import xyz.leutgeb.lorenz.logs.type.TreeType;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.type.TypeError;
@@ -27,7 +27,7 @@ public class FunctionDefinition {
       return type;
     }
 
-    Context sub = new Context(context);
+    var sub = context.child();
     List<Type> from = new ArrayList<>(arguments.size());
 
     for (String argument : arguments) {
@@ -43,9 +43,11 @@ public class FunctionDefinition {
     sub.getProblem().add(to, body.infer(sub));
 
     // Now we are set for unification!
-    var solution = sub.getProblem().solve();
+    var solution = sub.getProblem().solveAndGeneralize();
 
-    return type = (FunctionType) (solution.apply(result)).generalize(new Generalizer());
+    type = (FunctionType) solution.apply(result);
+    body.resolveType(solution);
+    return type;
   }
 
   public FunctionDefinition normalize() {
@@ -74,7 +76,9 @@ public class FunctionDefinition {
       throw new UnsupportedOperationException(
           "analysis is only supported for functions that return a tree");
     }
-    var result = new Pair<>(new AnnotatedType(type.getFrom(), q), body.inferAnnotations(context));
+    var result =
+        new Pair<>(
+            new AnnotatedType(type.getFrom(), q), body.inferAnnotations(context, Annotation.EMPTY));
     return result;
   }
 }

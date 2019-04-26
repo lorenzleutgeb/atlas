@@ -9,6 +9,8 @@ import xyz.leutgeb.lorenz.logs.type.BoolType;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.unification.UnificiationProblem;
 
+// TODO(lorenz.leutgeb): Use separate context classes for simple type inference
+// and constraint generation.
 @Log4j2
 @Value
 public class Context {
@@ -24,11 +26,21 @@ public class Context {
   }
 
   Context parent;
+
+  /**
+   * Holds types for identifiers. This is pre-populated for constants (true, false) and extended
+   * through {@link #put(String, Type)}, for example by walking over {@link
+   * xyz.leutgeb.lorenz.logs.ast.LetExpression}.
+   */
   Map<String, Type> mapping;
+
+  /** For simple type inference. */
   UnificiationProblem problem;
+
+  /** For constructing resource constraints. */
   Constraints constraints;
 
-  public Context(Context parent) {
+  private Context(Context parent) {
     this(parent, parent.problem, parent.constraints);
   }
 
@@ -43,10 +55,17 @@ public class Context {
     this.mapping = new HashMap<>();
   }
 
+  public Context child() {
+    return new Context(this);
+  }
+
   public String toString() {
     return "[" + this.problem.toString() + " " + this.mapping.toString() + "]";
   }
 
+  /** Recursively looks up the type of some identifier (given as {@link String}). */
+  // TODO(lorenz.leutgeb): This behaves differently in simple type inference and in constraint
+  // generation.
   public Type lookup(String key) {
     Type t = mapping.get(key);
     if (t != null) {
@@ -58,14 +77,15 @@ public class Context {
     }
   }
 
+  @Deprecated
   public void remove(String key) {
     mapping.remove(key);
   }
 
   public void put(String key, Type value) {
-    // if (lookup(key) != null) {
-    //   log.info("Hiding " + key);
-    // }
+    if (lookup(key) != null) {
+      log.info("Hiding " + key);
+    }
     mapping.put(key, value);
   }
 }

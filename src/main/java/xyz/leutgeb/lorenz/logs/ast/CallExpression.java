@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Stack;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.Value;
 import org.hipparchus.util.Pair;
@@ -15,6 +17,7 @@ import xyz.leutgeb.lorenz.logs.type.TypeError;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 @Value
+@EqualsAndHashCode(callSuper = true)
 public class CallExpression extends Expression {
   @NonNull Identifier name;
   @NonNull List<Expression> parameters;
@@ -26,7 +29,12 @@ public class CallExpression extends Expression {
     this.parameters = parameters;
   }
 
-  public Type infer(Context context) throws UnificationError, TypeError {
+  @Override
+  public Stream<? extends Expression> getChildren() {
+    return Stream.concat(Stream.of(name), parameters.stream());
+  }
+
+  public Type inferInternal(Context context) throws UnificationError, TypeError {
     List<Type> xTy = new ArrayList<>(parameters.size());
     for (Expression parameter : parameters) {
       xTy.add(parameter.infer(context));

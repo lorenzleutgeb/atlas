@@ -3,10 +3,12 @@ package xyz.leutgeb.lorenz.logs.unification;
 import java.util.Collection;
 import java.util.Collections;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import xyz.leutgeb.lorenz.logs.type.Generalizer;
 import xyz.leutgeb.lorenz.logs.type.Type;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 public class UnificationVariable extends Type {
   private final int id;
 

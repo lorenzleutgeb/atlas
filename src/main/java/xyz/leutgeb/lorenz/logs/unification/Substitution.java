@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.logs.unification;
 import java.util.HashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import xyz.leutgeb.lorenz.logs.type.Generalizer;
 import xyz.leutgeb.lorenz.logs.type.Type;
 
 public class Substitution implements Function<Type, Type> {
@@ -45,5 +46,9 @@ public class Substitution implements Function<Type, Type> {
       t = t.substitute(var, this.subs.get(var));
     }
     return t;
+  }
+
+  public void generalize(Generalizer generalizer) {
+    subs.replaceAll((k, v) -> v.generalize(generalizer));
   }
 }

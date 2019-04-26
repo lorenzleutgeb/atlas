@@ -1,11 +1,13 @@
 package xyz.leutgeb.lorenz.logs.type;
 
 import java.util.Map;
+import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 import xyz.leutgeb.lorenz.logs.unification.UnificiationProblem;
 
 @Value
+@EqualsAndHashCode(callSuper = true)
 public class TypeVar extends Type {
   public static final TypeVar ALPHA = new TypeVar("α");
   public static final TypeVar BETA = new TypeVar("β");

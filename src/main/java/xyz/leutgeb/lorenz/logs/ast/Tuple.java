@@ -2,10 +2,13 @@ package xyz.leutgeb.lorenz.logs.ast;
 
 import java.util.List;
 import java.util.Stack;
+import java.util.stream.Stream;
+import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatedType;
+import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.resources.EqualityConstraint;
 import xyz.leutgeb.lorenz.logs.type.TreeType;
 import xyz.leutgeb.lorenz.logs.type.Type;
@@ -13,6 +16,7 @@ import xyz.leutgeb.lorenz.logs.type.TypeError;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 @Value
+@EqualsAndHashCode(callSuper = true)
 public class Tuple extends TupleElement {
   List<TupleElement> elements;
 
@@ -42,7 +46,12 @@ public class Tuple extends TupleElement {
   }
 
   @Override
-  public Type infer(Context context) throws UnificationError, TypeError {
+  public Stream<? extends Expression> getChildren() {
+    return elements.stream();
+  }
+
+  @Override
+  public Type inferInternal(Context context) throws UnificationError, TypeError {
     var elementType = context.getProblem().fresh();
     var result = new TreeType(elementType);
     context.getProblem().add(result, getLeft().infer(context));
@@ -60,7 +69,8 @@ public class Tuple extends TupleElement {
   }
 
   @Override
-  public AnnotatedType inferAnnotations(Context context) throws UnificationError, TypeError {
+  public AnnotatedType inferAnnotations(Context context, Annotation typingContext)
+      throws UnificationError, TypeError {
     var constraints = context.getConstraints();
     var q = constraints.heuristic(2);
     var result = constraints.heuristic(1);

@@ -11,8 +11,8 @@ public class RangeHeuristic implements AnnotationHeuristic {
   int from, to;
 
   @Override
-  public TypingContextAnnotation generate(int size, Constraints context) {
-    var result = new TypingContextAnnotation(size);
+  public Annotation generate(int size, Constraints context) {
+    var result = new Annotation(size);
     for (int i = 0; i < size; i++) {
       result.getRankCoeffients().set(i, context.unknown());
     }

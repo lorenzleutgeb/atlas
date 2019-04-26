@@ -1,8 +1,10 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import lombok.EqualsAndHashCode;
 import lombok.Value;
 
 @Value
+@EqualsAndHashCode(callSuper = true)
 public class Derived extends Source {
   public static Derived desugar(Source source) {
     return new Derived(source, Justification.DESUGAR);

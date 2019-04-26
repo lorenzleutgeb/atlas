@@ -2,7 +2,6 @@ package xyz.leutgeb.lorenz.logs.resources;
 
 import java.util.LinkedList;
 import java.util.stream.Collectors;
-
 import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.UnknownCoefficient;
 
@@ -28,7 +27,7 @@ public class Constraints {
     return new UnknownCoefficient(freshness++);
   }
 
-  public TypingContextAnnotation heuristic(int size) {
+  public Annotation heuristic(int size) {
     return annotationHeuristic.generate(size, this);
   }
 
@@ -39,6 +38,8 @@ public class Constraints {
 
   @Override
   public String toString() {
-    return "{ " + constraints.stream().map(Object::toString).collect(Collectors.joining(", ")) + " }";
+    return "{ "
+        + constraints.stream().map(Object::toString).collect(Collectors.joining(", "))
+        + " }";
   }
 }

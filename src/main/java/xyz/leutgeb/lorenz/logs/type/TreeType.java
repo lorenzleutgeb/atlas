@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.logs.type;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
@@ -10,6 +11,7 @@ import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 import xyz.leutgeb.lorenz.logs.unification.UnificiationProblem;
 
 @Value
+@EqualsAndHashCode(callSuper = true)
 public class TreeType extends Type {
   Type elementType;
 

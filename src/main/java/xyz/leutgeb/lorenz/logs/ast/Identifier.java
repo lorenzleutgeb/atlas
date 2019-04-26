@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Stack;
+import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
@@ -13,7 +14,7 @@ import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.Util;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatedType;
-import xyz.leutgeb.lorenz.logs.resources.ZeroAnnotation;
+import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.type.TreeType;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.type.TypeError;
@@ -70,7 +71,12 @@ public class Identifier extends TupleElement {
   }
 
   @Override
-  public Type infer(Context context) throws UnificationError, TypeError {
+  public Stream<? extends Expression> getChildren() {
+    return Stream.empty();
+  }
+
+  @Override
+  public Type inferInternal(Context context) throws UnificationError, TypeError {
     if (this == NIL) {
       return new TreeType(context.getProblem().fresh());
     }
@@ -89,22 +95,40 @@ public class Identifier extends TupleElement {
   }
 
   @Override
-  public AnnotatedType inferAnnotations(Context context) throws UnificationError, TypeError {
-    if (this != NIL) {
-      return new AnnotatedType(null, ZeroAnnotation.INSTANCE);
-    }
-    var constraints = context.getConstraints();
-    var result = constraints.heuristic(1);
-    var q = constraints.heuristic(0);
-    for (var e : q.getCoefficients().entrySet()) {
-      var c = e.getKey().get(0);
-      for (int a = 0; a <= c; a++) {
-        int b = c - a;
-        constraints.eq(e.getValue(), result.getOrFresh(constraints, a, b));
+  public AnnotatedType inferAnnotations(Context context, Annotation typingContext)
+      throws UnificationError, TypeError {
+    // Special case for nil, see rule (nil).
+    if (this == NIL) {
+      var constraints = context.getConstraints();
+      var result = constraints.heuristic(1);
+
+      // Choose some annotation q for the empty sequence of trees.
+      var q = constraints.heuristic(0);
+
+      // Equate according to preconditions of (nil)
+      for (var e : q.getCoefficients().entrySet()) {
+        var c = e.getKey().get(0);
+        for (int a = 0; a <= c; a++) {
+          int b = c - a;
+
+          // TODO(lorenzleutgeb): Should getOrFresh be used here?
+          constraints.eq(e.getValue(), result.getOrFresh(constraints, a, b));
+        }
       }
+
+      return new AnnotatedType(infer(context), result);
     }
 
-    return new AnnotatedType(infer(context), result);
+    // Now, two other cases are left:
+    //  - tree variables
+    //    return some annotation
+    //  - non-tree variables or constants (like true/false)
+    //    return a zero-valued annotation
+
+    // TODO(lorenz.leutgeb): How to handle tree variables?
+
+    // Handles non-tree variables and constants.
+    return new AnnotatedType(null, Annotation.EMPTY);
   }
 
   public boolean isImmediate() {

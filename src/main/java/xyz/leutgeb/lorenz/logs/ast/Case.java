@@ -1,9 +1,11 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.Value;
 
 @Value
+@EqualsAndHashCode(callSuper = true)
 public class Case extends Syntax {
   @NonNull Expression matcher;
   @NonNull Expression body;

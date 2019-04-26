@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.logs.unification;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.stream.Collectors;
+import xyz.leutgeb.lorenz.logs.type.Generalizer;
 import xyz.leutgeb.lorenz.logs.type.Type;
 
 public class UnificiationProblem {
@@ -51,6 +52,13 @@ public class UnificiationProblem {
       solution.add(left, e.getRight());
     }
     return solution;
+  }
+
+  public Substitution solveAndGeneralize() throws UnificationError {
+    final var result = solve();
+    final var generalizer = new Generalizer();
+    result.generalize(generalizer);
+    return result;
   }
 
   private void substitute(UnificationVariable variable, Type result) {

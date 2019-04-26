@@ -1,7 +1,9 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
 import java.util.Stack;
+import java.util.stream.Stream;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.type.Type;
@@ -9,6 +11,7 @@ import xyz.leutgeb.lorenz.logs.type.TypeError;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 public class LetExpression extends Expression {
   private final Identifier declared;
   private final Expression value;
@@ -22,10 +25,15 @@ public class LetExpression extends Expression {
   }
 
   @Override
-  public Type infer(Context context) throws UnificationError, TypeError {
+  public Stream<? extends Expression> getChildren() {
+    return Stream.of(declared, value, body);
+  }
+
+  @Override
+  public Type inferInternal(Context context) throws UnificationError, TypeError {
     var declaredType = context.getProblem().fresh();
     context.getProblem().add(declaredType, value.infer(context));
-    var sub = new Context(context);
+    var sub = context.child();
     sub.put(declared.getName(), declaredType);
     sub.getProblem().add(declaredType, declared.infer(sub));
 
