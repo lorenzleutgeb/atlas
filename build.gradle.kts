@@ -35,6 +35,9 @@ dependencies {
     // Maths
     implementation("org.hipparchus:hipparchus-core:1.4")
 
+    // Commandline Parameters
+    implementation("info.picocli:picocli:4.0.0-alpha-2")
+
     // Testing
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.3.2")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.3.2")
@@ -42,7 +45,7 @@ dependencies {
 }
 
 application {
-    mainClassName = "xyz.leutgeb.lorenz.logs.App"
+    mainClassName = "xyz.leutgeb.lorenz.logs.Main"
 }
 
 tasks.withType<JavaCompile> {
@@ -75,6 +78,9 @@ tasks.withType<Wrapper> {
     gradleVersion = "5.3"
     distributionType = Wrapper.DistributionType.ALL
 }
+
+// Aggresively format code when building.
+tasks["build"].dependsOn("spotlessJavaApply")
 
 buildScan {
     termsOfServiceUrl = "https://gradle.com/terms-of-service"

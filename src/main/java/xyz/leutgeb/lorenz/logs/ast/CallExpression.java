@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -71,5 +72,18 @@ public class CallExpression extends Expression {
         + " ["
         + parameters.stream().map(Object::toString).collect(Collectors.joining(", "))
         + "])";
+  }
+
+  @Override
+  public void printTo(PrintStream out, int indentation) {
+    name.printTo(out, indentation);
+    out.print(" ");
+
+    for (int i = 0; i < parameters.size(); i++) {
+      parameters.get(i).printTo(out, indentation);
+      if (i < parameters.size() - 1) {
+        out.print(" ");
+      }
+    }
   }
 }

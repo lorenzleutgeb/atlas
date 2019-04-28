@@ -1,5 +1,7 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import java.io.PrintStream;
+
 public enum ComparisonOperator {
   EQ("=="),
   NE("!="),
@@ -21,5 +23,9 @@ public enum ComparisonOperator {
       }
     }
     throw new IllegalArgumentException();
+  }
+
+  public void printTo(PrintStream out) {
+    out.print(token);
   }
 }

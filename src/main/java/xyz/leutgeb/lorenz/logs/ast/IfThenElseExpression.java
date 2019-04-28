@@ -1,5 +1,8 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import static xyz.leutgeb.lorenz.logs.Util.indent;
+
+import java.io.PrintStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
@@ -47,7 +50,7 @@ public class IfThenElseExpression extends Expression {
   @Override
   public Expression normalize(Stack<Pair<Identifier, Expression>> context) {
     return new IfThenElseExpression(
-        source, (BooleanExpression) condition.normalize(context), truthy, falsy);
+        source, (BooleanExpression) condition.normalize(context), truthy.normalizeAndBind(), falsy.normalizeAndBind());
   }
 
   @Override
@@ -83,5 +86,19 @@ public class IfThenElseExpression extends Expression {
     }
 
     return new AnnotatedType(infer(context), truthyCA);
+  }
+
+  @Override
+  public void printTo(PrintStream out, int indentation) {
+    out.print("if ");
+    condition.printTo(out, indentation);
+    out.println();
+    indent(out, indentation);
+    out.print("then ");
+    truthy.printTo(out, indentation + 1);
+    out.println();
+    indent(out, indentation);
+    out.print("else ");
+    falsy.printTo(out, indentation + 1);
   }
 }

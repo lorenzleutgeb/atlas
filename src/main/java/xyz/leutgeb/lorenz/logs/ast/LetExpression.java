@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import java.io.PrintStream;
 import java.util.Stack;
 import java.util.stream.Stream;
 import lombok.Data;
@@ -9,6 +10,8 @@ import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.type.TypeError;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
+
+import static xyz.leutgeb.lorenz.logs.Util.indent;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -46,5 +49,17 @@ public class LetExpression extends Expression {
   public Expression normalize(Stack<Pair<Identifier, Expression>> context) {
     Stack<Pair<Identifier, Expression>> sub = new Stack<>();
     return new LetExpression(source, declared, value.normalize(sub), body).bindAll(sub);
+  }
+
+  @Override
+  public void printTo(PrintStream out, int indentation) {
+    out.print("let ");
+    out.print(declared);
+    out.print(" = ");
+    value.printTo(out, indentation + 1);
+    out.println();
+    indent(out, indentation);
+    out.print("in ");
+    body.printTo(out, indentation + 1);
   }
 }

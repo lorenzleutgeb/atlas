@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import java.io.PrintStream;
 import java.util.Stack;
 import java.util.stream.Stream;
 import org.hipparchus.util.Pair;
@@ -64,5 +65,12 @@ public abstract class Expression extends Syntax {
   public Expression normalizeAndBind() {
     var context = new Stack<Pair<Identifier, Expression>>();
     return normalize(context).bindAll(context);
+  }
+
+  public void printTo(PrintStream out, int indentation) {
+    for (int i = 0; i < indentation; i++) {
+      out.print("\t");
+    }
+    out.println(toString());
   }
 }

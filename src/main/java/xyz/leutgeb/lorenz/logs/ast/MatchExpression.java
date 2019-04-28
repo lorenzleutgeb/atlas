@@ -1,5 +1,8 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import static xyz.leutgeb.lorenz.logs.Util.indent;
+
+import java.io.PrintStream;
 import java.util.List;
 import java.util.Optional;
 import java.util.Stack;
@@ -31,12 +34,15 @@ public class MatchExpression extends Expression {
     this.cases = cases;
     Optional<Case> nilCase =
         cases.stream().filter(x -> x.getMatcher().equals(Identifier.NIL)).findAny();
-    if (nilCase.isEmpty()) {
+    if (nilCase.isEmpty() && this.cases.size() == 1) {
       log.info("Adding case `nil -> nil` to match " + source);
       this.cases.add(new Case(Derived.desugar(source), Identifier.NIL, Identifier.NIL));
     }
     if (this.cases.size() != 2) {
-      throw new IllegalArgumentException("exactly two cases are required for a match");
+      throw new IllegalArgumentException(
+          "exactly 2 cases are required for a match, however "
+              + this.cases.size()
+              + " were encountered");
     }
   }
 
@@ -95,7 +101,8 @@ public class MatchExpression extends Expression {
   @Override
   public Expression normalize(Stack<Pair<Identifier, Expression>> context) {
     if (test.isImmediate()) {
-      return this;
+      return new MatchExpression(
+              source, test, cases.stream().map(Case::normalize).collect(Collectors.toList()));
     }
 
     Identifier id = Identifier.getSugar();
@@ -117,7 +124,9 @@ public class MatchExpression extends Expression {
         cases.stream().filter(x -> !x.getMatcher().equals(Identifier.NIL)).findAny();
 
     if (nilCase.isEmpty() || nodeCase.isEmpty()) {
-      throw new IllegalStateException("case missing");
+      // TODO(lorenz.leutgeb): This is a too restrictive and throws too much. The fault probably is
+      // equality of nil identifiers. Investigate.
+      // throw new IllegalStateException("case missing");
     }
 
     // We have exactly two cases inside this match, being the two constructors of trees.
@@ -133,5 +142,25 @@ public class MatchExpression extends Expression {
     var sub = context.getConstraints().heuristic(typingContext.getSize() + 2);
 
     return super.inferAnnotations(context, typingContext);
+  }
+
+  @Override
+  public void printTo(PrintStream out, int indentation) {
+    out.print("match ");
+    test.printTo(out, indentation);
+    out.println(" with");
+
+    for (int i = 0; i < cases.size(); i++) {
+      // TODO(lorenz.leutgeb): Skip "nil -> nil".
+      var item = cases.get(i);
+      indent(out, indentation);
+      out.print("| ");
+      item.getMatcher().printTo(out, indentation + 1);
+      out.print(" -> ");
+      item.getBody().printTo(out, indentation + 1);
+      if (i < cases.size() - 1) {
+        out.println();
+      }
+    }
   }
 }

@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -80,5 +81,13 @@ public class FunctionDefinition {
         new Pair<>(
             new AnnotatedType(type.getFrom(), q), body.inferAnnotations(context, Annotation.EMPTY));
     return result;
+  }
+
+  public void printTo(PrintStream out) {
+    out.print(name);
+    out.print(" ");
+    out.print(arguments.stream().collect(Collectors.joining(" ")));
+    out.print(" = ");
+    body.printTo(out, 1);
   }
 }

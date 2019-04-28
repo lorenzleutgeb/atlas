@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import java.io.PrintStream;
 import java.util.List;
 import java.util.Stack;
 import java.util.stream.Stream;
@@ -94,5 +95,17 @@ public class Tuple extends TupleElement {
     }
 
     return new AnnotatedType(infer(context), result);
+  }
+
+  @Override
+  public void printTo(PrintStream out, int indentation) {
+    out.print("(");
+    for (int i = 0; i < elements.size(); i++) {
+      elements.get(i).printTo(out, indentation);
+      if (i < elements.size() - 1) {
+        out.print(", ");
+      }
+    }
+    out.print(")");
   }
 }

@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.logs.ast;
 
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
+import java.io.PrintStream;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -133,5 +134,10 @@ public class Identifier extends TupleElement {
 
   public boolean isImmediate() {
     return true;
+  }
+
+  @Override
+  public void printTo(PrintStream out, int indentation) {
+    out.print(name);
   }
 }

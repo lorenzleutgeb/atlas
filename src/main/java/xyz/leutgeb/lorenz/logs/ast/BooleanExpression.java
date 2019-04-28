@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import java.io.PrintStream;
 import java.util.Stack;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
@@ -67,5 +68,14 @@ public class BooleanExpression extends Expression {
     }
 
     return new BooleanExpression(source, newLeft, operator, newRight);
+  }
+
+  @Override
+  public void printTo(PrintStream out, int indentation) {
+    left.printTo(out, indentation);
+    out.print(" ");
+    operator.printTo(out);
+    out.print(" ");
+    right.printTo(out, indentation);
   }
 }
