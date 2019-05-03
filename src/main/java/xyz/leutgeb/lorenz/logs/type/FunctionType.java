@@ -7,12 +7,13 @@ import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
+import xyz.leutgeb.lorenz.logs.unification.Generalizer;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 import xyz.leutgeb.lorenz.logs.unification.UnificiationProblem;
 
 @Value
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = false)
 @RequiredArgsConstructor
 public class FunctionType extends Type {
   ProductType from;
@@ -35,7 +36,7 @@ public class FunctionType extends Type {
     return List.of(new Equivalence(from, ft.from), new Equivalence(to, ft.to));
   }
 
-  public Type substitute(UnificationVariable v, Type t) {
+  public Type substitute(TypeVariable v, Type t) {
     return new FunctionType((ProductType) from.substitute(v, t), to.substitute(v, t));
   }
 
@@ -44,13 +45,13 @@ public class FunctionType extends Type {
   }
 
   @Override
-  public Type wiggle(Map<TypeVar, UnificationVariable> wiggled, UnificiationProblem context) {
+  public Type wiggle(Map<TypeVariable, UnificationVariable> wiggled, UnificiationProblem context) {
     return new FunctionType(
         (ProductType) from.wiggle(wiggled, context), to.wiggle(wiggled, context));
   }
 
   @Override
   public String toString() {
-    return "(" + from + " → " + to + ")";
+    return "(" + from + " -> " + to + ")";
   }
 }

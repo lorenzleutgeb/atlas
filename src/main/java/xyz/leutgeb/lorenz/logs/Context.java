@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.logs;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.Value;
 import lombok.extern.log4j.Log4j2;
 import xyz.leutgeb.lorenz.logs.resources.Constraints;
@@ -9,7 +10,7 @@ import xyz.leutgeb.lorenz.logs.type.BoolType;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.unification.UnificiationProblem;
 
-// TODO(lorenz.leutgeb): Use separate context classes for simple type inference
+// TODO(lorenz.leutgeb): Use separate context classes for simple signature inference
 // and constraint generation.
 @Log4j2
 @Value
@@ -34,7 +35,7 @@ public class Context {
    */
   Map<String, Type> mapping;
 
-  /** For simple type inference. */
+  /** For simple signature inference. */
   UnificiationProblem problem;
 
   /** For constructing resource constraints. */
@@ -60,11 +61,19 @@ public class Context {
   }
 
   public String toString() {
-    return "[" + this.problem.toString() + " " + this.mapping.toString() + "]";
+    return "["
+        + this.problem.toString()
+        + " {"
+        + this.mapping
+            .entrySet()
+            .stream()
+            .map(e -> e.getKey() + " :: " + e.getValue())
+            .collect(Collectors.joining(", "))
+        + "}]";
   }
 
-  /** Recursively looks up the type of some identifier (given as {@link String}). */
-  // TODO(lorenz.leutgeb): This behaves differently in simple type inference and in constraint
+  /** Recursively looks up the signature of some identifier (given as {@link String}). */
+  // TODO(lorenz.leutgeb): This behaves differently in simple signature inference and in constraint
   // generation.
   public Type lookup(String key) {
     Type t = mapping.get(key);
@@ -83,6 +92,10 @@ public class Context {
   }
 
   public void put(String key, Type value) {
+    if ("nil".equals(key) || "_".equals(key)) {
+      return;
+    }
+
     if (lookup(key) != null) {
       log.info("Hiding " + key);
     }

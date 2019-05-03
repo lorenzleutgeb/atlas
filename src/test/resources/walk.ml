@@ -1,0 +1,1 @@
+walk x = match y with | (_, y, _) -> y

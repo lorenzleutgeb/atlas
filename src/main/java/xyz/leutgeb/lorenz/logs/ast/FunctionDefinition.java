@@ -10,6 +10,7 @@ import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatedType;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
+import xyz.leutgeb.lorenz.logs.type.FunctionSignature;
 import xyz.leutgeb.lorenz.logs.type.FunctionType;
 import xyz.leutgeb.lorenz.logs.type.TreeType;
 import xyz.leutgeb.lorenz.logs.type.Type;
@@ -21,11 +22,11 @@ public class FunctionDefinition {
   private final String name;
   private final List<String> arguments;
   private final Expression body;
-  private FunctionType type;
+  private FunctionSignature signature;
 
-  public FunctionType infer(Context context) throws UnificationError, TypeError {
-    if (type != null) {
-      return type;
+  public FunctionSignature infer(Context context) throws UnificationError, TypeError {
+    if (signature != null) {
+      return signature;
     }
 
     var sub = context.child();
@@ -44,11 +45,13 @@ public class FunctionDefinition {
     sub.getProblem().add(to, body.infer(sub));
 
     // Now we are set for unification!
-    var solution = sub.getProblem().solveAndGeneralize();
+    var solution = sub.getProblem().solveAndGeneralize(result);
 
-    type = (FunctionType) solution.apply(result);
+    signature =
+        new FunctionSignature(
+            (FunctionType) solution.apply(result), sub.getProblem().getConstraints());
     body.resolveType(solution);
-    return type;
+    return signature;
   }
 
   public FunctionDefinition normalize() {
@@ -58,11 +61,13 @@ public class FunctionDefinition {
 
   public Pair<AnnotatedType, AnnotatedType> inferAnnotation(Context context)
       throws UnificationError, TypeError {
-    if (type == null) {
+    if (signature == null) {
       throw new IllegalStateException();
     }
     var trees =
-        type.getFrom()
+        signature
+            .getType()
+            .getFrom()
             .getElements()
             .stream()
             .filter(x -> x instanceof TreeType)
@@ -73,13 +78,14 @@ public class FunctionDefinition {
     // }
     var constraints = context.getConstraints();
     var q = constraints.heuristic(trees.size());
-    if (!(type.getTo() instanceof TreeType)) {
+    if (!(signature.getType().getTo() instanceof TreeType)) {
       throw new UnsupportedOperationException(
           "analysis is only supported for functions that return a tree");
     }
     var result =
         new Pair<>(
-            new AnnotatedType(type.getFrom(), q), body.inferAnnotations(context, Annotation.EMPTY));
+            new AnnotatedType(signature.getType().getFrom(), q),
+            body.inferAnnotations(context, Annotation.EMPTY));
     return result;
   }
 

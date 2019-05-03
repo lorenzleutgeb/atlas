@@ -1,3 +1,3 @@
 package xyz.leutgeb.lorenz.logs.resources;
 
-public class Constraint {}
+public abstract class Constraint {}

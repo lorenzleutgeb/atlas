@@ -15,4 +15,9 @@ public class BoolType extends Type {
     }
     return Collections.emptyList();
   }
+
+  @Override
+  public String toString() {
+    return "Bool";
+  }
 }

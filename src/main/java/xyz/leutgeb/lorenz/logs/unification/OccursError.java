@@ -9,6 +9,6 @@ public class OccursError extends UnificationError {
   private final Type b;
 
   public String getMessage() {
-    return "Cannot create infinite type " + this.a.toString() + " = " + this.b.toString();
+    return "Cannot create infinite signature " + this.a.toString() + " = " + this.b.toString();
   }
 }

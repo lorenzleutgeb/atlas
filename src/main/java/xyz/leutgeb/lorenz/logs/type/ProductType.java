@@ -8,12 +8,13 @@ import java.util.stream.Collectors;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
+import xyz.leutgeb.lorenz.logs.unification.Generalizer;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 import xyz.leutgeb.lorenz.logs.unification.UnificiationProblem;
 
 @Value
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = false)
 public class ProductType extends Type {
   List<Type> elements;
 
@@ -34,7 +35,7 @@ public class ProductType extends Type {
   }
 
   @Override
-  public Type substitute(UnificationVariable v, Type t) {
+  public Type substitute(TypeVariable v, Type t) {
     return new ProductType(
         elements.stream().map(x -> x.substitute(v, t)).collect(Collectors.toList()));
   }
@@ -46,7 +47,7 @@ public class ProductType extends Type {
   }
 
   @Override
-  public Type wiggle(Map<TypeVar, UnificationVariable> wiggled, UnificiationProblem context) {
+  public Type wiggle(Map<TypeVariable, UnificationVariable> wiggled, UnificiationProblem context) {
     return new ProductType(
         elements.stream().map(x -> x.wiggle(wiggled, context)).collect(Collectors.toList()));
   }

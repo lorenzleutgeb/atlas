@@ -33,10 +33,10 @@ public class MatchExpression extends Expression {
     this.test = test;
     this.cases = cases;
     Optional<Case> nilCase =
-        cases.stream().filter(x -> x.getMatcher().equals(Identifier.NIL)).findAny();
+        cases.stream().filter(x -> x.getMatcher().equals(Identifier.nil())).findAny();
     if (nilCase.isEmpty() && this.cases.size() == 1) {
-      log.info("Adding case `nil -> nil` to match " + source);
-      this.cases.add(new Case(Derived.desugar(source), Identifier.NIL, Identifier.NIL));
+      // log.info("Adding case `nil -> nil` to match " + source);
+      this.cases.add(new Case(Derived.desugar(source), Identifier.nil(), Identifier.nil()));
     }
     if (this.cases.size() != 2) {
       throw new IllegalArgumentException(
@@ -63,8 +63,9 @@ public class MatchExpression extends Expression {
       var matcher = it.getMatcher();
       var body = it.getBody();
 
-      // The matcher is an identifier. We therefore create a new context, add a type variable for it
-      // and decompose with the type of test.
+      // The matcher is an identifier. We therefore create a new context, add a signature variable
+      // for it
+      // and decompose with the signature of test.
       if (matcher instanceof Identifier) {
         var id = (Identifier) matcher;
         var sub = context.child();
@@ -102,7 +103,7 @@ public class MatchExpression extends Expression {
   public Expression normalize(Stack<Pair<Identifier, Expression>> context) {
     if (test.isImmediate()) {
       return new MatchExpression(
-              source, test, cases.stream().map(Case::normalize).collect(Collectors.toList()));
+          source, test, cases.stream().map(Case::normalize).collect(Collectors.toList()));
     }
 
     Identifier id = Identifier.getSugar();
@@ -151,8 +152,10 @@ public class MatchExpression extends Expression {
     out.println(" with");
 
     for (int i = 0; i < cases.size(); i++) {
-      // TODO(lorenz.leutgeb): Skip "nil -> nil".
       var item = cases.get(i);
+      if (item.getMatcher().equals(Identifier.NIL) && item.getBody().equals(Identifier.NIL)) {
+        continue;
+      }
       indent(out, indentation);
       out.print("| ");
       item.getMatcher().printTo(out, indentation + 1);

@@ -1,5 +1,7 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import static xyz.leutgeb.lorenz.logs.Util.indent;
+
 import java.io.PrintStream;
 import java.util.Stack;
 import java.util.stream.Stream;
@@ -10,8 +12,6 @@ import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.type.TypeError;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
-
-import static xyz.leutgeb.lorenz.logs.Util.indent;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -54,7 +54,7 @@ public class LetExpression extends Expression {
   @Override
   public void printTo(PrintStream out, int indentation) {
     out.print("let ");
-    out.print(declared);
+    declared.printTo(out, indentation);
     out.print(" = ");
     value.printTo(out, indentation + 1);
     out.println();

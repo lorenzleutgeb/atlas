@@ -4,16 +4,15 @@ import java.util.Collection;
 import java.util.Collections;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import xyz.leutgeb.lorenz.logs.type.Generalizer;
+import xyz.leutgeb.lorenz.logs.Util;
 import xyz.leutgeb.lorenz.logs.type.Type;
+import xyz.leutgeb.lorenz.logs.type.TypeVariable;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class UnificationVariable extends Type {
-  private final int id;
-
-  public String toString() {
-    return "u" + this.id;
+public class UnificationVariable extends TypeVariable {
+  public UnificationVariable(int id) {
+    super("?" + Util.generateSubscript(id));
   }
 
   public Type generalize(Generalizer g) {
@@ -25,7 +24,12 @@ public class UnificationVariable extends Type {
     return Collections.emptyList();
   }
 
-  public Type substitute(UnificationVariable v, Type t) {
+  public Type substitute(TypeVariable v, Type t) {
     return v.equals(this) ? t : this;
+  }
+
+  @Override
+  public String toString() {
+    return super.toString();
   }
 }

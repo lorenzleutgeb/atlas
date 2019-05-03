@@ -10,7 +10,11 @@ import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.type.BoolType;
 import xyz.leutgeb.lorenz.logs.type.Type;
+import xyz.leutgeb.lorenz.logs.type.TypeClass;
+import xyz.leutgeb.lorenz.logs.type.TypeConstraint;
 import xyz.leutgeb.lorenz.logs.type.TypeError;
+import xyz.leutgeb.lorenz.logs.type.TypeVariable;
+import xyz.leutgeb.lorenz.logs.unification.Substitution;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 @Value
@@ -38,11 +42,25 @@ public class BooleanExpression extends Expression {
 
   @Override
   public Type inferInternal(Context context) throws UnificationError, TypeError {
-    // The next two lines remove polymorphism in favor of the "abstract base type".
+    // The next two lines remove polymorphism in favor of the "abstract base signature".
     // context.getProblem().add(right.infer(context), BaseType.INSTANCE);
     // context.getProblem().add(left.infer(context), BaseType.INSTANCE);
 
-    context.getProblem().add(right.infer(context), left.infer(context));
+    var ty = context.getProblem().fresh();
+    context.getProblem().add(right.infer(context), ty);
+    context.getProblem().add(left.infer(context), ty);
+
+    if (operator == ComparisonOperator.EQ || operator == ComparisonOperator.NE) {
+      context
+          .getProblem()
+          .addConstraint(
+              new TypeConstraint(TypeClass.EQ, new Substitution(TypeVariable.GAMMA, ty)));
+    } else {
+      context
+          .getProblem()
+          .addConstraint(
+              new TypeConstraint(TypeClass.ORD, new Substitution(TypeVariable.GAMMA, ty)));
+    }
     return BoolType.INSTANCE;
   }
 

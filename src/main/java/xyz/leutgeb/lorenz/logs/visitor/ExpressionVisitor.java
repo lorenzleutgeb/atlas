@@ -3,9 +3,9 @@ package xyz.leutgeb.lorenz.logs.visitor;
 import static java.util.stream.Collectors.toList;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import xyz.leutgeb.lorenz.logs.antlr.SplayBaseVisitor;
 import xyz.leutgeb.lorenz.logs.antlr.SplayParser;
 import xyz.leutgeb.lorenz.logs.ast.BooleanExpression;
 import xyz.leutgeb.lorenz.logs.ast.CallExpression;
@@ -20,29 +20,22 @@ import xyz.leutgeb.lorenz.logs.ast.Tuple;
 import xyz.leutgeb.lorenz.logs.ast.TupleElement;
 
 public class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
-  private final BooleanExpressionVisitor booleanExpressionVisitor = new BooleanExpressionVisitor();
-
   public ExpressionVisitor(String sourceName) {
     super(sourceName);
-  }
-
-  private final class BooleanExpressionVisitor extends SplayBaseVisitor<BooleanExpression> {
-    @Override
-    public BooleanExpression visitCondition(SplayParser.ConditionContext ctx) {
-      var l = ExpressionVisitor.this.visit(ctx.left);
-      var r = ExpressionVisitor.this.visit(ctx.right);
-      return new BooleanExpression(
-          getSource(ctx), l, ComparisonOperator.fromToken(ctx.op().getText()), r);
-    }
   }
 
   @Override
   public Expression visitIteExpression(SplayParser.IteExpressionContext ctx) {
     return new IfThenElseExpression(
-        getSource(ctx),
-        booleanExpressionVisitor.visitCondition(ctx.condition()),
-        visit(ctx.truthy),
-        visit(ctx.falsy));
+        getSource(ctx), visit(ctx.condition()), visit(ctx.truthy), visit(ctx.falsy));
+  }
+
+  @Override
+  public Expression visitComparison(SplayParser.ComparisonContext ctx) {
+    var l = ExpressionVisitor.this.visit(ctx.left);
+    var r = ExpressionVisitor.this.visit(ctx.right);
+    return new BooleanExpression(
+        getSource(ctx), l, ComparisonOperator.fromToken(ctx.op().getText()), r);
   }
 
   @Override
@@ -53,9 +46,10 @@ public class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
       SplayParser.ExpressionContext subExpressionContext = matchCase.expression();
       var subExpressionVisitor = new ExpressionVisitor(getSourceName());
       var subExpression = subExpressionVisitor.visit(subExpressionContext);
-      if (patternContext.tuple() != null && patternContext.IDENTIFIER() == null) {
-        cases.add(new Case(getSource(matchCase), visit(patternContext.tuple()), subExpression));
-      } else if (patternContext.tuple() == null && patternContext.IDENTIFIER() != null) {
+      if (patternContext.patternTuple() != null && patternContext.IDENTIFIER() == null) {
+        cases.add(
+            new Case(getSource(matchCase), visit(patternContext.patternTuple()), subExpression));
+      } else if (patternContext.patternTuple() == null && patternContext.IDENTIFIER() != null) {
         cases.add(
             new Case(
                 getSource(matchCase),
@@ -110,6 +104,16 @@ public class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
     return new Tuple(
         getSource(ctx),
         ctx.elements.stream().map(this::visitTupleElement).collect(Collectors.toList()));
+  }
+
+  @Override
+  public Tuple visitPatternTuple(SplayParser.PatternTupleContext ctx) {
+    return new Tuple(
+        getSource(ctx),
+        Arrays.asList(
+            Identifier.get(ctx.left.getText(), getSource(ctx)),
+            Identifier.get(ctx.middle.getText(), getSource(ctx)),
+            Identifier.get(ctx.right.getText(), getSource(ctx))));
   }
 
   @Override

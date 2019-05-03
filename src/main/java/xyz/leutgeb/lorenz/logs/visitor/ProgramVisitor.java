@@ -1,6 +1,8 @@
 package xyz.leutgeb.lorenz.logs.visitor;
 
-import java.util.stream.Collectors;
+import static java.util.stream.Collectors.toMap;
+
+import java.util.LinkedHashMap;
 import lombok.RequiredArgsConstructor;
 import xyz.leutgeb.lorenz.logs.antlr.SplayBaseVisitor;
 import xyz.leutgeb.lorenz.logs.antlr.SplayParser;
@@ -15,7 +17,13 @@ public class ProgramVisitor extends SplayBaseVisitor<Program> {
     return new Program(
         ctx.func()
             .stream()
-            .map((new FunctionDefinitionVisitor(sourceName))::visit)
-            .collect(Collectors.toList()));
+            .collect(
+                toMap(
+                    (SplayParser.FuncContext x) -> x.name.getText(),
+                    (new FunctionDefinitionVisitor(sourceName))::visit,
+                    (a, b) -> {
+                      throw new RuntimeException("clashing function definitions");
+                    },
+                    LinkedHashMap::new)));
   }
 }

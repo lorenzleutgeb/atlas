@@ -26,7 +26,8 @@ public abstract class Expression extends Syntax {
 
   public Type infer(Context context) throws UnificationError, TypeError {
     if (this.type == null) {
-      this.type = inferInternal(context);
+      Type inferred = inferInternal(context);
+      this.type = inferred;
     }
     return this.type;
   }

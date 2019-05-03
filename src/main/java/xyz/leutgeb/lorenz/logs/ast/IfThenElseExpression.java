@@ -9,25 +9,32 @@ import java.util.Stack;
 import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.extern.log4j.Log4j2;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatedType;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.logs.type.BoolType;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.type.TypeError;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
+@Log4j2
 public class IfThenElseExpression extends Expression {
-  private final BooleanExpression condition;
+  private final Expression condition;
   private final Expression truthy;
   private final Expression falsy;
 
   public IfThenElseExpression(
-      Source source, BooleanExpression condition, Expression truthy, Expression falsy) {
+      Source source, Expression condition, Expression truthy, Expression falsy) {
     super(source);
+    if (!(condition instanceof BooleanExpression)) {
+      log.warn(
+          "Encountered an if-then-else expression which does not use a simple comparison as condition. Resource bound inference will not work.");
+    }
     this.condition = condition;
     this.truthy = truthy;
     this.falsy = falsy;
@@ -43,14 +50,14 @@ public class IfThenElseExpression extends Expression {
     var result = context.getProblem().fresh();
     context.getProblem().add(result, truthy.infer(context));
     context.getProblem().add(result, falsy.infer(context));
-    condition.infer(context);
+    context.getProblem().add(BoolType.INSTANCE, condition.infer(context));
     return result;
   }
 
   @Override
   public Expression normalize(Stack<Pair<Identifier, Expression>> context) {
     return new IfThenElseExpression(
-        source, (BooleanExpression) condition.normalize(context), truthy.normalizeAndBind(), falsy.normalizeAndBind());
+        source, condition.normalize(context), truthy.normalizeAndBind(), falsy.normalizeAndBind());
   }
 
   @Override
@@ -74,9 +81,8 @@ public class IfThenElseExpression extends Expression {
     }
 
     for (Map.Entry<List<Integer>, Coefficient> entry :
-        ((Annotation) truthyAnnotation.getAnnotation()).getCoefficients().entrySet()) {
-      var other =
-          ((Annotation) falsyAnnotation.getAnnotation()).getCoefficients().get(entry.getKey());
+        truthyAnnotation.getAnnotation().getCoefficients().entrySet()) {
+      var other = falsyAnnotation.getAnnotation().getCoefficients().get(entry.getKey());
 
       if (other == null) {
         throw new UnsupportedOperationException("some coefficient is missing from falsy");

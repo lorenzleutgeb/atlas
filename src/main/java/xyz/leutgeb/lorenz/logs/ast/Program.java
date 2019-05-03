@@ -1,68 +1,60 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
 import java.io.PrintStream;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import xyz.leutgeb.lorenz.logs.Context;
-import xyz.leutgeb.lorenz.logs.type.Type;
+import xyz.leutgeb.lorenz.logs.type.FunctionSignature;
 import xyz.leutgeb.lorenz.logs.type.TypeError;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 @RequiredArgsConstructor
 public class Program {
-  private Map<FunctionDefinition, Type> signature;
+  @Getter private final Map<String, FunctionDefinition> functionDefinitions;
 
-  @Getter private final List<FunctionDefinition> functionDefinitions;
-
-  public Map<FunctionDefinition, Type> getSimpleSignature() throws UnificationError, TypeError {
-    if (signature == null) {
-      signature = new HashMap<>(functionDefinitions.size());
-      var ctx = Context.root();
-      for (var fd : functionDefinitions) {
-        var sub = ctx.child();
-        fd = fd.normalize();
-        Type t = fd.infer(sub);
-        signature.put(fd, t);
-        ctx.put(fd.getName(), t);
-      }
+  public void infer() throws UnificationError, TypeError {
+    normalize();
+    var ctx = Context.root();
+    for (var e : functionDefinitions.entrySet()) {
+      var sub = ctx.child();
+      var fd = e.getValue();
+      FunctionSignature t = fd.infer(sub);
+      ctx.put(fd.getName(), t.getType());
     }
-    return signature;
   }
 
-  public Map<FunctionDefinition, Type> getSignature() throws UnificationError, TypeError {
-    if (signature == null) {
-      signature = new HashMap<>(functionDefinitions.size());
-      var ctx = Context.root();
-      for (var fd : functionDefinitions) {
-        var sub = ctx.child();
-        fd = fd.normalize();
-        Type t = fd.infer(sub);
-        var at = fd.inferAnnotation(sub);
-        signature.put(fd, t);
-        ctx.put(fd.getName(), t);
-      }
+  public void solve() throws UnificationError, TypeError {
+    var ctx = Context.root();
+    for (var e : functionDefinitions.entrySet()) {
+      var sub = ctx.child();
+      var fd = e.getValue();
+      var at = fd.inferAnnotation(sub);
     }
-    return signature;
   }
 
   public void printTo(PrintStream out) {
+    printTo(out, true);
+  }
+
+  public void printTo(PrintStream out, boolean printFunctionSignatures) {
     try {
-      for (var entry : getSimpleSignature().entrySet()) {
-        var name = entry.getKey().getName();
-        out.println(name + " : " + entry.getValue());
-        entry.getKey().printTo(out);
+      infer();
+    } catch (UnificationError | TypeError unificationError) {
+      throw new RuntimeException(unificationError);
+    }
+    for (var entry : functionDefinitions.entrySet()) {
+      var name = entry.getKey();
+      if (printFunctionSignatures) {
+        out.print(name + " :: ");
+        out.println(entry.getValue().getSignature());
       }
-    } catch (UnificationError | TypeError e) {
-      throw new RuntimeException(e);
+      entry.getValue().printTo(out);
+      out.println();
     }
   }
 
   public void normalize() {
-    for (int i = 0; i < functionDefinitions.size(); i++) {
-      functionDefinitions.set(i, functionDefinitions.get(i).normalize());
-    }
+    functionDefinitions.replaceAll((k, v) -> v.normalize());
   }
 }

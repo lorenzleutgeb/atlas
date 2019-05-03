@@ -1,14 +1,19 @@
 package xyz.leutgeb.lorenz.logs.unification;
 
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.ListIterator;
+import java.util.Set;
 import java.util.stream.Collectors;
-import xyz.leutgeb.lorenz.logs.type.Generalizer;
+import lombok.Getter;
 import xyz.leutgeb.lorenz.logs.type.Type;
+import xyz.leutgeb.lorenz.logs.type.TypeConstraint;
 
 public class UnificiationProblem {
   private final LinkedList<Equivalence> equivalences = new LinkedList<>();
-  private final Substitution solution = new Substitution();
+
+  @Getter private Set<TypeConstraint> constraints = new HashSet<>();
+  private Substitution solution = new Substitution();
 
   private int freshness = 0;
 
@@ -49,16 +54,35 @@ public class UnificiationProblem {
       e.occurs();
       substitute(left, e.getRight());
       solution.substitute(left, e.getRight());
-      solution.add(left, e.getRight());
+      // solution = solution.compose(left, e.getRight());
+      constraints =
+          constraints
+              .stream()
+              .map(x -> x.apply(solution))
+              .collect(Collectors.toCollection(HashSet::new));
     }
+    var minimizedConstraints = new HashSet<TypeConstraint>();
+    for (var constraint : constraints) {
+      minimizedConstraints.removeIf(x -> !x.equals(constraint) && constraint.implies(x));
+      if (minimizedConstraints.stream().noneMatch(x -> x.implies(constraint))) {
+        minimizedConstraints.add(constraint);
+      }
+    }
+    constraints = minimizedConstraints;
     return solution;
   }
 
-  public Substitution solveAndGeneralize() throws UnificationError {
+  public Substitution solveAndGeneralize(Type generalizationBase) throws UnificationError {
     final var result = solve();
-    final var generalizer = new Generalizer();
-    result.generalize(generalizer);
-    return result;
+    var subsGenBase = result.apply(generalizationBase);
+    var generalizer = new Generalizer();
+    subsGenBase.generalize(generalizer);
+    constraints =
+        constraints
+            .stream()
+            .map(x -> x.apply(result))
+            .collect(Collectors.toCollection(HashSet::new));
+    return result.compose(generalizer.toSubstitution());
   }
 
   private void substitute(UnificationVariable variable, Type result) {
@@ -70,5 +94,9 @@ public class UnificiationProblem {
 
   public UnificationVariable fresh() {
     return new UnificationVariable(freshness++);
+  }
+
+  public void addConstraint(TypeConstraint tc) {
+    constraints.add(tc);
   }
 }

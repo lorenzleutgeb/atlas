@@ -10,25 +10,31 @@ program: (func)* EOF;
 func: name=IDENTIFIER (args+=IDENTIFIER)* ASSIGN body=expression ;
 
 // Expressions
-expression : IDENTIFIER # identifier
+expression : (IDENTIFIER | DERIVED_IDENTIFIER) # identifier
            | IF condition THEN truthy=expression ELSE falsy=expression # iteExpression
            | MATCH expression WITH cases+=matchCase+ # matchExpression
            | tuple # tupleExpression
            | name=IDENTIFIER (params+=expression)* # callExpression
-           | LET name=IDENTIFIER ASSIGN value=expression IN body=expression # letExpression
+           | LET name=(IDENTIFIER | DERIVED_IDENTIFIER) ASSIGN value=expression IN body=expression # letExpression
            | PAREN_OPEN expression PAREN_CLOSE # parenthesizedExpression
+//           | NUMBER # constant
            ;
 
 // Conditions are expressed by comparing two expressions.
-condition : left=expression op right=expression ;
+condition : left=expression op right=expression # comparison | expression # booleanExpression ;
 op : EQ | NE | LT | LE | GT | GE ;
 
 matchCase : OR pattern ARROW expression ;
 
-pattern : IDENTIFIER | tuple ;
+// For match expression we only admit simpler tuples:
+//  - non-recursive, i.e. it is only possible to match one level of a tree
+//  - no derived identifiers
+//  - anonymous identifiers are allowed
+pattern : (IDENTIFIER | ANONYMOUS_IDENTIFIER) | patternTuple ;
+patternTuple : PAREN_OPEN left=(IDENTIFIER | ANONYMOUS_IDENTIFIER) COMMA middle=(IDENTIFIER | ANONYMOUS_IDENTIFIER) COMMA right=(IDENTIFIER | ANONYMOUS_IDENTIFIER) PAREN_CLOSE;
 
 tuple: PAREN_OPEN elements+=tupleElement? (COMMA elements+=tupleElement)* PAREN_CLOSE ;
-tupleElement: tuple | IDENTIFIER ;
+tupleElement: tuple | IDENTIFIER | NUMBER ;
 
 ANONYMOUS_IDENTIFIER : '_';
 DOT : '.';
@@ -61,17 +67,22 @@ IN : 'in';
 IF : 'if';
 THEN : 'then';
 ELSE : 'else';
-ARROW : '->';
+ARROW : '->' | '→' ;
 MATCH : 'match';
 WITH : 'with';
 LET : 'let';
 
-IDENTIFIER : ('a'..'z') ( 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' | '\'' )*;
+// TODO(lorenz.leutgeb): Add greek alphabet and lowercase letters.
+
+SUBSCRIPT_NUMBER : [\u2080-\u2089];
+DERIVED_IDENTIFIER : '∂' SUBSCRIPT_NUMBER+;
+IDENTIFIER : (('a'..'z' | '∂') ( 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' | '\'' )*);
 TYPE : ('A'..'Z') ( 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' )*;
 NUMBER : '0' | ('1'..'9') ('0'..'9')*;
 QUOTED_STRING : QUOTE ( '\\"' | . )*? QUOTE;
 
-COMMENT : '%' ~[\r\n]* -> channel(HIDDEN);
-MULTI_LINE_COMMEN : '%*' .*? '*%' -> channel(HIDDEN);
-BLANK : [ \t\r\n\f]+ -> channel(HIDDEN);
+// ML-style nested comments.
+COMMENT : '(*' (COMMENT|.)*? '*)' -> channel(HIDDEN) ;
+LINE_COMMENT  : '(*)' .*? '\n' -> channel(HIDDEN) ;
 
+BLANK : [ \t\r\n\f]+ -> channel(HIDDEN);

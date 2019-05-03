@@ -6,18 +6,19 @@ import java.util.Map;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
+import xyz.leutgeb.lorenz.logs.unification.Generalizer;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 import xyz.leutgeb.lorenz.logs.unification.UnificiationProblem;
 
 @Value
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = false)
 public class TreeType extends Type {
   Type elementType;
 
   @Override
   public String toString() {
-    return "(T " + elementType + ")";
+    return "(Tree " + elementType + ")";
   }
 
   @Override
@@ -31,12 +32,12 @@ public class TreeType extends Type {
   }
 
   @Override
-  public Type substitute(UnificationVariable v, Type t) {
+  public Type substitute(TypeVariable v, Type t) {
     return new TreeType(elementType.substitute(v, t));
   }
 
   @Override
-  public Type wiggle(Map<TypeVar, UnificationVariable> wiggled, UnificiationProblem context) {
+  public Type wiggle(Map<TypeVariable, UnificationVariable> wiggled, UnificiationProblem context) {
     return new TreeType(elementType.wiggle(wiggled, context));
   }
 
@@ -44,4 +45,25 @@ public class TreeType extends Type {
   public Type generalize(Generalizer g) {
     return new TreeType(elementType.generalize(g));
   }
+
+  /*
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    TreeType treeType = (TreeType) o;
+
+    return elementType != null ? elementType.equals(treeType.elementType) : treeType.elementType == null;
+  }
+
+  @Override
+  public int hashCode() {
+    return elementType != null ? elementType.hashCode() : 0;
+  }
+   */
 }
