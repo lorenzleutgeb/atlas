@@ -11,14 +11,14 @@ import lombok.NonNull;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.Util;
-import xyz.leutgeb.lorenz.logs.resources.AnnotatedType;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.type.TreeType;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.type.TypeError;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
+import xyz.leutgeb.lorenz.logs.values.TreeValue;
 
-public class Identifier extends TupleElement {
+public class Identifier extends Expression {
   public static final Identifier NIL = new Identifier(Predefined.INSTANCE, "nil");
   public static final Identifier TRUE = new Identifier(Predefined.INSTANCE, "true");
   public static final Identifier FALSE = new Identifier(Predefined.INSTANCE, "false");
@@ -55,7 +55,7 @@ public class Identifier extends TupleElement {
 
   @Override
   public String toString() {
-    return "(id " + name + ")";
+    return name;
   }
 
   @Override
@@ -72,7 +72,7 @@ public class Identifier extends TupleElement {
       return context.getProblem().fresh();
     }
 
-    Type ty = context.lookup(this.name);
+    Type ty = context.lookupType(this.name);
     if (ty == null) {
       throw new TypeError.NotInContext(this.name);
     } else {
@@ -86,10 +86,9 @@ public class Identifier extends TupleElement {
   }
 
   @Override
-  public AnnotatedType inferAnnotations(Context context, Annotation typingContext)
-      throws UnificationError, TypeError {
+  public Annotation inferAnnotations(Context context) throws UnificationError, TypeError {
     // Special case for nil, see rule (nil).
-    if (this == NIL) {
+    if (NIL.equals(this)) {
       var constraints = context.getConstraints();
       var result = constraints.heuristic(1);
 
@@ -107,7 +106,7 @@ public class Identifier extends TupleElement {
         }
       }
 
-      return new AnnotatedType(infer(context), result);
+      return result;
     }
 
     // Now, two other cases are left:
@@ -116,10 +115,12 @@ public class Identifier extends TupleElement {
     //  - non-tree variables or constants (like true/false)
     //    return a zero-valued annotation
 
-    // TODO(lorenz.leutgeb): How to handle tree variables?
+    if (getType() instanceof TreeType) {
+      return context.lookupAnnotation(name);
+    }
 
     // Handles non-tree variables and constants.
-    return new AnnotatedType(null, Annotation.EMPTY);
+    return Annotation.EMPTY;
   }
 
   public boolean isImmediate() {
@@ -148,5 +149,22 @@ public class Identifier extends TupleElement {
   @Override
   public int hashCode() {
     return name.hashCode();
+  }
+
+  @Override
+  public Object evaluate(Context context) {
+    if (name.equals(NIL.name)) {
+      return TreeValue.nil();
+    }
+    if (name.equals(ANONYMOUS.name)) {
+      throw new UnsupportedOperationException("the value of _ cannot be accessed");
+    }
+    if (name.equals(TRUE.name)) {
+      return true;
+    }
+    if (name.equals(FALSE.name)) {
+      return false;
+    }
+    return context.lookupType(name);
   }
 }

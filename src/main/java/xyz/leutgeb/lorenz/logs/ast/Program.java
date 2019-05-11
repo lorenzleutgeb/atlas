@@ -20,7 +20,7 @@ public class Program {
       var sub = ctx.child();
       var fd = e.getValue();
       FunctionSignature t = fd.infer(sub);
-      ctx.put(fd.getName(), t.getType());
+      ctx.putType(fd.getName(), t.getType());
     }
   }
 
@@ -30,6 +30,7 @@ public class Program {
       var sub = ctx.child();
       var fd = e.getValue();
       var at = fd.inferAnnotation(sub);
+      ctx.putAnnotation(fd.getName(), at.getSecond().getAnnotation());
     }
   }
 

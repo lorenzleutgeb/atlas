@@ -35,13 +35,13 @@ public class LetExpression extends Expression {
   @Override
   public Type inferInternal(Context context) throws UnificationError, TypeError {
     var declaredType = context.getProblem().fresh();
-    context.getProblem().add(declaredType, value.infer(context));
+    context.getProblem().add(this, declaredType, value.infer(context));
     var sub = context.child();
-    sub.put(declared.getName(), declaredType);
-    sub.getProblem().add(declaredType, declared.infer(sub));
+    sub.putType(declared.getName(), declaredType);
+    sub.getProblem().add(this, declaredType, declared.infer(sub));
 
     var result = context.getProblem().fresh();
-    sub.getProblem().add(result, body.infer(sub));
+    sub.getProblem().add(this, result, body.infer(sub));
     return result;
   }
 
@@ -57,9 +57,13 @@ public class LetExpression extends Expression {
     declared.printTo(out, indentation);
     out.print(" = ");
     value.printTo(out, indentation + 1);
+    // out.println();
+    // indent(out, indentation);
+    out.println(" in (");
+    indent(out, indentation);
+    body.printTo(out, indentation + 1);
     out.println();
     indent(out, indentation);
-    out.print("in ");
-    body.printTo(out, indentation + 1);
+    out.print(")");
   }
 }

@@ -14,7 +14,7 @@ public class RangeHeuristic implements AnnotationHeuristic {
   public Annotation generate(int size, Constraints context) {
     var result = new Annotation(size);
     for (int i = 0; i < size; i++) {
-      result.getRankCoeffients().set(i, context.unknown());
+      result.getRankCoefficients().set(i, context.unknown());
     }
 
     var span = new ArrayList<List<Integer>>(size);

@@ -3,21 +3,19 @@ package xyz.leutgeb.lorenz.logs.visitor;
 import static java.util.stream.Collectors.toList;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
+import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.antlr.SplayParser;
 import xyz.leutgeb.lorenz.logs.ast.BooleanExpression;
 import xyz.leutgeb.lorenz.logs.ast.CallExpression;
-import xyz.leutgeb.lorenz.logs.ast.Case;
 import xyz.leutgeb.lorenz.logs.ast.ComparisonOperator;
 import xyz.leutgeb.lorenz.logs.ast.Expression;
 import xyz.leutgeb.lorenz.logs.ast.Identifier;
 import xyz.leutgeb.lorenz.logs.ast.IfThenElseExpression;
 import xyz.leutgeb.lorenz.logs.ast.LetExpression;
 import xyz.leutgeb.lorenz.logs.ast.MatchExpression;
+import xyz.leutgeb.lorenz.logs.ast.Number;
 import xyz.leutgeb.lorenz.logs.ast.Tuple;
-import xyz.leutgeb.lorenz.logs.ast.TupleElement;
 
 public class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   public ExpressionVisitor(String sourceName) {
@@ -40,19 +38,17 @@ public class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
 
   @Override
   public Expression visitMatchExpression(SplayParser.MatchExpressionContext ctx) {
-    List<Case> cases = new ArrayList<>(ctx.cases.size());
+    List<Pair<Expression, Expression>> cases = new ArrayList<>(ctx.cases.size());
     for (SplayParser.MatchCaseContext matchCase : ctx.cases) {
       SplayParser.PatternContext patternContext = matchCase.pattern();
       SplayParser.ExpressionContext subExpressionContext = matchCase.expression();
       var subExpressionVisitor = new ExpressionVisitor(getSourceName());
       var subExpression = subExpressionVisitor.visit(subExpressionContext);
       if (patternContext.patternTuple() != null && patternContext.IDENTIFIER() == null) {
-        cases.add(
-            new Case(getSource(matchCase), visit(patternContext.patternTuple()), subExpression));
+        cases.add(new Pair<>(visit(patternContext.patternTuple()), subExpression));
       } else if (patternContext.patternTuple() == null && patternContext.IDENTIFIER() != null) {
         cases.add(
-            new Case(
-                getSource(matchCase),
+            new Pair<>(
                 Identifier.get(patternContext.IDENTIFIER().getText(), getSource(patternContext)),
                 subExpression));
       } else {
@@ -88,29 +84,19 @@ public class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   }
 
   @Override
-  public TupleElement visitTupleElement(SplayParser.TupleElementContext ctx) {
-    if (ctx.IDENTIFIER() != null) {
-      String variable = ctx.IDENTIFIER().getText();
-      return Identifier.get(variable);
-    }
-    if (ctx.tuple() != null) {
-      return visitTuple(ctx.tuple());
-    }
-    throw new IllegalStateException();
-  }
-
-  @Override
   public Tuple visitTuple(SplayParser.TupleContext ctx) {
-    return new Tuple(
-        getSource(ctx),
-        ctx.elements.stream().map(this::visitTupleElement).collect(Collectors.toList()));
+    var elements = new ArrayList<Expression>(3);
+    elements.add(visit(ctx.left));
+    elements.add(visit(ctx.middle));
+    elements.add(visit(ctx.right));
+    return new Tuple(getSource(ctx), elements);
   }
 
   @Override
   public Tuple visitPatternTuple(SplayParser.PatternTupleContext ctx) {
     return new Tuple(
         getSource(ctx),
-        Arrays.asList(
+        List.of(
             Identifier.get(ctx.left.getText(), getSource(ctx)),
             Identifier.get(ctx.middle.getText(), getSource(ctx)),
             Identifier.get(ctx.right.getText(), getSource(ctx))));
@@ -119,5 +105,10 @@ public class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   @Override
   public Expression visitParenthesizedExpression(SplayParser.ParenthesizedExpressionContext ctx) {
     return visit(ctx.expression());
+  }
+
+  @Override
+  public Expression visitConstant(SplayParser.ConstantContext ctx) {
+    return new Number(getSource(ctx), Integer.valueOf(ctx.NUMBER().getText()));
   }
 }

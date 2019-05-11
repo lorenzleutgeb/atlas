@@ -3,7 +3,6 @@ package xyz.leutgeb.lorenz.logs.unification;
 import static xyz.leutgeb.lorenz.logs.type.TypeVariable.GREEK;
 
 import java.util.HashMap;
-import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.type.TypeVariable;
 
 public class Generalizer {
@@ -13,7 +12,7 @@ public class Generalizer {
     this.mapping = new HashMap<>(GREEK.length);
   }
 
-  public Type generalize(UnificationVariable u) {
+  public TypeVariable generalize(UnificationVariable u) {
     return this.mapping.computeIfAbsent(
         u,
         k -> {

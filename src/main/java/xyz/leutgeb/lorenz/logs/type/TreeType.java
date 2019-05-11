@@ -8,17 +8,21 @@ import lombok.Value;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.Generalizer;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
+import xyz.leutgeb.lorenz.logs.unification.UnificationProblem;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
-import xyz.leutgeb.lorenz.logs.unification.UnificiationProblem;
 
 @Value
 @EqualsAndHashCode(callSuper = false)
 public class TreeType extends Type {
-  Type elementType;
+  TypeVariable elementType;
+
+  public TreeType(TypeVariable elementType) {
+    this.elementType = elementType;
+  }
 
   @Override
   public String toString() {
-    return "(Tree " + elementType + ")";
+    return "T " + elementType;
   }
 
   @Override
@@ -33,11 +37,15 @@ public class TreeType extends Type {
 
   @Override
   public Type substitute(TypeVariable v, Type t) {
-    return new TreeType(elementType.substitute(v, t));
+    Type substitute = elementType.substitute(v, t);
+    if (!(substitute instanceof TypeVariable)) {
+      throw new RuntimeException("this type of tree cannot be constructed");
+    }
+    return new TreeType((TypeVariable) substitute);
   }
 
   @Override
-  public Type wiggle(Map<TypeVariable, UnificationVariable> wiggled, UnificiationProblem context) {
+  public Type wiggle(Map<TypeVariable, UnificationVariable> wiggled, UnificationProblem context) {
     return new TreeType(elementType.wiggle(wiggled, context));
   }
 
@@ -46,24 +54,8 @@ public class TreeType extends Type {
     return new TreeType(elementType.generalize(g));
   }
 
-  /*
   @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    TreeType treeType = (TreeType) o;
-
-    return elementType != null ? elementType.equals(treeType.elementType) : treeType.elementType == null;
+  public boolean occurs(UnificationVariable b) {
+    return elementType.equals(b);
   }
-
-  @Override
-  public int hashCode() {
-    return elementType != null ? elementType.hashCode() : 0;
-  }
-   */
 }

@@ -17,7 +17,7 @@ expression : (IDENTIFIER | DERIVED_IDENTIFIER) # identifier
            | name=IDENTIFIER (params+=expression)* # callExpression
            | LET name=(IDENTIFIER | DERIVED_IDENTIFIER) ASSIGN value=expression IN body=expression # letExpression
            | PAREN_OPEN expression PAREN_CLOSE # parenthesizedExpression
-//           | NUMBER # constant
+           | NUMBER # constant
            ;
 
 // Conditions are expressed by comparing two expressions.
@@ -33,8 +33,8 @@ matchCase : OR pattern ARROW expression ;
 pattern : (IDENTIFIER | ANONYMOUS_IDENTIFIER) | patternTuple ;
 patternTuple : PAREN_OPEN left=(IDENTIFIER | ANONYMOUS_IDENTIFIER) COMMA middle=(IDENTIFIER | ANONYMOUS_IDENTIFIER) COMMA right=(IDENTIFIER | ANONYMOUS_IDENTIFIER) PAREN_CLOSE;
 
-tuple: PAREN_OPEN elements+=tupleElement? (COMMA elements+=tupleElement)* PAREN_CLOSE ;
-tupleElement: tuple | IDENTIFIER | NUMBER ;
+// The following definition of tuples is much more liberal.
+tuple: PAREN_OPEN left=expression COMMA middle=expression COMMA right=expression PAREN_CLOSE ;
 
 ANONYMOUS_IDENTIFIER : '_';
 DOT : '.';

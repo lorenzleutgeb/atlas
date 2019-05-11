@@ -4,14 +4,16 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.Generalizer;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
+import xyz.leutgeb.lorenz.logs.unification.UnificationProblem;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
-import xyz.leutgeb.lorenz.logs.unification.UnificiationProblem;
 
 @Value
 @EqualsAndHashCode(callSuper = false)
@@ -24,7 +26,7 @@ public class ProductType extends Type {
       throw new TypeMismatch(this, b);
     }
     var pt = (ProductType) b;
-    if (pt.elements.size() != elements.size()) {
+    if (pt.size() != elements.size()) {
       throw new TypeMismatch(this, b);
     }
     var result = new ArrayList<Equivalence>(elements.size());
@@ -36,24 +38,38 @@ public class ProductType extends Type {
 
   @Override
   public Type substitute(TypeVariable v, Type t) {
-    return new ProductType(
-        elements.stream().map(x -> x.substitute(v, t)).collect(Collectors.toList()));
+    return map(x -> x.substitute(v, t));
   }
 
   @Override
   public Type generalize(Generalizer g) {
-    return new ProductType(
-        elements.stream().map(x -> x.generalize(g)).collect(Collectors.toList()));
+    return map(x -> x.generalize(g));
   }
 
   @Override
-  public Type wiggle(Map<TypeVariable, UnificationVariable> wiggled, UnificiationProblem context) {
-    return new ProductType(
-        elements.stream().map(x -> x.wiggle(wiggled, context)).collect(Collectors.toList()));
+  public Type wiggle(Map<TypeVariable, UnificationVariable> wiggled, UnificationProblem context) {
+    return map(x -> x.wiggle(wiggled, context));
   }
 
   @Override
   public String toString() {
-    return "(" + elements.stream().map(Object::toString).collect(Collectors.joining(" ⨯ ")) + ")";
+    return "(" + stream().map(Object::toString).collect(Collectors.joining(" ⨯ ")) + ")";
+  }
+
+  @Override
+  public boolean occurs(UnificationVariable b) {
+    return stream().anyMatch(x -> x.occurs(b));
+  }
+
+  private ProductType map(Function<Type, Type> f) {
+    return new ProductType(stream().map(f).collect(Collectors.toList()));
+  }
+
+  public Stream<Type> stream() {
+    return elements.stream();
+  }
+
+  public int size() {
+    return elements.size();
   }
 }

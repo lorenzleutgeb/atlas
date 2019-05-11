@@ -1,9 +1,7 @@
-contains_unordered t a = match t with
+contains_unordered a t = match t with
     | (x, b, y) -> if b == a
         then true
-        (* The use of a call expression as condition is problematic since there are no
-         * rules on how to deal with that for resource bound inference. *)
-        else if contains_unordered x a
+        else if contains_unordered a x
             then true
-            else contains_unordered y a
+            else contains_unordered a y
     | nil -> false

@@ -6,10 +6,11 @@ import java.util.ListIterator;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Getter;
+import xyz.leutgeb.lorenz.logs.ast.Expression;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.type.TypeConstraint;
 
-public class UnificiationProblem {
+public class UnificationProblem {
   private final LinkedList<Equivalence> equivalences = new LinkedList<>();
 
   @Getter private Set<TypeConstraint> constraints = new HashSet<>();
@@ -25,8 +26,8 @@ public class UnificiationProblem {
    * @see #add(Equivalence)
    * @see Equivalence
    */
-  public void add(Type left, Type right) {
-    add(new Equivalence(left, right));
+  public void add(Expression justification, Type left, Type right) {
+    add(new Equivalence(left, right, justification));
   }
 
   @Override

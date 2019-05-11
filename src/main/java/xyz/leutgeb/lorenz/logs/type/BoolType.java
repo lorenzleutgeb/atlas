@@ -18,6 +18,6 @@ public class BoolType extends Type {
 
   @Override
   public String toString() {
-    return "Bool";
+    return "B";
   }
 }

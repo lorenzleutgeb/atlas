@@ -4,8 +4,9 @@ import java.util.Arrays;
 import java.util.Map;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import xyz.leutgeb.lorenz.logs.unification.Generalizer;
+import xyz.leutgeb.lorenz.logs.unification.UnificationProblem;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
-import xyz.leutgeb.lorenz.logs.unification.UnificiationProblem;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -33,7 +34,8 @@ public class TypeVariable extends Type {
   private final String name;
 
   @Override
-  public Type wiggle(Map<TypeVariable, UnificationVariable> wiggled, UnificiationProblem context) {
+  public UnificationVariable wiggle(
+      Map<TypeVariable, UnificationVariable> wiggled, UnificationProblem context) {
     return wiggled.computeIfAbsent(this, k -> context.fresh());
   }
 
@@ -48,5 +50,10 @@ public class TypeVariable extends Type {
 
   public String toString() {
     return name;
+  }
+
+  @Override
+  public TypeVariable generalize(Generalizer generalizer) {
+    return this;
   }
 }

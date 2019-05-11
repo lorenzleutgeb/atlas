@@ -1,11 +1,13 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import static xyz.leutgeb.lorenz.logs.Util.indent;
+
 import java.io.PrintStream;
 import java.util.Stack;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
-import xyz.leutgeb.lorenz.logs.resources.AnnotatedType;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.type.TypeError;
@@ -24,10 +26,13 @@ public abstract class Expression extends Syntax {
 
   protected abstract Type inferInternal(Context context) throws UnificationError, TypeError;
 
+  public Object evaluate(Context context) {
+    throw new UnsupportedOperationException();
+  }
+
   public Type infer(Context context) throws UnificationError, TypeError {
     if (this.type == null) {
-      Type inferred = inferInternal(context);
-      this.type = inferred;
+      this.type = inferInternal(context);
     }
     return this.type;
   }
@@ -38,18 +43,29 @@ public abstract class Expression extends Syntax {
     getChildren().forEach(x -> x.resolveType(substitution));
   }
 
+  public @Nonnull Type getType() {
+    if (type == null) {
+      throw new IllegalStateException("type has not been inferred yet");
+    }
+    return type;
+  }
+
   public boolean isTypeResolved() {
     return typeResolved;
   }
 
-  public abstract Expression normalize(Stack<Pair<Identifier, Expression>> context);
+  public Expression normalize(Stack<Pair<Identifier, Expression>> context) {
+    if (isImmediate()) {
+      return this;
+    }
+    throw new UnsupportedOperationException("not implemented");
+  }
 
   public boolean isImmediate() {
     return false;
   }
 
-  public AnnotatedType inferAnnotations(Context context, Annotation typingContext)
-      throws UnificationError, TypeError {
+  public Annotation inferAnnotations(Context context) throws UnificationError, TypeError {
     throw new UnsupportedOperationException("not implemented");
   }
 
@@ -63,15 +79,22 @@ public abstract class Expression extends Syntax {
     return binder;
   }
 
-  public Expression normalizeAndBind() {
+  public Expression forceImmediate(Stack<Pair<Identifier, Expression>> context) {
+    if (isImmediate()) {
+      return this;
+    }
+    var id = Identifier.getSugar();
+    context.push(new Pair<>(id, normalize(context)));
+    return id;
+  }
+
+  protected Expression normalizeAndBind() {
     var context = new Stack<Pair<Identifier, Expression>>();
     return normalize(context).bindAll(context);
   }
 
   public void printTo(PrintStream out, int indentation) {
-    for (int i = 0; i < indentation; i++) {
-      out.print("\t");
-    }
+    indent(out, indentation);
     out.println(toString());
   }
 }

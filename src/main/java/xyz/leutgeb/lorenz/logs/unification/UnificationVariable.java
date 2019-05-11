@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.logs.unification;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import xyz.leutgeb.lorenz.logs.Util;
@@ -15,7 +16,7 @@ public class UnificationVariable extends TypeVariable {
     super("?" + Util.generateSubscript(id));
   }
 
-  public Type generalize(Generalizer g) {
+  public TypeVariable generalize(Generalizer g) {
     return g.generalize(this);
   }
 
@@ -26,6 +27,12 @@ public class UnificationVariable extends TypeVariable {
 
   public Type substitute(TypeVariable v, Type t) {
     return v.equals(this) ? t : this;
+  }
+
+  @Override
+  public UnificationVariable wiggle(
+      Map<TypeVariable, UnificationVariable> wiggled, UnificationProblem context) {
+    return this;
   }
 
   @Override

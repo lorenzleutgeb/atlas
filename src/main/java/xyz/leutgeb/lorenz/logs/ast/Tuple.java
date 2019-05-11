@@ -1,14 +1,15 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
 import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Stack;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
-import xyz.leutgeb.lorenz.logs.resources.AnnotatedType;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.resources.EqualityConstraint;
 import xyz.leutgeb.lorenz.logs.type.TreeType;
@@ -18,10 +19,10 @@ import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
-public class Tuple extends TupleElement {
-  List<TupleElement> elements;
+public class Tuple extends Expression {
+  List<Expression> elements;
 
-  public Tuple(Source source, List<TupleElement> elements) {
+  public Tuple(Source source, List<Expression> elements) {
     super(source);
     if (elements.size() != 3) {
       throw new IllegalArgumentException("only tuples with exactly three elements are supported");
@@ -29,21 +30,16 @@ public class Tuple extends TupleElement {
     this.elements = elements;
   }
 
-  public TupleElement getLeft() {
+  public Expression getLeft() {
     return elements.get(0);
   }
 
-  public TupleElement getRight() {
+  public Expression getRight() {
     return elements.get(2);
   }
 
-  public TupleElement getMiddle() {
+  public Expression getMiddle() {
     return elements.get(1);
-  }
-
-  @Override
-  public boolean isImmediate() {
-    return elements.stream().allMatch(Expression::isImmediate);
   }
 
   @Override
@@ -55,9 +51,9 @@ public class Tuple extends TupleElement {
   public Type inferInternal(Context context) throws UnificationError, TypeError {
     var elementType = context.getProblem().fresh();
     var result = new TreeType(elementType);
-    context.getProblem().add(result, getLeft().infer(context));
-    context.getProblem().add(elementType, getMiddle().infer(context));
-    context.getProblem().add(result, getRight().infer(context));
+    context.getProblem().add(this, result, getLeft().infer(context));
+    context.getProblem().add(this, elementType, getMiddle().infer(context));
+    context.getProblem().add(this, result, getRight().infer(context));
     return result;
   }
 
@@ -66,35 +62,46 @@ public class Tuple extends TupleElement {
     if (elements.stream().allMatch(Expression::isImmediate)) {
       return this;
     }
-    throw new UnsupportedOperationException("desugaring of tuples is not implemented");
+    return new Tuple(
+        Derived.anf(source),
+        elements.stream().map(e -> e.forceImmediate(context)).collect(Collectors.toList()));
   }
 
   @Override
-  public AnnotatedType inferAnnotations(Context context, Annotation typingContext)
-      throws UnificationError, TypeError {
+  public Annotation inferAnnotations(Context context) throws UnificationError, TypeError {
     var constraints = context.getConstraints();
-    var q = constraints.heuristic(2);
+    var x1q = context.lookupAnnotation(((Identifier) getLeft()).getName());
+    var x3q = context.lookupAnnotation(((Identifier) getRight()).getName());
+
+    // var q = constraints.heuristic(2);
     var result = constraints.heuristic(1);
 
-    var q1 = q.getRankCoeffients().get(0);
-    var q2 = q.getRankCoeffients().get(1);
-    var qx = result.getRankCoeffients().get(0);
+    // q_1 = q_2 = q'
+    // var q1 = q.getRankCoefficients().get(0);
+    var q1 = x1q.getRankCoefficient();
+    // var q2 = q.getRankCoefficients().get(1);
+    var q2 = x3q.getRankCoefficient();
+    var qx = result.getRankCoefficient();
     constraints.eq(q1, q2, qx);
 
-    var q100 = q.getOrFresh(constraints, 1, 0, 0);
-    var q010 = q.getOrFresh(constraints, 1, 0, 0);
+    // q_{1,0,0} = q_{0,1,0} = q_*'
+    // var q100 = q.getOrFresh(constraints, 1, 0, 0);
+    var q100 = x1q.getOrFresh(constraints, 1, 0);
+    // var q010 = q.getOrFresh(constraints, 1, 0, 0);
+    var q010 = x3q.getOrFresh(constraints, 1, 0);
     constraints.eq(q100, q010, qx);
 
-    for (var e : q.getCoefficients().entrySet()) {
+    // q_{a,a,b} = q'_{a,b}
+    for (var e : result.getCoefficients().entrySet()) {
       var a = e.getKey().get(0);
-      if (!a.equals(e.getKey().get(1))) {
-        continue;
-      }
-      var b = e.getKey().get(2);
-      constraints.add(new EqualityConstraint(e.getValue(), result.getOrFresh(constraints, a, b)));
+      var b = e.getKey().get(1);
+      constraints.add(
+          new EqualityConstraint(e.getValue(), x1q.getCoefficients().get(Arrays.asList(a, b))));
+      constraints.add(
+          new EqualityConstraint(e.getValue(), x3q.getCoefficients().get(Arrays.asList(a, b))));
     }
 
-    return new AnnotatedType(infer(context), result);
+    return result;
   }
 
   @Override
@@ -107,5 +114,10 @@ public class Tuple extends TupleElement {
       }
     }
     out.print(")");
+  }
+
+  @Override
+  public String toString() {
+    return "(" + elements.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
   }
 }

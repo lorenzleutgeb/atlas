@@ -47,8 +47,8 @@ public class BooleanExpression extends Expression {
     // context.getProblem().add(left.infer(context), BaseType.INSTANCE);
 
     var ty = context.getProblem().fresh();
-    context.getProblem().add(right.infer(context), ty);
-    context.getProblem().add(left.infer(context), ty);
+    context.getProblem().add(this, right.infer(context), ty);
+    context.getProblem().add(this, left.infer(context), ty);
 
     if (operator == ComparisonOperator.EQ || operator == ComparisonOperator.NE) {
       context
@@ -66,26 +66,8 @@ public class BooleanExpression extends Expression {
 
   @Override
   public Expression normalize(Stack<Pair<Identifier, Expression>> context) {
-    if (left.isImmediate() && right.isImmediate()) {
-      return this;
-    }
-
-    var newLeft = left;
-    var newRight = right;
-
-    if (!left.isImmediate()) {
-      Identifier id = Identifier.getSugar();
-      context.push(new Pair<>(id, left.normalize(context)));
-      newLeft = id;
-    }
-
-    if (!right.isImmediate()) {
-      Identifier id = Identifier.getSugar();
-      context.push(new Pair<>(id, right.normalize(context)));
-      newRight = id;
-    }
-
-    return new BooleanExpression(source, newLeft, operator, newRight);
+    return new BooleanExpression(
+        Derived.anf(source), left.normalize(context), operator, right.normalize(context));
   }
 
   @Override
@@ -95,5 +77,10 @@ public class BooleanExpression extends Expression {
     operator.printTo(out);
     out.print(" ");
     right.printTo(out, indentation);
+  }
+
+  @Override
+  public boolean isImmediate() {
+    return left.isImmediate() && right.isImmediate();
   }
 }

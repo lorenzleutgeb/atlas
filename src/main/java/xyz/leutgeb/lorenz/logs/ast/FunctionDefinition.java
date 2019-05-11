@@ -4,20 +4,23 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
-import java.util.stream.Collectors;
 import lombok.Data;
+import lombok.extern.log4j.Log4j2;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatedType;
-import xyz.leutgeb.lorenz.logs.resources.Annotation;
+import xyz.leutgeb.lorenz.logs.type.BoolType;
 import xyz.leutgeb.lorenz.logs.type.FunctionSignature;
 import xyz.leutgeb.lorenz.logs.type.FunctionType;
 import xyz.leutgeb.lorenz.logs.type.TreeType;
 import xyz.leutgeb.lorenz.logs.type.Type;
 import xyz.leutgeb.lorenz.logs.type.TypeError;
+import xyz.leutgeb.lorenz.logs.type.TypeVariable;
+import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 @Data
+@Log4j2
 public class FunctionDefinition {
   private final String name;
   private final List<String> arguments;
@@ -35,14 +38,14 @@ public class FunctionDefinition {
     for (String argument : arguments) {
       Type var = sub.getProblem().fresh();
       from.add(var);
-      sub.put(argument, var);
+      sub.putType(argument, var);
     }
 
     Type to = sub.getProblem().fresh();
     Type result = new FunctionType(from, to);
-    sub.put(name, result);
+    sub.putType(name, result);
 
-    sub.getProblem().add(to, body.infer(sub));
+    sub.getProblem().add(new Equivalence(to, body.infer(sub)));
 
     // Now we are set for unification!
     var solution = sub.getProblem().solveAndGeneralize(result);
@@ -64,20 +67,27 @@ public class FunctionDefinition {
     if (signature == null) {
       throw new IllegalStateException();
     }
-    var trees =
-        signature
-            .getType()
-            .getFrom()
-            .getElements()
-            .stream()
-            .filter(x -> x instanceof TreeType)
-            .collect(Collectors.toList());
+
+    var sub = context.child();
+    var types = signature.getType().getFrom().getElements();
+    int trees = 0;
+    for (int i = 0; i < arguments.size(); i++) {
+      if (types.get(i) instanceof TreeType) {
+        sub.putAnnotation(arguments.get(i), sub.getConstraints().heuristic(1));
+        trees++;
+      } else if (types.get(i) == BoolType.INSTANCE || types.get(i) instanceof TypeVariable) {
+        log.warn("Not adding any annotation for " + arguments.get(i));
+        // sub.putAnnotation(arguments.get(i), Annotation.);
+      } else {
+        throw new RuntimeException("unknown type");
+      }
+    }
     // if (trees.size() != 1) {
     //  throw new UnsupportedOperationException(
     //      "analysis is only supported for functions that take exactly one tree argument");
     // }
-    var constraints = context.getConstraints();
-    var q = constraints.heuristic(trees.size());
+    var constraints = sub.getConstraints();
+    var q = constraints.heuristic(trees);
     if (!(signature.getType().getTo() instanceof TreeType)) {
       throw new UnsupportedOperationException(
           "analysis is only supported for functions that return a tree");
@@ -85,14 +95,19 @@ public class FunctionDefinition {
     var result =
         new Pair<>(
             new AnnotatedType(signature.getType().getFrom(), q),
-            body.inferAnnotations(context, Annotation.EMPTY));
+            new AnnotatedType(body.getType(), body.inferAnnotations(sub)));
     return result;
   }
 
   public void printTo(PrintStream out) {
+    out.print("(* ");
+    out.print(name);
+    out.print(" :: ");
+    out.print(signature);
+    out.println(" *)");
     out.print(name);
     out.print(" ");
-    out.print(arguments.stream().collect(Collectors.joining(" ")));
+    out.print(String.join(" ", arguments));
     out.print(" = ");
     body.printTo(out, 1);
   }

@@ -11,17 +11,17 @@ import xyz.leutgeb.lorenz.logs.resources.coefficients.KnownCoefficient;
 
 public class Annotation {
   public static final Annotation EMPTY = new Annotation(0);
-  protected List<Coefficient> rankCoeffients;
+  protected List<Coefficient> rankCoefficients;
   protected Map<List<Integer>, Coefficient> coefficients;
   protected int size;
 
   public Annotation(int size) {
-    rankCoeffients = new ArrayList<>(size);
+    rankCoefficients = new ArrayList<>(size);
     coefficients = new LinkedHashMap<>();
     this.size = size;
 
     for (int i = 0; i < size; i++) {
-      getRankCoeffients().add(KnownCoefficient.ZERO);
+      getRankCoefficients().add(KnownCoefficient.ZERO);
     }
   }
 
@@ -64,7 +64,7 @@ public class Annotation {
   public String toString() {
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < size; i++) {
-      Coefficient q = rankCoeffients.get(i);
+      Coefficient q = rankCoefficients.get(i);
       sb.append(q);
       sb.append(" · ");
       sb.append("rank(t");
@@ -102,19 +102,25 @@ public class Annotation {
 
       i++;
     }
-
     return sb.toString();
   }
 
-  public List<Coefficient> getRankCoeffients() {
-    return this.rankCoeffients;
+  public List<Coefficient> getRankCoefficients() {
+    return this.rankCoefficients;
+  }
+
+  public Coefficient getRankCoefficient() {
+    if (size != 1) {
+      throw new IllegalStateException("must be of size exactly 1");
+    }
+    return getRankCoefficients().get(0);
   }
 
   public Map<List<Integer>, Coefficient> getCoefficients() {
     return this.coefficients;
   }
 
-  public int getSize() {
+  public int size() {
     return this.size;
   }
 }

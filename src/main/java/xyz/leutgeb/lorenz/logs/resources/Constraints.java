@@ -1,10 +1,14 @@
 package xyz.leutgeb.lorenz.logs.resources;
 
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.extern.log4j.Log4j2;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.UnknownCoefficient;
 
+@Log4j2
 public class Constraints {
   private AnnotationHeuristic annotationHeuristic = RangeHeuristic.DEFAULT;
   private int freshness = 0;
@@ -19,6 +23,38 @@ public class Constraints {
     for (int i = 0; i < coefficients.length - 1; i++) {
       for (int j = i + 1; j < coefficients.length; j++) {
         add(new EqualityConstraint(coefficients[i], coefficients[j]));
+      }
+    }
+  }
+
+  public void eq(Annotation... annotations) {
+    for (int i = 0; i < annotations.length - 1; i++) {
+      for (int j = i + 1; j < annotations.length; j++) {
+        if (annotations[i].size() != annotations[j].size()) {
+          throw new IllegalArgumentException("annotations of different sizes cannot be equal");
+        }
+        final int size = annotations[i].size();
+        for (int x = 0; x < size; x++) {
+          eq(
+              annotations[i].getRankCoefficients().get(x),
+              annotations[j].getRankCoefficients().get(x));
+        }
+
+        if (annotations[i].getCoefficients().size() != annotations[j].getCoefficients().size()) {
+          throw new UnsupportedOperationException(
+              "annotations have different number of coefficients");
+        }
+
+        for (Map.Entry<List<Integer>, Coefficient> entry :
+            annotations[i].getCoefficients().entrySet()) {
+          var other = annotations[j].getCoefficients().get(entry.getKey());
+
+          if (other == null) {
+            throw new UnsupportedOperationException("some coefficient is missing");
+          }
+
+          eq(entry.getValue(), other);
+        }
       }
     }
   }
