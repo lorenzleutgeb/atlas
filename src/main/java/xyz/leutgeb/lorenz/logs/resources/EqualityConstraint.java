@@ -1,13 +1,13 @@
 package xyz.leutgeb.lorenz.logs.resources;
 
+import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Value;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
 
-@Value
+@Data
 @EqualsAndHashCode(callSuper = true)
 public class EqualityConstraint extends Constraint {
-  Coefficient left, right;
+  protected final Coefficient left, right;
 
   @Override
   public String toString() {

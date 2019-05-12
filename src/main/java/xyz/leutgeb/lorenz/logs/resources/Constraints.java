@@ -59,6 +59,39 @@ public class Constraints {
     }
   }
 
+  /** Adds constraints such that left equals right + 1. */
+  public void increment(Annotation left, Annotation right) {
+    if (left.size() != right.size()) {
+      throw new IllegalArgumentException("annotations of different sizes cannot be equal");
+    }
+    final int size = left.size();
+    for (int x = 0; x < size; x++) {
+      eq(left.getRankCoefficients().get(x), right.getRankCoefficients().get(x));
+    }
+
+    if (left.getCoefficients().size() != right.getCoefficients().size()) {
+      throw new UnsupportedOperationException("annotations have different number of coefficients");
+    }
+
+    for (Map.Entry<List<Integer>, Coefficient> entry : left.getCoefficients().entrySet()) {
+      var other = right.getCoefficients().get(entry.getKey());
+
+      if (other == null) {
+        throw new UnsupportedOperationException("some coefficient is missing");
+      }
+
+      var vec = entry.getKey();
+
+      // NOTE: Special case for increments!
+      if (vec.subList(0, vec.size() - 2).stream().allMatch(x -> x == 0)
+          && entry.getKey().get(vec.size() - 1) == 2) {
+        add(OffsetConstraint.increment(entry.getValue(), other));
+      } else {
+        eq(entry.getValue(), other);
+      }
+    }
+  }
+
   public UnknownCoefficient unknown() {
     return new UnknownCoefficient(freshness++);
   }
