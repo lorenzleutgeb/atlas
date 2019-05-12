@@ -7,6 +7,9 @@ import java.util.stream.Collectors;
 import lombok.extern.log4j.Log4j2;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.logs.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.logs.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.logs.resources.constraints.OffsetConstraint;
 
 @Log4j2
 public class Constraints {

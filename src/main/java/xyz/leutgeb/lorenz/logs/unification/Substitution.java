@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import xyz.leutgeb.lorenz.logs.type.Type;
-import xyz.leutgeb.lorenz.logs.type.TypeVariable;
+import xyz.leutgeb.lorenz.logs.typing.TypeVariable;
+import xyz.leutgeb.lorenz.logs.typing.types.Type;
 
 public class Substitution implements Function<Type, Type> {
   public static Substitution identity() {

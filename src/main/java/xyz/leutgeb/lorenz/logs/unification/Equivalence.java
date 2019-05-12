@@ -7,7 +7,7 @@ import java.util.Collection;
 import javax.annotation.Nullable;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.ast.Expression;
-import xyz.leutgeb.lorenz.logs.type.Type;
+import xyz.leutgeb.lorenz.logs.typing.types.Type;
 
 @Value
 public class Equivalence {

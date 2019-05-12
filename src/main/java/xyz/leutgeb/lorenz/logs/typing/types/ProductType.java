@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.logs.type;
+package xyz.leutgeb.lorenz.logs.typing.types;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import xyz.leutgeb.lorenz.logs.typing.TypeVariable;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.Generalizer;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;

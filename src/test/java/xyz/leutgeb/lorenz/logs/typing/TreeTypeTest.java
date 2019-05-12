@@ -1,7 +1,8 @@
-package xyz.leutgeb.lorenz.logs.type;
+package xyz.leutgeb.lorenz.logs.typing;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import xyz.leutgeb.lorenz.logs.typing.types.TreeType;
 
 class TreeTypeTest {
 

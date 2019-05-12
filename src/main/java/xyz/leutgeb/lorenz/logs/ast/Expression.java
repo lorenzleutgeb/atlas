@@ -8,9 +8,11 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
+import xyz.leutgeb.lorenz.logs.ast.sources.Derived;
+import xyz.leutgeb.lorenz.logs.ast.sources.Source;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
-import xyz.leutgeb.lorenz.logs.type.Type;
-import xyz.leutgeb.lorenz.logs.type.TypeError;
+import xyz.leutgeb.lorenz.logs.typing.TypeError;
+import xyz.leutgeb.lorenz.logs.typing.types.Type;
 import xyz.leutgeb.lorenz.logs.unification.Substitution;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 

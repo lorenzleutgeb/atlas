@@ -1,23 +1,19 @@
-package xyz.leutgeb.lorenz.logs.type;
+package xyz.leutgeb.lorenz.logs.typing.types;
 
 import java.util.Collection;
 import java.util.Collections;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 
-public class BoolType extends Type {
-  public static final BoolType INSTANCE = new BoolType();
+@Deprecated
+public class BaseType extends Type {
+  public static final BaseType INSTANCE = new BaseType();
 
   @Override
   public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
-    if (!(b instanceof BoolType)) {
+    if (!(b instanceof BaseType)) {
       throw new TypeMismatch(this, b);
     }
     return Collections.emptyList();
-  }
-
-  @Override
-  public String toString() {
-    return "B";
   }
 }

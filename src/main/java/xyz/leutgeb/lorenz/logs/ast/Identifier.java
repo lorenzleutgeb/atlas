@@ -11,10 +11,12 @@ import lombok.NonNull;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.Util;
+import xyz.leutgeb.lorenz.logs.ast.sources.Predefined;
+import xyz.leutgeb.lorenz.logs.ast.sources.Source;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
-import xyz.leutgeb.lorenz.logs.type.TreeType;
-import xyz.leutgeb.lorenz.logs.type.Type;
-import xyz.leutgeb.lorenz.logs.type.TypeError;
+import xyz.leutgeb.lorenz.logs.typing.TypeError;
+import xyz.leutgeb.lorenz.logs.typing.types.TreeType;
+import xyz.leutgeb.lorenz.logs.typing.types.Type;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 import xyz.leutgeb.lorenz.logs.values.TreeValue;
 

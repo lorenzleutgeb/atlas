@@ -12,8 +12,8 @@ import lombok.Value;
 import lombok.extern.log4j.Log4j2;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.resources.Constraints;
-import xyz.leutgeb.lorenz.logs.type.BoolType;
-import xyz.leutgeb.lorenz.logs.type.Type;
+import xyz.leutgeb.lorenz.logs.typing.types.BoolType;
+import xyz.leutgeb.lorenz.logs.typing.types.Type;
 import xyz.leutgeb.lorenz.logs.unification.UnificationProblem;
 import xyz.leutgeb.lorenz.logs.values.TreeValue;
 

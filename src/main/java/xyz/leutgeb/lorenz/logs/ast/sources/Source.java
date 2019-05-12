@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.logs.ast;
+package xyz.leutgeb.lorenz.logs.ast.sources;
 
 public abstract class Source {
   public Source getRoot() {

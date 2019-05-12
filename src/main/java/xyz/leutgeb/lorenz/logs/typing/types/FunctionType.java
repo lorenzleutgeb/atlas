@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.logs.type;
+package xyz.leutgeb.lorenz.logs.typing.types;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import xyz.leutgeb.lorenz.logs.typing.TypeVariable;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.Generalizer;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
@@ -16,10 +17,10 @@ import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 @Value
 @EqualsAndHashCode(callSuper = false)
 public class FunctionType extends Type {
-  ProductType from;
+  xyz.leutgeb.lorenz.logs.typing.types.ProductType from;
   Type to;
 
-  public FunctionType(ProductType from, Type to) {
+  public FunctionType(xyz.leutgeb.lorenz.logs.typing.types.ProductType from, Type to) {
     Objects.requireNonNull(from);
     Objects.requireNonNull(to);
     this.from = from;
@@ -27,7 +28,7 @@ public class FunctionType extends Type {
   }
 
   public FunctionType(List<Type> from, Type to) {
-    this(new ProductType(from), to);
+    this(new xyz.leutgeb.lorenz.logs.typing.types.ProductType(from), to);
   }
 
   public FunctionType(Type to, Type... from) {
@@ -35,7 +36,8 @@ public class FunctionType extends Type {
   }
 
   public Type generalize(Generalizer g) {
-    return new FunctionType((ProductType) from.generalize(g), to.generalize(g));
+    return new FunctionType(
+        (xyz.leutgeb.lorenz.logs.typing.types.ProductType) from.generalize(g), to.generalize(g));
   }
 
   public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
@@ -51,7 +53,9 @@ public class FunctionType extends Type {
   }
 
   public Type substitute(TypeVariable v, Type t) {
-    return new FunctionType((ProductType) from.substitute(v, t), to.substitute(v, t));
+    return new FunctionType(
+        (xyz.leutgeb.lorenz.logs.typing.types.ProductType) from.substitute(v, t),
+        to.substitute(v, t));
   }
 
   public boolean occurs(UnificationVariable v) {
@@ -61,7 +65,8 @@ public class FunctionType extends Type {
   @Override
   public Type wiggle(Map<TypeVariable, UnificationVariable> wiggled, UnificationProblem context) {
     return new FunctionType(
-        (ProductType) from.wiggle(wiggled, context), to.wiggle(wiggled, context));
+        (xyz.leutgeb.lorenz.logs.typing.types.ProductType) from.wiggle(wiggled, context),
+        to.wiggle(wiggled, context));
   }
 
   @Override

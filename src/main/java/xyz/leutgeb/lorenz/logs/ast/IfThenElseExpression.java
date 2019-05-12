@@ -10,10 +10,11 @@ import lombok.EqualsAndHashCode;
 import lombok.extern.log4j.Log4j2;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
+import xyz.leutgeb.lorenz.logs.ast.sources.Derived;
+import xyz.leutgeb.lorenz.logs.ast.sources.Source;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
-import xyz.leutgeb.lorenz.logs.type.BoolType;
-import xyz.leutgeb.lorenz.logs.type.Type;
-import xyz.leutgeb.lorenz.logs.type.TypeError;
+import xyz.leutgeb.lorenz.logs.typing.TypeError;
+import xyz.leutgeb.lorenz.logs.typing.types.BoolType;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 @Data
@@ -42,7 +43,8 @@ public class IfThenElseExpression extends Expression {
   }
 
   @Override
-  public Type inferInternal(Context context) throws UnificationError, TypeError {
+  public xyz.leutgeb.lorenz.logs.typing.types.Type inferInternal(Context context)
+      throws UnificationError, TypeError {
     var result = context.getProblem().fresh();
     context.getProblem().add(this, result, truthy.infer(context));
     context.getProblem().add(this, result, falsy.infer(context));

@@ -6,9 +6,9 @@ import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
-import xyz.leutgeb.lorenz.logs.type.NumType;
-import xyz.leutgeb.lorenz.logs.type.Type;
-import xyz.leutgeb.lorenz.logs.type.TypeError;
+import xyz.leutgeb.lorenz.logs.ast.sources.Source;
+import xyz.leutgeb.lorenz.logs.typing.TypeError;
+import xyz.leutgeb.lorenz.logs.typing.types.NumType;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 @Value
@@ -27,7 +27,8 @@ public class Number extends Expression {
   }
 
   @Override
-  protected Type inferInternal(Context context) throws UnificationError, TypeError {
+  protected xyz.leutgeb.lorenz.logs.typing.types.Type inferInternal(Context context)
+      throws UnificationError, TypeError {
     return NumType.INSTANCE;
   }
 

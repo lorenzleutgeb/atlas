@@ -1,10 +1,11 @@
-package xyz.leutgeb.lorenz.logs.type;
+package xyz.leutgeb.lorenz.logs.typing.types;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import xyz.leutgeb.lorenz.logs.typing.TypeVariable;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.Generalizer;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;

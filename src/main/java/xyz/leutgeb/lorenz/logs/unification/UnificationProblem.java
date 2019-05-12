@@ -7,8 +7,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import xyz.leutgeb.lorenz.logs.ast.Expression;
-import xyz.leutgeb.lorenz.logs.type.Type;
-import xyz.leutgeb.lorenz.logs.type.TypeConstraint;
+import xyz.leutgeb.lorenz.logs.typing.TypeConstraint;
+import xyz.leutgeb.lorenz.logs.typing.types.Type;
 
 public class UnificationProblem {
   private final LinkedList<Equivalence> equivalences = new LinkedList<>();
