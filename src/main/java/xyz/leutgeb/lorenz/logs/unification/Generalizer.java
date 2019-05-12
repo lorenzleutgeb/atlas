@@ -1,9 +1,9 @@
 package xyz.leutgeb.lorenz.logs.unification;
 
-import static xyz.leutgeb.lorenz.logs.type.TypeVariable.GREEK;
+import static xyz.leutgeb.lorenz.logs.typing.TypeVariable.GREEK;
 
 import java.util.HashMap;
-import xyz.leutgeb.lorenz.logs.type.TypeVariable;
+import xyz.leutgeb.lorenz.logs.typing.TypeVariable;
 
 public class Generalizer {
   private final HashMap<UnificationVariable, TypeVariable> mapping;

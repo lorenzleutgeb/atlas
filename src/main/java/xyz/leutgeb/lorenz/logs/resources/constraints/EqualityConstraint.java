@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.logs.resources;
+package xyz.leutgeb.lorenz.logs.resources.constraints;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;

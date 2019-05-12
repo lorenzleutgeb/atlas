@@ -1,7 +1,7 @@
 package xyz.leutgeb.lorenz.logs.unification;
 
 import lombok.RequiredArgsConstructor;
-import xyz.leutgeb.lorenz.logs.type.Type;
+import xyz.leutgeb.lorenz.logs.typing.types.Type;
 
 @RequiredArgsConstructor
 public class OccursError extends UnificationError {

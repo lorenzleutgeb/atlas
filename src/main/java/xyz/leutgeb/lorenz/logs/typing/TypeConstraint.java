@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.logs.type;
+package xyz.leutgeb.lorenz.logs.typing;
 
 import java.util.stream.Collectors;
 import lombok.Value;

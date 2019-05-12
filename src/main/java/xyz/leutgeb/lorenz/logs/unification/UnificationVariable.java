@@ -6,8 +6,8 @@ import java.util.Map;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import xyz.leutgeb.lorenz.logs.Util;
-import xyz.leutgeb.lorenz.logs.type.Type;
-import xyz.leutgeb.lorenz.logs.type.TypeVariable;
+import xyz.leutgeb.lorenz.logs.typing.TypeVariable;
+import xyz.leutgeb.lorenz.logs.typing.types.Type;
 
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.logs.type;
+package xyz.leutgeb.lorenz.logs.typing;
 
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;

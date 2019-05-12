@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.logs.ast;
+package xyz.leutgeb.lorenz.logs.ast.sources;
 
 import lombok.EqualsAndHashCode;
 import lombok.Value;

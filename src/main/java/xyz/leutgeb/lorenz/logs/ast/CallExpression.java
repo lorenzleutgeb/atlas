@@ -12,9 +12,9 @@ import lombok.NonNull;
 import lombok.Value;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
-import xyz.leutgeb.lorenz.logs.type.FunctionType;
-import xyz.leutgeb.lorenz.logs.type.Type;
-import xyz.leutgeb.lorenz.logs.type.TypeError;
+import xyz.leutgeb.lorenz.logs.typing.FunctionType;
+import xyz.leutgeb.lorenz.logs.typing.Type;
+import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 @Value

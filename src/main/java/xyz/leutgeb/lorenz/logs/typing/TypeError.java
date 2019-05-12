@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.logs.type;
+package xyz.leutgeb.lorenz.logs.typing;
 
 public class TypeError extends Exception {
   public static class NotInContext extends TypeError {
