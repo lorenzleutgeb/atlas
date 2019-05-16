@@ -2,9 +2,7 @@
 
 %% In this file, lines beginning with %d or %m are to allow different versions
 %% of the system to be build by filtering with a sed script.  %d corresponds to
-%% definition-level features and %m corresponds to module-level features.  (The
-%% %m version of the system is not currently working or maintained.)
-
+%% definition-level features.
 
 %% Note that with the current ott behaviour, all macro definitions *must*
 %% be in the first TeX embedding which must come before anything else that
@@ -21,7 +19,6 @@ embed
 
 \newif\ifHAVEtypedefinitions \newif\ifHAVEmodules
 %d\HAVEtypedefinitionstrue
-%m\HAVEmodulestrue
 
 %%%% End of preamble %%%%
 
@@ -347,19 +344,13 @@ grammar
     | lowercase_ident                                   ::   :: id
 %d field_name , fn :: FN_  ::=  {{ coq-equality }}
 %d  | lowercase_ident                                   :: d :: id
-%m module_name , M :: MN_  ::= {{ coq-equality }}
-%m  | capitalized_ident                                 :: m :: id
-%m modtype_name  :: MTN_ ::= {{ coq-equality }}
-%m  | ident                                             :: m :: id
 
   %% 6.3 (Referring to named objects) http://caml.inria.fr/pub/docs/manual-ocaml/manual011.html#value-path
   value_path :: VP_  ::= {{ coq-equality }}
     | value_name                                        ::   :: name
-%m  |  module_path . value_name                         :: m :: path
   constr :: C_   ::= {{ coq-equality }}
       {{ com constructors: named, and built-in (including exceptions) }}
     | constr_name                                       ::   :: name
-%m  | module_path . constr_name                         :: m :: path
   %% 19.1 (Predefined exceptions) http://caml.inria.fr/pub/docs/manual-ocaml/manual033.html
     | Invalid_argument                                  :: L :: invalidargument
     | Not_found                                         :: L :: notfound
@@ -372,7 +363,6 @@ grammar
   typeconstr :: TC_  ::= {{ coq-equality }}
       {{ com type constructors: named, and built-in }}
     | typeconstr_name                                   ::   :: name
-%m  | extended_module_path . typeconstr_name            :: m :: epath
   %% 19.1 (Built-in types) http://caml.inria.fr/pub/docs/manual-ocaml/manual033.html
     | int                                               :: L :: int
     | char                                              :: L :: char
@@ -388,16 +378,6 @@ grammar
 %d field {{ lem fieldl }} :: F_  ::= {{ coq-equality }}
 %d  | field_name                                        :: d :: name
 %d% |  module_path . field_name                         :: d :: path
-%m module_path , mp :: MP_  ::= {{ coq-equality }}
-%m  | module_name                                       :: m :: name
-%m  |  module_path . module_name                        :: m :: path
-%m extended_module_path :: EMP_ ::= {{ coq-equality }}
-%m  | module_name                                       :: m :: name
-%m  |  extended_module_path . module_name               :: m :: epath
-%m  |  extended_module_path ( extended_module_path )    :: m ::
-%m modtype_path :: MTP_ ::= {{ coq-equality }}
-%m  | modtype_name                                      :: m :: name
-%m  |  extended_module_path . modtype_name              :: m :: epath
 
   idx, num :: '' ::=
       {{ coq nat }}
@@ -825,11 +805,6 @@ grammar
         (+ xs = {} +)
     | exception_definition                              :: d :: exception
         (+ xs = {} +)
-%m% | module module_name { ( module_name : module_type ) }  [ : module_type ]  = module_expr :: m :: functor
-%m  | module_definition                                 :: m :: module
-%m  | module type modtype_name  =  module_type          :: m :: modtype
-%m% | open module_path                                  :: m ::  open
-%m% | include module_expr                               :: m ::  include
 
   definitions , ds :: Ds_ ::=
     |                                                   :: d :: nil 
