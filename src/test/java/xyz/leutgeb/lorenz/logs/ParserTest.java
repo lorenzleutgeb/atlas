@@ -38,6 +38,7 @@ import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 public class ParserTest {
   private static final String PLUS = "~";
   private static final TreeType ATREE = new TreeType(ALPHA);
+  private static final TreeType BTREE = new TreeType(BETA);
   private static final BoolType BOOL = BoolType.INSTANCE;
 
   private static InputStream open(String fileName) {
@@ -57,18 +58,31 @@ public class ParserTest {
 
   private static Stream<Arguments> generateSnippets() throws IOException {
     return Stream.of(
-        Arguments.of("id t = match t with | (_, _, _) -> t", ft(ATREE, ATREE)),
+        Arguments.of("id t = match t with | (a, b, c) -> t", ft(ATREE, ATREE)),
         Arguments.of("id t = match t with | (a, b, c) -> (a, b, c)", ft(ATREE, ATREE)),
         Arguments.of("id x = x", ft(ALPHA, ALPHA)),
         Arguments.of("const = nil", ft(ATREE)),
         Arguments.of("left x y = x", ft(ALPHA, ALPHA, BETA)),
         Arguments.of("right x y = y", ft(BETA, ALPHA, BETA)),
         Arguments.of("less x y = if x < y then false else true", ft(BOOL, ALPHA, ALPHA)),
-        Arguments.of("left x = match x with | (y, _, _) -> y", ft(ATREE, ATREE)),
+        Arguments.of("left x = match x with | (y, a, b) -> y", ft(ATREE, ATREE)),
         Arguments.of("neg x = if x then false else true", ft(BOOL, BOOL)),
-        Arguments.of("empty t = match x with | nil -> true | (_, _, _) -> false", ft(BOOL, ATREE)),
+        Arguments.of("empty t = match t with | nil -> true | (a, b, c) -> false", ft(BOOL, ATREE)),
         Arguments.of("flip t = match t with | (a, b, c) -> (c, b, a)", ft(ATREE, ATREE)),
-        Arguments.of(read("contains_unordered"), ft(BOOL, ATREE)));
+        Arguments.of(read("contains_unordered"), ft(BOOL, ALPHA, ATREE)),
+        Arguments.of(read("descend"), ft(/*BOOL*/ BTREE, ATREE)));
+  }
+
+  @ParameterizedTest
+  @MethodSource("generateSnippets")
+  void snippets(String source, Type expected) throws Exception {
+    var program = parse(source);
+    program.infer();
+    assertEquals(
+        expected,
+        program.getFunctionDefinitions().values().iterator().next().getSignature().getType());
+
+    program.solve();
   }
 
   @ParameterizedTest
@@ -120,16 +134,6 @@ public class ParserTest {
             .getConstraints()
             .contains(new TypeConstraint(TypeClass.EQ, new Substitution(ALPHA, ATREE))));
     assertEquals(2, signature.getConstraints().size());
-  }
-
-  @ParameterizedTest
-  @MethodSource("generateSnippets")
-  void snippets(String source, Type expected) throws Exception {
-    var program = parse(source);
-    program.infer();
-    assertEquals(
-        expected,
-        program.getFunctionDefinitions().values().iterator().next().getSignature().getType());
   }
 
   @Test

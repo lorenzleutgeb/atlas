@@ -9,6 +9,7 @@ import lombok.extern.log4j.Log4j2;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatedType;
+import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.typing.FunctionSignature;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.typing.TypeVariable;
@@ -88,14 +89,19 @@ public class FunctionDefinition {
     // }
     var constraints = sub.getConstraints();
     var q = constraints.heuristic(trees);
-    if (!(signature.getType().getTo() instanceof TreeType)) {
-      throw new UnsupportedOperationException(
-          "analysis is only supported for functions that return a tree");
-    }
-    var result =
+
+    var qprime = body.getType() instanceof TreeType ? constraints.heuristic(1) : Annotation.EMPTY;
+
+    sub.putFunctionAnnotation(name, new Pair<>(q, qprime));
+
+    // if (!(signature.getType().getTo() instanceof TreeType)) {
+    final var result =
         new Pair<>(
             new AnnotatedType(signature.getType().getFrom(), q),
             new AnnotatedType(body.getType(), body.inferAnnotations(sub)));
+
+    constraints.solve();
+    System.out.println(q.substitute(constraints));
     return result;
   }
 

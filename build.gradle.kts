@@ -17,6 +17,10 @@ java {
     targetCompatibility = JavaVersion.VERSION_12
 }
 
+configurations {
+    create("z3")
+}
+
 dependencies {
     // We need to give the ANTLR Plugin a hint.
     antlr("org.antlr:antlr4:4.7.1")
@@ -44,6 +48,10 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.3.2")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.3.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.3.2")
+
+    // The Z3 Theorem Prover
+    // See https://github.com/Z3Prover/z3#java
+    implementation(files("libs/com.microsoft.z3.jar"))
 }
 
 application {

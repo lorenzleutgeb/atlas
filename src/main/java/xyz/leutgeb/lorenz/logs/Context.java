@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.log4j.Log4j2;
+import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.resources.Constraints;
 import xyz.leutgeb.lorenz.logs.typing.types.BoolType;
@@ -50,6 +51,8 @@ public class Context {
 
   Map<String, Annotation> annotations;
 
+  Map<String, Pair<Annotation, Annotation>> functionAnnotations;
+
   /** For simple signature inference. */
   UnificationProblem problem;
 
@@ -71,6 +74,7 @@ public class Context {
     this.types = new HashMap<>();
     this.values = new HashMap<>();
     this.annotations = new HashMap<>();
+    this.functionAnnotations = new HashMap<>();
   }
 
   public Context child() {
@@ -127,6 +131,17 @@ public class Context {
     }
   }
 
+  public Pair<Annotation, Annotation> lookupFunctionAnnotation(final String key) {
+    var t = functionAnnotations.get(key);
+    if (t != null) {
+      return t;
+    } else if (parent != null) {
+      return parent.lookupFunctionAnnotation(key);
+    } else {
+      throw new NoSuchElementException();
+    }
+  }
+
   private boolean hasType(String key) {
     Type t = types.get(key);
     if (t != null) {
@@ -156,14 +171,18 @@ public class Context {
   }
 
   public void putAnnotation(String key, Annotation value) {
-    if ("nil".equals(key) || "_".equals(key)) {
+    if ("nil".equals(key)) { // || "_".equals(key)) {
       throw new RuntimeException("this probably is a bad idea...");
     }
     annotations.put(key, value);
   }
 
+  public void putFunctionAnnotation(String key, Pair<Annotation, Annotation> value) {
+    functionAnnotations.put(key, value);
+  }
+
   public void putValue(String key, Type value) {
-    if ("nil".equals(key) || "_".equals(key)) {
+    if ("nil".equals(key)) { // || "_".equals(key)) {
       throw new RuntimeException("nil and _ cannot be redefined");
     }
 
@@ -176,10 +195,7 @@ public class Context {
   }
 
   private Iterator<String> iterateIdentifiers() {
-    var it = Sets.union(types.keySet(), values.keySet()).iterator();
-    if (parent == null) {
-      return it;
-    }
-    return Iterators.concat(it, parent.iterateIdentifiers());
+    final var it = Sets.union(types.keySet(), values.keySet()).iterator();
+    return parent == null ? it : Iterators.concat(it, parent.iterateIdentifiers());
   }
 }

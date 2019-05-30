@@ -2,19 +2,19 @@
 push q t = (q, t, nil)
 
 (* pop :: (T a) -> T a *)
-pop q    = match q with | (p, _, _) -> p | nil -> nil
+pop q    = match q with | (p, x, p2) -> p | nil -> nil
 
 (* ILLEGAL: We cannot construct trees of trees, only trees of the basic type.
 
 (* get :: (T (T a)) -> (T a) *)
-get  q   = match q with | (p, t, _) -> t | nil -> nil
+get  q   = match q with | (p1, x, p2) -> x | nil -> nil
 
 (* a is the element to look for in all elements of q *)
 (* q is a list of trees *)
 (* dfs_internal :: (a * (Tree (Tree a))) -> Bool *)
 dfs_internal a q = match q with
   | nil -> false
-  | (p, t, _) -> match t with
+  | (p, t, x) -> match t with
     | nil -> false
     | (l, b, r) -> if b = a
       then true

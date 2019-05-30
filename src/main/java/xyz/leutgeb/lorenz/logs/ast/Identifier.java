@@ -24,7 +24,7 @@ public class Identifier extends Expression {
   public static final Identifier NIL = new Identifier(Predefined.INSTANCE, "nil");
   public static final Identifier TRUE = new Identifier(Predefined.INSTANCE, "true");
   public static final Identifier FALSE = new Identifier(Predefined.INSTANCE, "false");
-  public static final Identifier ANONYMOUS = new Identifier(Predefined.INSTANCE, "_");
+  // public static final Identifier ANONYMOUS = new Identifier(Predefined.INSTANCE, "_");
   private static int freshness = 0;
   @NonNull @Getter private final String name;
   @NonNull @Getter private final Set<Source> occurences;
@@ -70,9 +70,9 @@ public class Identifier extends Expression {
     if (name.equals(NIL.name)) {
       return new TreeType(context.getProblem().fresh());
     }
-    if (name.equals(ANONYMOUS.name)) {
-      return context.getProblem().fresh();
-    }
+    // if (name.equals(ANONYMOUS.name)) {
+    //  return context.getProblem().fresh();
+    // }
 
     Type ty = context.lookupType(this.name);
     if (ty == null) {
@@ -158,9 +158,9 @@ public class Identifier extends Expression {
     if (name.equals(NIL.name)) {
       return TreeValue.nil();
     }
-    if (name.equals(ANONYMOUS.name)) {
-      throw new UnsupportedOperationException("the value of _ cannot be accessed");
-    }
+    // if (name.equals(ANONYMOUS.name)) {
+    //  throw new UnsupportedOperationException("the value of _ cannot be accessed");
+    // }
     if (name.equals(TRUE.name)) {
       return true;
     }

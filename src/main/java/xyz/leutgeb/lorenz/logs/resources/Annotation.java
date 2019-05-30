@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.logs.resources;
 
 import com.google.common.primitives.Ints;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,13 @@ public class Annotation {
   protected Map<List<Integer>, Coefficient> coefficients;
   protected int size;
 
+  private Annotation(
+      List<Coefficient> rankCoefficients, Map<List<Integer>, Coefficient> coefficients) {
+    this.rankCoefficients = rankCoefficients;
+    this.coefficients = coefficients;
+    this.size = rankCoefficients.size();
+  }
+
   public Annotation(int size) {
     rankCoefficients = new ArrayList<>(size);
     coefficients = new LinkedHashMap<>();
@@ -23,6 +31,18 @@ public class Annotation {
     for (int i = 0; i < size; i++) {
       getRankCoefficients().add(KnownCoefficient.ZERO);
     }
+  }
+
+  public Annotation substitute(Constraints constraints) {
+    final var rankCoefficients = new ArrayList<Coefficient>(this.rankCoefficients.size());
+    final var coefficients = new HashMap<List<Integer>, Coefficient>();
+    for (var entry : this.coefficients.entrySet()) {
+      coefficients.put(entry.getKey(), constraints.substitute(entry.getValue()));
+    }
+    for (var coefficient : this.rankCoefficients) {
+      rankCoefficients.add(constraints.substitute(coefficient));
+    }
+    return new Annotation(rankCoefficients, coefficients);
   }
 
   public void add(List<Integer> f, Coefficient coefficient) {
@@ -63,8 +83,13 @@ public class Annotation {
 
   public String toString() {
     StringBuilder sb = new StringBuilder();
+    boolean nonzero = false;
     for (int i = 0; i < size; i++) {
-      Coefficient q = rankCoefficients.get(i);
+      final var q = rankCoefficients.get(i);
+      if (q == KnownCoefficient.ZERO) {
+        continue;
+      }
+      nonzero = true;
       sb.append(q);
       sb.append(" · ");
       sb.append("rank(t");
@@ -75,13 +100,19 @@ public class Annotation {
         sb.append(" + ");
       }
     }
-    if (size > 0) {
+    if (size > 0 && nonzero) {
       sb.append(" + ");
     }
+    nonzero = false;
     var entries = coefficients.entrySet();
     int i = 0;
     for (var entry : entries) {
-      sb.append(entry.getValue());
+      final var q = entry.getValue();
+      if (q == KnownCoefficient.ZERO) {
+        continue;
+      }
+      nonzero = true;
+      sb.append(q);
       sb.append(" · ");
       sb.append("log(");
       for (int j = 0; j < size; j++) {
@@ -101,6 +132,9 @@ public class Annotation {
       }
 
       i++;
+    }
+    if (!nonzero) {
+      sb.append("0");
     }
     return sb.toString();
   }

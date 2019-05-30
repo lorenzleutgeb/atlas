@@ -30,13 +30,13 @@ matchCase : OR pattern ARROW expression ;
 //  - non-recursive, i.e. it is only possible to match one level of a tree
 //  - no derived identifiers
 //  - anonymous identifiers are allowed
-pattern : (IDENTIFIER | ANONYMOUS_IDENTIFIER) | patternTuple ;
-patternTuple : PAREN_OPEN left=(IDENTIFIER | ANONYMOUS_IDENTIFIER) COMMA middle=(IDENTIFIER | ANONYMOUS_IDENTIFIER) COMMA right=(IDENTIFIER | ANONYMOUS_IDENTIFIER) PAREN_CLOSE;
+pattern : IDENTIFIER | patternTuple ;
+patternTuple : PAREN_OPEN left=IDENTIFIER COMMA middle=IDENTIFIER COMMA right=IDENTIFIER PAREN_CLOSE;
 
 // The following definition of tuples is much more liberal.
 tuple: PAREN_OPEN left=expression COMMA middle=expression COMMA right=expression PAREN_CLOSE ;
 
-ANONYMOUS_IDENTIFIER : '_';
+// ANONYMOUS_IDENTIFIER : '_';
 DOT : '.';
 COMMA : ',';
 COLON : ':';

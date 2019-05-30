@@ -1,11 +1,23 @@
 package xyz.leutgeb.lorenz.logs.resources;
 
+import static xyz.leutgeb.lorenz.logs.Util.ensureLibrary;
+
+import com.microsoft.z3.Context;
+import com.microsoft.z3.Model;
+import com.microsoft.z3.RatNum;
+import com.microsoft.z3.RealExpr;
+import com.microsoft.z3.Solver;
+import com.microsoft.z3.Status;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.extern.log4j.Log4j2;
+import xyz.leutgeb.lorenz.logs.Util;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.logs.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.logs.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.logs.resources.constraints.EqualityConstraint;
@@ -13,10 +25,16 @@ import xyz.leutgeb.lorenz.logs.resources.constraints.OffsetConstraint;
 
 @Log4j2
 public class Constraints {
-  private AnnotationHeuristic annotationHeuristic = RangeHeuristic.DEFAULT;
-  private int freshness = 0;
+  private static final Map<String, String> Z3_CONFIG = Map.of("model", "true");
+
+  static {
+    ensureLibrary("z3java");
+  }
 
   private final LinkedList<Constraint> constraints = new LinkedList<>();
+  private AnnotationHeuristic annotationHeuristic = RangeHeuristic.DEFAULT;
+  private int freshness = 0;
+  private KnownCoefficient[] solution;
 
   public void add(Constraint constraint) {
     constraints.add(constraint);
@@ -103,9 +121,77 @@ public class Constraints {
     return annotationHeuristic.generate(size, this);
   }
 
-  public void solve() {
-    // TODO(lorenzleutgeb): Pass all constraints to some constraint solver, then read back results.
+  public KnownCoefficient substitute(Coefficient x) {
+    if (x instanceof KnownCoefficient) {
+      log.warn("You are trying to substitute a coefficient that is already known.");
+      return (KnownCoefficient) x;
+    } else if (x instanceof UnknownCoefficient) {
+      return solution[((UnknownCoefficient) x).getId()];
+    }
     throw new UnsupportedOperationException();
+  }
+
+  public void solve() {
+    if (solution != null) {
+      return;
+    }
+    final var ctx = new Context(Z3_CONFIG);
+    final var solver = ctx.mkSolver();
+
+    // Encode all coefficients as constants.
+    RealExpr[] coefficients = new RealExpr[freshness];
+    // Also encode that they are rational numbers.
+    // IntExpr[] numerators = new IntExpr[freshness];
+    // IntExpr[] denominators = new IntExpr[freshness];
+    for (int i = 0; i < freshness; i++) {
+      coefficients[i] = ctx.mkRealConst("q" + i);
+      // numerators[i] = ctx.mkIntConst("q" + i + "n");
+      // denominators[i] = ctx.mkIntConst("q" + i + "d");
+      // s.add(ctx.mkEq(coefficients[i], ctx.mkDiv(numerators[i], denominators[i])));
+      // s.add(ctx.mkNot(ctx.mkEq(denominators[i], ctx.mkInt(0))));
+      solver.add(ctx.mkGe(coefficients[i], ctx.mkReal(0)));
+    }
+
+    // Then encode all their dependencies.
+    for (Constraint c : constraints) {
+      solver.add(c.encode(ctx, coefficients));
+    }
+
+    log.debug(solver.toString());
+
+    final var model = check(solver);
+    solution = new KnownCoefficient[coefficients.length];
+    for (int i = 0; i < coefficients.length; i++) {
+      var x = model.getConstInterp(coefficients[i]);
+      if (!x.isRatNum()) {
+        throw new RuntimeException("solution for q" + i + " is not a rational number");
+      }
+      final var xr = (RatNum) x;
+      var num = xr.getNumerator();
+      if (num.getBigInteger().intValueExact() == 0) {
+        solution[i] = KnownCoefficient.ZERO;
+      } else {
+        log.debug("q" + i + " = " + xr.getNumerator() + "/" + xr.getDenominator());
+        solution[i] = new KnownCoefficient(Util.toFraction(xr));
+      }
+    }
+  }
+
+  private Model check(Solver solver) {
+    var status = solver.check();
+    if (Status.SATISFIABLE.equals(status)) {
+      return solver.getModel();
+    } else if (Status.UNKNOWN.equals(status)) {
+      log.error("Attempt to solve constraint system yielded unknown result.");
+      throw new RuntimeException("satisfiability of constraints unknown");
+    }
+    log.error("Constraint system is unsatisfiable!");
+    log.error(
+        "Unsatisfiable core:\n\t"
+            + Arrays.stream(solver.getUnsatCore())
+                .map(Objects::toString)
+                .collect(Collectors.joining("\n\t")));
+    throw new RuntimeException("constraint system is unsatisfiable");
   }
 
   @Override

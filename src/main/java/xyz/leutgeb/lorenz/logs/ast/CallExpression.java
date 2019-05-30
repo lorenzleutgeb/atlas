@@ -13,6 +13,7 @@ import lombok.Value;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
+import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.typing.types.FunctionType;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
@@ -50,6 +51,16 @@ public class CallExpression extends Expression {
     var result = context.getProblem().fresh();
     context.getProblem().add(this, fTy, new FunctionType(xTy, result));
     return result;
+  }
+
+  @Override
+  public Annotation inferAnnotations(Context context) throws UnificationError, TypeError {
+    var look = context.lookupFunctionAnnotation(name.getName());
+    var q = look.getFirst();
+    var qprime = look.getSecond();
+    var qplusone = context.getConstraints().heuristic(q.size());
+    context.getConstraints().increment(qplusone, q);
+    return qprime;
   }
 
   @Override

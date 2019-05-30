@@ -133,71 +133,59 @@ public class MatchExpression extends Expression {
     if (cases.size() != 2) {
       throw new IllegalStateException("must have exactly two cases");
     }
-    Optional<Pair<Expression, Expression>> nilCase =
-        cases.stream().filter(x -> x.getKey().equals(NIL)).findAny();
-    Optional<Pair<Expression, Expression>> nodeCase =
-        cases.stream().filter(x -> !x.getKey().equals(NIL)).findAny();
 
-    if (nilCase.isEmpty() || nodeCase.isEmpty()) {
-      // TODO(lorenz.leutgeb): This is a too restrictive and throws too much. The fault probably is
-      // equality of nil identifiers. Investigate.
+    if (!(getType() instanceof TreeType)) {
+      // This seems to be wrong
+      return Annotation.EMPTY;
+    }
+
+    final var nilFirst = cases.get(0).getKey().equals(NIL);
+    final var nilCase = cases.get(nilFirst ? 0 : 1);
+    final var nodeCase = cases.get(nilFirst ? 1 : 0);
+
+    if (nilCase == null || nodeCase == null) {
       throw new IllegalStateException("case missing");
     }
 
-    if (!(nilCase.get().getValue().getType() instanceof TreeType)
-        || !(nodeCase.get().getValue().getType() instanceof TreeType)) {
-      throw new UnsupportedOperationException("(match) only implemented for e1 : T and e2 : T");
-    }
+    final var scrutinee = (Identifier) test;
+    final var pattern = (Tuple) nodeCase.getKey();
+    final var x1 = (Identifier) pattern.getLeft();
+    final var x3 = (Identifier) pattern.getRight();
 
-    // We have exactly two cases inside this match, being the two constructors of trees.
-
-    // Note that in the nil-case, there are no new variables being introduced, so we just pass on
-    // context.
-    var nilqp = nilCase.get().getValue().inferAnnotations(context);
+    // nil
+    var nilqp = nilCase.getValue().inferAnnotations(context);
     if (nilqp.size() != 1) {
-      // TODO(lorenz.leutgeb): Waiting for Georg's response on how this is justified.
       throw new RuntimeException("annotation of nil case must have size exactly one");
     }
 
-    // TODO(lorenz.leutgeb): Waiting for Georg's response on whether the size should be m + 2 or m +
-    // 3.
+    // node
     var sub = context.child();
-    for (var e : ((Tuple) nodeCase.get().getKey()).getElements()) {
+    for (var e : pattern.getElements()) {
       sub.putAnnotation(((Identifier) e).getName(), sub.getConstraints().heuristic(1));
     }
-    var nodeqp = nodeCase.get().getValue().inferAnnotations(sub);
+    var nodeqp = nodeCase.getValue().inferAnnotations(sub);
     if (nodeqp.size() != 1) {
       throw new RuntimeException("annotation of node case must have size exactly one");
     }
 
     context.getConstraints().eq(nilqp, nodeqp);
 
+    // TODO: r_{\vec{a}, a, a, b} = q_{\vec{a}, a, b}
+    // TODO: p_{\vec{a},c} = \Sigma_{a+b=c} q_{\vec{a}, a, c}
+
     // r_{m+1} = r_{m+2} = q_{m+1}
     sub.getConstraints()
         .eq(
-            sub.lookupAnnotation(
-                    ((Identifier) ((Tuple) nodeCase.get().getKey()).getLeft()).getName())
-                .getRankCoefficient(),
-            sub.lookupAnnotation(
-                    ((Identifier) ((Tuple) nodeCase.get().getKey()).getRight()).getName())
-                .getRankCoefficient(),
-            sub.lookupAnnotation(((Identifier) test).getName()).getRankCoefficient());
+            sub.lookupAnnotation(x1.getName()).getRankCoefficient(),
+            sub.lookupAnnotation(x3.getName()).getRankCoefficient(),
+            sub.lookupAnnotation(scrutinee.getName()).getRankCoefficient());
 
     // r_{(\vec{0}, 1, 0, 0)} = r_{(\vec{0}, 0, 1, 0)} = q_{m+1}
     sub.getConstraints()
         .eq(
-            sub.lookupAnnotation(
-                    ((Identifier) ((Tuple) nodeCase.get().getKey()).getLeft()).getName())
-                .getCoefficients()
-                .get(Arrays.asList(1, 0)),
-            sub.lookupAnnotation(
-                    ((Identifier) ((Tuple) nodeCase.get().getKey()).getRight()).getName())
-                .getCoefficients()
-                .get(Arrays.asList(1, 0)),
-            sub.lookupAnnotation(((Identifier) test).getName()).getRankCoefficient());
-
-    // TODO: r_{\vec{a}, a, a, b} = q_{\vec{a}, a, b}
-    // TODO: p_{\vec{a},c} = \Sigma_{a+b=c} q_{\vec{a}, a, c}
+            sub.lookupAnnotation(x1.getName()).getCoefficients().get(Arrays.asList(1, 0)),
+            sub.lookupAnnotation(x3.getName()).getCoefficients().get(Arrays.asList(1, 0)),
+            sub.lookupAnnotation(scrutinee.getName()).getRankCoefficient());
 
     return nilqp;
   }
