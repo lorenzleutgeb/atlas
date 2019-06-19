@@ -1,10 +1,13 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
 import java.io.PrintStream;
+import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
+import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.typing.FunctionSignature;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
@@ -25,12 +28,11 @@ public class Program {
   }
 
   public void solve() throws UnificationError, TypeError {
-    var ctx = Context.root();
+    var functionAnnotations = new HashMap<String, Pair<Annotation, Annotation>>();
     for (var e : functionDefinitions.entrySet()) {
-      var sub = ctx.child();
       var fd = e.getValue();
-      var at = fd.inferAnnotation(sub);
-      ctx.putAnnotation(fd.getName(), at.getSecond().getAnnotation());
+      // inferAnnotation will add itself to functionAnnotations
+      var at = fd.inferAnnotation(functionAnnotations);
     }
   }
 

@@ -12,6 +12,8 @@ import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.ast.sources.Derived;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.typing.types.BoolType;
@@ -62,10 +64,11 @@ public class IfThenElseExpression extends Expression {
   }
 
   @Override
-  public Annotation inferAnnotations(Context context) throws UnificationError, TypeError {
-    var truthyAnnotation = truthy.inferAnnotations(context);
-    var falsyAnnotation = falsy.inferAnnotations(context);
-    context.getConstraints().eq(truthyAnnotation, falsyAnnotation);
+  public Annotation inferAnnotations(AnnotatingContext context, AnnotatingGlobals globals)
+      throws UnificationError, TypeError {
+    var truthyAnnotation = truthy.inferAnnotations(context, globals);
+    var falsyAnnotation = falsy.inferAnnotations(context, globals);
+    globals.getConstraints().eq(truthyAnnotation, falsyAnnotation);
     return truthyAnnotation;
   }
 

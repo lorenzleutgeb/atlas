@@ -1,5 +1,7 @@
 package xyz.leutgeb.lorenz.logs.resources;
 
+import static com.microsoft.z3.Status.SATISFIABLE;
+import static com.microsoft.z3.Status.UNKNOWN;
 import static xyz.leutgeb.lorenz.logs.Util.ensureLibrary;
 
 import com.microsoft.z3.Context;
@@ -7,8 +9,8 @@ import com.microsoft.z3.Model;
 import com.microsoft.z3.RatNum;
 import com.microsoft.z3.RealExpr;
 import com.microsoft.z3.Solver;
-import com.microsoft.z3.Status;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +23,8 @@ import xyz.leutgeb.lorenz.logs.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.logs.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.logs.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.logs.resources.constraints.EqualsSumConstraint;
+import xyz.leutgeb.lorenz.logs.resources.constraints.LessThanOrEqualConstraint;
 import xyz.leutgeb.lorenz.logs.resources.constraints.OffsetConstraint;
 
 @Log4j2
@@ -38,6 +42,10 @@ public class Constraints {
 
   public void add(Constraint constraint) {
     constraints.add(constraint);
+  }
+
+  public void le(Coefficient left, Coefficient right) {
+    add(new LessThanOrEqualConstraint(left, right));
   }
 
   public void eq(Coefficient... coefficients) {
@@ -179,9 +187,9 @@ public class Constraints {
 
   private Model check(Solver solver) {
     var status = solver.check();
-    if (Status.SATISFIABLE.equals(status)) {
+    if (SATISFIABLE.equals(status)) {
       return solver.getModel();
-    } else if (Status.UNKNOWN.equals(status)) {
+    } else if (UNKNOWN.equals(status)) {
       log.error("Attempt to solve constraint system yielded unknown result.");
       throw new RuntimeException("satisfiability of constraints unknown");
     }
@@ -199,5 +207,9 @@ public class Constraints {
     return "{ "
         + constraints.stream().map(Object::toString).collect(Collectors.joining(", "))
         + " }";
+  }
+
+  public void eqSum(Coefficient left, Collection<Coefficient> sum) {
+    add(new EqualsSumConstraint(left, sum));
   }
 }

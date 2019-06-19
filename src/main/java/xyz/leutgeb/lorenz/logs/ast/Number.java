@@ -7,6 +7,9 @@ import lombok.Value;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
+import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.typing.types.NumType;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
@@ -35,6 +38,12 @@ public class Number extends Expression {
   @Override
   public Expression normalize(Stack<Pair<Identifier, Expression>> context) {
     return this;
+  }
+
+  @Override
+  public Annotation inferAnnotations(AnnotatingContext context, AnnotatingGlobals globals)
+      throws UnificationError, TypeError {
+    return Annotation.empty();
   }
 
   @Override

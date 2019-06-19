@@ -7,7 +7,7 @@ import lombok.Value;
 
 @Value
 public class RangeHeuristic implements AnnotationHeuristic {
-  public static final RangeHeuristic DEFAULT = new RangeHeuristic(0, 5);
+  public static final RangeHeuristic DEFAULT = new RangeHeuristic(0, 2);
   int from, to;
 
   @Override

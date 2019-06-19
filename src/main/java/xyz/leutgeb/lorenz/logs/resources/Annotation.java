@@ -6,12 +6,14 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.java.Log;
 import xyz.leutgeb.lorenz.logs.Util;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.KnownCoefficient;
 
+@Log
 public class Annotation {
-  public static final Annotation EMPTY = new Annotation(0);
+  private static final Annotation EMPTY = new Annotation(0);
   protected List<Coefficient> rankCoefficients;
   protected Map<List<Integer>, Coefficient> coefficients;
   protected int size;
@@ -21,6 +23,15 @@ public class Annotation {
     this.rankCoefficients = rankCoefficients;
     this.coefficients = coefficients;
     this.size = rankCoefficients.size();
+    for (var l : coefficients.keySet()) {
+      if (l.size() != this.size + 1) {
+        throw new IllegalArgumentException();
+      }
+    }
+  }
+
+  public static Annotation empty() {
+    return new Annotation(0);
   }
 
   public Annotation(int size) {
@@ -31,6 +42,48 @@ public class Annotation {
     for (int i = 0; i < size; i++) {
       getRankCoefficients().add(KnownCoefficient.ZERO);
     }
+  }
+
+  public static Annotation merge(Annotation... as) {
+    if (as.length == 0) {
+      return EMPTY;
+    }
+
+    if (as.length == 1) {
+      return as[0];
+    }
+
+    int size = 0;
+    for (var a : as) {
+      size += a.size();
+    }
+
+    if (size == 0) {
+      return EMPTY;
+    }
+
+    final var rankCoefficients = new ArrayList<Coefficient>(size);
+    final var coefficients = new HashMap<List<Integer>, Coefficient>();
+    for (int i = 0; i < as.length; i++) {
+      final var a = as[i];
+      rankCoefficients.add(a.getRankCoefficient());
+
+      for (var e : a.getCoefficients().entrySet()) {
+        final var l = new ArrayList<Integer>(size + 1);
+        for (int j = 0; j < i; j++) {
+          l.add(0);
+        }
+        for (int j = 0; j < e.getKey().size() - 1; j++) {
+          l.add(e.getKey().get(j));
+        }
+        for (int j = 0; j < (size - i - a.size()); j++) {
+          l.add(0);
+        }
+        l.add(e.getKey().get(e.getKey().size() - 1));
+        coefficients.put(l, e.getValue());
+      }
+    }
+    return new Annotation(rankCoefficients, coefficients);
   }
 
   public Annotation substitute(Constraints constraints) {
@@ -72,13 +125,28 @@ public class Annotation {
     this.coefficients.put(f, coefficient);
   }
 
-  public Coefficient getOrFresh(Constraints context, int... fs) {
+  @Deprecated
+  public Coefficient getOrFreshForReal(Constraints context, int... fs) {
     var f = Ints.asList(fs);
     if (f.size() != size + 1) {
       throw new IllegalArgumentException(
           "expected one more integer than there are trees being annotated");
     }
     return this.coefficients.computeIfAbsent(f, k -> context.unknown());
+  }
+
+  public Coefficient getOrZero(Constraints context, int... fs) {
+    var f = Ints.asList(fs);
+    if (f.size() != size + 1) {
+      throw new IllegalArgumentException(
+          "expected one more integer than there are trees being annotated");
+    }
+    final var result = coefficients.get(f);
+    if (result == null) {
+      log.warning("Zeroing a coefficient because of absent counterpart.");
+      return KnownCoefficient.ZERO;
+    }
+    return result;
   }
 
   public String toString() {

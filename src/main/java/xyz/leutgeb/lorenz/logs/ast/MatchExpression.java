@@ -4,8 +4,9 @@ import static xyz.leutgeb.lorenz.logs.Util.indent;
 import static xyz.leutgeb.lorenz.logs.ast.Identifier.NIL;
 
 import java.io.PrintStream;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Stack;
 import java.util.stream.Collectors;
@@ -17,7 +18,10 @@ import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.ast.sources.Derived;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
+import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.typing.types.TreeType;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
@@ -129,15 +133,17 @@ public class MatchExpression extends Expression {
   }
 
   @Override
-  public Annotation inferAnnotations(Context context) throws UnificationError, TypeError {
+  public Annotation inferAnnotations(AnnotatingContext gammaxq, AnnotatingGlobals globals)
+      throws UnificationError, TypeError {
     if (cases.size() != 2) {
       throw new IllegalStateException("must have exactly two cases");
     }
 
     if (!(getType() instanceof TreeType)) {
-      // This seems to be wrong
-      return Annotation.EMPTY;
+      return Annotation.empty();
     }
+
+    final var constraints = globals.getConstraints();
 
     final var nilFirst = cases.get(0).getKey().equals(NIL);
     final var nilCase = cases.get(nilFirst ? 0 : 1);
@@ -152,40 +158,82 @@ public class MatchExpression extends Expression {
     final var x1 = (Identifier) pattern.getLeft();
     final var x3 = (Identifier) pattern.getRight();
 
+    final var gammap = gammaxq.pop(constraints);
+
     // nil
-    var nilqp = nilCase.getValue().inferAnnotations(context);
+    var nilqp = nilCase.getValue().inferAnnotations(gammap, globals);
     if (nilqp.size() != 1) {
       throw new RuntimeException("annotation of nil case must have size exactly one");
     }
 
+    final var gammaxsr = gammaxq.pop(constraints).extend(constraints, x1, x3);
+
     // node
-    var sub = context.child();
-    for (var e : pattern.getElements()) {
-      sub.putAnnotation(((Identifier) e).getName(), sub.getConstraints().heuristic(1));
-    }
-    var nodeqp = nodeCase.getValue().inferAnnotations(sub);
+    var nodeqp = nodeCase.getValue().inferAnnotations(gammaxsr, globals);
     if (nodeqp.size() != 1) {
       throw new RuntimeException("annotation of node case must have size exactly one");
     }
 
-    context.getConstraints().eq(nilqp, nodeqp);
+    constraints.eq(nilqp, nodeqp);
 
-    // TODO: r_{\vec{a}, a, a, b} = q_{\vec{a}, a, b}
-    // TODO: p_{\vec{a},c} = \Sigma_{a+b=c} q_{\vec{a}, a, c}
+    final var q = gammaxq.getAnnotation();
+    final var r = gammaxsr.getAnnotation();
+    final var p = gammap.getAnnotation();
+    final var m = -1;
 
     // r_{m+1} = r_{m+2} = q_{m+1}
-    sub.getConstraints()
-        .eq(
-            sub.lookupAnnotation(x1.getName()).getRankCoefficient(),
-            sub.lookupAnnotation(x3.getName()).getRankCoefficient(),
-            sub.lookupAnnotation(scrutinee.getName()).getRankCoefficient());
+    constraints.eq(
+        r.getRankCoefficients().get(m + 1),
+        r.getRankCoefficients().get(m + 2),
+        q.getRankCoefficients().get(m + 1));
 
     // r_{(\vec{0}, 1, 0, 0)} = r_{(\vec{0}, 0, 1, 0)} = q_{m+1}
-    sub.getConstraints()
-        .eq(
-            sub.lookupAnnotation(x1.getName()).getCoefficients().get(Arrays.asList(1, 0)),
-            sub.lookupAnnotation(x3.getName()).getCoefficients().get(Arrays.asList(1, 0)),
-            sub.lookupAnnotation(scrutinee.getName()).getRankCoefficient());
+    final var index1 = new ArrayList<Integer>(r.size() + 1);
+    final var index2 = new ArrayList<Integer>(r.size() + 1);
+    for (int i = 0; i < r.size() + 1 - 3; i++) {
+      index1.add(0);
+      index2.add(0);
+    }
+    index1.addAll(List.of(1, 0, 0));
+    index2.addAll(List.of(0, 1, 0));
+    constraints.eq(
+        r.getCoefficients().get(index1),
+        r.getCoefficients().get(index2),
+        q.getRankCoefficients().get(m + 1));
+
+    // r_{\vec{a}, a, a, b} = q_{\vec{a}, a, b}
+    for (Map.Entry<List<Integer>, Coefficient> e : r.getCoefficients().entrySet()) {
+      final var indexr = e.getKey();
+      if (!(indexr.get(indexr.size() - 2).equals(indexr.get(indexr.size() - 3)))) {
+        continue;
+      }
+      final var indexq = new ArrayList<>(indexr.subList(0, indexr.size() - 3));
+      final var a = indexr.get(indexr.size() - 2);
+      final var b = indexr.get(indexr.size() - 1);
+      indexq.add(a);
+      indexq.add(b);
+      constraints.eq(e.getValue(), q.getCoefficients().get(indexq));
+    }
+
+    // p_{\vec{a}, c} = \Sigma_{a+b=c} q_{\vec{a}, a, b}
+    for (var pe : p.getCoefficients().entrySet()) {
+      final var prefix = pe.getKey().subList(0, pe.getKey().size() - 1);
+      final var c = pe.getKey().get(pe.getKey().size() - 1);
+      final var sum = new ArrayList<Coefficient>();
+      for (final var e : q.getCoefficients().entrySet()) {
+        final var index = e.getKey();
+        final var carrier = new ArrayList<>(index.subList(0, index.size() - 2));
+        if (!prefix.equals(carrier)) {
+          continue;
+        }
+        final var a = index.get(index.size() - 2);
+        final var b = index.get(index.size() - 1);
+        if (a + b == c) {
+          sum.add(e.getValue());
+        }
+      }
+      constraints.eqSum(pe.getValue(), sum);
+    }
 
     return nilqp;
   }

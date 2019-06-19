@@ -10,6 +10,9 @@ import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.ast.sources.Derived;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
+import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.typing.TypeClass;
 import xyz.leutgeb.lorenz.logs.typing.TypeConstraint;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
@@ -84,5 +87,11 @@ public class BooleanExpression extends Expression {
   @Override
   public boolean isImmediate() {
     return left.isImmediate() && right.isImmediate();
+  }
+
+  @Override
+  public Annotation inferAnnotations(AnnotatingContext context, AnnotatingGlobals globals)
+      throws UnificationError, TypeError {
+    return Annotation.empty();
   }
 }

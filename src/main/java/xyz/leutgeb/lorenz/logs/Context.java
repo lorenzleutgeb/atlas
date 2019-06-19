@@ -4,38 +4,22 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.log4j.Log4j2;
-import org.hipparchus.util.Pair;
-import xyz.leutgeb.lorenz.logs.resources.Annotation;
-import xyz.leutgeb.lorenz.logs.resources.Constraints;
-import xyz.leutgeb.lorenz.logs.typing.types.BoolType;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
 import xyz.leutgeb.lorenz.logs.unification.UnificationProblem;
-import xyz.leutgeb.lorenz.logs.values.TreeValue;
 
 // TODO(lorenz.leutgeb): Use separate context classes for simple signature inference,
 // constraint generation, and evaluation.
 @Log4j2
 @Value
 public class Context {
-  private static final Context INTERNAL_ROOT = new Context();
-
-  static {
-    INTERNAL_ROOT.types.put("true", BoolType.INSTANCE);
-    INTERNAL_ROOT.types.put("false", BoolType.INSTANCE);
-
-    INTERNAL_ROOT.values.put("true", true);
-    INTERNAL_ROOT.values.put("false", false);
-    INTERNAL_ROOT.values.put("nil", TreeValue.nil());
-  }
-
   public static Context root() {
-    return new Context(INTERNAL_ROOT, new UnificationProblem(), new Constraints());
+    return new Context();
   }
 
   Context parent;
@@ -49,32 +33,22 @@ public class Context {
 
   Map<String, Object> values;
 
-  Map<String, Annotation> annotations;
-
-  Map<String, Pair<Annotation, Annotation>> functionAnnotations;
-
   /** For simple signature inference. */
   UnificationProblem problem;
 
-  /** For constructing resource constraints. */
-  Constraints constraints;
-
   private Context(Context parent) {
-    this(parent, parent.problem, parent.constraints);
+    this(parent, parent.problem);
   }
 
   private Context() {
-    this(null, new UnificationProblem(), new Constraints());
+    this(null, new UnificationProblem());
   }
 
-  private Context(Context parent, UnificationProblem problem, Constraints constraints) {
+  private Context(Context parent, UnificationProblem problem) {
     this.parent = parent;
     this.problem = problem;
-    this.constraints = constraints;
-    this.types = new HashMap<>();
+    this.types = new LinkedHashMap<>();
     this.values = new HashMap<>();
-    this.annotations = new HashMap<>();
-    this.functionAnnotations = new HashMap<>();
   }
 
   public Context child() {
@@ -94,8 +68,6 @@ public class Context {
   }
 
   /** Recursively looks up the signature of some identifier (given as {@link String}). */
-  // TODO(lorenz.leutgeb): This behaves differently in simple signature inference and in constraint
-  // generation.
   public @Nonnull Type lookupType(final String key) {
     Type t = lookupTypeInternal(key);
     if (t != null) {
@@ -105,7 +77,7 @@ public class Context {
       if (similar.isEmpty()) {
         throw new RuntimeException("'" + key + "' is not defined ");
       }
-      throw new RuntimeException("'" + key + "' is not defined (alternatives: " + similar + ")");
+      throw new RuntimeException("'" + key + "' is not defined. (Did you mean " + similar + "?)");
     }
   }
 
@@ -117,28 +89,6 @@ public class Context {
       return parent.lookupTypeInternal(key);
     } else {
       return null;
-    }
-  }
-
-  public Annotation lookupAnnotation(final String key) {
-    var t = annotations.get(key);
-    if (t != null) {
-      return t;
-    } else if (parent != null) {
-      return parent.lookupAnnotation(key);
-    } else {
-      throw new NoSuchElementException();
-    }
-  }
-
-  public Pair<Annotation, Annotation> lookupFunctionAnnotation(final String key) {
-    var t = functionAnnotations.get(key);
-    if (t != null) {
-      return t;
-    } else if (parent != null) {
-      return parent.lookupFunctionAnnotation(key);
-    } else {
-      throw new NoSuchElementException();
     }
   }
 
@@ -159,7 +109,7 @@ public class Context {
   }
 
   public void putType(String key, Type value) {
-    if ("nil".equals(key) || "_".equals(key)) {
+    if ("nil".equals(key)) { // || "_".equals(key)) {
       // Silently ignore this, since nil and _ will have a magic type assigned in Identifier.
       return;
     }
@@ -168,17 +118,6 @@ public class Context {
       log.info("Hiding " + key);
     }
     types.put(key, value);
-  }
-
-  public void putAnnotation(String key, Annotation value) {
-    if ("nil".equals(key)) { // || "_".equals(key)) {
-      throw new RuntimeException("this probably is a bad idea...");
-    }
-    annotations.put(key, value);
-  }
-
-  public void putFunctionAnnotation(String key, Pair<Annotation, Annotation> value) {
-    functionAnnotations.put(key, value);
   }
 
   public void putValue(String key, Type value) {

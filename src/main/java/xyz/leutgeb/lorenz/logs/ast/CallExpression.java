@@ -13,9 +13,12 @@ import lombok.Value;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.typing.types.FunctionType;
+import xyz.leutgeb.lorenz.logs.typing.types.TreeType;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
@@ -23,6 +26,8 @@ import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 @EqualsAndHashCode(callSuper = true)
 public class CallExpression extends Expression {
   @NonNull Identifier name;
+
+  // after normalization, this is effectively a List<Identifier>
   @NonNull List<Expression> parameters;
 
   public CallExpression(
@@ -54,12 +59,27 @@ public class CallExpression extends Expression {
   }
 
   @Override
-  public Annotation inferAnnotations(Context context) throws UnificationError, TypeError {
-    var look = context.lookupFunctionAnnotation(name.getName());
-    var q = look.getFirst();
-    var qprime = look.getSecond();
-    var qplusone = context.getConstraints().heuristic(q.size());
-    context.getConstraints().increment(qplusone, q);
+  public Annotation inferAnnotations(AnnotatingContext context, AnnotatingGlobals globals)
+      throws UnificationError, TypeError {
+    final var treeParameters =
+        parameters
+            .stream()
+            .map(param -> (Identifier) param)
+            .filter(param -> param.getType() instanceof TreeType)
+            .collect(Collectors.toList());
+
+    final var annotation = globals.getFunctionAnnotations().get(name.getName());
+    final var q = annotation.getFirst();
+    final var qprime = annotation.getSecond();
+
+    // Apply (w : var) to truncate context.
+    final var weakenedContext =
+        context.weakenIdentifiersExcept(globals.getConstraints(), treeParameters);
+
+    // Since we're in a leaf here, also apply (w).
+    final var weakenedPotential = weakenedContext.weaken(globals.getConstraints());
+
+    globals.getConstraints().increment(weakenedPotential.getAnnotation(), q);
     return qprime;
   }
 

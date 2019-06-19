@@ -10,6 +10,8 @@ import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.ast.sources.Derived;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
@@ -29,7 +31,7 @@ public abstract class Expression extends Syntax {
   protected abstract Type inferInternal(Context context) throws UnificationError, TypeError;
 
   public Object evaluate(Context context) {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("not implemented");
   }
 
   public Type infer(Context context) throws UnificationError, TypeError {
@@ -67,9 +69,8 @@ public abstract class Expression extends Syntax {
     return false;
   }
 
-  public Annotation inferAnnotations(Context context) throws UnificationError, TypeError {
-    throw new UnsupportedOperationException("not implemented");
-  }
+  public abstract Annotation inferAnnotations(AnnotatingContext context, AnnotatingGlobals globals)
+      throws UnificationError, TypeError;
 
   public Expression bindAll(Stack<Pair<Identifier, Expression>> context) {
     var binder = this;

@@ -1,3 +1,3 @@
 descend t = match t with
-(*  | nil -> true *)
+  | nil -> nil
   | (l, m, r) -> descend l

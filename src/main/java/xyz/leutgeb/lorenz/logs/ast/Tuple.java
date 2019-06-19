@@ -1,7 +1,6 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
 import java.io.PrintStream;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Stack;
 import java.util.stream.Collectors;
@@ -12,8 +11,9 @@ import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.ast.sources.Derived;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
-import xyz.leutgeb.lorenz.logs.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.typing.types.TreeType;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
@@ -70,37 +70,35 @@ public class Tuple extends Expression {
   }
 
   @Override
-  public Annotation inferAnnotations(Context context) throws UnificationError, TypeError {
-    var constraints = context.getConstraints();
-    var x1q = context.lookupAnnotation(((Identifier) getLeft()).getName());
-    var x3q = context.lookupAnnotation(((Identifier) getRight()).getName());
+  public Annotation inferAnnotations(AnnotatingContext x123q, AnnotatingGlobals globals)
+      throws UnificationError, TypeError {
+    final var constraints = globals.getConstraints();
 
-    // var q = constraints.heuristic(2);
+    // Apply (w : var) and (w) since this is a leaf node.
+    var q =
+        x123q
+            .weakenIdentifiersExcept(
+                globals.getConstraints(), List.of((Identifier) getLeft(), (Identifier) getRight()))
+            .weaken(constraints)
+            .getAnnotation();
     var result = constraints.heuristic(1);
 
     // q_1 = q_2 = q'
-    // var q1 = q.getRankCoefficients().get(0);
-    var q1 = x1q.getRankCoefficient();
-    // var q2 = q.getRankCoefficients().get(1);
-    var q2 = x3q.getRankCoefficient();
+    var q1 = q.getRankCoefficients().get(0);
+    var q2 = q.getRankCoefficients().get(1);
     var qx = result.getRankCoefficient();
     constraints.eq(q1, q2, qx);
 
     // q_{1,0,0} = q_{0,1,0} = q_*'
-    // var q100 = q.getOrFresh(constraints, 1, 0, 0);
-    var q100 = x1q.getOrFresh(constraints, 1, 0);
-    // var q010 = q.getOrFresh(constraints, 1, 0, 0);
-    var q010 = x3q.getOrFresh(constraints, 1, 0);
+    var q100 = q.getOrZero(constraints, 1, 0, 0);
+    var q010 = q.getOrZero(constraints, 0, 1, 0);
     constraints.eq(q100, q010, qx);
 
     // q_{a,a,b} = q'_{a,b}
     for (var e : result.getCoefficients().entrySet()) {
       var a = e.getKey().get(0);
       var b = e.getKey().get(1);
-      constraints.add(
-          new EqualityConstraint(e.getValue(), x1q.getCoefficients().get(Arrays.asList(a, b))));
-      constraints.add(
-          new EqualityConstraint(e.getValue(), x3q.getCoefficients().get(Arrays.asList(a, b))));
+      constraints.eq(e.getValue(), q.getCoefficients().get(List.of(a, a, b)));
     }
 
     return result;

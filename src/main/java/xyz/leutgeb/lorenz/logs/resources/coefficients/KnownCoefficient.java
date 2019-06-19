@@ -16,4 +16,9 @@ public class KnownCoefficient extends Coefficient {
   public RealExpr encode(Context context, RealExpr[] coefficients) {
     return context.mkReal(value.getNumerator(), value.getDenominator());
   }
+
+  @Override
+  public String toString() {
+    return value.toString();
+  }
 }

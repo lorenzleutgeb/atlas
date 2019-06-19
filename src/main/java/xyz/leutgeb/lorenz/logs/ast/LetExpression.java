@@ -10,6 +10,9 @@ import lombok.EqualsAndHashCode;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
+import xyz.leutgeb.lorenz.logs.resources.Annotation;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
@@ -31,6 +34,12 @@ public class LetExpression extends Expression {
   @Override
   public Stream<? extends Expression> getChildren() {
     return Stream.of(declared, value, body);
+  }
+
+  @Override
+  public Annotation inferAnnotations(AnnotatingContext context, AnnotatingGlobals globals)
+      throws UnificationError, TypeError {
+    throw new UnsupportedOperationException("not implemented");
   }
 
   @Override

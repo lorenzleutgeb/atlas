@@ -1,6 +1,7 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -13,8 +14,12 @@ import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.Util;
 import xyz.leutgeb.lorenz.logs.ast.sources.Predefined;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
+import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
+import xyz.leutgeb.lorenz.logs.typing.types.BoolType;
 import xyz.leutgeb.lorenz.logs.typing.types.TreeType;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
@@ -25,6 +30,7 @@ public class Identifier extends Expression {
   public static final Identifier TRUE = new Identifier(Predefined.INSTANCE, "true");
   public static final Identifier FALSE = new Identifier(Predefined.INSTANCE, "false");
   // public static final Identifier ANONYMOUS = new Identifier(Predefined.INSTANCE, "_");
+
   private static int freshness = 0;
   @NonNull @Getter private final String name;
   @NonNull @Getter private final Set<Source> occurences;
@@ -70,16 +76,18 @@ public class Identifier extends Expression {
     if (name.equals(NIL.name)) {
       return new TreeType(context.getProblem().fresh());
     }
-    // if (name.equals(ANONYMOUS.name)) {
-    //  return context.getProblem().fresh();
-    // }
+    if (name.equals(TRUE.name) || name.equals(FALSE.name)) {
+      return BoolType.INSTANCE;
+    }
 
-    Type ty = context.lookupType(this.name);
+    return context.lookupType(this.name);
+    /*
     if (ty == null) {
       throw new TypeError.NotInContext(this.name);
     } else {
       return ty;
     }
+    */
   }
 
   @Override
@@ -88,41 +96,41 @@ public class Identifier extends Expression {
   }
 
   @Override
-  public Annotation inferAnnotations(Context context) throws UnificationError, TypeError {
-    // Special case for nil, see rule (nil).
-    if (NIL.equals(this)) {
-      var constraints = context.getConstraints();
-      var result = constraints.heuristic(1);
-
-      // Choose some annotation q for the empty sequence of trees.
-      var q = constraints.heuristic(0);
-
-      // Equate according to preconditions of (nil)
-      for (var e : q.getCoefficients().entrySet()) {
-        var c = e.getKey().get(0);
-        for (int a = 0; a <= c; a++) {
-          int b = c - a;
-
-          // TODO(lorenzleutgeb): Should getOrFresh be used here?
-          constraints.eq(e.getValue(), result.getOrFresh(constraints, a, b));
-        }
-      }
-
-      return result;
-    }
-
-    // Now, two other cases are left:
+  public Annotation inferAnnotations(AnnotatingContext context, AnnotatingGlobals globals)
+      throws UnificationError, TypeError {
+    // Three cases
+    //  - nil
+    //    see rule (nil)
     //  - tree variables
     //    return some annotation
     //  - non-tree variables or constants (like true/false)
     //    return a zero-valued annotation
+    if (NIL.name.equals(name)) {
+      final var constraints = globals.getConstraints();
+      var qp = constraints.heuristic(1);
 
-    if (getType() instanceof TreeType) {
-      return context.lookupAnnotation(name);
+      // Apply (w : var) and (w) since this is a leaf.
+      var q = context.weakenAllIdentifiers(constraints).weaken(constraints).getAnnotation();
+
+      // Equate according to preconditions of (nil)
+      for (int c = 0; c < q.getRankCoefficients().size(); c++) {
+        final var sum = new ArrayList<Coefficient>();
+        for (final var e : qp.getCoefficients().entrySet()) {
+          final var index = e.getKey();
+          final var a = index.get(0);
+          final var b = index.get(1);
+          if (a + b == c) {
+            sum.add(e.getValue());
+          }
+        }
+        constraints.eqSum(q.getRankCoefficients().get(c), sum);
+      }
+      return qp;
+    } else if (getType() instanceof TreeType) {
+      return context.weakenIdentifiersExcept(globals.getConstraints(), this).getAnnotation();
+    } else {
+      return Annotation.empty();
     }
-
-    // Handles non-tree variables and constants.
-    return Annotation.EMPTY;
   }
 
   public boolean isImmediate() {
@@ -158,9 +166,6 @@ public class Identifier extends Expression {
     if (name.equals(NIL.name)) {
       return TreeValue.nil();
     }
-    // if (name.equals(ANONYMOUS.name)) {
-    //  throw new UnsupportedOperationException("the value of _ cannot be accessed");
-    // }
     if (name.equals(TRUE.name)) {
       return true;
     }

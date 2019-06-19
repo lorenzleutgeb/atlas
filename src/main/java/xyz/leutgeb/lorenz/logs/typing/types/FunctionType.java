@@ -1,6 +1,5 @@
 package xyz.leutgeb.lorenz.logs.typing.types;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +31,7 @@ public class FunctionType extends Type {
   }
 
   public FunctionType(Type to, Type... from) {
-    this(Arrays.asList(from), to);
+    this(List.of(from), to);
   }
 
   public Type generalize(Generalizer g) {

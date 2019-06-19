@@ -3,13 +3,16 @@ package xyz.leutgeb.lorenz.logs.ast;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
-import xyz.leutgeb.lorenz.logs.resources.AnnotatedType;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
+import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
+import xyz.leutgeb.lorenz.logs.resources.Constraints;
 import xyz.leutgeb.lorenz.logs.typing.FunctionSignature;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.typing.TypeVariable;
@@ -63,42 +66,40 @@ public class FunctionDefinition {
     return new FunctionDefinition(name, arguments, body.normalize(context).bindAll(context));
   }
 
-  public Pair<AnnotatedType, AnnotatedType> inferAnnotation(Context context)
+  public Pair<Annotation, Annotation> inferAnnotation(
+      Map<String, Pair<Annotation, Annotation>> functionAnnotations)
       throws UnificationError, TypeError {
+
     if (signature == null) {
       throw new IllegalStateException();
     }
 
-    var sub = context.child();
+    final var constraints = new Constraints();
+
     var types = signature.getType().getFrom().getElements();
-    int trees = 0;
+    final var ids = new ArrayList<String>(types.size());
+    var trees = 0;
     for (int i = 0; i < arguments.size(); i++) {
       if (types.get(i) instanceof TreeType) {
-        sub.putAnnotation(arguments.get(i), sub.getConstraints().heuristic(1));
+        ids.add(arguments.get(i));
         trees++;
       } else if (types.get(i) == BoolType.INSTANCE || types.get(i) instanceof TypeVariable) {
-        log.warn("Not adding any annotation for " + arguments.get(i));
-        // sub.putAnnotation(arguments.get(i), Annotation.);
+        log.warn("Not adding " + arguments.get(i) + " to AnnotatingContext");
       } else {
         throw new RuntimeException("unknown type");
       }
     }
-    // if (trees.size() != 1) {
-    //  throw new UnsupportedOperationException(
-    //      "analysis is only supported for functions that take exactly one tree argument");
-    // }
-    var constraints = sub.getConstraints();
-    var q = constraints.heuristic(trees);
 
-    var qprime = body.getType() instanceof TreeType ? constraints.heuristic(1) : Annotation.EMPTY;
+    var initialGammaQ = new AnnotatingContext(ids, constraints.heuristic(trees));
+    var q = initialGammaQ.getAnnotation();
 
-    sub.putFunctionAnnotation(name, new Pair<>(q, qprime));
+    var qprime = body.getType() instanceof TreeType ? constraints.heuristic(1) : Annotation.empty();
+
+    functionAnnotations.put(name, new Pair<>(q, qprime));
+    final var globals = new AnnotatingGlobals(functionAnnotations, constraints);
 
     // if (!(signature.getType().getTo() instanceof TreeType)) {
-    final var result =
-        new Pair<>(
-            new AnnotatedType(signature.getType().getFrom(), q),
-            new AnnotatedType(body.getType(), body.inferAnnotations(sub)));
+    final var result = new Pair<>(q, body.inferAnnotations(initialGammaQ, globals));
 
     constraints.solve();
     System.out.println(q.substitute(constraints));
