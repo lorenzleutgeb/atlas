@@ -6,6 +6,7 @@ import com.microsoft.z3.RealExpr;
 import java.util.Objects;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import xyz.leutgeb.lorenz.logs.ast.Expression;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
 
 @Data
@@ -13,7 +14,8 @@ import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
 public class EqualityConstraint extends Constraint {
   protected final Coefficient left, right;
 
-  public EqualityConstraint(Coefficient left, Coefficient right) {
+  public EqualityConstraint(int id, Expression source, Coefficient left, Coefficient right) {
+    super(id, source);
     Objects.requireNonNull(left);
     Objects.requireNonNull(right);
     this.left = left;
@@ -26,6 +28,6 @@ public class EqualityConstraint extends Constraint {
 
   @Override
   public String toString() {
-    return left + " = " + right;
+    return prefixed(left + " = " + right);
   }
 }

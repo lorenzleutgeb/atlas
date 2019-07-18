@@ -4,11 +4,13 @@ import static xyz.leutgeb.lorenz.logs.Util.indent;
 import static xyz.leutgeb.lorenz.logs.ast.Identifier.NIL;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.Stack;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Data;
@@ -17,11 +19,11 @@ import lombok.extern.log4j.Log4j2;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.ast.sources.Derived;
+import xyz.leutgeb.lorenz.logs.ast.sources.Renamed;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
-import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.typing.types.TreeType;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
@@ -54,6 +56,25 @@ public class MatchExpression extends Expression {
     }
   }
 
+  public MatchExpression(
+      Source source, Expression test, List<Pair<Expression, Expression>> cases, Type type) {
+    super(source, type);
+    this.test = test;
+    this.cases = cases;
+    Optional<Pair<Expression, Expression>> nilCase =
+        cases.stream().filter(x -> x.getKey().equals(Identifier.nil())).findAny();
+    if (nilCase.isEmpty() && this.cases.size() == 1) {
+      // log.info("Adding case `nil -> nil` to match " + source);
+      this.cases.add(new Pair<>(Identifier.nil(), Identifier.nil()));
+    }
+    if (this.cases.size() != 2) {
+      throw new IllegalArgumentException(
+          "exactly 2 cases are required for a match, however "
+              + this.cases.size()
+              + " were encountered");
+    }
+  }
+
   private static Pair<Expression, Expression> normalize(Pair<Expression, Expression> pair) {
     if (pair.getKey() instanceof Tuple
         && !((Tuple) pair.getKey()).getElements().stream().allMatch(Expression::isImmediate)) {
@@ -64,9 +85,12 @@ public class MatchExpression extends Expression {
 
   @Override
   public Stream<? extends Expression> getChildren() {
-    var a = cases.stream().map(Pair::getValue);
-    var b = cases.stream().map(Pair::getKey);
-    return Stream.concat(Stream.of(test), Stream.concat(a, b));
+    return Stream.concat(
+        Stream.of(test), Stream.concat(cases.stream().map(Pair::getKey), follow()));
+  }
+
+  public Stream<? extends Expression> follow() {
+    return cases.stream().map(Pair::getValue);
   }
 
   @Override
@@ -86,7 +110,7 @@ public class MatchExpression extends Expression {
           throw new RuntimeException("the only identifier allowed as destruction pattern is nil");
         }
         var id = (Identifier) matcher;
-        var sub = context.child();
+        var sub = context.hide(((Identifier) test).getName());
         var fresh = sub.getProblem().fresh();
         sub.putType(id.getName(), fresh);
         sub.getProblem().add(this, testType, matcher.infer(sub));
@@ -98,7 +122,7 @@ public class MatchExpression extends Expression {
           throw new UnsupportedOperationException();
         }
 
-        var sub = context.child();
+        var sub = context.hide(((Identifier) test).getName());
         for (int i = 0; i < 3; i++) {
           if (!(tuple.getElements().get(i) instanceof Identifier)) {
             throw new UnsupportedOperationException();
@@ -133,7 +157,21 @@ public class MatchExpression extends Expression {
   }
 
   @Override
-  public Annotation inferAnnotations(AnnotatingContext gammaxq, AnnotatingGlobals globals)
+  public MatchExpression rename(Map<String, String> renaming) {
+    return new MatchExpression(
+        new Renamed(source),
+        test,
+        cases.stream().map(e -> rename(e, renaming)).collect(Collectors.toList()),
+        type);
+  }
+
+  private static Pair<Expression, Expression> rename(
+      Pair<Expression, Expression> cc, Map<String, String> renaming) {
+    return new Pair<>(cc.getFirst(), cc.getSecond().rename(renaming));
+  }
+
+  @Override
+  public Annotation inferAnnotationsInternal(AnnotatingContext gammaxq, AnnotatingGlobals globals)
       throws UnificationError, TypeError {
     if (cases.size() != 2) {
       throw new IllegalStateException("must have exactly two cases");
@@ -158,7 +196,7 @@ public class MatchExpression extends Expression {
     final var x1 = (Identifier) pattern.getLeft();
     final var x3 = (Identifier) pattern.getRight();
 
-    final var gammap = gammaxq.pop(constraints);
+    final var gammap = gammaxq.pop(constraints, scrutinee);
 
     // nil
     var nilqp = nilCase.getValue().inferAnnotations(gammap, globals);
@@ -166,7 +204,7 @@ public class MatchExpression extends Expression {
       throw new RuntimeException("annotation of nil case must have size exactly one");
     }
 
-    final var gammaxsr = gammaxq.pop(constraints).extend(constraints, x1, x3);
+    final var gammaxsr = gammaxq.pop(constraints, scrutinee).extend(constraints, x1, x3);
 
     // node
     var nodeqp = nodeCase.getValue().inferAnnotations(gammaxsr, globals);
@@ -174,66 +212,57 @@ public class MatchExpression extends Expression {
       throw new RuntimeException("annotation of node case must have size exactly one");
     }
 
-    constraints.eq(nilqp, nodeqp);
-
-    final var q = gammaxq.getAnnotation();
-    final var r = gammaxsr.getAnnotation();
-    final var p = gammap.getAnnotation();
-    final var m = -1;
+    constraints.eq(this, nilqp, nodeqp);
 
     // r_{m+1} = r_{m+2} = q_{m+1}
     constraints.eq(
-        r.getRankCoefficients().get(m + 1),
-        r.getRankCoefficients().get(m + 2),
-        q.getRankCoefficients().get(m + 1));
+        this,
+        gammaxsr.getRankCoefficient(x1.getName()),
+        gammaxsr.getRankCoefficient(x3.getName()),
+        gammaxq.getRankCoefficient(scrutinee.getName()));
 
     // r_{(\vec{0}, 1, 0, 0)} = r_{(\vec{0}, 0, 1, 0)} = q_{m+1}
-    final var index1 = new ArrayList<Integer>(r.size() + 1);
-    final var index2 = new ArrayList<Integer>(r.size() + 1);
-    for (int i = 0; i < r.size() + 1 - 3; i++) {
-      index1.add(0);
-      index2.add(0);
-    }
-    index1.addAll(List.of(1, 0, 0));
-    index2.addAll(List.of(0, 1, 0));
+    final Function<String, Integer> index1 = (String name) -> name.equals(x1.getName()) ? 1 : 0;
+    final Function<String, Integer> index2 = (String name) -> name.equals(x3.getName()) ? 1 : 0;
+
     constraints.eq(
-        r.getCoefficients().get(index1),
-        r.getCoefficients().get(index2),
-        q.getRankCoefficients().get(m + 1));
+        this,
+        gammaxsr.getCoefficient(index1, 0),
+        gammaxsr.getCoefficient(index2, 0),
+        gammaxq.getRankCoefficient(scrutinee.getName()));
 
     // r_{\vec{a}, a, a, b} = q_{\vec{a}, a, b}
-    for (Map.Entry<List<Integer>, Coefficient> e : r.getCoefficients().entrySet()) {
-      final var indexr = e.getKey();
-      if (!(indexr.get(indexr.size() - 2).equals(indexr.get(indexr.size() - 3)))) {
-        continue;
-      }
-      final var indexq = new ArrayList<>(indexr.subList(0, indexr.size() - 3));
-      final var a = indexr.get(indexr.size() - 2);
-      final var b = indexr.get(indexr.size() - 1);
-      indexq.add(a);
-      indexq.add(b);
-      constraints.eq(e.getValue(), q.getCoefficients().get(indexq));
-    }
+    gammaxsr
+        .streamIndices()
+        .filter(index -> new HashSet<>(index.getFirst().values()).size() == 1)
+        .forEach(
+            index -> {
+              index.getFirst().put(scrutinee.getName(), index.getFirst().get(x1.getName()));
+              constraints.eq(this, gammaxsr.getCoefficient(index), gammaxq.getCoefficient(index));
+            });
 
     // p_{\vec{a}, c} = \Sigma_{a+b=c} q_{\vec{a}, a, b}
-    for (var pe : p.getCoefficients().entrySet()) {
-      final var prefix = pe.getKey().subList(0, pe.getKey().size() - 1);
-      final var c = pe.getKey().get(pe.getKey().size() - 1);
-      final var sum = new ArrayList<Coefficient>();
-      for (final var e : q.getCoefficients().entrySet()) {
-        final var index = e.getKey();
-        final var carrier = new ArrayList<>(index.subList(0, index.size() - 2));
-        if (!prefix.equals(carrier)) {
-          continue;
-        }
-        final var a = index.get(index.size() - 2);
-        final var b = index.get(index.size() - 1);
-        if (a + b == c) {
-          sum.add(e.getValue());
-        }
-      }
-      constraints.eqSum(pe.getValue(), sum);
-    }
+    gammap
+        .streamIndices()
+        .forEach(
+            indexLeft -> {
+              final var sum =
+                  gammaxq
+                      .streamIndices()
+                      .filter(
+                          indexRight ->
+                              indexLeft
+                                  .getSecond()
+                                  .equals(
+                                      indexRight.getSecond()
+                                          + indexRight.getFirst().get(scrutinee.getName())))
+                      .map(gammaxq::getCoefficient)
+                      .collect(Collectors.toList());
+
+              if (!sum.isEmpty()) {
+                constraints.eqSum(this, gammap.getCoefficient(indexLeft), sum);
+              }
+            });
 
     return nilqp;
   }
@@ -263,5 +292,13 @@ public class MatchExpression extends Expression {
   @Override
   public String toString() {
     return "match " + test.toString();
+  }
+
+  @Override
+  public Set<String> freeVariables() {
+    final var result = super.freeVariables();
+    result.removeAll(cases.get(0).getKey().freeVariables());
+    result.removeAll(cases.get(1).getKey().freeVariables());
+    return result;
   }
 }

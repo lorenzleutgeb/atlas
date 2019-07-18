@@ -2,10 +2,13 @@ package xyz.leutgeb.lorenz.logs;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
@@ -36,6 +39,8 @@ public class Context {
   /** For simple signature inference. */
   UnificationProblem problem;
 
+  Set<String> hidden;
+
   private Context(Context parent) {
     this(parent, parent.problem);
   }
@@ -49,6 +54,7 @@ public class Context {
     this.problem = problem;
     this.types = new LinkedHashMap<>();
     this.values = new HashMap<>();
+    this.hidden = new HashSet<>();
   }
 
   public Context child() {
@@ -82,6 +88,9 @@ public class Context {
   }
 
   private Type lookupTypeInternal(final String key) {
+    if (hidden.contains(key)) {
+      return null;
+    }
     Type t = types.get(key);
     if (t != null) {
       return t;
@@ -93,6 +102,9 @@ public class Context {
   }
 
   private boolean hasType(String key) {
+    if (hidden.contains(key)) {
+      return false;
+    }
     Type t = types.get(key);
     if (t != null) {
       return true;
@@ -103,9 +115,10 @@ public class Context {
     }
   }
 
-  @Deprecated
-  public void remove(String key) {
-    types.remove(key);
+  public Context hide(String... variables) {
+    final var result = child();
+    result.hidden.addAll(Arrays.asList(variables));
+    return result;
   }
 
   public void putType(String key, Type value) {
@@ -134,7 +147,11 @@ public class Context {
   }
 
   private Iterator<String> iterateIdentifiers() {
-    final var it = Sets.union(types.keySet(), values.keySet()).iterator();
-    return parent == null ? it : Iterators.concat(it, parent.iterateIdentifiers());
+    final var names = Sets.difference(Sets.union(types.keySet(), values.keySet()), hidden);
+    final var it = names.iterator();
+    return parent == null
+        ? it
+        : Iterators.concat(
+            it, Iterators.filter(parent.iterateIdentifiers(), name -> !hidden.contains(name)));
   }
 }

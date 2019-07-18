@@ -1,13 +1,19 @@
 package xyz.leutgeb.lorenz.logs.resources;
 
+import static xyz.leutgeb.lorenz.logs.Util.truncate;
+
 import com.google.common.primitives.Ints;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.extern.java.Log;
+import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.logs.Util;
+import xyz.leutgeb.lorenz.logs.ast.Expression;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.KnownCoefficient;
 
@@ -18,7 +24,7 @@ public class Annotation {
   protected Map<List<Integer>, Coefficient> coefficients;
   protected int size;
 
-  private Annotation(
+  public Annotation(
       List<Coefficient> rankCoefficients, Map<List<Integer>, Coefficient> coefficients) {
     this.rankCoefficients = rankCoefficients;
     this.coefficients = coefficients;
@@ -30,18 +36,18 @@ public class Annotation {
     }
   }
 
-  public static Annotation empty() {
-    return new Annotation(0);
-  }
-
   public Annotation(int size) {
     rankCoefficients = new ArrayList<>(size);
     coefficients = new LinkedHashMap<>();
     this.size = size;
 
     for (int i = 0; i < size; i++) {
-      getRankCoefficients().add(KnownCoefficient.ZERO);
+      rankCoefficients.add(KnownCoefficient.ZERO);
     }
+  }
+
+  public static Annotation empty() {
+    return new Annotation(0);
   }
 
   public static Annotation merge(Annotation... as) {
@@ -68,7 +74,7 @@ public class Annotation {
       final var a = as[i];
       rankCoefficients.add(a.getRankCoefficient());
 
-      for (var e : a.getCoefficients().entrySet()) {
+      for (var e : a.getCoefficients()) {
         final var l = new ArrayList<Integer>(size + 1);
         for (int j = 0; j < i; j++) {
           l.add(0);
@@ -98,6 +104,30 @@ public class Annotation {
     return new Annotation(rankCoefficients, coefficients);
   }
 
+  public Annotation greater(Expression source, Constraints constraints) {
+    final var result = constraints.heuristic(size());
+    // The returned annotation is asserted to have a greater potential than this.
+    for (Map.Entry<List<Integer>, Coefficient> e : getCoefficients()) {
+      constraints.le(source, e.getValue(), result.getCoefficient(e.getKey()));
+    }
+    for (int i = 0; i < size(); i++) {
+      constraints.le(source, getRankCoefficient(i), result.getRankCoefficient(i));
+    }
+    return result;
+  }
+
+  public Annotation less(Expression source, Constraints constraints) {
+    final var result = constraints.heuristic(size());
+    // The returned annotation is asserted to have a smaller potential than this.
+    for (Map.Entry<List<Integer>, Coefficient> e : getCoefficients()) {
+      constraints.le(source, result.getCoefficient(e.getKey()), e.getValue());
+    }
+    for (int i = 0; i < size(); i++) {
+      constraints.le(source, result.getRankCoefficient(i), getRankCoefficient(i));
+    }
+    return result;
+  }
+
   public void add(List<Integer> f, Coefficient coefficient) {
     if (f.size() != size + 1) {
       throw new IllegalArgumentException(
@@ -116,8 +146,8 @@ public class Annotation {
     coefficients.compute(f, (k, v) -> v == null ? coefficient : v.add(coefficient, context));
   }
 
-  public void add(Coefficient coefficient, int... fs) {
-    var f = Ints.asList(fs);
+  public void add(Coefficient coefficient, int... index) {
+    var f = Ints.asList(index);
     if (f.size() != size + 1) {
       throw new IllegalArgumentException(
           "expected one more integer than there are trees being annotated");
@@ -126,8 +156,8 @@ public class Annotation {
   }
 
   @Deprecated
-  public Coefficient getOrFreshForReal(Constraints context, int... fs) {
-    var f = Ints.asList(fs);
+  public Coefficient getOrFreshForReal(Constraints context, int... index) {
+    var f = Ints.asList(index);
     if (f.size() != size + 1) {
       throw new IllegalArgumentException(
           "expected one more integer than there are trees being annotated");
@@ -135,18 +165,41 @@ public class Annotation {
     return this.coefficients.computeIfAbsent(f, k -> context.unknown());
   }
 
-  public Coefficient getOrZero(Constraints context, int... fs) {
-    var f = Ints.asList(fs);
-    if (f.size() != size + 1) {
-      throw new IllegalArgumentException(
-          "expected one more integer than there are trees being annotated");
-    }
-    final var result = coefficients.get(f);
+  public Coefficient getCoefficientOrZero(int... index) {
+    final var result = getCoefficient(index);
     if (result == null) {
       log.warning("Zeroing a coefficient because of absent counterpart.");
       return KnownCoefficient.ZERO;
     }
     return result;
+  }
+
+  public String toShortString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(" ");
+    for (int i = 0; i < size; i++) {
+      final var q = rankCoefficients.get(i);
+      sb.append(q);
+
+      if (i < size - 1) {
+        sb.append(" , ");
+      }
+    }
+    if (size > 0) {
+      sb.append(", ");
+    }
+    var entries = coefficients.entrySet();
+    int i = 0;
+    for (var entry : entries) {
+      final var q = entry.getValue();
+      sb.append(q);
+      if (i < coefficients.size() - 1) {
+        sb.append(" , ");
+      }
+
+      i++;
+    }
+    return truncate(sb.toString(), 1000);
   }
 
   public String toString() {
@@ -189,6 +242,10 @@ public class Annotation {
         sb.append("|t");
         sb.append(Util.generateSubscript(j + 1));
         sb.append("| + ");
+
+        if (j < size - 1) {
+          sb.append(" + ");
+        }
       }
 
       // if (size > 0)
@@ -207,19 +264,89 @@ public class Annotation {
     return sb.toString();
   }
 
-  public List<Coefficient> getRankCoefficients() {
-    return this.rankCoefficients;
+  public String toStringForParameters(List<String> parameters) {
+    StringBuilder sb = new StringBuilder();
+    boolean nonzero = false;
+    for (int i = 0; i < size; i++) {
+      final var q = rankCoefficients.get(i);
+      if (q == KnownCoefficient.ZERO) {
+        continue;
+      }
+      nonzero = true;
+      sb.append(q);
+      sb.append(" · ");
+      sb.append("rank(");
+      sb.append(parameters.get(i));
+      sb.append(")");
+
+      if (i < size - 1) {
+        sb.append(" + ");
+      }
+    }
+    if (size > 0 && nonzero) {
+      sb.append(" + ");
+    }
+    return sb.toString()
+        + coefficients
+            .entrySet()
+            .stream()
+            .filter(e -> e.getValue() != KnownCoefficient.ZERO)
+            .map(
+                e -> {
+                  final var index = e.getKey();
+                  final var coefficient = e.getValue();
+                  final var items = new ArrayList<String>(index.size());
+                  for (int i = 0; i < index.size() - 1; i++) {
+                    if (index.get(i) == 0) {
+                      continue;
+                    }
+                    var item = "";
+                    if (index.get(i) != 1) {
+                      item += index.get(i) + " · ";
+                    }
+                    item += "|" + parameters.get(i) + "|";
+                    items.add(item);
+                  }
+                  if (index.get(index.size() - 1) != 0) {
+                    items.add(String.valueOf(index.get(index.size() - 1)));
+                  }
+                  var result = "";
+                  if (!coefficient.equals(new KnownCoefficient(Fraction.ONE))) {
+                    result = coefficient + " · ";
+                  }
+                  return result + "log(" + String.join(" + ", items) + ")";
+                })
+            .collect(Collectors.joining(" + "));
+  }
+
+  public Coefficient getRankCoefficient(int index) {
+    return this.rankCoefficients.get(index);
   }
 
   public Coefficient getRankCoefficient() {
     if (size != 1) {
       throw new IllegalStateException("must be of size exactly 1");
     }
-    return getRankCoefficients().get(0);
+    return getRankCoefficient(0);
   }
 
-  public Map<List<Integer>, Coefficient> getCoefficients() {
-    return this.coefficients;
+  public Coefficient getCoefficient(List<Integer> index) {
+    if (index.size() != size + 1) {
+      throw new IllegalArgumentException();
+    }
+    return coefficients.get(index);
+  }
+
+  public Coefficient getCoefficient(int... index) {
+    return getCoefficient(Ints.asList(index));
+  }
+
+  public Iterable<Map.Entry<List<Integer>, Coefficient>> getCoefficients() {
+    return coefficients.entrySet();
+  }
+
+  public Stream<Map.Entry<List<Integer>, Coefficient>> streamCoefficients() {
+    return coefficients.entrySet().stream();
   }
 
   public int size() {

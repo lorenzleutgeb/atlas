@@ -4,7 +4,7 @@ splay a t = match t with
         then (cl, c, cr)
         else if a < c
             then match cl with
-                | nil -> (cl, c, cr)
+                | nil -> (nil, c, cr)
                 | (bl, b, br) -> if a == b
                     then (bl, a, (br, c, cr))
                     else if a < b
@@ -17,7 +17,7 @@ splay a t = match t with
                         else match splay a br with
                             | (al, a', ar) ->  ((bl, b, al), a', (ar, c, cr))
             else match cr with
-                | nil -> (cl, c, cr)
+                | nil -> (cl, c, nil)
                 | (bl, b, br) -> if a == b
                     then ((cl, c, bl), a, br)
                     else if a < b

@@ -7,7 +7,10 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.PriorityQueue;
+import java.util.function.BiFunction;
 import java.util.function.ToDoubleFunction;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.text.similarity.JaroWinklerDistance;
 import org.apache.commons.text.similarity.SimilarityScore;
@@ -20,7 +23,11 @@ public class Util {
   public static String generateSubscript(int i) {
     StringBuilder sb = new StringBuilder();
     for (char ch : String.valueOf(i).toCharArray()) {
-      sb.append((char) ('\u2080' + (ch - '0')));
+      if (Character.isDigit(ch)) {
+        sb.append((char) ('\u2080' + (ch - '0')));
+      } else {
+        sb.append(ch);
+      }
     }
     return sb.toString();
   }
@@ -72,5 +79,29 @@ public class Util {
   public static Fraction toFraction(RatNum x) {
     return new Fraction(
         x.getBigIntNumerator().intValueExact(), x.getBigIntDenominator().intValueExact());
+  }
+
+  public static <T, U> BiFunction<T, U, T> first() {
+    return (T a, U b) -> a;
+  }
+
+  public static <T, U> BiFunction<T, U, U> second() {
+    return (T a, U b) -> b;
+  }
+
+  public static boolean isZero(List<Integer> xs) {
+    return xs.stream().allMatch(x -> x == 0);
+  }
+
+  public static List<Integer> zero(int n) {
+    return IntStream.generate(() -> 0).limit(n).boxed().collect(Collectors.toList());
+  }
+
+  public static RuntimeException bug(String message) {
+    return new RuntimeException("bug: " + message);
+  }
+
+  public static String truncate(String s, int n) {
+    return s.length() > n ? s.substring(0, n - 3) + "..." : s;
   }
 }

@@ -1,8 +1,18 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import static guru.nidi.graphviz.attribute.Records.turn;
+import static guru.nidi.graphviz.model.Factory.node;
 import static xyz.leutgeb.lorenz.logs.Util.indent;
+import static xyz.leutgeb.lorenz.logs.Util.truncate;
 
+import guru.nidi.graphviz.attribute.Records;
+import guru.nidi.graphviz.model.Graph;
+import guru.nidi.graphviz.model.Node;
 import java.io.PrintStream;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -13,6 +23,7 @@ import xyz.leutgeb.lorenz.logs.ast.sources.Source;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
+import xyz.leutgeb.lorenz.logs.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
 import xyz.leutgeb.lorenz.logs.unification.Substitution;
@@ -20,13 +31,25 @@ import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 public abstract class Expression extends Syntax {
   protected Type type;
+  protected Annotation annotation;
   protected boolean typeResolved;
+  protected Set<Constraint> preconditions = new LinkedHashSet<>();
 
   public Expression(Source source) {
     super(source);
   }
 
+  public Expression(Source source, Type type) {
+    super(source);
+    this.type = type;
+    typeResolved = true;
+  }
+
   public abstract Stream<? extends Expression> getChildren();
+
+  public Stream<? extends Expression> follow() {
+    return getChildren();
+  };
 
   protected abstract Type inferInternal(Context context) throws UnificationError, TypeError;
 
@@ -69,8 +92,16 @@ public abstract class Expression extends Syntax {
     return false;
   }
 
-  public abstract Annotation inferAnnotations(AnnotatingContext context, AnnotatingGlobals globals)
-      throws UnificationError, TypeError;
+  protected abstract Annotation inferAnnotationsInternal(
+      AnnotatingContext context, AnnotatingGlobals globals) throws UnificationError, TypeError;
+
+  public Annotation inferAnnotations(AnnotatingContext context, AnnotatingGlobals globals)
+      throws UnificationError, TypeError {
+    if (annotation == null) {
+      annotation = inferAnnotationsInternal(context, globals);
+    }
+    return annotation;
+  }
 
   public Expression bindAll(Stack<Pair<Identifier, Expression>> context) {
     var binder = this;
@@ -99,5 +130,39 @@ public abstract class Expression extends Syntax {
   public void printTo(PrintStream out, int indentation) {
     indent(out, indentation);
     out.println(toString());
+  }
+
+  public void addPrecondition(Constraint constraint) {
+    preconditions.add(constraint);
+  }
+
+  public Graph toGraph(Graph graph, Node parent) {
+    final Node self =
+        node(getClass().getSimpleName() + "@" + System.identityHashCode(this))
+            .with(
+                Records.of(
+                    turn(
+                        toString(),
+                        type.toString()
+                            + " | "
+                            + (annotation != null ? annotation.toShortString() : "?"),
+                        truncate(
+                            preconditions.toString().replace("=", "\\=").replace("<", "\\<"),
+                            1000))));
+    return follow()
+        .reduce(
+            graph.with(self.link(parent)),
+            (accumulator, expr) -> expr.toGraph(accumulator, self),
+            (a, b) -> a);
+  }
+
+  public Set<String> freeVariables() {
+    final var result = new HashSet<String>();
+    getChildren().forEach(e -> result.addAll(e.freeVariables()));
+    return result;
+  }
+
+  public Expression rename(Map<String, String> renaming) {
+    throw new UnsupportedOperationException();
   }
 }

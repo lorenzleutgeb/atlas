@@ -2,19 +2,35 @@ package xyz.leutgeb.lorenz.logs.resources;
 
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import lombok.Value;
+import java.util.stream.Collectors;
+import lombok.Data;
+import xyz.leutgeb.lorenz.logs.Util;
+import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
 
-@Value
+@Data
 public class RangeHeuristic implements AnnotationHeuristic {
-  public static final RangeHeuristic DEFAULT = new RangeHeuristic(0, 2);
-  int from, to;
+  public static final RangeHeuristic DEFAULT = new RangeHeuristic(0, 4);
+  private int fresheness = 0;
+  private final int from, to;
+
+  public RangeHeuristic(int from, int to) {
+    if (from != 0) {
+      throw new UnsupportedOperationException("from != 0 not implemented");
+    }
+    if (to <= from || to < 3) {
+      throw new IllegalArgumentException();
+    }
+    this.from = from;
+    this.to = to;
+  }
 
   @Override
   public Annotation generate(int size, Constraints context) {
-    var result = new Annotation(size);
+    final var rankCoefficients = new ArrayList<Coefficient>(size);
     for (int i = 0; i < size; i++) {
-      result.getRankCoefficients().set(i, context.unknown());
+      rankCoefficients.add(context.unknown(fresheness + Util.generateSubscript(i)));
     }
 
     var span = new ArrayList<List<Integer>>(size);
@@ -27,10 +43,18 @@ public class RangeHeuristic implements AnnotationHeuristic {
     }
 
     var cartesian = Lists.cartesianProduct(span);
+    var coefficients = new HashMap<List<Integer>, Coefficient>();
     for (List<Integer> l : cartesian) {
-      result.add(l, context.unknown());
+      coefficients.put(
+          l,
+          context.unknown(
+              fresheness
+                  + "₍"
+                  + l.stream().map(Util::generateSubscript).collect(Collectors.joining(","))
+                  + "₎"));
     }
 
-    return result;
+    fresheness++;
+    return new Annotation(rankCoefficients, coefficients);
   }
 }

@@ -47,7 +47,7 @@ public class BooleanExpression extends Expression {
 
   @Override
   public Type inferInternal(Context context) throws UnificationError, TypeError {
-    // The next two lines remove polymorphism in favor of the "abstract base signature".
+    // The next two lines hide polymorphism in favor of the "abstract base signature".
     // context.getProblem().add(right.infer(context), BaseType.INSTANCE);
     // context.getProblem().add(left.infer(context), BaseType.INSTANCE);
 
@@ -90,7 +90,7 @@ public class BooleanExpression extends Expression {
   }
 
   @Override
-  public Annotation inferAnnotations(AnnotatingContext context, AnnotatingGlobals globals)
+  public Annotation inferAnnotationsInternal(AnnotatingContext context, AnnotatingGlobals globals)
       throws UnificationError, TypeError {
     return Annotation.empty();
   }

@@ -52,6 +52,9 @@ dependencies {
     // The Z3 Theorem Prover
     // See https://github.com/Z3Prover/z3#java
     implementation(files("libs/com.microsoft.z3.jar"))
+
+    // Graph output
+    implementation("guru.nidi:graphviz-java:0.8.8")
 }
 
 application {

@@ -48,15 +48,20 @@ public class ParserTest {
     return ParserTest.class.getResourceAsStream("/" + fileName);
   }
 
-  private static String read(String fileName) throws IOException {
-    return new String(open(fileName).readAllBytes(), StandardCharsets.UTF_8);
+  private static String read(String fileNames) throws IOException {
+    Stream<String> fileNameStream = Stream.of(fileNames.split(PLUS));
+    return new String(
+        new SequenceInputStream(
+                enumeration(fileNameStream.map(ParserTest::open).collect(toUnmodifiableList())))
+            .readAllBytes(),
+        StandardCharsets.UTF_8);
   }
 
   private static FunctionType ft(Type to, Type... from) {
     return new FunctionType(to, from);
   }
 
-  private static Stream<Arguments> generateSnippets() throws IOException {
+  private static Stream<Arguments> small() throws IOException {
     return Stream.of(
         // Failing case, since t is used after its deconstruction:
         // Arguments.of("id t = match t with | (a, b, c) -> t", ft(ATREE, ATREE)),
@@ -74,8 +79,26 @@ public class ParserTest {
         Arguments.of(read("descend"), ft(/*BOOL*/ BTREE, ATREE)));
   }
 
+  private static Stream<Arguments> medium() throws IOException {
+    return Stream.of(
+        // Arguments.of(read("splay" + PLUS + "splay_max" + PLUS + "delete"), ft(ATREE, ALPHA,
+        // ATREE)),
+        Arguments.of(read("descend_variant"), ft(ATREE, ATREE, ATREE)),
+        Arguments.of(read("inorder"), ft(ATREE, ATREE, ATREE)),
+        Arguments.of(read("preorder"), ft(ATREE, ATREE, ATREE)),
+        Arguments.of(read("postorder"), ft(ATREE, ATREE, ATREE)),
+        Arguments.of(read("contains_unordered"), ft(BOOL, ALPHA, ATREE)),
+        Arguments.of(read("postorder"), ft(ATREE, ATREE, ATREE)),
+        Arguments.of(read("splay_max"), ft(ATREE, ATREE)),
+        Arguments.of(read("splay"), ft(ATREE, ALPHA, ATREE)));
+  }
+
+  private static Stream<Arguments> smallAndMedium() throws IOException {
+    return Stream.concat(small(), medium());
+  }
+
   @ParameterizedTest
-  @MethodSource("generateSnippets")
+  @MethodSource("smallAndMedium")
   void snippets(String source, Type expected) throws Exception {
     var program = parse(source);
     program.infer();
@@ -91,7 +114,9 @@ public class ParserTest {
     strings = {
       "flip",
       "walk",
-      "traversals",
+      "inorder",
+      "preorder",
+      "postorder",
       "splay",
       "splay" + PLUS + "insert",
       "splay_max",

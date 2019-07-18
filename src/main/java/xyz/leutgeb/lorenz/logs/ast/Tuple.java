@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.logs.ast;
 
 import java.io.PrintStream;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -10,6 +11,7 @@ import lombok.Value;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.ast.sources.Derived;
+import xyz.leutgeb.lorenz.logs.ast.sources.Renamed;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
@@ -26,6 +28,14 @@ public class Tuple extends Expression {
 
   public Tuple(Source source, List<Expression> elements) {
     super(source);
+    if (elements.size() != 3) {
+      throw new IllegalArgumentException("only tuples with exactly three elements are supported");
+    }
+    this.elements = elements;
+  }
+
+  public Tuple(Source source, List<Expression> elements, Type type) {
+    super(source, type);
     if (elements.size() != 3) {
       throw new IllegalArgumentException("only tuples with exactly three elements are supported");
     }
@@ -70,38 +80,57 @@ public class Tuple extends Expression {
   }
 
   @Override
-  public Annotation inferAnnotations(AnnotatingContext x123q, AnnotatingGlobals globals)
+  public Expression rename(Map<String, String> renaming) {
+    return new Tuple(
+        new Renamed(source),
+        elements.stream().map(e -> e.rename(renaming)).collect(Collectors.toList()),
+        type);
+  }
+
+  @Override
+  public Annotation inferAnnotationsInternal(AnnotatingContext x123q, AnnotatingGlobals globals)
       throws UnificationError, TypeError {
     final var constraints = globals.getConstraints();
 
+    final var leftId = ((Identifier) getLeft()).getName();
+    final var rightId = ((Identifier) getRight()).getName();
+
     // Apply (w : var) and (w) since this is a leaf node.
     var q =
-        x123q
-            .weakenIdentifiersExcept(
-                globals.getConstraints(), List.of((Identifier) getLeft(), (Identifier) getRight()))
-            .weaken(constraints)
-            .getAnnotation();
+        x123q.weakenIdentifiersExcept(
+            this, globals.getConstraints(), List.of((Identifier) getLeft(), (Identifier) getRight())
+            // .stream()
+            // .filter(i -> !i.isConstant())
+            // .collect(Collectors.toList())
+            );
+    /* TODO: Apply (w)
+    .getAnnotation()
+    .less(this, constraints);
+    */
     var result = constraints.heuristic(1);
 
     // q_1 = q_2 = q'
-    var q1 = q.getRankCoefficients().get(0);
-    var q2 = q.getRankCoefficients().get(1);
+    var q1 = q.getRankCoefficient(leftId);
+    var q2 = q.getRankCoefficient(rightId);
     var qx = result.getRankCoefficient();
-    constraints.eq(q1, q2, qx);
+    constraints.eq(this, q1, q2, qx);
 
     // q_{1,0,0} = q_{0,1,0} = q_*'
-    var q100 = q.getOrZero(constraints, 1, 0, 0);
-    var q010 = q.getOrZero(constraints, 0, 1, 0);
-    constraints.eq(q100, q010, qx);
+    var q100 = q.getCoefficient(Map.of(leftId, 1, rightId, 0), 0);
+    var q010 = q.getCoefficient(Map.of(leftId, 0, rightId, 1), 0);
+    constraints.eq(this, q100, q010, qx);
 
     // q_{a,a,b} = q'_{a,b}
-    for (var e : result.getCoefficients().entrySet()) {
-      var a = e.getKey().get(0);
-      var b = e.getKey().get(1);
-      constraints.eq(e.getValue(), q.getCoefficients().get(List.of(a, a, b)));
-    }
+    q.streamIndices()
+        .filter((index) -> index.getFirst().get(leftId).equals(index.getFirst().get(rightId)))
+        .forEach(
+            (index) -> {
+              var a = index.getFirst().get(leftId);
+              var b = index.getSecond();
+              constraints.eq(this, result.getCoefficient(a, b), q.getCoefficient(index));
+            });
 
-    return result;
+    return result.greater(this, constraints);
   }
 
   @Override

@@ -41,7 +41,7 @@ public class Number extends Expression {
   }
 
   @Override
-  public Annotation inferAnnotations(AnnotatingContext context, AnnotatingGlobals globals)
+  public Annotation inferAnnotationsInternal(AnnotatingContext context, AnnotatingGlobals globals)
       throws UnificationError, TypeError {
     return Annotation.empty();
   }

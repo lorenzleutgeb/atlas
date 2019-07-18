@@ -7,7 +7,7 @@ import lombok.Value;
 import org.hipparchus.fraction.Fraction;
 
 @Value
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = false)
 public class KnownCoefficient extends Coefficient {
   public static final KnownCoefficient ZERO = new KnownCoefficient(Fraction.ZERO);
 

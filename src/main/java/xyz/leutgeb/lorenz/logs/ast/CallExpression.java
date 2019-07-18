@@ -1,9 +1,13 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import static xyz.leutgeb.lorenz.logs.Util.bug;
+
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -12,6 +16,7 @@ import lombok.NonNull;
 import lombok.Value;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
+import xyz.leutgeb.lorenz.logs.ast.sources.Renamed;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
@@ -37,9 +42,28 @@ public class CallExpression extends Expression {
     this.parameters = parameters;
   }
 
+  public CallExpression(
+      Source source, @NonNull Identifier name, @NonNull List<Expression> parameters, Type type) {
+    super(source, type);
+    this.name = name;
+    this.parameters = parameters;
+  }
+
+  @Override
+  public Set<String> freeVariables() {
+    final var result = super.freeVariables();
+    result.remove(name.getName());
+    return result;
+  }
+
   @Override
   public Stream<? extends Expression> getChildren() {
-    return Stream.concat(Stream.of(name), parameters.stream());
+    return Stream.concat(Stream.of(name), follow());
+  }
+
+  @Override
+  public Stream<? extends Expression> follow() {
+    return parameters.stream();
   }
 
   public Type inferInternal(Context context) throws UnificationError, TypeError {
@@ -59,7 +83,7 @@ public class CallExpression extends Expression {
   }
 
   @Override
-  public Annotation inferAnnotations(AnnotatingContext context, AnnotatingGlobals globals)
+  public Annotation inferAnnotationsInternal(AnnotatingContext context, AnnotatingGlobals globals)
       throws UnificationError, TypeError {
     final var treeParameters =
         parameters
@@ -74,13 +98,19 @@ public class CallExpression extends Expression {
 
     // Apply (w : var) to truncate context.
     final var weakenedContext =
-        context.weakenIdentifiersExcept(globals.getConstraints(), treeParameters);
+        context.weakenIdentifiersExcept(this, globals.getConstraints(), treeParameters);
 
     // Since we're in a leaf here, also apply (w).
-    final var weakenedPotential = weakenedContext.weaken(globals.getConstraints());
+    final var weakenedPotential =
+        weakenedContext.getAnnotation().less(this, globals.getConstraints());
 
-    globals.getConstraints().increment(weakenedPotential.getAnnotation(), q);
-    return qprime;
+    globals.getConstraints().increment(this, q, weakenedPotential, globals.getCost());
+
+    if (qprime.size() > 1) {
+      throw bug("size should be at most one since we can return at most one tree!");
+    }
+
+    return qprime.greater(this, globals.getConstraints());
   }
 
   @Override
@@ -92,6 +122,15 @@ public class CallExpression extends Expression {
         source,
         name,
         parameters.stream().map(x -> x.forceImmediate(context)).collect(Collectors.toList()));
+  }
+
+  @Override
+  public Expression rename(Map<String, String> renaming) {
+    return new CallExpression(
+        new Renamed(source),
+        name,
+        parameters.stream().map(x -> x.rename(renaming)).collect(Collectors.toList()),
+        type);
   }
 
   @Override

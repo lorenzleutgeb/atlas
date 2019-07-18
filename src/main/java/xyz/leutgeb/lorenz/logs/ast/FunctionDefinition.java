@@ -1,5 +1,18 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import static guru.nidi.graphviz.attribute.Records.turn;
+import static guru.nidi.graphviz.model.Factory.graph;
+import static guru.nidi.graphviz.model.Factory.node;
+
+import guru.nidi.graphviz.attribute.RankDir;
+import guru.nidi.graphviz.attribute.Records;
+import guru.nidi.graphviz.attribute.Shape;
+import guru.nidi.graphviz.engine.Format;
+import guru.nidi.graphviz.engine.Graphviz;
+import guru.nidi.graphviz.model.Graph;
+import guru.nidi.graphviz.model.Node;
+import java.io.File;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -74,7 +87,7 @@ public class FunctionDefinition {
       throw new IllegalStateException();
     }
 
-    final var constraints = new Constraints();
+    final var constraints = new Constraints(name);
 
     var types = signature.getType().getFrom().getElements();
     final var ids = new ArrayList<String>(types.size());
@@ -96,13 +109,23 @@ public class FunctionDefinition {
     var qprime = body.getType() instanceof TreeType ? constraints.heuristic(1) : Annotation.empty();
 
     functionAnnotations.put(name, new Pair<>(q, qprime));
-    final var globals = new AnnotatingGlobals(functionAnnotations, constraints);
+    final var globals = new AnnotatingGlobals(functionAnnotations, constraints, 1);
 
     // if (!(signature.getType().getTo() instanceof TreeType)) {
     final var result = new Pair<>(q, body.inferAnnotations(initialGammaQ, globals));
 
+    try {
+      this.toGraph(result);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
     constraints.solve();
-    System.out.println(q.substitute(constraints));
+    System.out.println(
+        name
+            + " "
+            + String.join(" ", arguments)
+            + " | "
+            + q.substitute(constraints).toStringForParameters(ids));
     return result;
   }
 
@@ -117,5 +140,23 @@ public class FunctionDefinition {
     out.print(String.join(" ", arguments));
     out.print(" = ");
     body.printTo(out, 1);
+  }
+
+  public void toGraph(Pair<Annotation, Annotation> annotations) throws IOException {
+    Graph g = graph(name).directed().graphAttr().with(RankDir.BOTTOM_TO_TOP);
+    Node root =
+        node(name)
+            .with(
+                Shape.DOUBLE_OCTAGON,
+                Records.of(
+                    turn(
+                        name,
+                        signature.toString().replace(">", "\\>"),
+                        annotations.getFirst().toShortString()
+                            + " → "
+                            + annotations.getSecond().toShortString())));
+    Graph result = body.toGraph(g, root);
+    var viz = Graphviz.fromGraph(result);
+    viz.render(Format.SVG).toFile(new File("out", name + ".svg"));
   }
 }

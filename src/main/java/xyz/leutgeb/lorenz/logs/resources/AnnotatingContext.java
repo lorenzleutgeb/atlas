@@ -1,16 +1,29 @@
 package xyz.leutgeb.lorenz.logs.resources;
 
+import static xyz.leutgeb.lorenz.logs.Util.bug;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
+import org.hipparchus.util.Pair;
+import xyz.leutgeb.lorenz.logs.ast.Expression;
 import xyz.leutgeb.lorenz.logs.ast.Identifier;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.logs.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.logs.typing.types.TreeType;
 
 @Log4j2
@@ -23,13 +36,104 @@ public class AnnotatingContext {
     if (ids.size() != annotation.size()) {
       throw new IllegalArgumentException("sizes must match");
     }
+    // if (ids.stream().anyMatch(Identifier::isConstant)) {
+    //  throw new IllegalArgumentException("constant in context");
+    // }
     this.ids = ids;
     this.annotation = annotation;
   }
 
-  public AnnotatingContext pop(Constraints constraints) {
+  public Coefficient getCoefficient(Function<String, Integer> indexer, Integer c) {
+    final var index = new ArrayList<Integer>(size() + 1);
+    for (var id : ids) {
+      index.add(indexer.apply(id));
+    }
+    index.add(c);
+    return annotation.getCoefficient(index);
+  }
+
+  public Coefficient getCoefficient(Map<String, Integer> indexer, Integer c) {
+    if (indexer.size() < size()) {
+      throw new IllegalArgumentException("indexer does not cover context");
+    }
+    final var inspect = getCoefficient(indexer::get, c);
+    return inspect;
+  }
+
+  public Coefficient getCoefficient(Pair<Map<String, Integer>, Integer> index) {
+    return getCoefficient(index.getFirst(), index.getSecond());
+  }
+
+  public Set<Map<String, Integer>> getIndices(
+      BiFunction<String, Integer, Boolean> f, Predicate<Integer> g) {
+    final var result = new HashSet<Map<String, Integer>>();
+    outer:
+    for (var entry : annotation.getCoefficients()) {
+      if (!g.test(entry.getKey().get(size()))) {
+        continue;
+      }
+      for (int i = 0; i < size() - 1; i++) {
+        if (!f.apply(ids.get(i), entry.getKey().get(i))) {
+          continue outer;
+        }
+      }
+      final var index = new HashMap<String, Integer>();
+      for (int i = 0; i < size() - 1; i++) {
+        index.put(ids.get(i), entry.getKey().get(i));
+      }
+      index.put(null, entry.getKey().get(size()));
+      result.add(index);
+    }
+    return result;
+  }
+
+  public Stream<Pair<Map<String, Integer>, Integer>> streamIndices() {
+    return annotation
+        .streamCoefficients()
+        .map(
+            entry -> {
+              final var index =
+                  IntStream.range(0, size())
+                      .boxed()
+                      .collect(Collectors.toMap(ids::get, entry.getKey()::get));
+              return new Pair<>(index, entry.getKey().get(size()));
+            });
+  }
+
+  public AnnotatingContext partition(
+      Expression source, Constraints constraints, Predicate<String> isLeft) {
+    final var leftIds = new ArrayList<Pair<Integer, String>>(ids.size());
+    final var rightIds = new ArrayList<Pair<Integer, String>>(ids.size());
+
+    for (int i = 0; i < ids.size(); i++) {
+      (isLeft.test(ids.get(i)) ? leftIds : rightIds).add(new Pair<>(i, ids.get(i)));
+    }
+
+    final var both = new ArrayList<>(leftIds);
+    both.addAll(rightIds);
+
+    final var result =
+        new AnnotatingContext(
+            both.stream().map(Pair::getSecond).collect(Collectors.toList()),
+            constraints.heuristic(both.size()));
+
+    for (int i = 0; i < result.getAnnotation().size(); i++) {
+      constraints.eq(
+          source,
+          annotation.getRankCoefficient(both.get(i).getFirst()),
+          result.getAnnotation().getRankCoefficient(i));
+    }
+
+    // TODO: Other coefficients.
+
+    return result;
+  }
+
+  public AnnotatingContext pop(Constraints constraints, Identifier toPop) {
+    final int i = ids.indexOf(toPop.getName());
     final var newIds = new ArrayList<String>(this.ids.size() - 1);
-    newIds.addAll(this.ids.subList(0, this.ids.size() - 1));
+    newIds.addAll(this.ids.subList(0, i));
+    newIds.addAll(this.ids.subList(i + 1, this.ids.size()));
     return new AnnotatingContext(newIds, constraints.heuristic(this.annotation.size() - 1));
   }
 
@@ -61,11 +165,22 @@ public class AnnotatingContext {
    *
    * <p>Note that this method also enforces order on the resulting context.
    */
-  public AnnotatingContext weakenIdentifiersExcept(Constraints constraints, List<Identifier> ids) {
+  public AnnotatingContext weakenIdentifiersExcept(
+      Expression source, Constraints constraints, List<Identifier> ids) {
     ensureAllTrees(ids);
 
-    if (!this.ids.containsAll(ids.stream().map(Identifier::getName).collect(Collectors.toList()))) {
-      throw new IllegalArgumentException("some id is not contained");
+    if (!this.ids.containsAll(
+        ids.stream()
+            .map(Identifier::getName)
+            .filter(s -> !s.equals("nil") && !s.equals("true") && !s.equals("false"))
+            .collect(Collectors.toList()))) {
+      throw bug("some id is not contained");
+    }
+
+    if (ids.size() > size()) {
+      log.debug(
+          "Weakening to more variables is not possible. Additional ones will be dropped. That might yield a context that is too short.");
+      ids = ids.stream().filter(this.ids::contains).collect(Collectors.toList());
     }
 
     if (ids.size() == size()) {
@@ -74,11 +189,11 @@ public class AnnotatingContext {
 
     final var r = constraints.heuristic(ids.size());
 
-    // TODO(lorenz.leutgeb): Clarify assumption: The (w : var) rule as
+    // The (w : var) rule as
     // stated/defined in the paper requires the element of the context
     // to be removed to be in the rightmost/last position. It then
     // elegantly uses r_{\vec{a}, 0, b} = q_{\vec{a}, 0, b}. I think
-    // it is possible to remove an element at an arbitrary position,
+    // it is possible to hide an element at an arbitrary position,
     // as sketched by r_{\vec{a}, 0, \vec{a'}, b} = q_{\vec{a}, 0, \vec{a'}, b},
     // such that |\vec{a}| = i - 1, |\vec{a'}| = |Q| - a.
 
@@ -108,33 +223,114 @@ public class AnnotatingContext {
 
       // r_{\vec{a}, 0, \vec{a'}, b} = q_{\vec{a}, 0, \vec{a'}, b}
 
-      for (Map.Entry<List<Integer>, Coefficient> e :
-          this.getAnnotation().getCoefficients().entrySet()) {
+      for (Map.Entry<List<Integer>, Coefficient> e : this.getAnnotation().getCoefficients()) {
         if (e.getKey().get(index) == 0) {
           final var other = e.getKey().subList(0, index);
           final var otherClone = new ArrayList<Integer>(other.size());
           otherClone.addAll(other);
           otherClone.addAll(e.getKey().subList(index + 1, e.getKey().size()));
-          constraints.eq(e.getValue(), r.getCoefficients().get(otherClone));
+          constraints.eq(source, e.getValue(), r.getCoefficient(otherClone));
         }
       }
 
       // r_i = q_i
       constraints.eq(
-          r.getRankCoefficients().get(j), this.getAnnotation().getRankCoefficients().get(index));
+          source, r.getRankCoefficient(j), this.getAnnotation().getRankCoefficient(index));
     }
-
-    for (int i = 0; i < locations.size(); i++) {}
 
     return new AnnotatingContext(newIds, r);
   }
 
-  public AnnotatingContext weakenIdentifiersExcept(Constraints constraints, Identifier id) {
-    return weakenIdentifiersExcept(constraints, Collections.singletonList(id));
+  public Pair<String, AnnotatingContext> share(
+      Expression source, Constraints constraints, String id) {
+    if (!this.ids.contains(id)) {
+      throw bug("id not contained");
+    }
+    final var resultAnnotation = constraints.heuristic(size() + 1);
+    var primed = id + "'";
+    while (this.ids.contains(primed)) {
+      primed += "'";
+    }
+    final var primedId = primed;
+
+    final var resultIds = new ArrayList<String>(size() + 1);
+    resultIds.addAll(this.ids);
+    resultIds.add(primed);
+
+    // Generate constraints according to sharing operator.
+    final var result = new AnnotatingContext(resultIds, resultAnnotation);
+
+    // TODO: Equate all coefficients for elements of this.ids not in ids
+    constraints.eqSum(
+        source,
+        this.getRankCoefficient(id),
+        List.of(result.getRankCoefficient(id), result.getRankCoefficient(primedId)));
+    for (var it : ids) {
+      if (!it.equals(id)) {
+        constraints.eq(source, this.getRankCoefficient(it), result.getRankCoefficient(it));
+      }
+    }
+
+    result
+        .streamIndices()
+        .forEach(
+            index -> {
+              final var sum = index.getFirst().get(id) + index.getFirst().get(primedId);
+              final var copy = new HashMap<String, Integer>(index.getFirst());
+              copy.put(id, sum);
+              constraints.eq(
+                  source,
+                  result.getCoefficient(index),
+                  this.getCoefficientOrZero(copy, index.getSecond()));
+            });
+
+    return new Pair<>(primed, result);
   }
 
-  public AnnotatingContext weakenAllIdentifiers(Constraints constraints) {
-    return weakenIdentifiersExcept(constraints, Collections.emptyList());
+  private Coefficient getCoefficientOrZero(HashMap<String, Integer> copy, Integer second) {
+    final var result = getCoefficient(copy, second);
+    return result != null ? result : KnownCoefficient.ZERO;
+  }
+
+  public Pair<Map<String, String>, AnnotatingContext> share(
+      Expression source, Constraints constraints, List<String> ids) {
+    if (ids.isEmpty()) {
+      return new Pair<>(Collections.emptyMap(), this);
+    }
+
+    final var idsAsSet = new HashSet<>(ids);
+    if (idsAsSet.size() != ids.size()) {
+      throw bug("ids contain duplicate");
+    }
+    if (!this.ids.containsAll(ids)) {
+      throw bug("some id not contained");
+    }
+    final var renaming = new HashMap<String, String>();
+    var result = this;
+    for (var id : ids) {
+      var it = result.share(source, constraints, id);
+      result = it.getSecond();
+      renaming.put(id, it.getFirst());
+    }
+    return new Pair<>(renaming, result);
+  }
+
+  public int indexOf(String id) {
+    for (int i = 0; i < ids.size(); i++) {
+      if (ids.get(i).equals(id)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  public AnnotatingContext weakenIdentifiersExcept(
+      Expression source, Constraints constraints, Identifier id) {
+    return weakenIdentifiersExcept(source, constraints, Collections.singletonList(id));
+  }
+
+  public AnnotatingContext weakenAllIdentifiers(Expression source, Constraints constraints) {
+    return weakenIdentifiersExcept(source, constraints, Collections.emptyList());
   }
 
   public int getIndex(Identifier id) {
@@ -156,14 +352,7 @@ public class AnnotatingContext {
     return size() == 0;
   }
 
-  public AnnotatingContext weaken(Constraints constraints) {
-    final var result = constraints.heuristic(annotation.size());
-    for (Map.Entry<List<Integer>, Coefficient> e : annotation.getCoefficients().entrySet()) {
-      constraints.le(result.getCoefficients().get(e.getKey()), e.getValue());
-    }
-    for (int i = 0; i < annotation.getRankCoefficients().size(); i++) {
-      constraints.le(result.getRankCoefficients().get(i), annotation.getRankCoefficients().get(i));
-    }
-    return new AnnotatingContext(ids, result);
+  public Coefficient getRankCoefficient(String id) {
+    return annotation.getRankCoefficient(indexOf(id));
   }
 }

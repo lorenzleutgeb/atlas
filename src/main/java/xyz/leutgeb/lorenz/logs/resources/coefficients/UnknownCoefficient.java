@@ -10,10 +10,24 @@ import xyz.leutgeb.lorenz.logs.Util;
 @EqualsAndHashCode(callSuper = true)
 public class UnknownCoefficient extends Coefficient {
   int id;
+  String name;
+
+  public UnknownCoefficient(int id) {
+    this(id, "");
+  }
+
+  public UnknownCoefficient(int id, String name) {
+    this.id = id;
+    this.name = name;
+  }
 
   @Override
   public String toString() {
-    return "∂" + Util.generateSubscript(id);
+    if (name.isEmpty()) {
+      return "∂" + Util.generateSubscript(id);
+    } else {
+      return name;
+    }
   }
 
   public RealExpr encode(Context ctx, RealExpr[] coefficients) {
