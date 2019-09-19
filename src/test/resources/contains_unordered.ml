@@ -1,7 +1,7 @@
-contains_unordered a t = match t with
-    | (x, b, y) -> if b == a
+contains_unordered x t = match t with
+    | (l, y, r) -> if x == y
         then true
-        else if contains_unordered a x
+        else if contains_unordered x l
             then true
-            else contains_unordered a y
+            else contains_unordered x r
     | nil -> false

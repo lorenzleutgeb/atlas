@@ -1,3 +1,3 @@
-inorder t q = match t with
-  | nil       -> q
-  | (l, x, r) -> (inorder l (inorder r q, x, nil))
+inorder t1 t2 = match t1 with
+  | nil       -> t2
+  | (l, x, r) -> (inorder l (inorder r t2, x, nil))

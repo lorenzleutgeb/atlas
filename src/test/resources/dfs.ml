@@ -1,9 +1,3 @@
-(* push :: (T a * a) -> T a *)
-push q t = (q, t, nil)
-
-(* pop :: (T a) -> T a *)
-pop q    = match q with | (p, x, p2) -> p | nil -> nil
-
 (* ILLEGAL: We cannot construct trees of trees, only trees of the basic type.
 
 (* get :: (T (T a)) -> (T a) *)
@@ -32,5 +26,4 @@ dfs_internal a q = match q with
 
 (* dfs :: (a * (Tree a)) -> Bool *)
 dfs a t = dfs_internal a t (nil, t, nil)
-
 *)

@@ -1,1 +1,1 @@
-flip t = match t with | (l, m, r) -> (r, m, l)
+flip t = match t with | (l, x, r) -> (r, x, l)

@@ -1,3 +1,3 @@
-preorder t q = match t with
-  | nil       -> q
-  | (l, x, r) -> (preorder l (preorder r q), x, nil)
+preorder t1 t2 = match t1 with
+  | nil       -> t2
+  | (l, x, r) -> (preorder l (preorder r t2), x, nil)

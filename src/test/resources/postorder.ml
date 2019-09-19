@@ -1,3 +1,3 @@
-postorder t q = match t with
-  | nil       -> q
-  | (l, x, r) -> (postorder l (postorder r (q, x, nil)))
+postorder t1 t2 = match t1 with
+  | nil       -> t2
+  | (l, x, r) -> (postorder l (postorder r (t2, x, nil)))
