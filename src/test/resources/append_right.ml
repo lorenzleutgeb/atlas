@@ -11,4 +11,9 @@ append_right t1 t2 = match t1 with
  * the number of recursive calls to append_right!
  * We therefore expect cost to be expressed only
  * in some terms dependent on t1.
+ *
+ * This function is taken from David Obwaller's
+ * mail on 2019-09-11.
+ *
+ * Attempt for annotation is symmetric to append_left.
  *)

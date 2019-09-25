@@ -1,5 +1,5 @@
 iter_left t = match t with
-  | nil -> nil
+  | nil       -> nil
   | (l, x, r) -> (iter_left l, x, r)
 
 (**

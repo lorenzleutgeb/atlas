@@ -1,5 +1,5 @@
 descend_right t = match t with
-  | nil -> nil
+  | nil       -> nil
   | (l, m, r) -> descend_right r
 
 (**

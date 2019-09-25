@@ -1,5 +1,5 @@
 descend_left_on_second t1 t2 = match t with
-  | nil -> nil
+  | nil       -> nil
   | (l, x, r) -> descend_left_on_second t1 l
 
 (**

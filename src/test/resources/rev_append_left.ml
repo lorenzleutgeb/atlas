@@ -1,6 +1,6 @@
-append_left_reverse t1 t2 = match t1 with
+rev_append_left t1 t2 = match t1 with
   | nil       -> t2
-  | (l, x, r) -> append_left_reverse l (t2, x, nil)
+  | (l, x, r) -> rev_append_left l (t2, x, nil)
 
 (**
  * The number of recursive calls is equivalent to
