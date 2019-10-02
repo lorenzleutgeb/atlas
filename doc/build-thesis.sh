@@ -4,6 +4,9 @@
 # Replace the 'x' in the next line with the name of the thesis' main LaTeX document without the '.tex' extension
 SOURCE=thesis
 
+# Merge BibTeX files
+cat dblp.bib mathscinet.bib misc.bib > references.bib
+
 # Build the thesis document
 pdflatex $SOURCE
 bibtex   $SOURCE
