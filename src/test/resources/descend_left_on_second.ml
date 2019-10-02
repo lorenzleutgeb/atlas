@@ -1,4 +1,4 @@
-descend_left_on_second t1 t2 = match t with
+descend_left_on_second t1 t2 = match t2 with
   | nil       -> nil
   | (l, x, r) -> descend_left_on_second t1 l
 
