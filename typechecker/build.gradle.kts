@@ -3,7 +3,7 @@ plugins {
     application
     antlr
 
-    id("com.diffplug.gradle.spotless") version "3.16.0"
+    id("com.diffplug.gradle.spotless") version "3.24.3"
     id("com.gradle.build-scan") version "2.2.1"
 }
 
@@ -45,9 +45,10 @@ dependencies {
     implementation("info.picocli:picocli:4.0.0-alpha-2")
 
     // Testing
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.3.2")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.3.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.3.2")
+    val jupiterVersion = "5.5.2"
+    testImplementation("org.junit.jupiter:junit-jupiter-api:${jupiterVersion}")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:${jupiterVersion}")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${jupiterVersion}")
 
     // The Z3 Theorem Prover
     // See https://github.com/Z3Prover/z3#java
@@ -78,17 +79,15 @@ tasks.withType<AntlrTask> {
     ))
 }
 
-/*
-tasks.withType<Test> {
+tasks.test {
     useJUnitPlatform()
     testLogging {
         events("passed", "skipped", "failed")
     }
 }
-*/
 
 tasks.withType<Wrapper> {
-    gradleVersion = "5.3"
+    gradleVersion = "5.6.2"
     distributionType = Wrapper.DistributionType.ALL
 }
 
