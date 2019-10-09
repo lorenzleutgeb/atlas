@@ -1,10 +1,14 @@
-contains_unordered x t = match t with
-    | nil       -> false
-    | (l, y, r) -> if x == y
-        then true
-        else if contains_unordered x l
-            then true
-            else contains_unordered x r
+singleton x = (nil, x, nil)
+
+id t = match t with | (a, b, c) -> (a, b, c)
+
+left t = match t with | (l, x, r) -> l
+
+right t = match t with | (l, x, r) -> r
+
+flip t = match t with | (l, x, r) -> (r, x, l)
+
+empty t = match t with | nil -> true | (r, x, l) -> false
 
 (**
  * Attempt to annotate:
@@ -68,7 +72,7 @@ contains_unordered x t = match t with
  *       ht((l, y, r)) >= ht(l) + 1
  *       max({ht(l), ht(r)}) + 1 >= ht(l) + 1
  *       max({ht(l), ht(r)})     >= ht(l)
-         Error, since for ht(r) > ht(l)
+ *       Error, since for ht(r) > ht(l)
  *       Case: ht(l) >= ht(r)
  *         ht(l) >= ht(l)
  *       Case: ht(l) < ht(r)
@@ -77,3 +81,37 @@ contains_unordered x t = match t with
  *     ht(t) >= 0
  *     by definition of ht.
  *)
+contains_unordered x t = match t with
+    | nil       -> false
+    | (l, y, r) -> if x == y
+        then true
+        else (Bool.or (contains_unordered x l) (contains_unordered x r))
+
+(**
+ * This function is equivalent to
+ *
+ *     id x = x
+ *
+ * on trees, but costs the "depth"
+ * of t.
+ *
+ * This function is taken from David Obwaller's
+ * mail on 2019-09-11.
+ *
+ * -------------------------------------------------------------------
+ *
+ * Attempt to annotate:
+ *   iter_both t | 1 * rk(t)
+ *
+ * Attempt to prove:
+ * Case: t == nil
+ *   rk(t)   >= 0
+ *   rk(nil) >= 0
+ *   0       >= 0
+ * Case: t == (l, x, r)
+ *   rk(t)                                 >= rk((iter_both l, x, iter_both r)) + 1
+ * ! Error, since we cannot expand `(iter_both l, x, iter_both r)` meaningfully.
+ *)
+iter t = match t with
+  | nil       -> nil
+  | (l, x, r) -> (iter l, x, iter r)

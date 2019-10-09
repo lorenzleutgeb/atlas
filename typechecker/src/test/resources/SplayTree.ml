@@ -33,3 +33,39 @@ splay a t = match t with
                             else match splay a br with
                                 | nil         -> nil
                                 | (al, x, xa) -> (((cl, c, bl), b, al), x, xa)
+
+splay_max t = match t with
+    | nil       -> nil
+    | (l, b, r) -> match r with
+        | nil         -> (l, b, nil)
+        | (rl, c, rr) -> if rr == nil
+            then ((l, b, rl), c, nil)
+            else match splay_max rr with
+                | nil          -> nil
+                | (rrl, x, xa) -> (((l, b, rl), c, rrl), x, xa)
+
+delete a t = if t == nil
+    then nil
+    else match splay a t with
+        | (l, a', r) -> if a == a'
+            then if l == nil
+                then r
+                else match splay_max l with
+                    | (l', m, r') -> (l', m, r)
+            else (l, a', r)
+
+insert a t = if t == nil
+    then (nil, a, nil)
+    else match splay a t with
+        | (l, a', r) ->
+            if a == a'
+                then (l, a, r)
+                else if a < a'
+                    then (l, a, (nil, a', r))
+                    else ((l, a', nil), a, r)
+
+contains a t = match t with
+  | nil       -> false
+  | (l, x, r) -> let ts = splay a (l, x, r) in match ts with
+    | nil          -> false
+    | (l2, x2, r2) -> if x2 == a then true else false
