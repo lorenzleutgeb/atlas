@@ -1,10 +1,12 @@
+import org.gradle.api.internal.tasks.testing.TestDescriptorInternal
+
 plugins {
     java
     application
     antlr
 
-    id("com.diffplug.gradle.spotless") version "3.24.3"
-    id("com.gradle.build-scan") version "2.2.1"
+    id("com.diffplug.gradle.spotless") version "3.25.0"
+    id("com.gradle.build-scan") version "2.4.2"
 }
 
 repositories {
@@ -13,8 +15,8 @@ repositories {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_12
-    targetCompatibility = JavaVersion.VERSION_12
+    sourceCompatibility = JavaVersion.VERSION_13
+    targetCompatibility = JavaVersion.VERSION_13
 }
 
 configurations {
@@ -23,39 +25,53 @@ configurations {
 
 dependencies {
     // We need to give the ANTLR Plugin a hint.
-    antlr("org.antlr:antlr4:4.7.1")
-    implementation("org.antlr:antlr4:4.7.1")
+    val antlrDependency = "org.antlr:antlr4:4.7.2"
+    antlr(antlrDependency)
+    implementation(antlrDependency)
 
-    implementation("com.google.guava:guava:26.0-jre")
+    implementation("com.google.guava:guava:28.1-jre")
 
     implementation("org.apache.commons:commons-text:1.6")
 
     // Logging
-    implementation("org.apache.logging.log4j:log4j-api:2.11.1")
-    implementation("org.apache.logging.log4j:log4j-core:2.11.1")
+    fun log4j(x: String): String {
+        return "org.apache.logging.log4j:log4j-$x:2.12.1"
+    }
+    implementation(log4j("api"))
+    implementation(log4j("core"))
 
     // Lombok
-    compileClasspath("org.projectlombok:lombok:1.18.4")
-    annotationProcessor("org.projectlombok:lombok:1.18.4")
+    val lombok = "org.projectlombok:lombok:1.18.10"
+    compileOnly(lombok)
+    annotationProcessor(lombok)
 
     // Maths
-    implementation("org.hipparchus:hipparchus-core:1.4")
+    implementation("org.hipparchus:hipparchus-core:1.5")
+
+    // Graphs
+    fun jgrapht(x: String): String {
+        return "org.jgrapht:jgrapht-$x:1.3.1"
+    }
+    implementation(jgrapht("core"))
+    implementation(jgrapht("io"))
 
     // Commandline Parameters
-    implementation("info.picocli:picocli:4.0.0-alpha-2")
+    implementation("info.picocli:picocli:4.0.4")
 
     // Testing
-    val jupiterVersion = "5.5.2"
-    testImplementation("org.junit.jupiter:junit-jupiter-api:${jupiterVersion}")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:${jupiterVersion}")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${jupiterVersion}")
+    fun jupiter(x: String): String {
+        return "org.junit.jupiter:junit-jupiter-$x:5.5.2"
+    }
+    testImplementation(jupiter("api"))
+    testImplementation(jupiter("params"))
+    testRuntimeOnly(jupiter("engine"))
 
     // The Z3 Theorem Prover
     // See https://github.com/Z3Prover/z3#java
     implementation(files("libs/com.microsoft.z3.jar"))
 
     // Graph output
-    implementation("guru.nidi:graphviz-java:0.8.8")
+    implementation("guru.nidi:graphviz-java:0.11.0")
 }
 
 application {
@@ -84,10 +100,17 @@ tasks.test {
     testLogging {
         events("passed", "skipped", "failed")
     }
+    // See https://github.com/junit-team/junit5/issues/2041#issuecomment-539712030
+    afterTest(KotlinClosure2<TestDescriptor, TestResult, Any>({ descriptor, result ->
+        val test = descriptor as TestDescriptorInternal
+        val classDisplayName = if(test.className == test.classDisplayName) test.classDisplayName else "${test.className} [${test.classDisplayName}]"
+        val testDisplayName = if(test.name == test.displayName) test.displayName else "${test.name} [${test.displayName}]"
+        println("\n$classDisplayName > $testDisplayName: ${result.resultType}")
+    }))
 }
 
 tasks.withType<Wrapper> {
-    gradleVersion = "5.6.2"
+    gradleVersion = "6.0-20191007230021+0000"
     distributionType = Wrapper.DistributionType.ALL
 }
 
