@@ -6,7 +6,6 @@ plugins {
     antlr
 
     id("com.diffplug.gradle.spotless") version "3.25.0"
-    id("com.gradle.build-scan") version "2.4.2"
 }
 
 repositories {
@@ -116,16 +115,6 @@ tasks.withType<Wrapper> {
 
 // Aggresively format code when building.
 tasks["build"].dependsOn("spotlessJavaApply")
-
-buildScan {
-    termsOfServiceUrl = "https://gradle.com/terms-of-service"
-    termsOfServiceAgree = "yes"
-    if (System.getenv("CI") != null) {
-        publishAlways()
-        tag("ci")
-        link("Travis CI", System.getenv("TRAVIS_JOB_WEB_URL"))
-    }
-}
 
 spotless {
     java {
