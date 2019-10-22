@@ -14,6 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.hipparchus.util.Pair;
@@ -37,6 +38,7 @@ public abstract class Expression extends Syntax {
 
   public Expression(Source source) {
     super(source);
+    typeResolved = false;
   }
 
   public Expression(Source source, Type type) {
@@ -53,10 +55,6 @@ public abstract class Expression extends Syntax {
 
   protected abstract Type inferInternal(Context context) throws UnificationError, TypeError;
 
-  public Object evaluate(Context context) {
-    throw new UnsupportedOperationException("not implemented");
-  }
-
   public Type infer(Context context) throws UnificationError, TypeError {
     if (this.type == null) {
       this.type = inferInternal(context);
@@ -65,8 +63,8 @@ public abstract class Expression extends Syntax {
   }
 
   public void resolveType(Substitution substitution) {
-    typeResolved = true;
     this.type = substitution.apply(this.type);
+    typeResolved = true;
     getChildren().forEach(x -> x.resolveType(substitution));
   }
 
@@ -117,7 +115,8 @@ public abstract class Expression extends Syntax {
     if (isImmediate()) {
       return this;
     }
-    var id = Identifier.getSugar();
+
+    var id = Identifier.getSugar(Derived.anf(source));
     context.push(new Pair<>(id, normalize(context)));
     return id;
   }
@@ -164,5 +163,20 @@ public abstract class Expression extends Syntax {
 
   public Expression rename(Map<String, String> renaming) {
     throw new UnsupportedOperationException();
+  }
+
+  public void printHaskellTo(PrintStream out, int indentation) {
+    indent(out, indentation);
+    out.println(toString());
+  }
+
+  public Set<String> getOcurringFunctions() {
+    return getChildren()
+        .flatMap(e -> e.getOcurringFunctions().stream())
+        .collect(Collectors.toSet());
+  }
+
+  public Expression unshare() {
+    return this;
   }
 }

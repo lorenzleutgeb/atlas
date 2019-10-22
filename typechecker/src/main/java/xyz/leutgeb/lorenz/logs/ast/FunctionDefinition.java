@@ -3,8 +3,9 @@ package xyz.leutgeb.lorenz.logs.ast;
 import static guru.nidi.graphviz.attribute.Records.turn;
 import static guru.nidi.graphviz.model.Factory.graph;
 import static guru.nidi.graphviz.model.Factory.node;
+import static java.util.Collections.singleton;
 
-import guru.nidi.graphviz.attribute.RankDir;
+import com.google.common.collect.Sets;
 import guru.nidi.graphviz.attribute.Records;
 import guru.nidi.graphviz.attribute.Shape;
 import guru.nidi.graphviz.engine.Format;
@@ -15,13 +16,17 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
+import java.util.stream.Collectors;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
+import xyz.leutgeb.lorenz.logs.Loader;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
@@ -33,23 +38,31 @@ import xyz.leutgeb.lorenz.logs.typing.types.BoolType;
 import xyz.leutgeb.lorenz.logs.typing.types.FunctionType;
 import xyz.leutgeb.lorenz.logs.typing.types.TreeType;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
-import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 @Data
 @Log4j2
 public class FunctionDefinition {
+  private final String moduleName;
   private final String name;
   private final List<String> arguments;
-  private final Expression body;
+  private Expression body;
   private FunctionSignature signature;
+
+  public FunctionDefinition(
+      String moduleName, String name, List<String> arguments, Expression body) {
+    this.moduleName = moduleName;
+    this.name = name;
+    this.arguments = arguments;
+    this.body = body;
+  }
 
   public FunctionSignature infer(Context context) throws UnificationError, TypeError {
     if (signature != null) {
       return signature;
     }
 
-    var sub = context.child();
+    var sub = context.childWithNewUnfication();
     List<Type> from = new ArrayList<>(arguments.size());
 
     for (String argument : arguments) {
@@ -60,23 +73,29 @@ public class FunctionDefinition {
 
     Type to = sub.getProblem().fresh();
     Type result = new FunctionType(from, to);
-    sub.putType(name, result);
+    sub.putType(getFullyQualifiedName(), result);
 
-    sub.getProblem().add(new Equivalence(to, body.infer(sub)));
+    sub.getProblem().addIfNotEqual(to, body.infer(sub));
 
     // Now we are set for unification!
     var solution = sub.getProblem().solveAndGeneralize(result);
 
     signature =
         new FunctionSignature(
-            (FunctionType) solution.apply(result), sub.getProblem().getConstraints());
+            sub.getProblem().getConstraints().stream()
+                .map(tc -> tc.apply(solution))
+                .collect(Collectors.toSet()),
+            (FunctionType) solution.apply(result));
     body.resolveType(solution);
     return signature;
   }
 
-  public FunctionDefinition normalize() {
+  public void normalize() {
+    if (signature != null) {
+      return;
+    }
     var context = new Stack<Pair<Identifier, Expression>>();
-    return new FunctionDefinition(name, arguments, body.normalize(context).bindAll(context));
+    body = body.normalize(context).bindAll(context);
   }
 
   public Pair<Annotation, Annotation> inferAnnotation(
@@ -88,6 +107,9 @@ public class FunctionDefinition {
     }
 
     final var constraints = new Constraints(name);
+
+    // Enable syntax-directed application of (share) here!
+    // body = body.unshare();
 
     var types = signature.getType().getFrom().getElements();
     final var ids = new ArrayList<String>(types.size());
@@ -108,31 +130,53 @@ public class FunctionDefinition {
 
     var qprime = body.getType() instanceof TreeType ? constraints.heuristic(1) : Annotation.empty();
 
-    functionAnnotations.put(name, new Pair<>(q, qprime));
+    functionAnnotations.put(getFullyQualifiedName(), new Pair<>(q, qprime));
     final var globals = new AnnotatingGlobals(functionAnnotations, constraints, 1);
 
-    // if (!(signature.getType().getTo() instanceof TreeType)) {
     final var result = new Pair<>(q, body.inferAnnotations(initialGammaQ, globals));
 
+    /*
     try {
       this.toGraph(result);
     } catch (IOException e) {
       e.printStackTrace();
     }
+     */
+
     constraints.solve();
+
+    /*
+    Graph g = constraints.toGraph(graph(name).directed().graphAttr().with(RankDir.BOTTOM_TO_TOP));
+    var viz = Graphviz.fromGraph(g);
+    try {
+      viz.engine(Engine.CIRCO)
+          .render(Format.SVG)
+              // TODO(lorenzleutgeb): Remove hardcoded path here.
+          .toFile(new File(new File("..", "out"), name + "-constraints.svg"));
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    */
+
+    // TODO: Remove this side-effect!
     System.out.println(
         name
-            + " "
+            + (arguments.isEmpty() ? "" : " ")
             + String.join(" ", arguments)
             + " | "
-            + q.substitute(constraints).toStringForParameters(ids));
+            + q.substitute(constraints).toStringForParameters(ids, false)
+            + " -> "
+            + qprime
+                .substitute(constraints)
+                .toStringForParameters(Collections.singletonList("_"), false));
+
     return result;
   }
 
   public void printTo(PrintStream out) {
     out.print("(* ");
     out.print(name);
-    out.print(" :: ");
+    out.print(" : ");
     out.print(signature);
     out.println(" *)");
     out.print(name);
@@ -142,8 +186,21 @@ public class FunctionDefinition {
     body.printTo(out, 1);
   }
 
+  public void printHaskellTo(PrintStream out) {
+    out.print(name);
+    out.print(" :: ");
+    out.println(signature.toHaskell());
+    out.print(name);
+    out.print(" ");
+    out.print(String.join(" ", arguments));
+    out.print(" = ");
+    body.printHaskellTo(out, 1);
+    out.println();
+    out.println();
+  }
+
   public void toGraph(Pair<Annotation, Annotation> annotations) throws IOException {
-    Graph g = graph(name).directed().graphAttr().with(RankDir.BOTTOM_TO_TOP);
+    Graph g = graph(name).directed(); // .graphAttr();//.with(RankDir.BOTTOM_TO_TOP);
     Node root =
         node(name)
             .with(
@@ -158,5 +215,23 @@ public class FunctionDefinition {
     Graph result = body.toGraph(g, root);
     var viz = Graphviz.fromGraph(result);
     viz.render(Format.SVG).toFile(new File("out", name + ".svg"));
+  }
+
+  public String getFullyQualifiedName() {
+    return moduleName + "." + name;
+  }
+
+  public Set<String> importedFunctions() {
+    return getOcurringFunctions().stream()
+        .filter(f -> !Loader.moduleName(f).equals(moduleName))
+        .collect(Collectors.toSet());
+  }
+
+  public Set<String> getOcurringFunctions() {
+    return body.getOcurringFunctions();
+  }
+
+  public Set<String> getOcurringFunctionsNonRecursive() {
+    return Sets.difference(getOcurringFunctions(), singleton(getFullyQualifiedName()));
   }
 }

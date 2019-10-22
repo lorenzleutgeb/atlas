@@ -3,7 +3,6 @@ package xyz.leutgeb.lorenz.logs.typing.types;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -12,6 +11,7 @@ import lombok.Value;
 import xyz.leutgeb.lorenz.logs.typing.TypeVariable;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.Generalizer;
+import xyz.leutgeb.lorenz.logs.unification.Substitution;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationProblem;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
@@ -32,7 +32,9 @@ public class ProductType extends Type {
     }
     var result = new ArrayList<Equivalence>(elements.size());
     for (int i = 0; i < elements.size(); i++) {
-      result.add(new Equivalence(elements.get(i), pt.elements.get(i)));
+      if (!elements.get(i).equals(pt.elements.get(i))) {
+        result.add(new Equivalence(elements.get(i), pt.elements.get(i)));
+      }
     }
     return result;
   }
@@ -48,8 +50,29 @@ public class ProductType extends Type {
   }
 
   @Override
-  public Type wiggle(Map<TypeVariable, UnificationVariable> wiggled, UnificationProblem context) {
+  public Type wiggle(Substitution wiggled, UnificationProblem context) {
     return map(x -> x.wiggle(wiggled, context));
+  }
+
+  @Override
+  public String toHaskell() {
+    if (elements.size() == 0) {
+      return "()";
+    }
+    if (elements.size() == 1) {
+      return elements.get(0).toHaskell();
+    }
+    return "(" + stream().map(Type::toHaskell).collect(Collectors.joining(", ")) + ")";
+  }
+
+  public String toCurriedHaskell() {
+    if (elements.size() == 0) {
+      return "";
+    }
+    if (elements.size() == 1) {
+      return elements.get(0).toHaskell();
+    }
+    return stream().map(Type::toHaskell).collect(Collectors.joining(" -> "));
   }
 
   @Override

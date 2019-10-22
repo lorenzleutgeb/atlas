@@ -3,8 +3,8 @@ package xyz.leutgeb.lorenz.logs.ast;
 import static xyz.leutgeb.lorenz.logs.Util.indent;
 import static xyz.leutgeb.lorenz.logs.ast.Identifier.NIL;
 
+import com.google.common.collect.Sets;
 import java.io.PrintStream;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,11 +19,13 @@ import lombok.extern.log4j.Log4j2;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.ast.sources.Derived;
+import xyz.leutgeb.lorenz.logs.ast.sources.Predefined;
 import xyz.leutgeb.lorenz.logs.ast.sources.Renamed;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
+import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.typing.types.TreeType;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
@@ -83,6 +85,11 @@ public class MatchExpression extends Expression {
     return new Pair<>(pair.getKey(), pair.getValue().normalizeAndBind());
   }
 
+  private static Pair<Expression, Expression> rename(
+      Pair<Expression, Expression> cc, Map<String, String> renaming) {
+    return new Pair<>(cc.getFirst(), cc.getSecond().rename(renaming));
+  }
+
   @Override
   public Stream<? extends Expression> getChildren() {
     return Stream.concat(
@@ -97,14 +104,14 @@ public class MatchExpression extends Expression {
   public Type inferInternal(Context context) throws UnificationError, TypeError {
     final var result = context.getProblem().fresh();
     final var testType = context.getProblem().fresh();
-    context.getProblem().add(this, testType, test.infer(context));
+    context.getProblem().addIfNotEqual(this, testType, test.infer(context).wiggle(context));
 
     for (Pair<Expression, Expression> it : cases) {
       var matcher = it.getKey();
       var body = it.getValue();
 
       // The matcher is an identifier. We therefore create a new context, add a signature variable
-      // for it and decompose with the signature of test.
+      // for it and deconstruct with the signature of test.
       if (matcher instanceof Identifier) {
         if (!NIL.equals(matcher)) {
           throw new RuntimeException("the only identifier allowed as destruction pattern is nil");
@@ -113,8 +120,8 @@ public class MatchExpression extends Expression {
         var sub = context.hide(((Identifier) test).getName());
         var fresh = sub.getProblem().fresh();
         sub.putType(id.getName(), fresh);
-        sub.getProblem().add(this, testType, matcher.infer(sub));
-        sub.getProblem().add(this, result, body.infer(sub));
+        sub.getProblem().addIfNotEqual(this, testType, matcher.infer(sub).wiggle(sub));
+        sub.getProblem().addIfNotEqual(this, result, body.infer(sub).wiggle(sub));
       } else if (matcher instanceof Tuple) {
         var tuple = (Tuple) matcher;
 
@@ -132,8 +139,8 @@ public class MatchExpression extends Expression {
           sub.putType(name, fresh);
         }
 
-        sub.getProblem().add(this, testType, it.getKey().infer(sub));
-        sub.getProblem().add(this, result, it.getValue().infer(sub));
+        sub.getProblem().addIfNotEqual(this, testType, it.getKey().infer(sub).wiggle(sub));
+        sub.getProblem().addIfNotEqual(this, result, it.getValue().infer(sub).wiggle(sub));
       } else {
         throw new UnsupportedOperationException();
       }
@@ -163,11 +170,6 @@ public class MatchExpression extends Expression {
         test,
         cases.stream().map(e -> rename(e, renaming)).collect(Collectors.toList()),
         type);
-  }
-
-  private static Pair<Expression, Expression> rename(
-      Pair<Expression, Expression> cc, Map<String, String> renaming) {
-    return new Pair<>(cc.getFirst(), cc.getSecond().rename(renaming));
   }
 
   @Override
@@ -204,17 +206,23 @@ public class MatchExpression extends Expression {
       throw new RuntimeException("annotation of nil case must have size exactly one");
     }
 
+    // \Gamma, x_1 : T, x_2 : B, x_3 : T  (NOTE: x_2 is skipped since it is not a tree).
     final var gammaxsr = gammaxq.pop(constraints, scrutinee).extend(constraints, x1, x3);
 
-    // node
+    // node (also called "e_2" in the paper)
     var nodeqp = nodeCase.getValue().inferAnnotations(gammaxsr, globals);
     if (nodeqp.size() != 1) {
       throw new RuntimeException("annotation of node case must have size exactly one");
     }
 
+    // Both e_1 and e_2 are annotated with Q' in the paper, which we cannot
+    // directly express but equate the results.
     constraints.eq(this, nilqp, nodeqp);
 
     // r_{m+1} = r_{m+2} = q_{m+1}
+    // m refers to the size of \Gamma
+    // r_{m+1} refers to x_1
+    // r_{m+2} refers to x_3
     constraints.eq(
         this,
         gammaxsr.getRankCoefficient(x1.getName()),
@@ -222,6 +230,10 @@ public class MatchExpression extends Expression {
         gammaxq.getRankCoefficient(scrutinee.getName()));
 
     // r_{(\vec{0}, 1, 0, 0)} = r_{(\vec{0}, 0, 1, 0)} = q_{m+1}
+    // To implement this constraint we use two indices defined as function that set the
+    // index for all variables except x_1/x_3 to zero. That way we get the above selection.
+    // Again m refers to the size of \Gamma, thus q_{m+1} refers to the coefficient of the
+    // scrutinee.
     final Function<String, Integer> index1 = (String name) -> name.equals(x1.getName()) ? 1 : 0;
     final Function<String, Integer> index2 = (String name) -> name.equals(x3.getName()) ? 1 : 0;
 
@@ -232,11 +244,22 @@ public class MatchExpression extends Expression {
         gammaxq.getRankCoefficient(scrutinee.getName()));
 
     // r_{\vec{a}, a, a, b} = q_{\vec{a}, a, b}
+    // TODO: Clarify whether \vec{a} should really look like a, a, a, ...
     gammaxsr
         .streamIndices()
-        .filter(index -> new HashSet<>(index.getFirst().values()).size() == 1)
+        .filter(
+            index -> {
+              final var a1 = index.getFirst().get(x1.getName());
+              final var a2 = index.getFirst().get(x3.getName());
+              return a1 != null && a1.equals(a2);
+
+              // This would filter for all a to be the same.
+              // return new HashSet<>(index.getFirst().values()).size() == 1;
+            })
         .forEach(
             index -> {
+              // Here we use the coefficient of x1, but could just as well use x3. The
+              // previous filter ensures that they are the same.
               index.getFirst().put(scrutinee.getName(), index.getFirst().get(x1.getName()));
               constraints.eq(this, gammaxsr.getCoefficient(index), gammaxq.getCoefficient(index));
             });
@@ -246,7 +269,7 @@ public class MatchExpression extends Expression {
         .streamIndices()
         .forEach(
             indexLeft -> {
-              final var sum =
+              final List<Coefficient> sum =
                   gammaxq
                       .streamIndices()
                       .filter(
@@ -290,6 +313,24 @@ public class MatchExpression extends Expression {
   }
 
   @Override
+  public void printHaskellTo(PrintStream out, int indentation) {
+    out.print("case ");
+    test.printTo(out, indentation);
+    out.println(" of");
+
+    for (int i = 0; i < cases.size(); i++) {
+      var item = cases.get(i);
+      indent(out, indentation);
+      item.getKey().printHaskellTo(out, indentation + 1);
+      out.print(" -> ");
+      item.getValue().printHaskellTo(out, indentation + 1);
+      if (i < cases.size() - 1) {
+        out.println();
+      }
+    }
+  }
+
+  @Override
   public String toString() {
     return "match " + test.toString();
   }
@@ -300,5 +341,42 @@ public class MatchExpression extends Expression {
     result.removeAll(cases.get(0).getKey().freeVariables());
     result.removeAll(cases.get(1).getKey().freeVariables());
     return result;
+  }
+
+  @Override
+  public Expression unshare() {
+    Set<String> free1 = cases.get(1).getSecond().freeVariables();
+    Set<String> free2 = cases.get(0).getSecond().freeVariables();
+    Sets.SetView<String> intersection = Sets.intersection(free1, free2);
+    if (intersection.size() > 1) {
+      throw new UnsupportedOperationException("please implement");
+    }
+
+    if (intersection.isEmpty()) {
+      return new MatchExpression(
+          source,
+          test,
+          List.of(
+              Pair.create(cases.get(0).getFirst(), cases.get(0).getSecond().unshare()),
+              Pair.create(cases.get(1).getFirst(), cases.get(1).getSecond().unshare())),
+          type);
+    }
+
+    Identifier up = new Identifier(Predefined.INSTANCE, intersection.iterator().next());
+    var down = ShareExpression.clone(up);
+    var result =
+        ShareExpression.rename(
+            up, down, Pair.create(cases.get(0).getSecond(), cases.get(1).getSecond()));
+    return new ShareExpression(
+        source,
+        up,
+        down,
+        new MatchExpression(
+            source,
+            test,
+            List.of(
+                Pair.create(cases.get(0).getFirst(), result.getFirst().unshare()),
+                Pair.create(cases.get(1).getFirst(), result.getSecond().unshare())),
+            type));
   }
 }

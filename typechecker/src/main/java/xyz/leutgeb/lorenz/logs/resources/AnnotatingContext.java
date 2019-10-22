@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.Data;
+import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.ast.Expression;
@@ -29,7 +30,7 @@ import xyz.leutgeb.lorenz.logs.typing.types.TreeType;
 @Log4j2
 @Data
 public class AnnotatingContext {
-  private final List<String> ids;
+  @Getter private final List<String> ids;
   private Annotation annotation;
 
   public AnnotatingContext(List<String> ids, Annotation annotation) {
@@ -41,6 +42,14 @@ public class AnnotatingContext {
     // }
     this.ids = ids;
     this.annotation = annotation;
+  }
+
+  public AnnotatingContext less(Expression source, Constraints constraints) {
+    return new AnnotatingContext(new ArrayList<>(ids), annotation.less(source, constraints));
+  }
+
+  public AnnotatingContext greater(Expression source, Constraints constraints) {
+    return new AnnotatingContext(new ArrayList<>(ids), annotation.greater(source, constraints));
   }
 
   public Coefficient getCoefficient(Function<String, Integer> indexer, Integer c) {
@@ -100,6 +109,7 @@ public class AnnotatingContext {
             });
   }
 
+  @Deprecated
   public AnnotatingContext partition(
       Expression source, Constraints constraints, Predicate<String> isLeft) {
     final var leftIds = new ArrayList<Pair<Integer, String>>(ids.size());
@@ -156,6 +166,44 @@ public class AnnotatingContext {
     return new AnnotatingContext(newIds, annotation);
   }
 
+  public AnnotatingContext weaken(Expression source, Constraints constraints, String id) {
+    // ensureAllTrees(Collections.singleton(id));
+
+    final var remainingIds = new ArrayList<>(ids);
+    if (!remainingIds.remove(id)) {
+      throw bug("unknown variable");
+    }
+    final var result = new AnnotatingContext(remainingIds, constraints.heuristic(size() - 1));
+
+    // r_{(\vec{a}, b)} = q_{(\vec{a}, 0, b)}
+    streamIndices()
+        .filter(index -> index.getFirst().get(id) == 0)
+        .forEach(
+            index -> constraints.eq(source, result.getCoefficient(index), getCoefficient(index)));
+
+    // r_i = q_i
+    for (var e : remainingIds) {
+      constraints.eq(source, result.getRankCoefficient(e), getRankCoefficient(e));
+    }
+
+    return result;
+  }
+
+  public AnnotatingContext weakenIdentifiersExcept(
+      Expression source, Constraints constraints, Set<String> ids) {
+    if (ids.size() == this.ids.size() && ids.containsAll(this.ids)) {
+      return this;
+    }
+    var result = this;
+    for (var e : this.ids) {
+      if (ids.contains(e)) {
+        continue;
+      }
+      result = result.weaken(source, constraints, e);
+    }
+    return result;
+  }
+
   /**
    * Applies the rule (w : var) to generate a new context which only spans the identifiers given.
    * This is useful towards applying rules that require a specific context, such as (nil), which
@@ -165,7 +213,8 @@ public class AnnotatingContext {
    *
    * <p>Note that this method also enforces order on the resulting context.
    */
-  public AnnotatingContext weakenIdentifiersExcept(
+  @Deprecated
+  public AnnotatingContext weakenIdentifiersExceptOld(
       Expression source, Constraints constraints, List<Identifier> ids) {
     ensureAllTrees(ids);
 
@@ -178,9 +227,7 @@ public class AnnotatingContext {
     }
 
     if (ids.size() > size()) {
-      log.debug(
-          "Weakening to more variables is not possible. Additional ones will be dropped. That might yield a context that is too short.");
-      ids = ids.stream().filter(this.ids::contains).collect(Collectors.toList());
+      throw bug("Weakening to more variables is not possible.");
     }
 
     if (ids.size() == size()) {
@@ -192,16 +239,16 @@ public class AnnotatingContext {
     // The (w : var) rule as
     // stated/defined in the paper requires the element of the context
     // to be removed to be in the rightmost/last position. It then
-    // elegantly uses r_{\vec{a}, 0, b} = q_{\vec{a}, 0, b}. I think
+    // elegantly uses r_{\vec{a}, b} = q_{\vec{a}, 0, b}. I think
     // it is possible to hide an element at an arbitrary position,
-    // as sketched by r_{\vec{a}, 0, \vec{a'}, b} = q_{\vec{a}, 0, \vec{a'}, b},
+    // as sketched by r_{\vec{a}, \vec{a'}, b} = q_{\vec{a}, 0, \vec{a'}, b},
     // such that |\vec{a}| = i - 1, |\vec{a'}| = |Q| - a.
 
     final var locations = new ArrayList<Integer>(ids.size());
     final var newIds = new ArrayList<String>(ids.size());
+
     for (int j = 0; j < ids.size(); j++) {
       final var needle = ids.get(j);
-      boolean found = false;
       int index = -1;
 
       for (int i = 0; i < this.ids.size(); i++) {
@@ -209,20 +256,18 @@ public class AnnotatingContext {
         if (needle.getName().equals(id)) {
           newIds.add(id);
           index = i;
-          found = true;
           locations.add(i);
           break;
         }
       }
 
-      if (!found) {
-        throw new RuntimeException();
+      if (index == -1) {
+        throw bug("could not find index for id " + needle);
       }
 
       // Generate constraints.
 
-      // r_{\vec{a}, 0, \vec{a'}, b} = q_{\vec{a}, 0, \vec{a'}, b}
-
+      // r_{\vec{a}, \vec{a'}, b} = q_{\vec{a}, 0, \vec{a'}, b}
       for (Map.Entry<List<Integer>, Coefficient> e : this.getAnnotation().getCoefficients()) {
         if (e.getKey().get(index) == 0) {
           final var other = e.getKey().subList(0, index);
@@ -241,18 +286,22 @@ public class AnnotatingContext {
     return new AnnotatingContext(newIds, r);
   }
 
+  private String prime(String id) {
+    var tmp = id + "'";
+    while (ids.contains(tmp)) {
+      tmp += "'";
+    }
+    return tmp;
+  }
+
   public Pair<String, AnnotatingContext> share(
       Expression source, Constraints constraints, String id) {
     if (!this.ids.contains(id)) {
       throw bug("id not contained");
     }
-    final var resultAnnotation = constraints.heuristic(size() + 1);
-    var primed = id + "'";
-    while (this.ids.contains(primed)) {
-      primed += "'";
-    }
-    final var primedId = primed;
 
+    final var resultAnnotation = constraints.heuristic(size() + 1);
+    final var primed = prime(id);
     final var resultIds = new ArrayList<String>(size() + 1);
     resultIds.addAll(this.ids);
     resultIds.add(primed);
@@ -264,7 +313,7 @@ public class AnnotatingContext {
     constraints.eqSum(
         source,
         this.getRankCoefficient(id),
-        List.of(result.getRankCoefficient(id), result.getRankCoefficient(primedId)));
+        List.of(result.getRankCoefficient(id), result.getRankCoefficient(primed)));
     for (var it : ids) {
       if (!it.equals(id)) {
         constraints.eq(source, this.getRankCoefficient(it), result.getRankCoefficient(it));
@@ -275,8 +324,8 @@ public class AnnotatingContext {
         .streamIndices()
         .forEach(
             index -> {
-              final var sum = index.getFirst().get(id) + index.getFirst().get(primedId);
-              final var copy = new HashMap<String, Integer>(index.getFirst());
+              final var sum = index.getFirst().get(id) + index.getFirst().get(primed);
+              final var copy = new HashMap<>(index.getFirst());
               copy.put(id, sum);
               constraints.eq(
                   source,
@@ -321,16 +370,16 @@ public class AnnotatingContext {
         return i;
       }
     }
-    return -1;
+    throw bug("unknown id '" + id + "'");
   }
 
   public AnnotatingContext weakenIdentifiersExcept(
       Expression source, Constraints constraints, Identifier id) {
-    return weakenIdentifiersExcept(source, constraints, Collections.singletonList(id));
+    return weakenIdentifiersExcept(source, constraints, Collections.singleton(id.getName()));
   }
 
   public AnnotatingContext weakenAllIdentifiers(Expression source, Constraints constraints) {
-    return weakenIdentifiersExcept(source, constraints, Collections.emptyList());
+    return weakenIdentifiersExcept(source, constraints, Collections.emptySet());
   }
 
   public int getIndex(Identifier id) {

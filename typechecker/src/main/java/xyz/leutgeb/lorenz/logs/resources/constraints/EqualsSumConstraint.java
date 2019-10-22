@@ -1,10 +1,17 @@
 package xyz.leutgeb.lorenz.logs.resources.constraints;
 
+import static guru.nidi.graphviz.model.Link.to;
+
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.RealExpr;
+import guru.nidi.graphviz.attribute.Color;
+import guru.nidi.graphviz.model.Graph;
+import guru.nidi.graphviz.model.LinkTarget;
+import guru.nidi.graphviz.model.Node;
 import java.util.Collection;
+import java.util.Map;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.ast.Expression;
 import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
@@ -32,5 +39,15 @@ public class EqualsSumConstraint extends Constraint {
         sum.stream().map(c -> c.encode(ctx, coefficients)).toArray(ArithExpr[]::new);
 
     return ctx.mkEq(left.encode(ctx, coefficients), ctx.mkAdd(encodedSum));
+  }
+
+  @Override
+  public Graph toGraph(Graph graph, Map<Coefficient, Node> nodes) {
+    var link = new LinkTarget[sum.size()];
+    int i = 0;
+    for (var c : sum) {
+      link[i++] = to(nodes.get(c)).with(Color.CYAN);
+    }
+    return graph.with(nodes.get(left).link(link));
   }
 }

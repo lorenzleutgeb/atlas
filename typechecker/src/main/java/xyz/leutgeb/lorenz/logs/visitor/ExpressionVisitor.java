@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.logs.visitor;
 
 import static java.util.stream.Collectors.toList;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import org.hipparchus.util.Pair;
@@ -18,8 +19,8 @@ import xyz.leutgeb.lorenz.logs.ast.Number;
 import xyz.leutgeb.lorenz.logs.ast.Tuple;
 
 public class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
-  public ExpressionVisitor(String sourceName) {
-    super(sourceName);
+  public ExpressionVisitor(String moduleName, Path path) {
+    super(moduleName, path);
   }
 
   @Override
@@ -42,7 +43,7 @@ public class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
     for (SplayParser.MatchCaseContext matchCase : ctx.cases) {
       SplayParser.PatternContext patternContext = matchCase.pattern();
       SplayParser.ExpressionContext subExpressionContext = matchCase.expression();
-      var subExpressionVisitor = new ExpressionVisitor(getSourceName());
+      var subExpressionVisitor = new ExpressionVisitor(getModuleName(), getPath());
       var subExpression = subExpressionVisitor.visit(subExpressionContext);
       if (patternContext.patternTuple() != null && patternContext.IDENTIFIER() == null) {
         cases.add(new Pair<>(visit(patternContext.patternTuple()), subExpression));
@@ -66,21 +67,29 @@ public class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
 
   @Override
   public Expression visitCallExpression(SplayParser.CallExpressionContext ctx) {
+    var fqn = ctx.name.getText();
+    if (!fqn.contains(".")) {
+      fqn = getModuleName() + "." + fqn;
+    }
     return new CallExpression(
         getSource(ctx),
-        Identifier.get(ctx.name.getText()),
+        getModuleName(),
+        Identifier.get(fqn, getSource(ctx)),
         ctx.params.stream().map(this::visit).collect(toList()));
   }
 
   @Override
   public Expression visitLetExpression(SplayParser.LetExpressionContext ctx) {
     return new LetExpression(
-        getSource(ctx), Identifier.get(ctx.name.getText()), visit(ctx.value), visit(ctx.body));
+        getSource(ctx),
+        Identifier.get(ctx.name.getText(), getSource(ctx)),
+        visit(ctx.value),
+        visit(ctx.body));
   }
 
   @Override
   public Expression visitIdentifier(SplayParser.IdentifierContext ctx) {
-    return Identifier.get(ctx.getText());
+    return Identifier.get(ctx.getText(), getSource(ctx));
   }
 
   @Override

@@ -2,9 +2,10 @@ package xyz.leutgeb.lorenz.logs.ast;
 
 import static xyz.leutgeb.lorenz.logs.Util.bug;
 
+import com.google.common.collect.Sets;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,32 +22,45 @@ import xyz.leutgeb.lorenz.logs.ast.sources.Source;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.logs.resources.Annotation;
+import xyz.leutgeb.lorenz.logs.typing.FunctionSignature;
 import xyz.leutgeb.lorenz.logs.typing.TypeError;
 import xyz.leutgeb.lorenz.logs.typing.types.FunctionType;
 import xyz.leutgeb.lorenz.logs.typing.types.TreeType;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
+import xyz.leutgeb.lorenz.logs.unification.Substitution;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
 public class CallExpression extends Expression {
+  @NonNull String moduleName;
+
   @NonNull Identifier name;
 
   // after normalization, this is effectively a List<Identifier>
   @NonNull List<Expression> parameters;
 
   public CallExpression(
-      Source source, @NonNull Identifier name, @NonNull List<Expression> parameters) {
+      Source source,
+      String moduleName,
+      @NonNull Identifier name,
+      @NonNull List<Expression> parameters) {
     super(source);
+    this.moduleName = moduleName;
     this.name = name;
     this.parameters = parameters;
   }
 
   public CallExpression(
-      Source source, @NonNull Identifier name, @NonNull List<Expression> parameters, Type type) {
+      Source source,
+      @NonNull Identifier name,
+      @NonNull List<Expression> parameters,
+      Type type,
+      String moduleName) {
     super(source, type);
     this.name = name;
     this.parameters = parameters;
+    this.moduleName = moduleName;
   }
 
   @Override
@@ -67,18 +81,41 @@ public class CallExpression extends Expression {
   }
 
   public Type inferInternal(Context context) throws UnificationError, TypeError {
-    var fTy = (FunctionType) name.infer(context).wiggle(new HashMap<>(), context.getProblem());
-    if (fTy.getFrom().getElements().size() != parameters.size()) {
-      throw new TypeError();
-    }
     List<Type> xTy = new ArrayList<>(parameters.size());
     for (int i = 0; i < parameters.size(); i++) {
       Expression parameter = parameters.get(i);
       xTy.add(parameter.infer(context));
-      context.getProblem().add(this, fTy.getFrom().getElements().get(i), parameter.infer(context));
+    }
+
+    // TODO: Look up signature, not type (only for non-recursive calls)!
+    FunctionType fTy = null;
+    if (context.hasSignature(name.getName())) {
+      FunctionSignature originalSignature = context.getSignatures().get(name.getName());
+      FunctionSignature signature =
+          originalSignature.wiggle(new Substitution(), context.getProblem());
+      fTy = signature.getType();
+      context.putType(name.getName(), fTy);
+      name.infer(context);
+      for (var typeConstraint : signature.getConstraints()) {
+        context.getProblem().addConstraint(typeConstraint);
+      }
+    } else {
+      fTy = (FunctionType) name.infer(context).wiggle(new Substitution(), context.getProblem());
+    }
+
+    if (fTy.getFrom().getElements().size() != parameters.size()) {
+      throw new TypeError();
+    }
+
+    for (int i = 0; i < parameters.size(); i++) {
+      Expression parameter = parameters.get(i);
+      context
+          .getProblem()
+          .addIfNotEqual(
+              this, fTy.getFrom().getElements().get(i), parameter.infer(context).wiggle(context));
     }
     var result = context.getProblem().fresh();
-    context.getProblem().add(this, fTy, new FunctionType(xTy, result));
+    context.getProblem().addIfNotEqual(this, fTy, new FunctionType(xTy, result).wiggle(context));
     return result;
   }
 
@@ -86,11 +123,11 @@ public class CallExpression extends Expression {
   public Annotation inferAnnotationsInternal(AnnotatingContext context, AnnotatingGlobals globals)
       throws UnificationError, TypeError {
     final var treeParameters =
-        parameters
-            .stream()
+        parameters.stream()
             .map(param -> (Identifier) param)
             .filter(param -> param.getType() instanceof TreeType)
-            .collect(Collectors.toList());
+            .map(Identifier::toString)
+            .collect(Collectors.toSet());
 
     final var annotation = globals.getFunctionAnnotations().get(name.getName());
     final var q = annotation.getFirst();
@@ -120,6 +157,7 @@ public class CallExpression extends Expression {
     }
     return new CallExpression(
         source,
+        moduleName,
         name,
         parameters.stream().map(x -> x.forceImmediate(context)).collect(Collectors.toList()));
   }
@@ -130,7 +168,8 @@ public class CallExpression extends Expression {
         new Renamed(source),
         name,
         parameters.stream().map(x -> x.rename(renaming)).collect(Collectors.toList()),
-        type);
+        type,
+        moduleName);
   }
 
   @Override
@@ -151,5 +190,69 @@ public class CallExpression extends Expression {
         out.print(" ");
       }
     }
+  }
+
+  @Override
+  public void printHaskellTo(PrintStream out, int indentation) {
+    name.printHaskellTo(out, indentation);
+    out.print(" ");
+
+    for (int i = 0; i < parameters.size(); i++) {
+      parameters.get(i).printHaskellTo(out, indentation);
+      if (i < parameters.size() - 1) {
+        out.print(" ");
+      }
+    }
+  }
+
+  @Override
+  public Set<String> getOcurringFunctions() {
+    var fqn = name.getName();
+    if (!fqn.contains(".")) {
+      fqn = moduleName + "." + fqn;
+    }
+
+    // NOTE: In case this expression is not in LNF yet,
+    // there might be more call expressions "hiding"
+    // inside the parameters!
+    return Sets.union(Collections.singleton(fqn), super.getOcurringFunctions());
+  }
+
+  @Override
+  public Expression unshare() {
+    boolean eqs = false;
+    int a = -1, b = -1;
+    for (int i = 0; i < parameters.size() - 1; i++) {
+      if (!(parameters.get(i) instanceof Identifier)) {
+        throw new IllegalStateException("must be in anf");
+      }
+      for (int j = i + 1; j < parameters.size(); j++) {
+        if (!parameters.get(j).equals(parameters.get(i))) {
+          continue;
+        }
+        a = i;
+        b = j;
+        if (!eqs) {
+          eqs = true;
+        } else {
+          throw new UnsupportedOperationException(
+              "please implement unsharing of calls with more than one pair of equal parameters");
+        }
+      }
+    }
+
+    if (a == -1 || b == -1) {
+      return this;
+    }
+
+    var down = ShareExpression.clone((Identifier) parameters.get(a));
+    var newParameters = new ArrayList<>(parameters);
+    newParameters.set(a, down.getFirst());
+    newParameters.set(b, down.getSecond());
+
+    return new ShareExpression(
+        (Identifier) parameters.get(a),
+        down,
+        new CallExpression(source, name, newParameters, type, moduleName));
   }
 }

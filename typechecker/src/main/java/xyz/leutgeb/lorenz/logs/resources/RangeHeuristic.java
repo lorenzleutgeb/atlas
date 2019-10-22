@@ -2,7 +2,7 @@ package xyz.leutgeb.lorenz.logs.resources;
 
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.Data;
@@ -11,7 +11,7 @@ import xyz.leutgeb.lorenz.logs.resources.coefficients.Coefficient;
 
 @Data
 public class RangeHeuristic implements AnnotationHeuristic {
-  public static final RangeHeuristic DEFAULT = new RangeHeuristic(0, 4);
+  public static final RangeHeuristic DEFAULT = new RangeHeuristic(0, 3);
   private int fresheness = 0;
   private final int from, to;
 
@@ -43,14 +43,14 @@ public class RangeHeuristic implements AnnotationHeuristic {
     }
 
     var cartesian = Lists.cartesianProduct(span);
-    var coefficients = new HashMap<List<Integer>, Coefficient>();
+    var coefficients = new LinkedHashMap<List<Integer>, Coefficient>();
     for (List<Integer> l : cartesian) {
       coefficients.put(
           l,
           context.unknown(
               fresheness
                   + "₍"
-                  + l.stream().map(Util::generateSubscript).collect(Collectors.joining(","))
+                  + l.stream().map(Util::generateSubscript).collect(Collectors.joining(" "))
                   + "₎"));
     }
 

@@ -1,14 +1,18 @@
 package xyz.leutgeb.lorenz.logs.typing.types;
 
+import static java.util.Arrays.asList;
+import static java.util.Arrays.copyOf;
+
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.typing.TypeVariable;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.Generalizer;
+import xyz.leutgeb.lorenz.logs.unification.Substitution;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationProblem;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
@@ -22,6 +26,9 @@ public class FunctionType extends Type {
   public FunctionType(xyz.leutgeb.lorenz.logs.typing.types.ProductType from, Type to) {
     Objects.requireNonNull(from);
     Objects.requireNonNull(to);
+    if (to instanceof FunctionType) {
+      throw new IllegalArgumentException("curried functions are not supported");
+    }
     this.from = from;
     this.to = to;
   }
@@ -30,8 +37,8 @@ public class FunctionType extends Type {
     this(new xyz.leutgeb.lorenz.logs.typing.types.ProductType(from), to);
   }
 
-  public FunctionType(Type to, Type... from) {
-    this(List.of(from), to);
+  public FunctionType(Type... types) {
+    this(new ProductType(asList(copyOf(types, types.length - 1))), types[types.length - 1]);
   }
 
   public Type generalize(Generalizer g) {
@@ -48,7 +55,14 @@ public class FunctionType extends Type {
     if (from.size() != ft.from.size()) {
       throw new TypeMismatch(from, ft.from);
     }
-    return List.of(new Equivalence(from, ft.from), new Equivalence(to, ft.to));
+    final var result = new ArrayList<Equivalence>(2);
+    if (!from.equals(ft.from)) {
+      result.add(new Equivalence(from, ft.from));
+    }
+    if (!to.equals(ft.to)) {
+      result.add(new Equivalence(to, ft.to));
+    }
+    return result;
   }
 
   public Type substitute(TypeVariable v, Type t) {
@@ -62,10 +76,15 @@ public class FunctionType extends Type {
   }
 
   @Override
-  public Type wiggle(Map<TypeVariable, UnificationVariable> wiggled, UnificationProblem context) {
+  public Type wiggle(Substitution wiggled, UnificationProblem context) {
     return new FunctionType(
         (xyz.leutgeb.lorenz.logs.typing.types.ProductType) from.wiggle(wiggled, context),
         to.wiggle(wiggled, context));
+  }
+
+  @Override
+  public String toHaskell() {
+    return (from.size() > 0 ? from.toCurriedHaskell() + " -> " : "") + to.toHaskell();
   }
 
   @Override

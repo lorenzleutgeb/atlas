@@ -1,13 +1,13 @@
 package xyz.leutgeb.lorenz.logs.typing.types;
 
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.Collections;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.typing.TypeVariable;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.Generalizer;
+import xyz.leutgeb.lorenz.logs.unification.Substitution;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationProblem;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
@@ -33,7 +33,10 @@ public class TreeType extends Type {
     }
 
     var tree = (TreeType) b;
-    return List.of(new Equivalence(elementType, tree.elementType));
+    if (!elementType.equals(tree.elementType)) {
+      return Collections.singletonList(new Equivalence(elementType, tree.elementType));
+    }
+    return Collections.emptyList();
   }
 
   @Override
@@ -46,8 +49,13 @@ public class TreeType extends Type {
   }
 
   @Override
-  public Type wiggle(Map<TypeVariable, UnificationVariable> wiggled, UnificationProblem context) {
+  public Type wiggle(Substitution wiggled, UnificationProblem context) {
     return new TreeType(elementType.wiggle(wiggled, context));
+  }
+
+  @Override
+  public String toHaskell() {
+    return "Tree " + elementType.toHaskell();
   }
 
   @Override

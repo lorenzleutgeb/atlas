@@ -7,6 +7,7 @@ import com.google.common.collect.Sets;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
@@ -32,6 +33,8 @@ import xyz.leutgeb.lorenz.logs.unification.UnificationError;
 public class LetExpression extends Expression {
   private final Identifier declared;
   private final Expression value;
+
+  // TODO: Make body final again.
   private /*final*/ Expression body;
 
   public LetExpression(Source source, Identifier declared, Expression value, Expression body) {
@@ -51,59 +54,58 @@ public class LetExpression extends Expression {
 
   @Override
   public Stream<? extends Expression> getChildren() {
-    return Stream.of(declared, value, body);
+    return Stream.concat(follow(), Stream.of(declared));
   }
 
   @Override
-  public Annotation inferAnnotationsInternal(AnnotatingContext qin, AnnotatingGlobals globals)
+  public Stream<? extends Expression> follow() {
+    return Stream.of(value, body);
+  }
+
+  @Override
+  public Annotation inferAnnotationsInternal(AnnotatingContext gammaxq, AnnotatingGlobals globals)
       throws UnificationError, TypeError {
     final var constraints = globals.getConstraints();
+    final var x = declared.getName();
 
-    // Gamma is used as context for e1, so from the combined context,
-    // take Gamma to be exactly the variables that occur in e1.
-    // Delta on the other hand is "everything that's not in Gamma".
-    var varsForDelta = body.freeVariables();
-    varsForDelta.remove(declared.getName());
+    // \Gamma is used as context for e1, so from the combined context,
+    // take \Gamma to be exactly the variables that occur in e1.
     final var varsForGamma = value.freeVariables();
 
-    final var intersect = Sets.intersection(varsForGamma, varsForDelta);
-    // if (!intersect.isEmpty()) {
-    //  throw bug("(share) is not implemented. the set of shared variables is " + intersect);
-    // }
+    // \Delta on the other hand is "everything that's not in \Gamma".
+    final var varsForDelta = body.freeVariables();
+    Sets.difference(new HashSet<>(gammaxq.getIds()), varsForGamma).copyInto(varsForDelta);
+    varsForDelta.remove(x);
 
-    final var sharing = qin.share(this, constraints, new ArrayList<>(intersect));
+    // Check for variables that are contained in both \Delta and \Gamma and apply (share).
+    final var intersect = Sets.intersection(varsForGamma, varsForDelta);
+    final var sharing = gammaxq.share(this, constraints, new ArrayList<>(intersect));
 
     final var q = sharing.getSecond();
+
+    // TODO: This is an ugly mutation.
     body = body.rename(sharing.getFirst());
-    varsForDelta =
-        varsForDelta
-            .stream()
+
+    // Newly generated variables are being used in \Delta, while \Gamma uses old names.
+    final var renamedVarsForDelta =
+        varsForDelta.stream()
             .map(id -> sharing.getFirst().getOrDefault(id, id))
             .collect(Collectors.toSet());
 
-    /*
-    final var m = varsInGamma.size();
-    final var k = q.size() - m;
-    */
-
-    final var x = declared.getName();
     final var xl = (value.getType() instanceof TreeType) ? 1 : 0;
-    final var e2l = (body.getType() instanceof TreeType) ? 1 : 0;
-    final var e1l = (body.getType() instanceof TreeType) ? 1 : 0;
 
     final var gamma = new ArrayList<>(varsForGamma);
-    final var delta = new ArrayList<>(varsForDelta);
-    final var deltax = new ArrayList<>(delta);
+    final var delta = new ArrayList<>(renamedVarsForDelta);
 
+    final var deltax = new ArrayList<>(delta);
+    // For the case that the scrutinee (variable "x") is not a tree, we do not actually
+    // add it to the context that R annotates, and it is the same as \Delta.
     if (xl > 0) {
-      deltax.add(declared.getName());
+      deltax.add(x);
     }
 
     final var gammap = new AnnotatingContext(gamma, constraints.heuristic(gamma.size()));
     final var deltaxr = new AnnotatingContext(deltax, constraints.heuristic(deltax.size()));
-
-    // The addition accounts for the case where the variable we are binding here is a tree
-    // (and therefore carries potential).
 
     // A. Rank Coefficients
     // p_i = q_i
@@ -111,8 +113,7 @@ public class LetExpression extends Expression {
       constraints.eq(this, gammap.getRankCoefficient(id), q.getRankCoefficient(id));
     }
 
-    // r_j = q_j
-    // TODO: This looks dubious... Shouldn't it be r_{j} = q_{j + m}?
+    // r_j = q_{j + m}
     for (var id : delta) {
       constraints.eq(this, deltaxr.getRankCoefficient(id), q.getRankCoefficient(id));
     }
@@ -127,7 +128,8 @@ public class LetExpression extends Expression {
     //  i. p_{(\vec{a}, c)} = q_{(\vec{a}, \vec{0}, c)}
     // ii. p^{\vec{b}}_{(\vec{a}, c)} = q_{(\vec{a}, \vec{b}, c)}
     q.streamIndices()
-        // TODO: Filter to make sure that \vec{a} != \vec{0}.
+        // Filter to make sure that \vec{a} != \vec{0}.
+        .filter(index -> gamma.stream().noneMatch(id -> index.getFirst().get(id) == 0))
         .forEach(
             index -> {
               // Check if the index for all variables from delta are zero.
@@ -196,39 +198,10 @@ public class LetExpression extends Expression {
       throw new RuntimeException("bug");
     }
 
-    // TODO: Clarify. This can only work if x is a tree?
     // p' = r_{k + 1}
     if (xl > 0) {
       globals.getConstraints().eq(this, e1pp.getRankCoefficient(), deltaxr.getRankCoefficient(x));
     }
-
-    // r_{(\vec{b}, 0, c)} = q_{(\vec{0}, \vec{b}, c)}
-    /*
-    for (var e : r.getCoefficients()) {
-      final var index = e.getKey();
-      if (index.get(index.size() - 2) != 0) {
-        continue;
-      }
-      // We have to subtract 1 + xl here (0 is full index, 1 is full index
-      // without c), now if x is a tree, then we subtract one more.
-      final var b = index.subList(0, index.size() - (1 + xl));
-
-      if (isZero(b)) {
-         continue;
-      }
-
-      // We have to subtract one here, since c is _always_ the last element.
-      final var c = index.get(index.size() - 1);
-      final var value = e.getValue();
-      // To create the long index we have to fill up with as many zero as
-      // the difference between b's (forgetting c since it's on both sides) and
-      // q.
-      final var longIndex = zero((q.size() + 1) - b.size());
-      longIndex.addAll(b);
-      longIndex.add(c);
-      constraints.eq(this, value, q.getAnnotation().getCoefficient(longIndex));
-    }
-    */
 
     return body.inferAnnotations(deltaxr, globals);
   }
@@ -236,13 +209,13 @@ public class LetExpression extends Expression {
   @Override
   public Type inferInternal(Context context) throws UnificationError, TypeError {
     var declaredType = context.getProblem().fresh();
-    context.getProblem().add(this, declaredType, value.infer(context));
+    context.getProblem().addIfNotEqual(this, declaredType, value.infer(context).wiggle(context));
     var sub = context.child();
     sub.putType(declared.getName(), declaredType);
-    sub.getProblem().add(this, declaredType, declared.infer(sub));
+    sub.getProblem().addIfNotEqual(this, declaredType, declared.infer(sub).wiggle(context));
 
     var result = context.getProblem().fresh();
-    sub.getProblem().add(this, result, body.infer(sub));
+    sub.getProblem().addIfNotEqual(this, result, body.infer(sub).wiggle(context));
     return result;
   }
 
@@ -275,9 +248,38 @@ public class LetExpression extends Expression {
   }
 
   @Override
+  public void printHaskellTo(PrintStream out, int indentation) {
+    out.print("let ");
+    declared.printHaskellTo(out, indentation);
+    out.print(" = ");
+    value.printHaskellTo(out, indentation + 1);
+    // out.println();
+    // indent(out, indentation);
+    out.println(" in (");
+    indent(out, indentation);
+    body.printHaskellTo(out, indentation + 1);
+    out.println();
+    indent(out, indentation);
+    out.print(")");
+  }
+
+  @Override
   public Set<String> freeVariables() {
     final var result = super.freeVariables();
     result.remove(declared.getName());
     return result;
+  }
+
+  @Override
+  public String toString() {
+    return "let " + declared + " = " + value + " in ...";
+  }
+
+  @Override
+  public Expression unshare() {
+    if (!Sets.intersection(value.freeVariables(), body.freeVariables()).isEmpty()) {
+      throw new UnsupportedOperationException("please implement");
+    }
+    return new LetExpression(source, declared, value, body.unshare(), type);
   }
 }

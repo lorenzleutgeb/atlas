@@ -76,7 +76,7 @@ LET : 'let';
 
 SUBSCRIPT_NUMBER : [\u2080-\u2089];
 DERIVED_IDENTIFIER : '∂' SUBSCRIPT_NUMBER+;
-IDENTIFIER : (('a'..'z' | '∂') ( 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' | '\'' )*);
+IDENTIFIER : (('A' .. 'Z' | 'a'..'z' | '∂') ( 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' | '\'' | '.' )*);
 TYPE : ('A'..'Z') ( 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' )*;
 NUMBER : '0' | ('1'..'9') ('0'..'9')*;
 QUOTED_STRING : QUOTE ( '\\"' | . )*? QUOTE;

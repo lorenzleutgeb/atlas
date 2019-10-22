@@ -1,43 +1,44 @@
 package xyz.leutgeb.lorenz.logs.typing;
 
-import java.util.Arrays;
-import java.util.Map;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
 import xyz.leutgeb.lorenz.logs.unification.Generalizer;
+import xyz.leutgeb.lorenz.logs.unification.Substitution;
 import xyz.leutgeb.lorenz.logs.unification.UnificationProblem;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
 public class TypeVariable extends Type {
-  public static final TypeVariable ALPHA = new TypeVariable("α");
-  public static final TypeVariable BETA = new TypeVariable("β");
-  public static final TypeVariable GAMMA = new TypeVariable("γ");
-  public static final TypeVariable DELTA = new TypeVariable("δ");
-  public static final TypeVariable EPSILON = new TypeVariable("ε");
-  public static final TypeVariable LAMBDA = new TypeVariable("λ");
-  public static final TypeVariable MU = new TypeVariable("μ");
-  public static final TypeVariable NU = new TypeVariable("ν");
-  public static final TypeVariable PI = new TypeVariable("π");
-  public static final TypeVariable OMEGA = new TypeVariable("ω");
-  public static final TypeVariable RHO = new TypeVariable("ρ");
-  public static final TypeVariable SIGMA = new TypeVariable("σ");
-  public static final TypeVariable TAU = new TypeVariable("τ");
-  public static final TypeVariable XI = new TypeVariable("ξ");
+  private static final String[] GREEK = new String[] {"α", "β", "γ", "δ", "ε"};
+  private static final String[] HASKELL = new String[] {"a", "b", "c", "d", "e"};
 
-  public static final TypeVariable[] GREEK =
-      new TypeVariable[] {
-        ALPHA, BETA, GAMMA, DELTA, EPSILON, LAMBDA, MU, NU, PI, OMEGA, RHO, SIGMA, TAU, XI
-      };
+  public static final TypeVariable ALPHA = new TypeVariable(0);
+  public static final TypeVariable BETA = new TypeVariable(1);
+  public static final TypeVariable GAMMA = new TypeVariable(2);
+  public static final TypeVariable DELTA = new TypeVariable(3);
+  public static final TypeVariable EPSILON = new TypeVariable(4);
 
-  private final String name;
+  private final int index;
 
   @Override
-  public UnificationVariable wiggle(
-      Map<TypeVariable, UnificationVariable> wiggled, UnificationProblem context) {
-    return wiggled.computeIfAbsent(this, k -> context.fresh());
+  public UnificationVariable wiggle(Substitution wiggled, UnificationProblem context) {
+    if (wiggled.isInDomain(this)) {
+      return (UnificationVariable) wiggled.apply(this);
+    }
+
+    var result = context.fresh();
+    wiggled.substitute(this, result);
+    return result;
+  }
+
+  @Override
+  public String toHaskell() {
+    if (index < HASKELL.length) {
+      return HASKELL[index];
+    }
+    return "ty" + index;
   }
 
   @Override
@@ -45,16 +46,35 @@ public class TypeVariable extends Type {
     return v.equals(this) ? t : this;
   }
 
-  public static boolean isGreek(Type t) {
-    return Arrays.asList(GREEK).contains(t);
-  }
-
+  @Override
   public String toString() {
-    return name;
+    if (index < GREEK.length) {
+      return GREEK[index];
+    }
+    return "ty" + index;
   }
 
   @Override
   public TypeVariable generalize(Generalizer generalizer) {
     return this;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    TypeVariable that = (TypeVariable) o;
+
+    return index == that.index;
+  }
+
+  @Override
+  public int hashCode() {
+    return index;
   }
 }

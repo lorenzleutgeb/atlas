@@ -45,9 +45,4 @@ public class Number extends Expression {
       throws UnificationError, TypeError {
     return Annotation.empty();
   }
-
-  @Override
-  public Object evaluate(Context context) {
-    return value;
-  }
 }

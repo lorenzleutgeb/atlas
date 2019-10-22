@@ -28,4 +28,9 @@ public enum ComparisonOperator {
   public void printTo(PrintStream out) {
     out.print(token);
   }
+
+  @Override
+  public String toString() {
+    return token;
+  }
 }

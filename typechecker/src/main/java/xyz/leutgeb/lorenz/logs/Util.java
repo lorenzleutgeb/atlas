@@ -1,6 +1,9 @@
 package xyz.leutgeb.lorenz.logs;
 
+import static guru.nidi.graphviz.model.Factory.node;
+
 import com.microsoft.z3.RatNum;
+import guru.nidi.graphviz.model.Node;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -103,5 +106,20 @@ public class Util {
 
   public static String truncate(String s, int n) {
     return s.length() > n ? s.substring(0, n - 3) + "..." : s;
+  }
+
+  public static Node objectNode(Object o) {
+    if (o == null) {
+      return node("null");
+    }
+    return node(o.getClass().getSimpleName() + "@" + System.identityHashCode(o))
+        .with("label", o.toString());
+  }
+
+  public static String capitalizeFirstLetter(String original) {
+    if (original == null || original.length() == 0) {
+      return original;
+    }
+    return original.substring(0, 1).toUpperCase() + original.substring(1);
   }
 }

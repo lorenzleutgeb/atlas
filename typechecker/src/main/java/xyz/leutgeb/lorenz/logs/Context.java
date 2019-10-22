@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.log4j.Log4j2;
+import xyz.leutgeb.lorenz.logs.typing.FunctionSignature;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
 import xyz.leutgeb.lorenz.logs.unification.UnificationProblem;
 
@@ -34,12 +35,12 @@ public class Context {
    */
   Map<String, Type> types;
 
-  Map<String, Object> values;
-
   /** For simple signature inference. */
   UnificationProblem problem;
 
   Set<String> hidden;
+
+  Map<String, FunctionSignature> signatures;
 
   private Context(Context parent) {
     this(parent, parent.problem);
@@ -53,21 +54,23 @@ public class Context {
     this.parent = parent;
     this.problem = problem;
     this.types = new LinkedHashMap<>();
-    this.values = new HashMap<>();
     this.hidden = new HashSet<>();
+    this.signatures = parent == null ? new HashMap<>() : parent.signatures;
   }
 
   public Context child() {
     return new Context(this);
   }
 
+  public Context childWithNewUnfication() {
+    return new Context(this, new UnificationProblem());
+  }
+
   public String toString() {
     return "["
         + this.problem.toString()
         + " {"
-        + this.types
-            .entrySet()
-            .stream()
+        + this.types.entrySet().stream()
             .map(e -> e.getKey() + " :: " + e.getValue())
             .collect(Collectors.joining(", "))
         + "}]";
@@ -84,6 +87,19 @@ public class Context {
         throw new RuntimeException("'" + key + "' is not defined ");
       }
       throw new RuntimeException("'" + key + "' is not defined. (Did you mean " + similar + "?)");
+    }
+  }
+
+  public @Nonnull FunctionSignature lookupSignature(final String fqn) {
+    FunctionSignature t = signatures.get(fqn);
+    if (t != null) {
+      return t;
+    } else {
+      var similar = Util.similar(fqn, iterateIdentifiers(), 0.5, 4);
+      if (similar.isEmpty()) {
+        throw new RuntimeException("'" + fqn + "' is not defined ");
+      }
+      throw new RuntimeException("'" + fqn + "' is not defined. (Did you mean " + similar + "?)");
     }
   }
 
@@ -133,25 +149,20 @@ public class Context {
     types.put(key, value);
   }
 
-  public void putValue(String key, Type value) {
-    if ("nil".equals(key)) { // || "_".equals(key)) {
-      throw new RuntimeException("nil and _ cannot be redefined");
-    }
-
-    /*
-    if (hasValue(key) != null) {
-      log.info("Overriding " + key);
-    }
-    */
-    values.put(key, value);
-  }
-
   private Iterator<String> iterateIdentifiers() {
-    final var names = Sets.difference(Sets.union(types.keySet(), values.keySet()), hidden);
+    final var names = Sets.difference(types.keySet(), hidden);
     final var it = names.iterator();
     return parent == null
         ? it
         : Iterators.concat(
             it, Iterators.filter(parent.iterateIdentifiers(), name -> !hidden.contains(name)));
+  }
+
+  public void putSignature(String fullyQualifiedName, FunctionSignature functionSignature) {
+    signatures.put(fullyQualifiedName, functionSignature);
+  }
+
+  public boolean hasSignature(String fqn) {
+    return signatures.containsKey(fqn);
   }
 }

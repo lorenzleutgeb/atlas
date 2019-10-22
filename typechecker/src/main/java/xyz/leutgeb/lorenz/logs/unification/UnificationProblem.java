@@ -3,6 +3,8 @@ package xyz.leutgeb.lorenz.logs.unification;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.ListIterator;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -18,16 +20,24 @@ public class UnificationProblem {
 
   private int freshness = 0;
 
-  public void add(Equivalence equivalence) {
-    equivalences.add(equivalence);
+  public void addIfNotEqual(Type a, Type b) {
+    Objects.requireNonNull(a);
+    Objects.requireNonNull(b);
+    if (!a.equals(b)) {
+      equivalences.add(new Equivalence(a, b));
+    }
   }
 
   /**
-   * @see #add(Equivalence)
+   * @see #addIfNotEqual(Equivalence)
    * @see Equivalence
    */
-  public void add(Expression justification, Type left, Type right) {
-    add(new Equivalence(left, right, justification));
+  public void addIfNotEqual(Expression justification, Type a, Type b) {
+    Objects.requireNonNull(a);
+    Objects.requireNonNull(b);
+    if (!a.equals(b)) {
+      equivalences.add(new Equivalence(a, b, justification));
+    }
   }
 
   @Override
@@ -57,8 +67,7 @@ public class UnificationProblem {
       solution.substitute(left, e.getRight());
       // solution = solution.compose(left, e.getRight());
       constraints =
-          constraints
-              .stream()
+          constraints.stream()
               .map(x -> x.apply(solution))
               .collect(Collectors.toCollection(HashSet::new));
     }
@@ -79,8 +88,7 @@ public class UnificationProblem {
     var generalizer = new Generalizer();
     subsGenBase.generalize(generalizer);
     constraints =
-        constraints
-            .stream()
+        constraints.stream()
             .map(x -> x.apply(result))
             .collect(Collectors.toCollection(HashSet::new));
     return result.compose(generalizer.toSubstitution());
@@ -89,7 +97,10 @@ public class UnificationProblem {
   private void substitute(UnificationVariable variable, Type result) {
     ListIterator<Equivalence> iterator = equivalences.listIterator();
     while (iterator.hasNext()) {
-      iterator.set(iterator.next().substitute(variable, result));
+      Optional<Equivalence> substitute = iterator.next().substitute(variable, result);
+      if (substitute.isPresent()) {
+        iterator.set(substitute.get());
+      }
     }
   }
 

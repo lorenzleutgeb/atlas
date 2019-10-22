@@ -1,7 +1,5 @@
 package xyz.leutgeb.lorenz.logs.unification;
 
-import static xyz.leutgeb.lorenz.logs.typing.TypeVariable.GREEK;
-
 import java.util.HashMap;
 import xyz.leutgeb.lorenz.logs.typing.TypeVariable;
 
@@ -9,7 +7,7 @@ public class Generalizer {
   private final HashMap<UnificationVariable, TypeVariable> mapping;
 
   public Generalizer() {
-    this.mapping = new HashMap<>(GREEK.length);
+    this.mapping = new HashMap<>();
   }
 
   public TypeVariable generalize(UnificationVariable u) {
@@ -17,7 +15,7 @@ public class Generalizer {
         u,
         k -> {
           var x = this.mapping.size();
-          return x < GREEK.length ? GREEK[x] : new TypeVariable("gen" + x);
+          return new TypeVariable(x);
         });
   }
 

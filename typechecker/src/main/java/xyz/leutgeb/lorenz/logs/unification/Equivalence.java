@@ -4,9 +4,13 @@ import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nullable;
 import lombok.Value;
 import xyz.leutgeb.lorenz.logs.ast.Expression;
+import xyz.leutgeb.lorenz.logs.typing.TypeVariable;
+import xyz.leutgeb.lorenz.logs.typing.types.TreeType;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
 
 @Value
@@ -21,19 +25,24 @@ public class Equivalence {
     requireNonNull(left);
     requireNonNull(right);
 
+    if (left.equals(right)) {
+      throw new IllegalArgumentException(
+          "two types that are equal should not be explicitly said to be equivalent");
+    }
+
     /* The following is handy for debugging issues in type inference:
-    if (Stream.of(TypeVariable.GREEK).anyMatch(x -> x.equals(left) || x.equals(right))) {
+     */
+    if (left.getClass().equals(TypeVariable.class) || right.getClass().equals(TypeVariable.class)) {
       throw new IllegalArgumentException("no type variables when unifying!");
     }
 
     for (Type t : List.of(left, right)) {
       if (t instanceof TreeType) {
-        if (TypeVariable.isGreek(((TreeType) t).getElementType())) {
+        if (t.getClass().equals(TypeVariable.class)) {
           throw new IllegalArgumentException("no type variables when unifying!");
         }
       }
     }
-    */
 
     if (!(left instanceof UnificationVariable) && (right instanceof UnificationVariable)) {
       this.left = right;
@@ -50,9 +59,13 @@ public class Equivalence {
     this(left, right, null);
   }
 
-  public Equivalence substitute(UnificationVariable variable, Type result) {
-    return new Equivalence(
-        left.substitute(variable, result), right.substitute(variable, result), justification);
+  public Optional<Equivalence> substitute(UnificationVariable variable, Type result) {
+    var leftSubstitute = left.substitute(variable, result);
+    var rightSubstitute = right.substitute(variable, result);
+    if (!leftSubstitute.equals(rightSubstitute)) {
+      return Optional.of(new Equivalence(leftSubstitute, rightSubstitute, justification));
+    }
+    return Optional.empty();
   }
 
   public void occurs() throws OccursError {

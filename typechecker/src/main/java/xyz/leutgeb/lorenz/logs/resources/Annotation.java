@@ -4,7 +4,6 @@ import static xyz.leutgeb.lorenz.logs.Util.truncate;
 
 import com.google.common.primitives.Ints;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +68,7 @@ public class Annotation {
     }
 
     final var rankCoefficients = new ArrayList<Coefficient>(size);
-    final var coefficients = new HashMap<List<Integer>, Coefficient>();
+    final var coefficients = new LinkedHashMap<List<Integer>, Coefficient>();
     for (int i = 0; i < as.length; i++) {
       final var a = as[i];
       rankCoefficients.add(a.getRankCoefficient());
@@ -94,7 +93,7 @@ public class Annotation {
 
   public Annotation substitute(Constraints constraints) {
     final var rankCoefficients = new ArrayList<Coefficient>(this.rankCoefficients.size());
-    final var coefficients = new HashMap<List<Integer>, Coefficient>();
+    final var coefficients = new LinkedHashMap<List<Integer>, Coefficient>();
     for (var entry : this.coefficients.entrySet()) {
       coefficients.put(entry.getKey(), constraints.substitute(entry.getValue()));
     }
@@ -106,7 +105,7 @@ public class Annotation {
 
   public Annotation greater(Expression source, Constraints constraints) {
     final var result = constraints.heuristic(size());
-    // The returned annotation is asserted to have a greater potential than this.
+    // The returned annotation is asserted to have a greater or equal potential than this.
     for (Map.Entry<List<Integer>, Coefficient> e : getCoefficients()) {
       constraints.le(source, e.getValue(), result.getCoefficient(e.getKey()));
     }
@@ -118,7 +117,7 @@ public class Annotation {
 
   public Annotation less(Expression source, Constraints constraints) {
     final var result = constraints.heuristic(size());
-    // The returned annotation is asserted to have a smaller potential than this.
+    // The returned annotation is asserted to have a smaller or equal potential than this.
     for (Map.Entry<List<Integer>, Coefficient> e : getCoefficients()) {
       constraints.le(source, result.getCoefficient(e.getKey()), e.getValue());
     }
@@ -264,12 +263,12 @@ public class Annotation {
     return sb.toString();
   }
 
-  public String toStringForParameters(List<String> parameters) {
+  public String toStringForParameters(List<String> parameters, boolean simplify) {
     StringBuilder sb = new StringBuilder();
     boolean nonzero = false;
     for (int i = 0; i < size; i++) {
       final var q = rankCoefficients.get(i);
-      if (q == KnownCoefficient.ZERO) {
+      if (q == KnownCoefficient.ZERO && simplify) {
         continue;
       }
       nonzero = true;
@@ -286,10 +285,8 @@ public class Annotation {
     if (size > 0 && nonzero) {
       sb.append(" + ");
     }
-    return sb.toString()
-        + coefficients
-            .entrySet()
-            .stream()
+    sb.append(
+        coefficients.entrySet().stream()
             .filter(e -> e.getValue() != KnownCoefficient.ZERO)
             .map(
                 e -> {
@@ -297,17 +294,17 @@ public class Annotation {
                   final var coefficient = e.getValue();
                   final var items = new ArrayList<String>(index.size());
                   for (int i = 0; i < index.size() - 1; i++) {
-                    if (index.get(i) == 0) {
+                    if (index.get(i) == 0 && simplify) {
                       continue;
                     }
                     var item = "";
-                    if (index.get(i) != 1) {
+                    if (index.get(i) != 1 || !simplify) {
                       item += index.get(i) + " · ";
                     }
                     item += "|" + parameters.get(i) + "|";
                     items.add(item);
                   }
-                  if (index.get(index.size() - 1) != 0) {
+                  if (index.get(index.size() - 1) != 0 || !simplify) {
                     items.add(String.valueOf(index.get(index.size() - 1)));
                   }
                   var result = "";
@@ -316,7 +313,13 @@ public class Annotation {
                   }
                   return result + "log(" + String.join(" + ", items) + ")";
                 })
-            .collect(Collectors.joining(" + "));
+            .collect(Collectors.joining(" + ")));
+
+    if (sb.length() == 0) {
+      return "0";
+    }
+
+    return sb.toString();
   }
 
   public Coefficient getRankCoefficient(int index) {

@@ -26,14 +26,11 @@ import xyz.leutgeb.lorenz.logs.typing.types.BoolType;
 import xyz.leutgeb.lorenz.logs.typing.types.TreeType;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
 import xyz.leutgeb.lorenz.logs.unification.UnificationError;
-import xyz.leutgeb.lorenz.logs.values.TreeValue;
 
 public class Identifier extends Expression {
+  public static final Identifier NIL = new Identifier(Predefined.INSTANCE, "nil");
   private static final Set<String> CONSTANT_NAMES = Set.of("true", "false", "nil");
   private static final Set<String> BOOLEAN_NAMES = Set.of("true", "false");
-
-  public static final Identifier NIL = new Identifier(Predefined.INSTANCE, "nil");
-
   private static int freshness = 0;
   @NonNull @Getter private final String name;
   @NonNull @Getter private final Set<Source> occurences;
@@ -58,11 +55,13 @@ public class Identifier extends Expression {
     return new Identifier(Predefined.INSTANCE, "nil");
   }
 
-  public static Identifier getSugar() {
-    return get("∂" + Util.generateSubscript(freshness++));
+  public static Identifier getSugar(Source source) {
+    // TODO: Instead of a global counter, have one per function definition.
+    return get("var" + freshness++, source);
+    // return get("∂" + Util.generateSubscript(freshness++));
   }
 
-  public static Identifier get(String name) {
+  private static Identifier get(String name) {
     return new Identifier(Predefined.INSTANCE, name);
   }
 
@@ -70,6 +69,10 @@ public class Identifier extends Expression {
     Identifier identifier = new Identifier(source, name);
     identifier.occurences.add(source);
     return identifier;
+  }
+
+  public static boolean isConstant(String name) {
+    return CONSTANT_NAMES.contains(name);
   }
 
   @Override
@@ -91,6 +94,9 @@ public class Identifier extends Expression {
       return BoolType.INSTANCE;
     }
 
+    if (context.hasSignature(this.name)) {
+      return context.getSignatures().get(this.name).getType();
+    }
     return context.lookupType(this.name);
   }
 
@@ -109,32 +115,36 @@ public class Identifier extends Expression {
     //    return some annotation
     //  - non-tree variables or constants (like true/false)
     //    return a zero-valued annotation
+    final var constraints = globals.getConstraints();
     if (NIL.name.equals(name)) {
-      final var constraints = globals.getConstraints();
       var qp = constraints.heuristic(1);
 
       // Apply (w : var) and (w) since this is a leaf.
       var q =
           context.weakenAllIdentifiers(this, constraints).getAnnotation().less(this, constraints);
 
-      // Equate according to preconditions of (nil)
-      for (int c = 0; c < q.size(); c++) {
+      for (var e : q.getCoefficients()) {
+        final int c = e.getKey().get(0);
+        final var value = e.getValue();
         final var sum = new ArrayList<Coefficient>();
-        for (final var e : qp.getCoefficients()) {
-          final var index = e.getKey();
+        for (final var d : qp.getCoefficients()) {
+          final var index = d.getKey();
           final var a = index.get(0);
           final var b = index.get(1);
           if (a + b == c) {
-            sum.add(e.getValue());
+            sum.add(d.getValue());
           }
         }
-        constraints.eqSum(this, q.getRankCoefficient(c), sum);
+        constraints.eqSum(this, value, sum);
       }
       return qp.greater(this, constraints);
     } else if (getType() instanceof TreeType) {
-      return context.weakenIdentifiersExcept(this, globals.getConstraints(), this).getAnnotation();
+      return context
+          .weakenIdentifiersExcept(this, constraints, this)
+          .getAnnotation()
+          .greater(this, globals.getConstraints());
     } else {
-      return Annotation.empty();
+      return Annotation.empty().greater(this, constraints);
     }
   }
 
@@ -163,26 +173,11 @@ public class Identifier extends Expression {
   }
 
   @Override
-  public Object evaluate(Context context) {
-    if (name.equals(NIL.name)) {
-      return TreeValue.nil();
-    }
-    if (BOOLEAN_NAMES.contains(name)) {
-      return Boolean.valueOf(name);
-    }
-    return context.lookupType(name);
-  }
-
-  @Override
   public Set<String> freeVariables() {
     if (!(type instanceof TreeType) || isConstant()) {
       return Collections.emptySet();
     }
     return Collections.singleton(name);
-  }
-
-  public static boolean isConstant(String name) {
-    return CONSTANT_NAMES.contains(name);
   }
 
   public boolean isConstant() {
@@ -197,5 +192,16 @@ public class Identifier extends Expression {
   @Override
   public Identifier rename(Map<String, String> renaming) {
     return new Identifier(new Renamed(source), renaming.getOrDefault(name, name), type);
+  }
+
+  @Override
+  public void printHaskellTo(PrintStream out, int indentation) {
+    if (name.equals((NIL.name))) {
+      out.print("Nil");
+    } else if (BOOLEAN_NAMES.contains(name)) {
+      out.print(Util.capitalizeFirstLetter(name));
+    } else {
+      out.print(name);
+    }
   }
 }

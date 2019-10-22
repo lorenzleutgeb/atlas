@@ -1,26 +1,31 @@
 package xyz.leutgeb.lorenz.logs.typing;
 
+import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
-import static java.util.Collections.singletonList;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import lombok.Value;
-import xyz.leutgeb.lorenz.logs.unification.Substitution;
 
 @Value
 public class TypeClass {
-  public static TypeClass EQ =
-      new TypeClass("Eq", singletonList(TypeVariable.GAMMA), Collections.emptySet());
-
-  public static TypeClass ORD =
-      new TypeClass(
-          "Ord",
-          singletonList(TypeVariable.GAMMA),
-          singleton(new TypeConstraint(TypeClass.EQ, Substitution.identity())));
+  public static TypeClass EQ = new TypeClass("Eq", 1, emptySet());
+  public static TypeClass ORD = new TypeClass("Ord", 1, singleton(TypeClass.EQ));
 
   String name;
-  List<TypeVariable> variables;
-  Set<TypeConstraint> preconditions;
+  int arity;
+
+  /**
+   * This encoding of preconditions is very primitive. We do not account for differences in arity of
+   * preconditions and this, and also reodering of arguments is not possible.
+   */
+  Set<TypeClass> preconditions;
+
+  public TypeClass(String name, int arity, Set<TypeClass> preconditions) {
+    this.name = name;
+    this.arity = arity;
+    if (preconditions.stream().anyMatch(precondition -> precondition.arity != this.arity)) {
+      throw new IllegalArgumentException("arity mismatch");
+    }
+    this.preconditions = preconditions;
+  }
 }

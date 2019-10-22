@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.logs.visitor;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import org.antlr.v4.runtime.Token;
@@ -7,8 +8,9 @@ import xyz.leutgeb.lorenz.logs.antlr.SplayParser;
 import xyz.leutgeb.lorenz.logs.ast.FunctionDefinition;
 
 public class FunctionDefinitionVisitor extends SourceNameAwareVisitor<FunctionDefinition> {
-  public FunctionDefinitionVisitor(String sourceName) {
-    super(sourceName);
+
+  public FunctionDefinitionVisitor(String moduleName, Path path) {
+    super(moduleName, path);
   }
 
   @Override
@@ -18,7 +20,8 @@ public class FunctionDefinitionVisitor extends SourceNameAwareVisitor<FunctionDe
       String arg = t.getText();
       args.add(arg);
     }
-    ExpressionVisitor visitor = new ExpressionVisitor(getSourceName());
-    return new FunctionDefinition(ctx.name.getText(), args, visitor.visit(ctx.body));
+    ExpressionVisitor visitor = new ExpressionVisitor(getModuleName(), getPath());
+    return new FunctionDefinition(
+        getModuleName(), ctx.name.getText(), args, visitor.visit(ctx.body));
   }
 }

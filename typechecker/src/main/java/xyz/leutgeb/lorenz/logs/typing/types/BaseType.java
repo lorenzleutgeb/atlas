@@ -16,4 +16,9 @@ public class BaseType extends Type {
     }
     return Collections.emptyList();
   }
+
+  @Override
+  public String toHaskell() {
+    return "Integer";
+  }
 }

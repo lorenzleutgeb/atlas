@@ -2,7 +2,9 @@ package xyz.leutgeb.lorenz.logs.resources;
 
 import static com.microsoft.z3.Status.SATISFIABLE;
 import static com.microsoft.z3.Status.UNKNOWN;
+import static xyz.leutgeb.lorenz.logs.Util.bug;
 import static xyz.leutgeb.lorenz.logs.Util.ensureLibrary;
+import static xyz.leutgeb.lorenz.logs.Util.objectNode;
 
 import com.google.common.collect.Sets;
 import com.microsoft.z3.Context;
@@ -10,11 +12,14 @@ import com.microsoft.z3.Model;
 import com.microsoft.z3.RatNum;
 import com.microsoft.z3.RealExpr;
 import com.microsoft.z3.Solver;
+import guru.nidi.graphviz.model.Graph;
+import guru.nidi.graphviz.model.Node;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -46,9 +51,10 @@ public class Constraints {
   private final LinkedList<Constraint> constraints = new LinkedList<>();
   private final String name;
   private AnnotationHeuristic annotationHeuristic = RangeHeuristic.DEFAULT;
-  private int freshness = 0;
-  private KnownCoefficient[] solution;
+  // private int freshness = 0;
+  private Map<Coefficient, KnownCoefficient> solution;
   private Map<Integer, String> coefficientNames = new HashMap<>();
+  private List<Coefficient> generatedCoefficients = new ArrayList<>();
 
   public Constraints(String name) {
     this.name = name;
@@ -212,8 +218,11 @@ public class Constraints {
   }
 
   public UnknownCoefficient unknown(String name) {
+    int freshness = generatedCoefficients.size();
     coefficientNames.put(freshness, name);
-    return new UnknownCoefficient(freshness++, name);
+    var result = new UnknownCoefficient(freshness, name);
+    generatedCoefficients.add(result);
+    return result;
   }
 
   public Annotation heuristic(int size) {
@@ -225,7 +234,10 @@ public class Constraints {
       log.warn("You are trying to substitute a coefficient that is already known.");
       return (KnownCoefficient) x;
     } else if (x instanceof UnknownCoefficient) {
-      return solution[((UnknownCoefficient) x).getId()];
+      if (!solution.containsKey(x)) {
+        throw bug("unknown coefficient!");
+      }
+      return solution.get(x);
     }
     throw new UnsupportedOperationException();
   }
@@ -239,11 +251,11 @@ public class Constraints {
     final var solver = ctx.mkSolver();
 
     // Encode all coefficients as constants.
-    RealExpr[] coefficients = new RealExpr[freshness];
+    RealExpr[] coefficients = new RealExpr[generatedCoefficients.size()];
     // Also encode that they are rational numbers.
     // IntExpr[] numerators = new IntExpr[freshness];
     // IntExpr[] denominators = new IntExpr[freshness];
-    for (int i = 0; i < freshness; i++) {
+    for (int i = 0; i < generatedCoefficients.size(); i++) {
       coefficients[i] = ctx.mkRealConst("q" + coefficientNames.getOrDefault(i, "q_unknown_" + i));
       // coefficients[i] = ctx.mkRealConst("q" + i);
       // numerators[i] = ctx.mkIntConst("q" + i + "n");
@@ -273,7 +285,7 @@ public class Constraints {
     }
 
     final var model = check(solver);
-    solution = new KnownCoefficient[coefficients.length];
+    solution = new HashMap<>();
     for (int i = 0; i < coefficients.length; i++) {
       var x = model.getConstInterp(coefficients[i]);
       if (!x.isRatNum()) {
@@ -282,7 +294,7 @@ public class Constraints {
       final var xr = (RatNum) x;
       var num = xr.getNumerator();
       if (num.getBigInteger().intValueExact() == 0) {
-        solution[i] = KnownCoefficient.ZERO;
+        solution.put(generatedCoefficients.get(i), KnownCoefficient.ZERO);
       } else {
         /*
         log.debug(
@@ -293,7 +305,7 @@ public class Constraints {
                 + "/"
                 + xr.getDenominator());
          */
-        solution[i] = new KnownCoefficient(Util.toFraction(xr));
+        solution.put(generatedCoefficients.get(i), new KnownCoefficient(Util.toFraction(xr)));
       }
     }
   }
@@ -333,5 +345,19 @@ public class Constraints {
 
   public void eqSum(Expression source, Coefficient left, Collection<Coefficient> sum) {
     add(new EqualsSumConstraint(constraints.size(), source, left, sum));
+  }
+
+  public Graph toGraph(Graph graph) {
+    var nodes = new HashMap<Coefficient, Node>();
+    for (var it : generatedCoefficients) {
+      nodes.put(it, objectNode(it));
+      // graph = graph.with(objectNode(it));
+    }
+
+    for (var it : constraints) {
+      graph = it.toGraph(graph, nodes);
+    }
+
+    return graph;
   }
 }

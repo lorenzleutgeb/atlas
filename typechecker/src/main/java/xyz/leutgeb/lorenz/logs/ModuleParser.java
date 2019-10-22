@@ -1,6 +1,7 @@
 package xyz.leutgeb.lorenz.logs;
 
-import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
 import org.antlr.v4.runtime.BailErrorStrategy;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
@@ -11,18 +12,18 @@ import org.antlr.v4.runtime.atn.PredictionMode;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import xyz.leutgeb.lorenz.logs.antlr.SplayLexer;
 import xyz.leutgeb.lorenz.logs.antlr.SplayParser;
-import xyz.leutgeb.lorenz.logs.ast.Program;
+import xyz.leutgeb.lorenz.logs.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.logs.visitor.ProgramVisitor;
 
-public class ProgramParser {
-  public static Program parse(String s) {
+public class ModuleParser {
+  public static List<FunctionDefinition> parse(String s, String moduleName) {
     try {
-      return parse(CharStreams.fromString(s));
-    } catch (IOException e) {
+      return parse(CharStreams.fromString(s), moduleName);
+      // } catch (IOException e) {
       // In this case we assume that something went fundamentally
       // wrong when using a String as input. The caller probably
       // assumes that I/O on a String should always be fine.
-      throw new RuntimeException("Encountered I/O-related exception while parsing a String.", e);
+      // throw new RuntimeException("Encountered I/O-related exception while parsing a String.", e);
     } catch (RecognitionException | ParseCancellationException e) {
       // If there were issues parsing the given string, we
       // throw something that suggests that the input string
@@ -31,7 +32,7 @@ public class ProgramParser {
     }
   }
 
-  public static Program parse(CharStream stream) throws IOException {
+  public static List<FunctionDefinition> parse(CharStream stream, String moduleName) {
     /*
     // In order to require less memory: use unbuffered streams and avoid constructing a full parse tree.
     ASPCore2Lexer lexer = new ASPCore2Lexer(new UnbufferedCharStream(is));
@@ -88,7 +89,7 @@ public class ProgramParser {
     }
 
     // Construct internal program representation.
-    ProgramVisitor visitor = new ProgramVisitor(stream.getSourceName());
+    ProgramVisitor visitor = new ProgramVisitor(moduleName, Path.of(stream.getSourceName()));
     return visitor.visitProgram(programContext);
   }
 }

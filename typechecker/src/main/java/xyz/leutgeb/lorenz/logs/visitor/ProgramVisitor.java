@@ -1,29 +1,20 @@
 package xyz.leutgeb.lorenz.logs.visitor;
 
-import static java.util.stream.Collectors.toMap;
-
-import java.util.LinkedHashMap;
-import lombok.RequiredArgsConstructor;
-import xyz.leutgeb.lorenz.logs.antlr.SplayBaseVisitor;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Collectors;
 import xyz.leutgeb.lorenz.logs.antlr.SplayParser;
-import xyz.leutgeb.lorenz.logs.ast.Program;
+import xyz.leutgeb.lorenz.logs.ast.FunctionDefinition;
 
-@RequiredArgsConstructor
-public class ProgramVisitor extends SplayBaseVisitor<Program> {
-  private final String sourceName;
+public class ProgramVisitor extends SourceNameAwareVisitor<List<FunctionDefinition>> {
+  public ProgramVisitor(String moduleName, Path path) {
+    super(moduleName, path);
+  }
 
   @Override
-  public Program visitProgram(SplayParser.ProgramContext ctx) {
-    return new Program(
-        ctx.func()
-            .stream()
-            .collect(
-                toMap(
-                    (SplayParser.FuncContext x) -> x.name.getText(),
-                    (new FunctionDefinitionVisitor(sourceName))::visit,
-                    (a, b) -> {
-                      throw new RuntimeException("clashing function definitions");
-                    },
-                    LinkedHashMap::new)));
+  public List<FunctionDefinition> visitProgram(SplayParser.ProgramContext ctx) {
+    return ctx.func().stream()
+        .map((new FunctionDefinitionVisitor(getModuleName(), getPath()))::visit)
+        .collect(Collectors.toList());
   }
 }

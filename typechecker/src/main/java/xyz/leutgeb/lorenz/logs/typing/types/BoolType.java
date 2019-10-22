@@ -17,6 +17,11 @@ public class BoolType extends Type {
   }
 
   @Override
+  public String toHaskell() {
+    return "Bool";
+  }
+
+  @Override
   public String toString() {
     return "B";
   }

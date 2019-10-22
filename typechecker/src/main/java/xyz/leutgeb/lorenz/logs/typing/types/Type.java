@@ -1,10 +1,11 @@
 package xyz.leutgeb.lorenz.logs.typing.types;
 
 import java.util.Collection;
-import java.util.Map;
+import xyz.leutgeb.lorenz.logs.Context;
 import xyz.leutgeb.lorenz.logs.typing.TypeVariable;
 import xyz.leutgeb.lorenz.logs.unification.Equivalence;
 import xyz.leutgeb.lorenz.logs.unification.Generalizer;
+import xyz.leutgeb.lorenz.logs.unification.Substitution;
 import xyz.leutgeb.lorenz.logs.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.logs.unification.UnificationProblem;
 import xyz.leutgeb.lorenz.logs.unification.UnificationVariable;
@@ -26,7 +27,18 @@ public abstract class Type {
     return this;
   }
 
-  public Type wiggle(Map<TypeVariable, UnificationVariable> wiggled, UnificationProblem context) {
+  public Type wiggle(Substitution wiggled, UnificationProblem context) {
     return this;
   }
+
+  public Type wiggle(UnificationProblem problem) {
+    return wiggle(new Substitution(), problem);
+  }
+
+  public Type wiggle(Context context) {
+    return this;
+    // return wiggle(context.getProblem());
+  }
+
+  public abstract String toHaskell();
 }
