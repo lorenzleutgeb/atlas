@@ -1,4 +1,6 @@
-module Tree where
+module InterpreterPrelude
+  ( module InterpreterPrelude
+  ) where
 
 data Tree a = Nil | Node (Tree a) a (Tree a)
   deriving (Eq, Show)
@@ -25,3 +27,16 @@ read_left (Node l x r) = x:(read_left l)
 read_right :: Tree a -> [a]
 read_right Nil = []
 read_right (Node l x r) = x:(read_right r)
+
+-- Utility functions to compute potentials
+
+log' :: Integer -> Double
+log' n = (logBase 2 (fromInteger n))
+
+leaves :: Tree a -> Integer
+leaves Nil = 1
+leaves (Node l _ r) = (leaves l) + (leaves r)
+
+rank :: Tree a -> Double
+rank Nil = 0
+rank (Node l _ r) = (rank l) + (log' (leaves l)) + (rank r) + (log' (leaves r))

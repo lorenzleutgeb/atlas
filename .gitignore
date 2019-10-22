@@ -1,3 +1,4 @@
+interpreter/generated-src/*.hs
 
 # Created by https://www.gitignore.io/api/java,linux,gradle,intellij,latex,haskell
 # Edit at https://www.gitignore.io/?templates=java,linux,gradle,intellij,latex,haskell
