@@ -2,6 +2,7 @@ del_min t = match t with
   | nil       -> nil
   | (l, m, r) -> (merge l r)
 
+(* insert a h = (merge (Tree.singleton a) h) *)
 insert a h = (merge (nil, a, nil) h)
 
 merge h1 h2 = match h1 with

@@ -10,6 +10,8 @@ flip t = match t with | (l, x, r) -> (r, x, l)
 
 empty t = match t with | nil -> true | (r, x, l) -> false
 
+clone x t = (t, x, t)
+
 (**
  * Attempt to annotate:
  *   contains_unordered x t | 1 * rk(t)
