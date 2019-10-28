@@ -4,6 +4,12 @@ import InterpreterPrelude
 
 import qualified LeftList
 import qualified RightList
+import qualified SplayTree
+import qualified Bool
+import qualified Tree
+import qualified PairingHeap
+import qualified SkewHeap
+import qualified Scratch
 
 show_inorder :: Show a => Tree a -> String
 show_inorder Nil = " _ "
