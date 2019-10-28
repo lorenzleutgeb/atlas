@@ -1,0 +1,19 @@
+name: Build lac
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-java@v1
+      with:
+        java-version: 13
+    - uses: actions/setup-haskell@v1
+      with:
+        ghc-version: '8.8.1'
+        cabal-version: '3.0'
+    - name: Build with Gradle
+      run: ./gradlew build
+      working-directory: typechecker
+    - run: cabal build
+      working-directory: interpreter
