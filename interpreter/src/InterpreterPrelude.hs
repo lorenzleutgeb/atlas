@@ -3,7 +3,7 @@ module InterpreterPrelude
   ) where
 
 data Tree a = Nil | Node (Tree a) a (Tree a)
-  deriving (Eq, Show)
+  deriving (Eq, Show, Functor)
 
 --data Tree a where
 --  Nil :: Tree a

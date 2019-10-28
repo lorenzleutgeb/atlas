@@ -8,16 +8,8 @@ author:              Lorenz Leutgeb
 maintainer:          lorenz@leutgeb.xyz
 -- copyright:
 -- category:
-build-type:          Simple
+build-type:          Custom
 cabal-version:       >=1.10
-
-library
-  -- exposed-modules:
-  -- other-modules:
-  -- other-extensions:
-  build-depends:       base >=4.11 && <4.12
-  -- hs-source-dirs:
-  default-language:    Haskell2010
 
 executable interpreter
   main-is:             Main.hs
@@ -26,4 +18,4 @@ executable interpreter
   build-depends:       base >=4.11 && <4.12
   hs-source-dirs:      src, generated-src
   default-language:    Haskell2010
-  extensions:          GADTs, FlexibleContexts
+  extensions:          GADTs, FlexibleContexts, DeriveFunctor
