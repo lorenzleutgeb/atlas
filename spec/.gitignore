@@ -1,0 +1,13 @@
+*.vo
+*.glob
+*.v.d
+*.aux
+.coqdeps.d
+splay.dvi
+splay.log
+splay.pdf
+splay.ps
+splay.rawtex
+splay.tex
+splay.toc
+splay.v
