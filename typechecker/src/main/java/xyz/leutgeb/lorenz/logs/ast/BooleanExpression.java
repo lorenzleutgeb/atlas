@@ -124,14 +124,14 @@ public class BooleanExpression extends Expression {
   }
 
   @Override
-  public Expression unshare() {
+  public Expression unshare(Map<String, Integer> unshared) {
     if (!(left instanceof Identifier) || !(right instanceof Identifier)) {
       throw new IllegalStateException("must be in anf");
     }
     if (!left.equals(right)) {
       return this;
     }
-    var down = ShareExpression.clone((Identifier) left);
+    var down = ShareExpression.clone((Identifier) left, unshared);
     return new ShareExpression(
         (Identifier) left,
         down,

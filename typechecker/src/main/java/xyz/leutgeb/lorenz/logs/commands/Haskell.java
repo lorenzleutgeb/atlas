@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.logs.commands;
 import static picocli.CommandLine.Help.Visibility.ALWAYS;
 
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -61,7 +62,7 @@ public class Haskell implements Runnable {
       throw new RuntimeException(unificationError);
     }
     Multimap<String, FunctionDefinition> output = ArrayListMultimap.create();
-    Multimap<String, String> imports = ArrayListMultimap.create();
+    Multimap<String, String> imports = HashMultimap.create();
     for (var fd : program.getFunctionDefinitions()) {
       if (pattern.asMatchPredicate().test(fd.getFullyQualifiedName())) {
         output.put(fd.getModuleName(), fd);
@@ -70,7 +71,7 @@ public class Haskell implements Runnable {
             fd.importedFunctions().stream().map(Loader::moduleName).collect(Collectors.toSet()));
       }
     }
-    for (var e : output.keys()) {
+    for (var e : output.keySet()) {
       var path = Loader.path(e, this.path, ".hs");
       var lastModulePart = e.substring(Math.max(0, e.lastIndexOf(".")));
       try (var stream = new PrintStream(new FileOutputStream(path.toFile()))) {

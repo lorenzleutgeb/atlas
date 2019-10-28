@@ -1,8 +1,9 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import static com.google.common.collect.Sets.intersection;
 import static xyz.leutgeb.lorenz.logs.Util.indent;
+import static xyz.leutgeb.lorenz.logs.Util.notImplemented;
 
-import com.google.common.collect.Sets;
 import java.io.PrintStream;
 import java.util.Map;
 import java.util.Set;
@@ -134,7 +135,7 @@ public class IfThenElseExpression extends Expression {
   }
 
   @Override
-  public Expression unshare() {
+  public Expression unshare(Map<String, Integer> unshared) {
     // if (!(condition instanceof Identifier)) {
     //  throw new IllegalStateException("must be in anf");
     // }
@@ -142,27 +143,34 @@ public class IfThenElseExpression extends Expression {
     Set<String> freeT = truthy.freeVariables();
     Set<String> freeF = falsy.freeVariables();
     Set<String> cond = condition.freeVariables();
-    if (!Sets.intersection(freeT, cond).isEmpty() || !Sets.intersection(freeF, cond).isEmpty()) {
-      throw new UnsupportedOperationException("please implement");
+
+    if (!intersection(freeT, cond).isEmpty() || !intersection(freeF, cond).isEmpty()) {
+      throw notImplemented(
+          "unsharing if-then-else across condition and branch is not supported (can only unshare between then-branch and else-branch)");
     }
 
-    var intersection = Sets.intersection(freeT, freeF);
-
-    if (intersection.size() > 1) {
-      throw new UnsupportedOperationException("please implement");
-    }
+    var intersection = intersection(freeT, freeF);
 
     if (intersection.size() == 0) {
-      return this;
+      return new IfThenElseExpression(
+          source, condition, truthy.unshare(unshared), falsy.unshare(unshared), type);
     }
 
     var target = new Identifier(Predefined.INSTANCE, intersection.iterator().next());
-    var down = ShareExpression.clone(target);
+    var down = ShareExpression.clone(target, unshared);
     var result = ShareExpression.rename(target, down, Pair.create(truthy, falsy));
 
-    return new ShareExpression(
-        target,
-        down,
-        new IfThenElseExpression(source, condition, result.getFirst(), result.getSecond(), type));
+    var replacement =
+        new ShareExpression(
+            target,
+            down,
+            new IfThenElseExpression(
+                source,
+                condition,
+                result.getFirst().unshare(unshared),
+                result.getSecond().unshare(unshared),
+                type));
+
+    return intersection.size() > 1 ? replacement.unshare(unshared) : replacement;
   }
 }

@@ -162,7 +162,7 @@ public class Tuple extends Expression {
   }
 
   @Override
-  public Expression unshare() {
+  public Expression unshare(Map<String, Integer> unshared) {
     // NOTE: The only sharing possible is left and right, since sharing of either of the
     // two with middle would mean a type error.
     if (!(getLeft() instanceof Identifier) || !(getRight() instanceof Identifier)) {
@@ -171,7 +171,7 @@ public class Tuple extends Expression {
     if (!getLeft().equals(getRight())) {
       return this;
     }
-    var down = ShareExpression.clone((Identifier) getLeft());
+    var down = ShareExpression.clone((Identifier) getLeft(), unshared);
     return new ShareExpression(
         (Identifier) getLeft(),
         down,

@@ -9,21 +9,24 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.Spliterators;
 import java.util.Stack;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import lombok.Getter;
 import lombok.Value;
 import org.antlr.v4.runtime.CharStreams;
-import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.graph.AsSubgraph;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedAcyclicGraph;
+import org.jgrapht.graph.EdgeReversedGraph;
 import org.jgrapht.io.DOTExporter;
 import org.jgrapht.io.ExportException;
 import org.jgrapht.io.IntegerComponentNameProvider;
+import org.jgrapht.traverse.BreadthFirstIterator;
 import org.jgrapht.traverse.TopologicalOrderIterator;
 import xyz.leutgeb.lorenz.logs.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.logs.ast.Program;
@@ -106,7 +109,6 @@ public class Loader {
             256,
             ((path, basicFileAttributes) ->
                 path.getFileName().toString().endsWith(DOT_EXTENSION) && looksGood(path)))
-        .peek(System.out::println)
         .flatMap(
             path -> {
               try {
@@ -151,15 +153,20 @@ public class Loader {
             .filter(Predicate.not(functionDefinitions::containsKey))
             .collect(Collectors.toCollection(Stack::new));
     load(stack);
-    final var connectivityInspector = new ConnectivityInspector<>(g);
 
-    final var iterator =
-        new TopologicalOrderIterator<>(
-            new AsSubgraph<>(
-                g,
-                names.stream()
-                    .flatMap(name -> connectivityInspector.connectedSetOf(name).stream())
-                    .collect(Collectors.toSet())));
+    final var reversed = new EdgeReversedGraph<>(g);
+
+    // Is this really the best way to get a set of reachable nodes?
+    final var connectedSet =
+        names.stream()
+            .flatMap(
+                name -> {
+                  final var bfi = new BreadthFirstIterator<>(reversed, name);
+                  return StreamSupport.stream(Spliterators.spliteratorUnknownSize(bfi, 0), false);
+                })
+            .collect(Collectors.toSet());
+
+    final var iterator = new TopologicalOrderIterator<>(new AsSubgraph<>(g, connectedSet));
 
     final var result = new ArrayList<FunctionDefinition>();
     while (iterator.hasNext()) {

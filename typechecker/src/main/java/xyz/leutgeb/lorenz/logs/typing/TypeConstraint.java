@@ -16,36 +16,7 @@ import xyz.leutgeb.lorenz.logs.unification.UnificationProblem;
 public class TypeConstraint {
   TypeClass typeClass;
 
-  /**
-   * Maps from variables in the declaration of the signature class to variables where the constraint
-   * applies.
-   */
-  // TODO(lorenz.leutgeb): Maybe just a list would be enough?
-  // Substitution substitution;
-
   List<Type> constrained;
-
-  // Set<TypeConstraint> preconditions;
-  // String name;
-  // List<TypeVar> arguments;
-
-  /*
-  public TypeConstraint(TypeClass typeClass, Substitution substitution) {
-    if (!substitution.isIdentity()) {
-      for (var v : typeClass.getVariables()) {
-        if (!substitution.isInDomain(v)) {
-          throw new IllegalArgumentException("variable " + v + " is not in domain of substitution");
-        }
-      }
-      // if (typeClass.getVariables().size() == 1 &&
-      // (substitution.apply(typeClass.getVariables().get(0)) instanceof TreeType)) {
-      //  throw new IllegalArgumentException("trees cannot be compared!");
-      // }
-    }
-    this.typeClass = typeClass;
-    this.substitution = substitution;
-  }
-   */
 
   public TypeConstraint(TypeClass typeClass, List<Type> binding) {
     if (typeClass.getArity() != binding.size()) {
@@ -69,26 +40,6 @@ public class TypeConstraint {
     }
     return type.equals(constrained.get(0));
   }
-  /*
-  public TypeConstraint(Set<TypeConstraint> preconditions, String name, List<TypeVar> arguments) {
-    for (var cond : preconditions) {
-      for (var ty : cond.getArguments()) {
-        if (!arguments.contains(ty)) {
-          throw new IllegalArgumentException("free signature variable");
-        }
-      }
-    }
-    if (arguments.size() < 1) {
-      throw new IllegalArgumentException("arguments must be non-empty");
-    }
-    if (name.isBlank()) {
-      throw new IllegalArgumentException("name must be non-blank");
-    }
-    this.preconditions = preconditions;
-    this.name = name;
-    this.arguments = arguments;
-  }
-   */
 
   @Override
   public String toString() {
@@ -112,9 +63,7 @@ public class TypeConstraint {
       return false;
     }
 
-    // typeClass == ORD
     for (var precondition : typeClass.getPreconditions()) {
-      // precondition == EQ
       if (!precondition.equals(other.typeClass)) {
         continue;
       }

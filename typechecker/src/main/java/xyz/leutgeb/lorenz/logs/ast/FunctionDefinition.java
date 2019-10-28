@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.logs.ast;
 import static guru.nidi.graphviz.attribute.Records.turn;
 import static guru.nidi.graphviz.model.Factory.graph;
 import static guru.nidi.graphviz.model.Factory.node;
+import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
 
 import com.google.common.collect.Sets;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -48,6 +50,7 @@ public class FunctionDefinition {
   private final List<String> arguments;
   private Expression body;
   private FunctionSignature signature;
+  private Pair<Annotation, Annotation> annotation;
 
   public FunctionDefinition(
       String moduleName, String name, List<String> arguments, Expression body) {
@@ -72,8 +75,8 @@ public class FunctionDefinition {
     }
 
     Type to = sub.getProblem().fresh();
-    Type result = new FunctionType(from, to);
-    sub.putType(getFullyQualifiedName(), result);
+    FunctionType result = new FunctionType(from, to);
+    sub.putSignature(getFullyQualifiedName(), new FunctionSignature(emptySet(), result));
 
     sub.getProblem().addIfNotEqual(to, body.infer(sub));
 
@@ -98,79 +101,89 @@ public class FunctionDefinition {
     body = body.normalize(context).bindAll(context);
   }
 
-  public Pair<Annotation, Annotation> inferAnnotation(
-      Map<String, Pair<Annotation, Annotation>> functionAnnotations)
-      throws UnificationError, TypeError {
+  public void substitute(Constraints constraints) {
+    annotation =
+        new Pair<>(
+            annotation.getFirst().substitute(constraints),
+            annotation.getSecond().substitute(constraints));
+  }
 
+  private List<String> treeLikeArguments() {
     if (signature == null) {
       throw new IllegalStateException();
     }
-
-    final var constraints = new Constraints(name);
-
-    // Enable syntax-directed application of (share) here!
-    // body = body.unshare();
-
     var types = signature.getType().getFrom().getElements();
     final var ids = new ArrayList<String>(types.size());
-    var trees = 0;
     for (int i = 0; i < arguments.size(); i++) {
       if (types.get(i) instanceof TreeType) {
         ids.add(arguments.get(i));
-        trees++;
       } else if (types.get(i) == BoolType.INSTANCE || types.get(i) instanceof TypeVariable) {
         log.warn("Not adding " + arguments.get(i) + " to AnnotatingContext");
       } else {
         throw new RuntimeException("unknown type");
       }
     }
+    return ids;
+  }
 
-    var initialGammaQ = new AnnotatingContext(ids, constraints.heuristic(trees));
-    var q = initialGammaQ.getAnnotation();
+  public void infer(
+      Map<String, Pair<Annotation, Annotation>> functionAnnotations, Constraints constraints)
+      throws UnificationError, TypeError {
+    setupForInference(constraints);
+    inferAnnotation(functionAnnotations, constraints);
+  }
 
-    var qprime = body.getType() instanceof TreeType ? constraints.heuristic(1) : Annotation.empty();
+  public void check(
+      Map<String, Pair<Annotation, Annotation>> functionAnnotations,
+      Constraints constraints,
+      Annotation from,
+      Annotation to)
+      throws UnificationError, TypeError {
+    annotation = new Pair<>(from, to);
+    inferAnnotation(functionAnnotations, constraints);
+  }
 
-    functionAnnotations.put(getFullyQualifiedName(), new Pair<>(q, qprime));
+  public void inferAnnotation(
+      Map<String, Pair<Annotation, Annotation>> functionAnnotations, Constraints constraints)
+      throws UnificationError, TypeError {
+
+    if (signature == null) {
+      throw new IllegalStateException();
+    }
+
+    final var ids = treeLikeArguments();
+
+    functionAnnotations.put(getFullyQualifiedName(), annotation);
     final var globals = new AnnotatingGlobals(functionAnnotations, constraints, 1);
 
-    final var result = new Pair<>(q, body.inferAnnotations(initialGammaQ, globals));
+    body.inferAnnotations(new AnnotatingContext(ids, annotation.getFirst()), globals);
+  }
 
-    /*
-    try {
-      this.toGraph(result);
-    } catch (IOException e) {
-      e.printStackTrace();
+  public void setupForInference(Constraints constraints) {
+    if (signature == null) {
+      throw new IllegalStateException();
     }
-     */
 
-    constraints.solve();
+    final var ids = treeLikeArguments();
+    annotation =
+        new Pair<>(
+            constraints.heuristic(ids.size()),
+            body.getType() instanceof TreeType ? constraints.heuristic(1) : Annotation.empty());
+  }
 
-    /*
-    Graph g = constraints.toGraph(graph(name).directed().graphAttr().with(RankDir.BOTTOM_TO_TOP));
-    var viz = Graphviz.fromGraph(g);
-    try {
-      viz.engine(Engine.CIRCO)
-          .render(Format.SVG)
-              // TODO(lorenzleutgeb): Remove hardcoded path here.
-          .toFile(new File(new File("..", "out"), name + "-constraints.svg"));
-    } catch (IOException e) {
-      e.printStackTrace();
+  public void printAnnotation(PrintStream out) {
+    if (annotation == null) {
+      throw new IllegalStateException();
     }
-    */
 
-    // TODO: Remove this side-effect!
-    System.out.println(
+    out.println(
         name
             + (arguments.isEmpty() ? "" : " ")
             + String.join(" ", arguments)
             + " | "
-            + q.substitute(constraints).toStringForParameters(ids, false)
+            + annotation.getFirst().toStringForParameters(treeLikeArguments(), false)
             + " -> "
-            + qprime
-                .substitute(constraints)
-                .toStringForParameters(Collections.singletonList("_"), false));
-
-    return result;
+            + annotation.getSecond().toStringForParameters(Collections.singletonList("_"), false));
   }
 
   public void printTo(PrintStream out) {
@@ -199,7 +212,7 @@ public class FunctionDefinition {
     out.println();
   }
 
-  public void toGraph(Pair<Annotation, Annotation> annotations) throws IOException {
+  public void toGraph() throws IOException {
     Graph g = graph(name).directed(); // .graphAttr();//.with(RankDir.BOTTOM_TO_TOP);
     Node root =
         node(name)
@@ -208,10 +221,10 @@ public class FunctionDefinition {
                 Records.of(
                     turn(
                         name,
-                        signature.toString().replace(">", "\\>"),
-                        annotations.getFirst().toShortString()
+                        signature.toString().replace(">", "\\>").replace("<", "\\<"),
+                        annotation.getFirst().toShortString()
                             + " → "
-                            + annotations.getSecond().toShortString())));
+                            + annotation.getSecond().toShortString())));
     Graph result = body.toGraph(g, root);
     var viz = Graphviz.fromGraph(result);
     viz.render(Format.SVG).toFile(new File("out", name + ".svg"));
@@ -233,5 +246,9 @@ public class FunctionDefinition {
 
   public Set<String> getOcurringFunctionsNonRecursive() {
     return Sets.difference(getOcurringFunctions(), singleton(getFullyQualifiedName()));
+  }
+
+  public void unshare() {
+    body = body.unshare(new HashMap<>());
   }
 }

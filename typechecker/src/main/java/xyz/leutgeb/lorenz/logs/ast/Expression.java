@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.logs.ast;
 import static guru.nidi.graphviz.attribute.Records.turn;
 import static guru.nidi.graphviz.model.Factory.node;
 import static xyz.leutgeb.lorenz.logs.Util.indent;
+import static xyz.leutgeb.lorenz.logs.Util.notImplemented;
 import static xyz.leutgeb.lorenz.logs.Util.truncate;
 
 import guru.nidi.graphviz.attribute.Records;
@@ -83,7 +84,7 @@ public abstract class Expression extends Syntax {
     if (isImmediate()) {
       return this;
     }
-    throw new UnsupportedOperationException("not implemented");
+    throw notImplemented("normalization of a concrete non-immediate expression type");
   }
 
   public boolean isImmediate() {
@@ -141,12 +142,19 @@ public abstract class Expression extends Syntax {
             .with(
                 Records.of(
                     turn(
-                        toString(),
+                        toString().replace("=", "\\=").replace("<", "\\<").replace(">", "\\>"),
                         type.toString()
                             + " | "
-                            + (annotation != null ? annotation.toShortString() : "?"),
+                            + (annotation != null ? annotation.toShortString() : "?")
+                                .replace("=", "\\=")
+                                .replace("<", "\\<")
+                                .replace(">", "\\>"),
                         truncate(
-                            preconditions.toString().replace("=", "\\=").replace("<", "\\<"),
+                            preconditions
+                                .toString()
+                                .replace("=", "\\=")
+                                .replace("<", "\\<")
+                                .replace(">", "\\>"),
                             1000))));
     return follow()
         .reduce(
@@ -162,7 +170,7 @@ public abstract class Expression extends Syntax {
   }
 
   public Expression rename(Map<String, String> renaming) {
-    throw new UnsupportedOperationException();
+    throw notImplemented("renaming of a concrete expression type");
   }
 
   public void printHaskellTo(PrintStream out, int indentation) {
@@ -176,7 +184,8 @@ public abstract class Expression extends Syntax {
         .collect(Collectors.toSet());
   }
 
-  public Expression unshare() {
+  /** Performs a bottom-down translation to explicate sharing of variables. */
+  public Expression unshare(Map<String, Integer> unshared) {
     return this;
   }
 }

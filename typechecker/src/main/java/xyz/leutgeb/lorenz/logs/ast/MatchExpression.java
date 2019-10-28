@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import static com.google.common.collect.Sets.intersection;
 import static xyz.leutgeb.lorenz.logs.Util.indent;
 import static xyz.leutgeb.lorenz.logs.ast.Identifier.NIL;
 
@@ -80,7 +81,7 @@ public class MatchExpression extends Expression {
   private static Pair<Expression, Expression> normalize(Pair<Expression, Expression> pair) {
     if (pair.getKey() instanceof Tuple
         && !((Tuple) pair.getKey()).getElements().stream().allMatch(Expression::isImmediate)) {
-      throw new UnsupportedOperationException("non-immediate patterns are not supported");
+      throw new IllegalArgumentException("non-immediate patterns are not supported");
     }
     return new Pair<>(pair.getKey(), pair.getValue().normalizeAndBind());
   }
@@ -167,7 +168,7 @@ public class MatchExpression extends Expression {
   public MatchExpression rename(Map<String, String> renaming) {
     return new MatchExpression(
         new Renamed(source),
-        test,
+        test.rename(renaming),
         cases.stream().map(e -> rename(e, renaming)).collect(Collectors.toList()),
         type);
   }
@@ -344,39 +345,53 @@ public class MatchExpression extends Expression {
   }
 
   @Override
-  public Expression unshare() {
-    Set<String> free1 = cases.get(1).getSecond().freeVariables();
-    Set<String> free2 = cases.get(0).getSecond().freeVariables();
-    Sets.SetView<String> intersection = Sets.intersection(free1, free2);
-    if (intersection.size() > 1) {
-      throw new UnsupportedOperationException("please implement");
+  public Expression unshare(Map<String, Integer> unshared) {
+    final var c0 = cases.get(0).getSecond();
+    final var c1 = cases.get(1).getSecond();
+
+    if (!(test instanceof Identifier)) {
+      throw new IllegalStateException("anf required");
     }
+
+    final var testName = ((Identifier) test).getName();
+
+    Set<String> free0 = c0.freeVariables();
+    Set<String> free1 = c1.freeVariables();
+
+    if (free0.contains(testName) || free1.contains(testName)) {
+      throw new IllegalStateException(
+          "test variable is destructed, so it cannot occur freely in any case expression");
+    }
+
+    Sets.SetView<String> intersection = intersection(free1, free0);
 
     if (intersection.isEmpty()) {
       return new MatchExpression(
           source,
           test,
           List.of(
-              Pair.create(cases.get(0).getFirst(), cases.get(0).getSecond().unshare()),
-              Pair.create(cases.get(1).getFirst(), cases.get(1).getSecond().unshare())),
+              Pair.create(cases.get(0).getFirst(), c0.unshare(unshared)),
+              Pair.create(cases.get(1).getFirst(), c1.unshare(unshared))),
           type);
     }
 
     Identifier up = new Identifier(Predefined.INSTANCE, intersection.iterator().next());
-    var down = ShareExpression.clone(up);
-    var result =
-        ShareExpression.rename(
-            up, down, Pair.create(cases.get(0).getSecond(), cases.get(1).getSecond()));
-    return new ShareExpression(
-        source,
-        up,
-        down,
-        new MatchExpression(
+    var down = ShareExpression.clone(up, unshared);
+    var result = ShareExpression.rename(up, down, Pair.create(c0, c1));
+
+    var replacement =
+        new ShareExpression(
             source,
-            test,
-            List.of(
-                Pair.create(cases.get(0).getFirst(), result.getFirst().unshare()),
-                Pair.create(cases.get(1).getFirst(), result.getSecond().unshare())),
-            type));
+            up,
+            down,
+            new MatchExpression(
+                source,
+                test,
+                List.of(
+                    Pair.create(cases.get(0).getFirst(), result.getFirst().unshare(unshared)),
+                    Pair.create(cases.get(1).getFirst(), result.getSecond().unshare(unshared))),
+                type));
+
+    return intersection.size() > 1 ? replacement.unshare(unshared) : replacement;
   }
 }

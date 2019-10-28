@@ -122,4 +122,12 @@ public class Util {
     }
     return original.substring(0, 1).toUpperCase() + original.substring(1);
   }
+
+  public static RuntimeException notImplemented(String feature) {
+    return new UnsupportedOperationException("not implemented: " + feature);
+  }
+
+  public static String repeat(String str, int times) {
+    return new String(new char[times]).replace("\0", str);
+  }
 }

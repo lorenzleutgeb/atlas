@@ -33,6 +33,12 @@ public class AnnotatingContext {
   @Getter private final List<String> ids;
   private Annotation annotation;
 
+  private void checkIds() {
+    if (ids.size() != (new HashSet<>(ids)).size()) {
+      throw new IllegalStateException();
+    }
+  }
+
   public AnnotatingContext(List<String> ids, Annotation annotation) {
     if (ids.size() != annotation.size()) {
       throw new IllegalArgumentException("sizes must match");
@@ -41,6 +47,7 @@ public class AnnotatingContext {
     //  throw new IllegalArgumentException("constant in context");
     // }
     this.ids = ids;
+    checkIds();
     this.annotation = annotation;
   }
 
@@ -97,6 +104,7 @@ public class AnnotatingContext {
   }
 
   public Stream<Pair<Map<String, Integer>, Integer>> streamIndices() {
+    checkIds();
     return annotation
         .streamCoefficients()
         .map(
@@ -294,6 +302,8 @@ public class AnnotatingContext {
     return tmp;
   }
 
+  /** @deprecated use {@link Expression#unshare} */
+  @Deprecated
   public Pair<String, AnnotatingContext> share(
       Expression source, Constraints constraints, String id) {
     if (!this.ids.contains(id)) {
@@ -341,6 +351,8 @@ public class AnnotatingContext {
     return result != null ? result : KnownCoefficient.ZERO;
   }
 
+  /** @deprecated use {@link Expression#unshare} */
+  @Deprecated
   public Pair<Map<String, String>, AnnotatingContext> share(
       Expression source, Constraints constraints, List<String> ids) {
     if (ids.isEmpty()) {

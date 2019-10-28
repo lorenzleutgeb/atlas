@@ -1,6 +1,7 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
 import static xyz.leutgeb.lorenz.logs.Util.bug;
+import static xyz.leutgeb.lorenz.logs.Util.notImplemented;
 
 import com.google.common.collect.Sets;
 import java.io.PrintStream;
@@ -81,26 +82,26 @@ public class CallExpression extends Expression {
   }
 
   public Type inferInternal(Context context) throws UnificationError, TypeError {
+    if (!context.hasSignature(name.getName())) {
+      throw new TypeError();
+    }
+
     List<Type> xTy = new ArrayList<>(parameters.size());
     for (int i = 0; i < parameters.size(); i++) {
       Expression parameter = parameters.get(i);
       xTy.add(parameter.infer(context));
     }
 
-    // TODO: Look up signature, not type (only for non-recursive calls)!
-    FunctionType fTy = null;
-    if (context.hasSignature(name.getName())) {
-      FunctionSignature originalSignature = context.getSignatures().get(name.getName());
-      FunctionSignature signature =
-          originalSignature.wiggle(new Substitution(), context.getProblem());
-      fTy = signature.getType();
-      context.putType(name.getName(), fTy);
-      name.infer(context);
-      for (var typeConstraint : signature.getConstraints()) {
-        context.getProblem().addConstraint(typeConstraint);
-      }
-    } else {
-      fTy = (FunctionType) name.infer(context).wiggle(new Substitution(), context.getProblem());
+    FunctionSignature signature =
+        context
+            .getSignatures()
+            .get(name.getName())
+            .wiggle(new Substitution(), context.getProblem());
+
+    final var fTy = signature.getType();
+    name.infer(context);
+    for (var typeConstraint : signature.getConstraints()) {
+      context.getProblem().addConstraint(typeConstraint);
     }
 
     if (fTy.getFrom().getElements().size() != parameters.size()) {
@@ -219,7 +220,7 @@ public class CallExpression extends Expression {
   }
 
   @Override
-  public Expression unshare() {
+  public Expression unshare(Map<String, Integer> unshared) {
     boolean eqs = false;
     int a = -1, b = -1;
     for (int i = 0; i < parameters.size() - 1; i++) {
@@ -235,8 +236,7 @@ public class CallExpression extends Expression {
         if (!eqs) {
           eqs = true;
         } else {
-          throw new UnsupportedOperationException(
-              "please implement unsharing of calls with more than one pair of equal parameters");
+          throw notImplemented("unsharing of call with more than one pair of equal parameters");
         }
       }
     }
@@ -245,7 +245,7 @@ public class CallExpression extends Expression {
       return this;
     }
 
-    var down = ShareExpression.clone((Identifier) parameters.get(a));
+    var down = ShareExpression.clone((Identifier) parameters.get(a), unshared);
     var newParameters = new ArrayList<>(parameters);
     newParameters.set(a, down.getFirst());
     newParameters.set(b, down.getSecond());

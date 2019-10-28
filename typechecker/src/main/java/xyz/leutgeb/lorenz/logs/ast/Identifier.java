@@ -191,6 +191,9 @@ public class Identifier extends Expression {
 
   @Override
   public Identifier rename(Map<String, String> renaming) {
+    if (renaming.containsValue(name)) {
+      throw new IllegalArgumentException("renaming something to pre-existing name");
+    }
     return new Identifier(new Renamed(source), renaming.getOrDefault(name, name), type);
   }
 

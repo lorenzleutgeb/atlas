@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.logs.ast;
 
+import static com.google.common.collect.Sets.intersection;
 import static xyz.leutgeb.lorenz.logs.Util.bug;
 import static xyz.leutgeb.lorenz.logs.Util.indent;
 
@@ -12,12 +13,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.logs.Context;
+import xyz.leutgeb.lorenz.logs.ast.sources.Predefined;
 import xyz.leutgeb.lorenz.logs.ast.sources.Renamed;
 import xyz.leutgeb.lorenz.logs.ast.sources.Source;
 import xyz.leutgeb.lorenz.logs.resources.AnnotatingContext;
@@ -34,8 +35,7 @@ public class LetExpression extends Expression {
   private final Identifier declared;
   private final Expression value;
 
-  // TODO: Make body final again.
-  private /*final*/ Expression body;
+  private final Expression body;
 
   public LetExpression(Source source, Identifier declared, Expression value, Expression body) {
     super(source);
@@ -78,24 +78,32 @@ public class LetExpression extends Expression {
     varsForDelta.remove(x);
 
     // Check for variables that are contained in both \Delta and \Gamma and apply (share).
-    final var intersect = Sets.intersection(varsForGamma, varsForDelta);
-    final var sharing = gammaxq.share(this, constraints, new ArrayList<>(intersect));
+    final var intersect = intersection(varsForGamma, varsForDelta);
 
-    final var q = sharing.getSecond();
+    // NOTE: The following check only makes sense if we called "unshare" before, which is in flux.
+    if (!intersect.isEmpty()) {
+      throw new IllegalStateException(
+          "assuming that you called unshare, there should be no intersections");
+    }
+
+    // final var sharing = gammaxq.share(this, constraints, new ArrayList<>(intersect));
+
+    /** unshare final var q = sharing.getSecond(); */
+    final var q = gammaxq;
 
     // TODO: This is an ugly mutation.
-    body = body.rename(sharing.getFirst());
+    /** unshare body = body.rename(sharing.getFirst()); */
 
     // Newly generated variables are being used in \Delta, while \Gamma uses old names.
-    final var renamedVarsForDelta =
-        varsForDelta.stream()
-            .map(id -> sharing.getFirst().getOrDefault(id, id))
-            .collect(Collectors.toSet());
-
+    /**
+     * unshare final var renamedVarsForDelta = varsForDelta.stream() .map(id ->
+     * sharing.getFirst().getOrDefault(id, id)) .collect(Collectors.toSet());
+     */
     final var xl = (value.getType() instanceof TreeType) ? 1 : 0;
 
     final var gamma = new ArrayList<>(varsForGamma);
-    final var delta = new ArrayList<>(renamedVarsForDelta);
+    /** unshare final var delta = new ArrayList<>(renamedVarsForDelta); */
+    final var delta = new ArrayList<>(varsForDelta);
 
     final var deltax = new ArrayList<>(delta);
     // For the case that the scrutinee (variable "x") is not a tree, we do not actually
@@ -276,10 +284,30 @@ public class LetExpression extends Expression {
   }
 
   @Override
-  public Expression unshare() {
-    if (!Sets.intersection(value.freeVariables(), body.freeVariables()).isEmpty()) {
-      throw new UnsupportedOperationException("please implement");
+  public Expression unshare(Map<String, Integer> unshared) {
+    final var intersection = intersection(value.freeVariables(), body.freeVariables());
+
+    // Easy case, just recurse further down into the body.
+    if (intersection.isEmpty()) {
+      return new LetExpression(source, declared, value, body.unshare(unshared), type);
     }
-    return new LetExpression(source, declared, value, body.unshare(), type);
+
+    // Otherwise, there's some overlap between body and value.
+    var target = new Identifier(Predefined.INSTANCE, intersection.iterator().next());
+    var down = ShareExpression.clone(target, unshared);
+    var result = ShareExpression.rename(target, down, Pair.create(value, body));
+
+    var replacement =
+        new ShareExpression(
+            target,
+            down,
+            new LetExpression(
+                source,
+                declared,
+                result.getFirst().unshare(unshared),
+                result.getSecond().unshare(unshared),
+                type));
+
+    return intersection.size() > 1 ? replacement.unshare(unshared) : replacement;
   }
 }

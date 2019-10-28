@@ -53,11 +53,13 @@ public class ParserTest {
         arguments("LeftList.postorder", sig(ATREE, ATREE, ATREE)),
         arguments("SplayTree.splay_max", sig(Set.of(eq(ATREE)), ATREE, ATREE)),
         arguments("LeftList.cons", sig(ALPHA, ATREE, ATREE)),
-        arguments("LeftList.tl", sig(ATREE, ATREE)),
-        arguments("SplayTree.splay", sig(Set.of(eq(ATREE), ord(ALPHA)), ALPHA, ATREE, ATREE)),
-        arguments("SplayTree.delete", sig(Set.of(eq(ATREE), ord(ALPHA)), ALPHA, ATREE, ATREE)),
-        arguments("SkewHeap.merge", sig(Set.of(ord(ALPHA)), ATREE, ATREE, ATREE)),
-        arguments("SkewHeap.insert", sig(Set.of(ord(ALPHA)), ALPHA, ATREE, ATREE)));
+        arguments("LeftList.tl", sig(ATREE, ATREE)));
+    /*
+    arguments("SplayTree.splay", sig(Set.of(eq(ATREE), ord(ALPHA)), ALPHA, ATREE, ATREE)),
+    arguments("SplayTree.delete", sig(Set.of(eq(ATREE), ord(ALPHA)), ALPHA, ATREE, ATREE)),
+    arguments("SkewHeap.merge", sig(Set.of(ord(ALPHA)), ATREE, ATREE, ATREE)),
+    arguments("SkewHeap.insert", sig(Set.of(ord(ALPHA)), ALPHA, ATREE, ATREE)));
+         */
   }
 
   private static FunctionType ft(Type... types) {
@@ -95,6 +97,7 @@ public class ParserTest {
         program.getFunctionDefinitions().stream()
             .filter(x -> x.getFullyQualifiedName().equals(fqn))
             .findFirst();
+
     // final var definition =
     // program.getFunctionDefinitions().get(program.getFunctionDefinitions().size() - 1);
 

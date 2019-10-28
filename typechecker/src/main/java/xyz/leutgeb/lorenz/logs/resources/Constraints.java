@@ -278,6 +278,7 @@ public class Constraints {
     }
 
     // log.debug(solver.toString());
+    // TODO: Parameterize location.
     try (PrintWriter out = new PrintWriter(new File("out", name + ".smt"))) {
       out.println(solver);
     } catch (FileNotFoundException e) {
@@ -312,6 +313,7 @@ public class Constraints {
 
   private Model check(Solver solver) {
     final var start = Instant.now();
+    System.out.println("Invoking z3 at " + start);
     var status = solver.check();
     final var stop = Instant.now();
     log.debug("Solving time: " + (Duration.between(start, stop)));
@@ -359,5 +361,9 @@ public class Constraints {
     }
 
     return graph;
+  }
+
+  public int size() {
+    return constraints.size();
   }
 }

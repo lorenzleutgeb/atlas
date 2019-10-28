@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.log4j.Log4j2;
 import xyz.leutgeb.lorenz.logs.typing.FunctionSignature;
+import xyz.leutgeb.lorenz.logs.typing.types.FunctionType;
 import xyz.leutgeb.lorenz.logs.typing.types.Type;
 import xyz.leutgeb.lorenz.logs.unification.UnificationProblem;
 
@@ -138,14 +139,20 @@ public class Context {
   }
 
   public void putType(String key, Type value) {
+    if (value instanceof FunctionType) {
+      throw new IllegalArgumentException("use putSignature");
+    }
+
     if ("nil".equals(key)) { // || "_".equals(key)) {
       // Silently ignore this, since nil and _ will have a magic type assigned in Identifier.
       return;
     }
 
     if (hasType(key)) {
+      // TODO: Make this an error?
       log.info("Hiding " + key);
     }
+
     types.put(key, value);
   }
 
