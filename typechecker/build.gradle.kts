@@ -102,8 +102,8 @@ tasks.test {
     // See https://github.com/junit-team/junit5/issues/2041#issuecomment-539712030
     afterTest(KotlinClosure2<TestDescriptor, TestResult, Any>({ descriptor, result ->
         val test = descriptor as TestDescriptorInternal
-        val classDisplayName = if(test.className == test.classDisplayName) test.classDisplayName else "${test.className} [${test.classDisplayName}]"
-        val testDisplayName = if(test.name == test.displayName) test.displayName else "${test.name} [${test.displayName}]"
+        val classDisplayName = if (test.className == test.classDisplayName) test.classDisplayName else "${test.className} [${test.classDisplayName}]"
+        val testDisplayName = if (test.name == test.displayName) test.displayName else "${test.name} [${test.displayName}]"
         println("\n$classDisplayName > $testDisplayName: ${result.resultType}")
     }))
 }
