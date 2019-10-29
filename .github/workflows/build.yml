@@ -12,6 +12,7 @@ jobs:
       with:
         ghc-version: '8.8.1'
         cabal-version: '3.0'
+    - run: wget https://lorenz.leutgeb.xyz/lac/com.microsoft.z3.jar --directory-prefix typechecker/libs/
     - name: Build with Gradle
       run: ./gradlew build
       working-directory: typechecker
