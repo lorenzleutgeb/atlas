@@ -15,5 +15,7 @@ jobs:
     - run: wget https://lorenz.leutgeb.xyz/lac/com.microsoft.z3.jar --directory-prefix typechecker/libs/
     - run: ./gradlew build -x test
       working-directory: typechecker
+    - run: cabal update
+      working-directory: interpreter
     - run: cabal build
       working-directory: interpreter
