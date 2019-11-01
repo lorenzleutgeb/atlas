@@ -8,6 +8,6 @@ main = do
   putStrLn result
   result <- readProcess "unzip" ["-o", "../typechecker/build/distributions/lac.zip"] ""
   putStrLn result
-  result <- readProcess "../typechecker/build/distributions/lac/bin/lac" ["hs", "--home=../typechecker/src/test/resources", "\".*\"", "generated-src"] ""
+  result <- readProcess "./lac/bin/lac" ["hs", "--home=../typechecker/src/test/resources", "\".*\"", "generated-src"] ""
   putStrLn result
   defaultMain
