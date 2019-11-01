@@ -13,10 +13,16 @@ jobs:
           ${{ runner.os }}-gradle-
     - uses: actions/cache@preview
       with:
-        path: interpreter/.stack-work
-        key: ${{ runner.os }}-stack-${{ hashFiles('**/stack.yaml') }}
+        path: ~/.stack/programs
+        key: ${{ runner.os }}-stack-programs-${{ hashFiles('**/stack.yaml') }}
         restore-keys: |
-          ${{ runner.os }}-stack-
+          ${{ runner.os }}-stack-programs-
+    - uses: actions/cache@preview
+      with:
+        path: interpreter/.stack-work
+        key: ${{ runner.os }}-stack-work-${{ hashFiles('**/stack.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-stack-work-
     - uses: actions/setup-java@v1
       with:
         java-version: 13
