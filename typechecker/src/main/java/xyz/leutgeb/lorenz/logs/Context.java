@@ -149,8 +149,7 @@ public class Context {
     }
 
     if (hasType(key)) {
-      // TODO: Make this an error?
-      log.info("Hiding " + key);
+      throw new RuntimeException("hiding of variables not possible (affected: '" + key + "')");
     }
 
     types.put(key, value);
