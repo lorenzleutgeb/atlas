@@ -8,7 +8,7 @@ jobs:
     - uses: actions/setup-java@v1
       with:
         java-version: 13
-    - run: wget -qO- https://get.haskellstack.org/ | sh
+    - run: stack upgrade
     - run: wget https://lorenz.leutgeb.xyz/lac/com.microsoft.z3.jar --directory-prefix typechecker/libs/
     - run: ./gradlew build -x test
       working-directory: typechecker
