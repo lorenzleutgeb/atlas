@@ -5,6 +5,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
+    - uses: actions/cache@preview
+      with:
+        path: ~/.gradle/caches
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+    - uses: actions/cache@preview
+      working-directory: interpreter
+      with:
+        path: .stack-work
+        key: ${{ runner.os }}-gradle-${{ hashFiles('stack.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-stack-
     - uses: actions/setup-java@v1
       with:
         java-version: 13
