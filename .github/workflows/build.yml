@@ -8,14 +8,9 @@ jobs:
     - uses: actions/setup-java@v1
       with:
         java-version: 13
-    - uses: actions/setup-haskell@v1
-      with:
-        ghc-version: '8.8.1'
-        cabal-version: '3.0'
+    - run: wget -qO- https://get.haskellstack.org/ | sh
     - run: wget https://lorenz.leutgeb.xyz/lac/com.microsoft.z3.jar --directory-prefix typechecker/libs/
     - run: ./gradlew build -x test
       working-directory: typechecker
-    - run: cabal update
-      working-directory: interpreter
-    - run: cabal build
+    - run: stack build
       working-directory: interpreter
