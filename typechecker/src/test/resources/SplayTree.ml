@@ -34,6 +34,25 @@ splay a t = match t with
                                 | nil         -> nil
                                 | (al, x, xa) -> (((cl, c, bl), b, al), x, xa)
 
+(* Assumption: a < b < c *)
+splay_zigzig a t = match t with
+    | nil         -> nil
+    | (cl, c, cr) -> if a == c
+        then (cl, c, cr)
+        else if a < c
+            then match cl with
+                | nil         -> (nil, c, cr)
+                | (bl, b, br) -> if a == b
+                    then (bl, a, (br, c, cr))
+                    else if a < b
+                        then if bl == nil
+                            then (bl, b, (br, c, cr))
+                            else match splay a bl with
+                                | nil          -> nil
+                                | (al, a', ar) -> (al, a', (ar, b, (br, c, cr)))
+                    else nil
+            else nil
+
 splay_max t = match t with
     | nil       -> nil
     | (l, b, r) -> match r with
