@@ -109,7 +109,7 @@ tasks.test {
 }
 
 tasks.withType<Wrapper> {
-    gradleVersion = "6.0-rc-3"
+    gradleVersion = "6.0"
     distributionType = Wrapper.DistributionType.ALL
 }
 
