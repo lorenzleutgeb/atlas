@@ -7,7 +7,7 @@ options {
 program: (func)* EOF;
 
 // Function declaration (with list of arguments):
-func: name=IDENTIFIER (args+=IDENTIFIER)* ASSIGN body=expression ;
+func: name=IDENTIFIER (args+=IDENTIFIER)* ASSIGN body=expression SEMICOLON?;
 
 // Expressions
 expression : (IDENTIFIER | DERIVED_IDENTIFIER) # identifier
