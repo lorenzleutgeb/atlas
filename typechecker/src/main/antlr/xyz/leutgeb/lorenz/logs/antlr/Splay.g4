@@ -7,7 +7,41 @@ options {
 program: (func)* EOF;
 
 // Function declaration (with list of arguments):
-func: name=IDENTIFIER (args+=IDENTIFIER)* ASSIGN body=expression SEMICOLON?;
+func : signature? name=IDENTIFIER (args+=IDENTIFIER)* ASSIGN body=expression SEMICOLON?;
+
+signature : name=IDENTIFIER COLON COLON (constraints DOUBLE_ARROW)? productType ARROW namedType;
+
+variableType : IDENTIFIER ;
+
+treeType : TREE IDENTIFIER ;
+
+// NOTE: This does NOT include product types!
+constructedType : variableType
+                | treeType
+                ;
+
+predefinedType : BOOL ;
+
+unnamedType : constructedType | predefinedType ;
+
+// Optionally named types.
+namedType : (IDENTIFIER COLON COLON)? unnamedType ;
+
+typeClass : TYC_EQ | TYC_ORD;
+
+constraint : typeClass variableType
+           | typeClass PAREN_OPEN treeType PAREN_CLOSE
+           ;
+
+constraints : constraint
+            | PAREN_OPEN items+=constraint (COMMA items+=constraint)* PAREN_CLOSE
+            ;
+
+productType : PAREN_OPEN (productTypeNaming COLON COLON)? names+=IDENTIFIER PAREN_OPEN items+=unnamedType (TIMES items+=unnamedType)* PAREN_CLOSE
+            | (productTypeNaming COLON COLON)? items+=unnamedType (TIMES items+=unnamedType)*
+            ;
+
+productTypeNaming : PAREN_OPEN names+=IDENTIFIER (COMMA names+=IDENTIFIER) PAREN_CLOSE ;
 
 // Expressions
 expression : (IDENTIFIER | DERIVED_IDENTIFIER) # identifier
@@ -68,9 +102,14 @@ IF : 'if';
 THEN : 'then';
 ELSE : 'else';
 ARROW : '->' | '→' ;
+DOUBLE_ARROW : '=>' ;
 MATCH : 'match';
 WITH : 'with';
 LET : 'let';
+TREE : 'Tree' | 'T';
+BOOL : 'Bool' | 'Bo';
+TYC_ORD : 'Ord';
+TYC_EQ : 'Eq';
 
 // TODO(lorenz.leutgeb): Add greek alphabet and lowercase letters.
 
