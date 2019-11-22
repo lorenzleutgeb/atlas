@@ -7,7 +7,38 @@ options {
 program: (func)* EOF;
 
 // Function declaration (with list of arguments):
-func: name=IDENTIFIER (args+=IDENTIFIER)* ASSIGN body=expression SEMICOLON?;
+func : signature? name=IDENTIFIER (args+=IDENTIFIER)* ASSIGN body=expression SEMICOLON?;
+
+signature : name=IDENTIFIER COLON COLON (constraints DOUBLE_ARROW)? productType ARROW type;
+
+variableType : IDENTIFIER ;
+
+treeType : TREE IDENTIFIER ;
+
+constructedType : variableType
+                | treeType
+                ;
+
+predefinedType : BASE
+               | BOOL
+               ;
+
+type : constructedType | predefinedType ;
+
+typeClass : TYC_EQ | TYC_ORD;
+
+constraint : typeClass variableType
+           | typeClass PAREN_OPEN treeType PAREN_CLOSE
+           ;
+
+constraints: constraint
+           | PAREN_OPEN items+=constraint (COMMA items+=constraint)* PAREN_CLOSE
+           ;
+
+productType: type
+           | PAREN_OPEN items+=type (TIMES items+=type)* PAREN_CLOSE
+           | items+=type (TIMES items+=type)*
+           ;
 
 // Expressions
 expression : (IDENTIFIER | DERIVED_IDENTIFIER) # identifier
@@ -68,9 +99,15 @@ IF : 'if';
 THEN : 'then';
 ELSE : 'else';
 ARROW : '->' | '→' ;
+DOUBLE_ARROW : '=>' ;
 MATCH : 'match';
 WITH : 'with';
 LET : 'let';
+TREE : 'Tree' | 'T';
+BASE : 'Base' | 'Ba';
+BOOL : 'Bool' | 'Bo';
+TYC_ORD : 'Ord';
+TYC_EQ : 'Eq';
 
 // TODO(lorenz.leutgeb): Add greek alphabet and lowercase letters.
 
