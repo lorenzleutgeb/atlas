@@ -1,0 +1,3 @@
+[submodule "typechecker/src/test/resources/examples"]
+	path = typechecker/src/test/resources/examples
+	url = git@github.com:lorenzleutgeb/lac-examples.git
