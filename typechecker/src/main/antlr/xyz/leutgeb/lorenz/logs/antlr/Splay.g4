@@ -9,11 +9,11 @@ program: (func)* EOF;
 // Function declaration (with list of arguments):
 func : signature? name=IDENTIFIER (args+=IDENTIFIER)* ASSIGN body=expression SEMICOLON?;
 
-signature : name=IDENTIFIER COLON COLON (constraints DOUBLE_ARROW)? productType ARROW namedType;
+signature : name=IDENTIFIER DOUBLECOLON (constraints DOUBLE_ARROW)? from=productType ARROW to=namedType;
 
 variableType : IDENTIFIER ;
 
-treeType : TREE IDENTIFIER ;
+treeType : TREE variableType ;
 
 // NOTE: This does NOT include product types!
 constructedType : variableType
@@ -25,7 +25,7 @@ predefinedType : BOOL ;
 unnamedType : constructedType | predefinedType ;
 
 // Optionally named types.
-namedType : (IDENTIFIER COLON COLON)? unnamedType ;
+namedType : (IDENTIFIER DOUBLECOLON)? unnamedType ;
 
 typeClass : TYC_EQ | TYC_ORD;
 
@@ -33,29 +33,28 @@ constraint : typeClass variableType
            | typeClass PAREN_OPEN treeType PAREN_CLOSE
            ;
 
-constraints : constraint
+constraints : items+=constraint
             | PAREN_OPEN items+=constraint (COMMA items+=constraint)* PAREN_CLOSE
             ;
 
-productType : PAREN_OPEN (productTypeNaming COLON COLON)? names+=IDENTIFIER PAREN_OPEN items+=unnamedType (TIMES items+=unnamedType)* PAREN_CLOSE
-            | (productTypeNaming COLON COLON)? items+=unnamedType (TIMES items+=unnamedType)*
+productType : (productTypeNaming DOUBLECOLON)? PAREN_OPEN items+=unnamedType (CROSS items+=unnamedType)* PAREN_CLOSE
+            | (productTypeNaming DOUBLECOLON)? items+=unnamedType (CROSS items+=unnamedType)*
             ;
 
 productTypeNaming : PAREN_OPEN names+=IDENTIFIER (COMMA names+=IDENTIFIER) PAREN_CLOSE ;
 
 // Expressions
 expression : (IDENTIFIER | DERIVED_IDENTIFIER) # identifier
-           | IF condition THEN truthy=expression ELSE falsy=expression # iteExpression
+           | IF condition=expression THEN truthy=expression ELSE falsy=expression # iteExpression
            | MATCH expression WITH cases+=matchCase+ # matchExpression
            | tuple # tupleExpression
            | name=IDENTIFIER (params+=expression)* # callExpression
            | LET name=(IDENTIFIER | DERIVED_IDENTIFIER) ASSIGN value=expression IN body=expression # letExpression
            | PAREN_OPEN expression PAREN_CLOSE # parenthesizedExpression
            | NUMBER # constant
+           | left=expression op right=expression # comparison
            ;
 
-// Conditions are expressed by comparing two expressions.
-condition : left=expression op right=expression # comparison | expression # booleanExpression ;
 op : EQ | NE | LT | LE | GT | GE ;
 
 matchCase : OR pattern ARROW expression ;
@@ -73,12 +72,12 @@ tuple: PAREN_OPEN left=expression COMMA middle=expression COMMA right=expression
 // ANONYMOUS_IDENTIFIER : '_';
 DOT : '.';
 COMMA : ',';
-COLON : ':';
+DOUBLECOLON : '::' | '∷';
 SEMICOLON : ';';
 OR : '|';
 PLUS : '+';
 MINUS : '-';
-TIMES : '*';
+CROSS : '*' | '⨯' ;
 DIV : '/';
 QUOTE : '"';
 
@@ -90,19 +89,19 @@ CURLY_OPEN : '{';
 CURLY_CLOSE : '}';
 
 EQ : '==';
-NE : '!=';
+NE : '!=' | '≠';
 LT : '<';
-LE : '<=';
+LE : '<=' | '≤';
 GT : '>';
-GE : '>=';
+GE : '>=' | '≥';
 
-ASSIGN : '=';
+ASSIGN : '=' | '≔';
 IN : 'in';
 IF : 'if';
 THEN : 'then';
 ELSE : 'else';
-ARROW : '->' | '→' ;
-DOUBLE_ARROW : '=>' ;
+ARROW : '->' | '→';
+DOUBLE_ARROW : '=>' | '⇒';
 MATCH : 'match';
 WITH : 'with';
 LET : 'let';
@@ -115,7 +114,8 @@ TYC_EQ : 'Eq';
 
 SUBSCRIPT_NUMBER : [\u2080-\u2089];
 DERIVED_IDENTIFIER : '∂' SUBSCRIPT_NUMBER+;
-IDENTIFIER : (('A' .. 'Z' | 'a'..'z' | '∂') ( 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' | '\'' | '.' )*);
+
+IDENTIFIER : (('A' .. 'Z' | 'a'..'z' | 'α' | 'β' | 'γ' | 'δ' | 'ε' | '∂') ( 'A'..'Z' | 'a'..'z' | 'α' | 'β' | 'γ' | 'δ' | 'ε' | '∂' | '0'..'9' | '_' | '\'' | '.' )*);
 TYPE : ('A'..'Z') ( 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' )*;
 NUMBER : '0' | ('1'..'9') ('0'..'9')*;
 QUOTED_STRING : QUOTE ( '\\"' | . )*? QUOTE;

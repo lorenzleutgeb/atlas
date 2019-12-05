@@ -118,6 +118,6 @@ public class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
 
   @Override
   public Expression visitConstant(SplayParser.ConstantContext ctx) {
-    return new Number(getSource(ctx), Integer.valueOf(ctx.NUMBER().getText()));
+    return new Number(getSource(ctx), Integer.parseInt(ctx.NUMBER().getText()));
   }
 }
