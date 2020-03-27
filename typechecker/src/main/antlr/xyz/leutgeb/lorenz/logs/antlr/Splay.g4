@@ -44,12 +44,12 @@ productType : (productTypeNaming DOUBLECOLON)? PAREN_OPEN items+=unnamedType (CR
 productTypeNaming : PAREN_OPEN names+=IDENTIFIER (COMMA names+=IDENTIFIER) PAREN_CLOSE ;
 
 // Expressions
-expression : (IDENTIFIER | DERIVED_IDENTIFIER) # identifier
+expression : identifier # variableExpression
            | IF condition=expression THEN truthy=expression ELSE falsy=expression # iteExpression
-           | MATCH expression WITH cases+=matchCase+ # matchExpression
-           | tuple # tupleExpression
+           | MATCH test=expression WITH OR LEAF ARROW leafCase=expression OR nodePattern=pattern ARROW nodeCase=expression # matchExpression
+           | node # nodeExpression
            | name=IDENTIFIER (params+=expression)* # callExpression
-           | LET name=(IDENTIFIER | DERIVED_IDENTIFIER) ASSIGN value=expression IN body=expression # letExpression
+           | LET name=identifier ASSIGN value=expression IN body=expression # letExpression
            | PAREN_OPEN expression PAREN_CLOSE # parenthesizedExpression
            | NUMBER # constant
            | left=expression op right=expression # comparison
@@ -57,19 +57,18 @@ expression : (IDENTIFIER | DERIVED_IDENTIFIER) # identifier
 
 op : EQ | NE | LT | LE | GT | GE ;
 
-matchCase : OR pattern ARROW expression ;
-
-// For match expression we only admit simpler tuples:
+// For patterns we only admit simpler tuples:
 //  - non-recursive, i.e. it is only possible to match one level of a tree
 //  - no derived identifiers
+// TODO:
 //  - anonymous identifiers are allowed
-pattern : IDENTIFIER | patternTuple ;
-patternTuple : PAREN_OPEN left=IDENTIFIER COMMA middle=IDENTIFIER COMMA right=IDENTIFIER PAREN_CLOSE;
+pattern : PAREN_OPEN left=IDENTIFIER COMMA middle=IDENTIFIER COMMA right=IDENTIFIER PAREN_CLOSE;
 
-// The following definition of tuples is much more liberal.
-tuple: PAREN_OPEN left=expression COMMA middle=expression COMMA right=expression PAREN_CLOSE ;
+node: PAREN_OPEN left=expression COMMA middle=expression COMMA right=expression PAREN_CLOSE ;
 
-// ANONYMOUS_IDENTIFIER : '_';
+identifier : LEAF | IDENTIFIER | ANONYMOUS_IDENTIFIER | DERIVED_IDENTIFIER;
+
+ANONYMOUS_IDENTIFIER : '_';
 DOT : '.';
 COMMA : ',';
 DOUBLECOLON : '::' | '∷';
@@ -96,6 +95,7 @@ GT : '>';
 GE : '>=' | '≥';
 
 ASSIGN : '=' | '≔';
+LEAF : 'leaf';
 IN : 'in';
 IF : 'if';
 THEN : 'then';
@@ -115,7 +115,7 @@ TYC_EQ : 'Eq';
 SUBSCRIPT_NUMBER : [\u2080-\u2089];
 DERIVED_IDENTIFIER : '∂' SUBSCRIPT_NUMBER+;
 
-IDENTIFIER : (('A' .. 'Z' | 'a'..'z' | 'α' | 'β' | 'γ' | 'δ' | 'ε' | '∂') ( 'A'..'Z' | 'a'..'z' | 'α' | 'β' | 'γ' | 'δ' | 'ε' | '∂' | '0'..'9' | '_' | '\'' | '.' )*);
+IDENTIFIER : (('A' .. 'Z' | 'a'..'z' | 'α' | 'β' | 'γ' | 'δ' | 'ε' | '∂') ( 'A'..'Z' | 'a'..'z' | 'α' | 'β' | 'γ' | 'δ' | 'ε' | '∂' | '0'..'9' | '_' | '\'' | '.' )*) ;
 TYPE : ('A'..'Z') ( 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' )*;
 NUMBER : '0' | ('1'..'9') ('0'..'9')*;
 QUOTED_STRING : QUOTE ( '\\"' | . )*? QUOTE;

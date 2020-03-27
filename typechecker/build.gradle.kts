@@ -1,5 +1,8 @@
 import org.gradle.api.internal.tasks.testing.TestDescriptorInternal
 
+val rootPackage = "xyz.leutgeb.lorenz.lac"
+val rootPackagePath = rootPackage.replace(".", "/")
+
 plugins {
     java
     application
@@ -14,8 +17,8 @@ repositories {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_13
-    targetCompatibility = JavaVersion.VERSION_13
+    sourceCompatibility = JavaVersion.VERSION_14
+    targetCompatibility = JavaVersion.VERSION_14
 }
 
 configurations {
@@ -24,42 +27,42 @@ configurations {
 
 dependencies {
     // We need to give the ANTLR Plugin a hint.
-    val antlrDependency = "org.antlr:antlr4:4.7.2"
+    val antlrDependency = "org.antlr:antlr4:4.8-1"
     antlr(antlrDependency)
     implementation(antlrDependency)
 
-    implementation("com.google.guava:guava:28.1-jre")
+    implementation("com.google.guava:guava:28.2-jre")
 
-    implementation("org.apache.commons:commons-text:1.6")
+    implementation("org.apache.commons:commons-text:1.8")
 
     // Logging
     fun log4j(x: String): String {
-        return "org.apache.logging.log4j:log4j-$x:2.12.1"
+        return "org.apache.logging.log4j:log4j-$x:2.13.1"
     }
     implementation(log4j("api"))
     implementation(log4j("core"))
 
     // Lombok
-    val lombok = "org.projectlombok:lombok:1.18.10"
+    val lombok = "org.projectlombok:lombok:1.18.12"
     compileOnly(lombok)
     annotationProcessor(lombok)
 
     // Maths
-    implementation("org.hipparchus:hipparchus-core:1.5")
+    implementation("org.hipparchus:hipparchus-core:1.6")
 
     // Graphs
     fun jgrapht(x: String): String {
-        return "org.jgrapht:jgrapht-$x:1.3.1"
+        return "org.jgrapht:jgrapht-$x:1.4.0"
     }
     implementation(jgrapht("core"))
     implementation(jgrapht("io"))
 
     // Commandline Parameters
-    implementation("info.picocli:picocli:4.0.4")
+    implementation("info.picocli:picocli:4.2.0")
 
     // Testing
     fun jupiter(x: String): String {
-        return "org.junit.jupiter:junit-jupiter-$x:5.5.2"
+        return "org.junit.jupiter:junit-jupiter-$x:5.6.0"
     }
     testImplementation(jupiter("api"))
     testImplementation(jupiter("params"))
@@ -70,11 +73,11 @@ dependencies {
     implementation(files("libs/com.microsoft.z3.jar"))
 
     // Graph output
-    implementation("guru.nidi:graphviz-java:0.11.0")
+    implementation("guru.nidi:graphviz-java:0.15.0")
 }
 
 application {
-    mainClassName = "xyz.leutgeb.lorenz.logs.Main"
+    mainClassName = "$rootPackage.Main"
 }
 
 tasks.withType<JavaCompile> {
@@ -87,10 +90,10 @@ tasks.withType<AntlrTask> {
             "-visitor",
             "-no-listener",
             "-long-messages",
-            "-package", "xyz.leutgeb.lorenz.logs.antlr",
+            "-package", "$rootPackage.antlr",
             "-Werror",
             "-Xlog",
-            "-lib", "src/main/antlr/xyz/leutgeb/lorenz/logs/antlr"
+            "-lib", "src/main/antlr/$rootPackagePath/antlr"
     ))
 }
 
@@ -109,11 +112,11 @@ tasks.test {
 }
 
 tasks.withType<Wrapper> {
-    gradleVersion = "6.0"
+    gradleVersion = "6.3"
     distributionType = Wrapper.DistributionType.ALL
 }
 
-// Aggresively format code when building.
+// Aggressively format code when building.
 tasks["build"].dependsOn("spotlessJavaApply")
 
 spotless {

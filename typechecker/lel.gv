@@ -1,0 +1,11 @@
+strict digraph G {
+  Obligation_974443433;
+  Obligation_237754074;
+  Obligation_396931979;
+  Obligation_677407997;
+  Obligation_1891141352;
+  Obligation_974443433 -> Obligation_237754074;
+  Obligation_974443433 -> Obligation_396931979;
+  Obligation_396931979 -> Obligation_677407997;
+  Obligation_396931979 -> Obligation_1891141352;
+}

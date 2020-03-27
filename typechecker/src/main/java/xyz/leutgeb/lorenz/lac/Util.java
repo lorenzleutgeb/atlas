@@ -1,0 +1,227 @@
+package xyz.leutgeb.lorenz.lac;
+
+import static guru.nidi.graphviz.model.Factory.node;
+
+import com.microsoft.z3.RatNum;
+import guru.nidi.graphviz.model.Node;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Random;
+import java.util.Set;
+import java.util.Stack;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.ToDoubleFunction;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import lombok.extern.log4j.Log4j2;
+import org.apache.commons.text.similarity.JaroWinklerDistance;
+import org.apache.commons.text.similarity.SimilarityScore;
+import org.hipparchus.fraction.Fraction;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
+
+@Log4j2
+public class Util {
+  private static final SimilarityScore<Double> SIMILARITY = new JaroWinklerDistance();
+  private static final Random RANDOM = new Random();
+
+  public static String generateSubscript(int i) {
+    StringBuilder sb = new StringBuilder();
+    for (char ch : String.valueOf(i).toCharArray()) {
+      if (Character.isDigit(ch)) {
+        sb.append((char) ('\u2080' + (ch - '0')));
+      } else {
+        sb.append(ch);
+      }
+    }
+    return sb.toString();
+  }
+
+  public static String escapeSubscript(String s) {
+    return s.replace("\u2080", "0")
+        .replace("\u2081", "1")
+        .replace("\u2082", "2")
+        .replace("\u2083", "3")
+        .replace("\u2084", "4")
+        .replace("\u2085", "5")
+        .replace("\u2086", "6")
+        .replace("\u2087", "7")
+        .replace("\u2088", "8")
+        .replace("\u2089", "9")
+        .replace("₍", "_")
+        .replace("₎", "_");
+  }
+
+  public static void indent(PrintStream out, int indentation) {
+    for (int i = 0; i < indentation; i++) {
+      out.print("  ");
+    }
+  }
+
+  public static List<String> similar(
+      String key, Iterator<String> candidates, double threshold, int limit) {
+    ToDoubleFunction<String> similarity = x -> SIMILARITY.apply(key, x);
+    Comparator<String> comparator = Comparator.comparingDouble(similarity).reversed();
+    var similar = new PriorityQueue<>(comparator);
+    while (candidates.hasNext()) {
+      var candidate = candidates.next();
+      if (similarity.applyAsDouble(candidate) > threshold) {
+        similar.add(candidate);
+      }
+    }
+    if (similar.size() < limit) {
+      return new ArrayList<>(similar);
+    }
+    var result = new ArrayList<String>(limit);
+    for (int i = 0; i < limit; i++) {
+      result.add(similar.poll());
+    }
+    return result;
+  }
+
+  public static void ensureLibrary(String name) {
+    try {
+      System.loadLibrary(name);
+    } catch (UnsatisfiedLinkError e) {
+      log.fatal(
+          "The library '"
+              + name
+              + "' is required, but could not be loaded. Make sure that a file named 'lib"
+              + name
+              + ".so' (or similar, since this name is platform-dependent) exists in one of the following paths: '"
+              + System.getProperty("java.library.path")
+              + "'.",
+          e);
+      System.exit(1);
+    }
+  }
+
+  public static Fraction toFraction(RatNum x) {
+    return new Fraction(
+        x.getBigIntNumerator().intValueExact(), x.getBigIntDenominator().intValueExact());
+  }
+
+  public static <T, U> BiFunction<T, U, T> first() {
+    return (T a, U b) -> a;
+  }
+
+  public static <T, U> BiFunction<T, U, U> second() {
+    return (T a, U b) -> b;
+  }
+
+  public static boolean isZero(List<Integer> xs) {
+    return xs.stream().allMatch(x -> x == 0);
+  }
+
+  public static List<Integer> zero(int n) {
+    return IntStream.generate(() -> 0).limit(n).boxed().collect(Collectors.toList());
+  }
+
+  public static RuntimeException bug(String message) {
+    return new RuntimeException("bug: " + message);
+  }
+
+  private static String randomHex(int length) {
+    StringBuffer sb = new StringBuffer();
+    while (sb.length() < length) {
+      sb.append(String.format("%08x", RANDOM.nextInt()));
+    }
+
+    return sb.toString().substring(0, length);
+  }
+
+  public static String randomHex() {
+    return randomHex(16);
+  }
+
+  public static String truncate(String s, int n) {
+    return s.length() > n ? s.substring(0, n - 3) + "..." : s;
+  }
+
+  public static String stamp(Object o) {
+    return o.getClass().getSimpleName() + "_" + System.identityHashCode(o);
+  }
+
+  public static Node rawObjectNode(Object o) {
+    return rawObjectNode(o, "");
+  }
+
+  private static Node rawObjectNode(Object o, String suffix) {
+    return node(stamp(o) + suffix);
+  }
+
+  public static Node objectNode(Object o, String label, String suffix) {
+    if (o == null) {
+      return node("null");
+    }
+    return rawObjectNode(o, suffix).with("label", label);
+  }
+
+  public static Node objectNode(Object o) {
+    return objectNode(o, o == null ? "null" : o.toString());
+  }
+
+  private static Node objectNode(Object o, String label) {
+    return objectNode(o, label, "");
+  }
+
+  public static String capitalizeFirstLetter(String original) {
+    if (original == null || original.length() == 0) {
+      return original;
+    }
+    return original.substring(0, 1).toUpperCase() + original.substring(1);
+  }
+
+  public static RuntimeException notImplemented(String feature) {
+    return new UnsupportedOperationException("not implemented: " + feature);
+  }
+
+  public static String repeat(String str, int times) {
+    return new String(new char[times]).replace("\0", str);
+  }
+
+  public static int signum(Fraction fraction) {
+    return Integer.signum(fraction.getNumerator()) * Integer.signum(fraction.getDenominator());
+  }
+
+  @SafeVarargs
+  public static <T> Stack<T> stack(T... elements) {
+    final var result = new Stack<T>();
+    for (int i = elements.length - 1; i >= 0; i--) {
+      result.push(elements[i]);
+    }
+    return result;
+  }
+
+  public static Set<String> setOfNames(Set<Identifier> ids) {
+    return ids.stream().map(Identifier::getName).collect(Collectors.toSet());
+  }
+
+  public static <E> E pick(Set<E> set) {
+    if (set.isEmpty()) {
+      throw new IllegalArgumentException("cannot get element from empty set");
+    }
+    return set.iterator().next();
+  }
+
+  public static <E> List<E> append(List<E> a, List<E> b) {
+    final var result = new ArrayList<E>(a.size() + b.size());
+    result.addAll(a);
+    result.addAll(b);
+    return result;
+  }
+
+  public static <T, U> Function<T, U> fallback(Function<T, U> primary, Function<T, U> fallback) {
+    return t -> {
+      final U result = primary.apply(t);
+      if (result == null) {
+        return fallback.apply(t);
+      }
+      return result;
+    };
+  }
+}
