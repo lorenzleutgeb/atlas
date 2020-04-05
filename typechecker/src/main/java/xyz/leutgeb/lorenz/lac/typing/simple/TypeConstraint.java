@@ -1,12 +1,14 @@
 package xyz.leutgeb.lorenz.lac.typing.simple;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.Substitution;
-import xyz.leutgeb.lorenz.lac.unification.UnificationProblem;
+import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 
 /**
  * Denotes that some signature (represented by a variable) must be a member of a signature class.
@@ -32,6 +34,17 @@ public class TypeConstraint {
     }
     this.constrained = Arrays.asList(binding);
     this.typeClass = typeClass;
+  }
+
+  public static Set<TypeConstraint> minimize(Set<TypeConstraint> constraints) {
+    var minimizedConstraints = new HashSet<TypeConstraint>();
+    for (var constraint : constraints) {
+      minimizedConstraints.removeIf(x -> !x.equals(constraint) && constraint.implies(x));
+      if (minimizedConstraints.stream().noneMatch(x -> x.implies(constraint))) {
+        minimizedConstraints.add(constraint);
+      }
+    }
+    return minimizedConstraints;
   }
 
   public boolean appliesTo(Type type) {
@@ -110,7 +123,7 @@ public class TypeConstraint {
             .collect(Collectors.joining(" "));
   }
 
-  public TypeConstraint wiggle(Substitution wiggled, UnificationProblem context) {
+  public TypeConstraint wiggle(Substitution wiggled, UnificationContext context) {
     return new TypeConstraint(
         typeClass,
         constrained.stream().map(t -> t.wiggle(wiggled, context)).collect(Collectors.toList()));

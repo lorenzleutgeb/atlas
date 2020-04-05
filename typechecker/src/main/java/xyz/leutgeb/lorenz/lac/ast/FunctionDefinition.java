@@ -6,6 +6,8 @@ import static guru.nidi.graphviz.model.Factory.graph;
 import static guru.nidi.graphviz.model.Factory.node;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
+import static java.util.stream.Collectors.toList;
+import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.minimize;
 
 import guru.nidi.graphviz.attribute.Records;
 import guru.nidi.graphviz.attribute.Shape;
@@ -18,22 +20,29 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import org.hipparchus.util.Pair;
+import org.jgrapht.graph.DirectedMultigraph;
+import org.jgrapht.nio.AttributeType;
+import org.jgrapht.nio.DefaultAttribute;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.Loader;
+import xyz.leutgeb.lorenz.lac.NidiExporter;
+import xyz.leutgeb.lorenz.lac.SizeEdge;
+import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.AnnotationHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemUnsatisfiableException;
@@ -44,9 +53,10 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.BoolType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.FunctionType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
+import xyz.leutgeb.lorenz.lac.unification.Generalizer;
+import xyz.leutgeb.lorenz.lac.unification.Substitution;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
-import xyz.leutgeb.lorenz.lac.unification.UnificationVariable;
 
 @Data
 @Log4j2
@@ -58,6 +68,7 @@ public class FunctionDefinition {
   private FunctionSignature inferredSignature;
   private FunctionSignature annotatedSignature;
   private Pair<Annotation, Annotation> annotation;
+  private org.jgrapht.Graph<Identifier, SizeEdge> sizeAnalysis;
 
   public FunctionDefinition(
       String moduleName,
@@ -72,57 +83,60 @@ public class FunctionDefinition {
     this.annotatedSignature = annotatedSignature;
   }
 
-  public FunctionSignature inferAnnotations(UnificationContext context)
-      throws UnificationError, TypeError {
+  public FunctionSignature stubSignature(UnificationContext problem) {
+    return inferredSignature =
+        new FunctionSignature(
+            emptySet(),
+            new FunctionType(
+                Stream.generate(problem::fresh).limit(arguments.size()).collect(toList()),
+                problem.fresh()));
+  }
+
+  public void infer(UnificationContext context) throws UnificationError, TypeError {
+    /*
     if (inferredSignature != null) {
       return inferredSignature;
     }
+    */
 
-    var sub = context.childWithNewUnfication();
-    List<Type> from = new ArrayList<>(arguments.size());
+    // var sub = context.childWithNewUnfication();
+    final var sub = context.childWithNewVariables(getFullyQualifiedName());
+    for (int i = 0; i < arguments.size(); i++) {
+      sub.putType(
+          arguments.get(i), inferredSignature.getType().getFrom().getElements().get(i), null);
+    }
 
-    if (annotatedSignature == null) {
-      for (String argument : arguments) {
-        Type var = sub.getProblem().fresh();
-        from.add(var);
-        sub.putType(argument, var);
-      }
-    } else {
+    // TODO: Maybe do this in stub?
+    if (annotatedSignature != null) {
       if (annotatedSignature.getType().getFrom().getElements().size() != arguments.size()) {
         throw new TypeError();
       }
       for (int i = 0; i < arguments.size(); i++) {
         Type ty = annotatedSignature.getType().getFrom().getElements().get(i);
-        UnificationVariable var = sub.getProblem().fresh();
-        from.add(var);
-        sub.putType(arguments.get(i), var);
-        sub.getProblem().addIfNotEqual(var, ty);
+        Type var = inferredSignature.getType().getFrom().getElements().get(i);
+        sub.addIfNotEqual(var, ty);
       }
+      sub.addIfNotEqual(inferredSignature.getType().getTo(), annotatedSignature.getType().getTo());
     }
 
-    UnificationVariable to = sub.getProblem().fresh();
-    if (annotatedSignature != null) {
-      sub.getProblem().addIfNotEqual(to, annotatedSignature.getType().getTo());
-    }
-    FunctionType result = new FunctionType(from, to);
-    sub.putSignature(getFullyQualifiedName(), new FunctionSignature(emptySet(), result));
+    sub.addIfNotEqual(inferredSignature.getType().getTo(), body.infer(sub));
+  }
 
-    sub.getProblem().addIfNotEqual(to, body.infer(sub));
-
-    var solution = sub.getProblem().solveAndGeneralize(result);
-
-    inferredSignature =
-        new FunctionSignature(
-            sub.getProblem().getConstraints().stream()
-                .map(tc -> tc.apply(solution))
-                .collect(Collectors.toSet()),
-            (FunctionType) solution.apply(result));
-    body.resolveType(solution);
+  public void resolve(Substitution solution, FunctionSignature signature)
+      throws TypeError.AnnotationMismatch {
+    var subsGenBase = solution.apply(signature.getType());
+    var generalizer = new Generalizer();
+    subsGenBase.generalize(generalizer);
+    var x = solution.compose(generalizer.toSubstitution());
+    final var relevantConstraints = signature.getConstraints();
+    var tmp = new FunctionSignature(relevantConstraints, signature.getType());
+    tmp = tmp.apply(x);
+    inferredSignature = new FunctionSignature(minimize(tmp.getConstraints()), tmp.getType());
+    body.resolveType(x);
     if (annotatedSignature != null && !inferredSignature.equals(annotatedSignature)) {
       throw new TypeError.AnnotationMismatch(
           getFullyQualifiedName(), annotatedSignature, inferredSignature);
     }
-    return inferredSignature;
   }
 
   public void normalize() {
@@ -155,14 +169,44 @@ public class FunctionDefinition {
     return ids;
   }
 
-  public Set<Constraint> inferAnnotations(
+  public void stubAnnotations(
       Map<String, Pair<Annotation, Annotation>> functionAnnotations,
       Map<String, Pair<Annotation, Annotation>> costFreeFunctionAnnotations,
-      AnnotatingGlobals globals,
-      OutputStream out)
-      throws UnificationError, TypeError, ConstraintSystemUnsatisfiableException {
-    if (inferredSignature == null) {
-      throw new IllegalStateException();
+      AnnotationHeuristic heuristic,
+      OutputStream out) {
+
+    sizeAnalysis = new DirectedMultigraph<Identifier, SizeEdge>(SizeEdge.class);
+    body.analyzeSizes(sizeAnalysis);
+
+    final NidiExporter<Identifier, SizeEdge> exporter =
+        new NidiExporter<>(
+            identifier ->
+                identifier.getName()
+                    + "_"
+                    + (identifier.getIntro() == null
+                        ? "null"
+                        : (identifier.getIntro().getFqn()
+                            + "_"
+                            + Util.stamp(identifier.getIntro().getExpression()))));
+    exporter.setVertexAttributeProvider(
+        v -> {
+          return Map.of("label", new DefaultAttribute<>(v.getName(), AttributeType.STRING));
+        });
+    exporter.setEdgeAttributeProvider(
+        e -> {
+          return Map.of(
+              // "label",
+              // new DefaultAttribute<>(e.getKind().toString(), AttributeType.STRING),
+              "color",
+              new DefaultAttribute<>(
+                  e.getKind().equals(SizeEdge.Kind.EQ) ? "blue4" : "red", AttributeType.STRING));
+        });
+    final var exp = exporter.transform(sizeAnalysis);
+    final var viz = Graphviz.fromGraph(exp);
+    try {
+      viz.render(Format.SVG).toOutputStream(out);
+    } catch (IOException e) {
+      e.printStackTrace();
     }
 
     final var treeLikeArguments = treeLikeArguments();
@@ -173,8 +217,8 @@ public class FunctionDefinition {
     if (predefined == null) {
       annotation =
           new Pair<>(
-              globals.getHeuristic().generate("args", treeLikeArguments.size()),
-              returnsTree ? globals.getHeuristic().generate("return", 1) : Annotation.empty());
+              heuristic.generate("args", treeLikeArguments.size()),
+              returnsTree ? heuristic.generate("return", 1) : Annotation.empty());
     } else {
       if (predefined.getFirst().size() != treeLikeArguments.size()) {
         throw new IllegalArgumentException(
@@ -201,11 +245,18 @@ public class FunctionDefinition {
 
     var costFreeAnnotation =
         new Pair<>(
-            globals.getHeuristic().generate("cfargs", annotation.getFirst()),
-            globals.getHeuristic().generate("cfreturn", annotation.getSecond()));
+            heuristic.generate("cfargs", annotation.getFirst()),
+            heuristic.generate("cfreturn", annotation.getSecond()));
 
     functionAnnotations.put(getFullyQualifiedName(), annotation);
-    // costFreeFunctionAnnotations.put(getFullyQualifiedName(), costFreeAnnotation);
+    costFreeFunctionAnnotations.put(getFullyQualifiedName(), costFreeAnnotation);
+  }
+
+  public Set<Constraint> infer(AnnotatingGlobals globals, OutputStream out)
+      throws UnificationError, TypeError, ConstraintSystemUnsatisfiableException {
+    if (inferredSignature == null) {
+      throw new IllegalStateException();
+    }
 
     /*
     var returnedAnnotation =
@@ -215,7 +266,7 @@ public class FunctionDefinition {
 
     final var obligation =
         new Obligation(
-            new AnnotatingContext(treeLikeArguments, annotation.getFirst()),
+            new AnnotatingContext(treeLikeArguments(), annotation.getFirst()),
             body,
             annotation.getSecond(),
             1);
@@ -323,7 +374,7 @@ public class FunctionDefinition {
   }
 
   public void unshare() {
-    body = body.unshare(new HashMap<>(), new IntIdGenerator());
+    body = body.unshare(new IntIdGenerator());
   }
 
   @Override

@@ -12,9 +12,8 @@ import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 
-public class Node implements Rule {
-  @Override
-  public RuleApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+public class Node {
+  public static Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
     final var expression = (Tuple) obligation.getExpression();
 
     final var leftId = ((Identifier) expression.getLeft()).getName();
@@ -35,7 +34,7 @@ public class Node implements Rule {
 
     final var rankCoefficient = obligation.getAnnotation().getRankCoefficient(0);
 
-    return RuleApplicationResult.onlyConstraints(
+    return Rule.ApplicationResult.onlyConstraints(
         Stream.concat(
                 Stream.of(
                     // q_1 = q_2 = q_{*}'

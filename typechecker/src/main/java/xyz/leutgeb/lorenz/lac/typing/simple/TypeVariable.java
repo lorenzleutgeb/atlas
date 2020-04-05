@@ -6,10 +6,10 @@ import xyz.leutgeb.lorenz.lac.unification.Equivalence;
 import xyz.leutgeb.lorenz.lac.unification.Generalizer;
 import xyz.leutgeb.lorenz.lac.unification.Substitution;
 import xyz.leutgeb.lorenz.lac.unification.TypeMismatch;
-import xyz.leutgeb.lorenz.lac.unification.UnificationProblem;
+import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationVariable;
 
-public class TypeVariable extends Type {
+public class TypeVariable implements Type {
   public static final TypeVariable ALPHA = new TypeVariable("α");
   public static final TypeVariable BETA = new TypeVariable("β");
   public static final TypeVariable GAMMA = new TypeVariable("γ");
@@ -35,12 +35,12 @@ public class TypeVariable extends Type {
   }
 
   @Override
-  public UnificationVariable wiggle(Substitution wiggled, UnificationProblem context) {
+  public UnificationVariable wiggle(Substitution wiggled, UnificationContext problem) {
     if (wiggled.isInDomain(this)) {
       return (UnificationVariable) wiggled.apply(this);
     }
 
-    var result = context.fresh();
+    var result = problem.fresh();
     wiggled.substitute(this, result);
     return result;
   }
@@ -53,6 +53,11 @@ public class TypeVariable extends Type {
   @Override
   public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
     throw new UnsupportedOperationException("cannot decompose type variable");
+  }
+
+  @Override
+  public boolean occurs(TypeVariable b) {
+    return equals(b);
   }
 
   @Override

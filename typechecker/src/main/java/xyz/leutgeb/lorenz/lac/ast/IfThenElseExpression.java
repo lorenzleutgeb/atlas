@@ -55,10 +55,10 @@ public class IfThenElseExpression extends Expression {
   @Override
   public xyz.leutgeb.lorenz.lac.typing.simple.types.Type inferInternal(UnificationContext context)
       throws UnificationError, TypeError {
-    var result = context.getProblem().fresh();
-    context.getProblem().addIfNotEqual(this, result, truthy.infer(context));
-    context.getProblem().addIfNotEqual(this, result, falsy.infer(context));
-    context.getProblem().addIfNotEqual(this, BoolType.INSTANCE, condition.infer(context));
+    var result = context.fresh();
+    context.addIfNotEqual(result, truthy.infer(context));
+    context.addIfNotEqual(result, falsy.infer(context));
+    context.addIfNotEqual(BoolType.INSTANCE, condition.infer(context));
     return result;
   }
 
@@ -113,14 +113,14 @@ public class IfThenElseExpression extends Expression {
   }
 
   @Override
-  public Expression unshare(Map<String, Integer> unshared, IntIdGenerator idGenerator) {
+  public Expression unshare(IntIdGenerator idGenerator) {
     if (!(condition instanceof Identifier)) {
       throw new IllegalStateException("must be in anf");
     }
 
     // First, ensure that subexpressions are unshared.
-    final var newT = truthy.unshare(unshared, idGenerator);
-    final var newF = falsy.unshare(unshared, idGenerator);
+    final var newT = truthy.unshare(idGenerator);
+    final var newF = falsy.unshare(idGenerator);
 
     Set<Identifier> freeT = newT.freeVariables();
     Set<Identifier> freeF = newF.freeVariables();
@@ -138,7 +138,7 @@ public class IfThenElseExpression extends Expression {
     }
 
     var target = pick(intersection);
-    var down = ShareExpression.clone(target, unshared, idGenerator);
+    var down = ShareExpression.clone(target, idGenerator);
     var result = ShareExpression.rename(target, down, Pair.create(newT, newF));
 
     var replacement =
@@ -149,7 +149,7 @@ public class IfThenElseExpression extends Expression {
             new IfThenElseExpression(
                 source, condition, result.getFirst(), result.getSecond(), type));
 
-    return intersection.size() > 1 ? replacement.unshare(unshared, idGenerator) : replacement;
+    return intersection.size() > 1 ? replacement.unshare(idGenerator) : replacement;
   }
 
   @Override

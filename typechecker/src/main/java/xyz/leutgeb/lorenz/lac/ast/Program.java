@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -30,23 +29,46 @@ import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemException
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemUnsatisfiableException;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
+import xyz.leutgeb.lorenz.lac.unification.Equivalence;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
 public class Program {
-  @Getter private final List<FunctionDefinition> functionDefinitions;
+  @Getter private final Map<String, FunctionDefinition> functionDefinitions;
+  private final List<Set<String>> order;
 
-  public Program(List<FunctionDefinition> functionDefinitions) {
-    functionDefinitions.forEach(Objects::requireNonNull);
+  public Program(Map<String, FunctionDefinition> functionDefinitions, List<Set<String>> order) {
+    // functionDefinitions.forEach(Objects::requireNonNull);
     this.functionDefinitions = functionDefinitions;
+    this.order = order;
   }
 
   public void infer() throws UnificationError, TypeError {
     normalize();
-    var ctx = UnificationContext.root();
-    for (var fd : functionDefinitions) {
-      ctx.putSignature(fd.getFullyQualifiedName(), fd.inferAnnotations(ctx.child()));
+    var root = UnificationContext.root();
+    for (Set<String> component : order) {
+      final var ctx = root.childWithNewProblem();
+      for (var fqn : component) {
+        var fd = get(fqn);
+        ctx.putSignature(fd.getFullyQualifiedName(), fd.stubSignature(ctx));
+      }
+
+      for (var fqn : component) {
+        var fd = get(fqn);
+        fd.infer(ctx);
+      }
+
+      var solution = Equivalence.solve(ctx.getEquivalences());
+      for (var fqn : component) {
+        var fd = get(fqn);
+        fd.resolve(solution, ctx.getSignatures().get(fqn));
+        ctx.putSignature(fqn, fd.getInferredSignature());
+      }
     }
+  }
+
+  private FunctionDefinition get(String fqn) {
+    return functionDefinitions.get(fqn);
   }
 
   public Optional<Map<String, Pair<Annotation, Annotation>>> solve()
@@ -66,31 +88,44 @@ public class Program {
       throws UnificationError, TypeError, ConstraintSystemException {
     final var costFreeFunctionAnnotations = new HashMap<String, Pair<Annotation, Annotation>>();
     final var name =
-        functionDefinitions.stream()
-            .map(FunctionDefinition::getName)
+        functionDefinitions.keySet().stream()
+            .map(fqn -> fqn.replace(".", "~"))
             .collect(Collectors.joining("+"));
 
     final var basePath = Paths.get(".", "out");
 
     unshare();
-    for (var fd : functionDefinitions) {
+    for (var entry : functionDefinitions.entrySet()) {
       try (final var out =
-          Files.newOutputStream(basePath.resolve(fd.getFullyQualifiedName() + "-unshared.ml"))) {
-        fd.printTo(new PrintStream(out));
+          Files.newOutputStream(
+              basePath.resolve(entry.getKey().replace(".", "~") + "-unshared.ml"))) {
+        entry.getValue().printTo(new PrintStream(out));
       } catch (IOException e) {
         e.printStackTrace();
       }
     }
 
-    final var accumulatedConstraints = new HashSet<Constraint>(outsideConstraints);
-    final var globals = new AnnotatingGlobals(functionAnnotations, costFreeFunctionAnnotations, 1);
+    final var accumulatedConstraints = new HashSet<>(outsideConstraints);
 
-    for (var fd : functionDefinitions) {
-      // inferAnnotation will add itself to functionAnnotations
+    for (var fd : functionDefinitions.values()) {
+      final var globals =
+          new AnnotatingGlobals(functionAnnotations, costFreeFunctionAnnotations, null, 1);
+      try (final var out =
+          Files.newOutputStream(basePath.resolve(fd.getFullyQualifiedName() + "-sizes.svg"))) {
+        fd.stubAnnotations(
+            functionAnnotations, costFreeFunctionAnnotations, globals.getHeuristic(), out);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+
+    for (var fd : functionDefinitions.values()) {
       try (final var out =
           Files.newOutputStream(basePath.resolve(fd.getFullyQualifiedName() + "-proof.svg"))) {
-        accumulatedConstraints.addAll(
-            fd.inferAnnotations(functionAnnotations, costFreeFunctionAnnotations, globals, out));
+        final var globals =
+            new AnnotatingGlobals(
+                functionAnnotations, costFreeFunctionAnnotations, fd.getSizeAnalysis(), 1);
+        accumulatedConstraints.addAll(fd.infer(globals, out));
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -127,28 +162,41 @@ public class Program {
       throw new ConstraintSystemUnsatisfiableException("constraint system is unsatisfiable");
     }
 
-    for (var fd : functionDefinitions) {
+    final var namesAsSet =
+        functionDefinitions.values().stream()
+            .map(FunctionDefinition::getFullyQualifiedName)
+            .collect(Collectors.joining(", ", "{", "}"));
+
+    final var single = functionDefinitions.size() == 1;
+
+    if (solution.isPresent() && !single) {
+      System.out.println(namesAsSet + ":");
+    }
+
+    for (var fd : functionDefinitions.values()) {
       // fd.printAnnotation(System.out);
-      try (final var out = Files.newOutputStream(basePath.resolve(fd.getName() + ".svg"))) {
+      try (final var out =
+          Files.newOutputStream(
+              basePath.resolve(fd.getFullyQualifiedName().replace(".", "~") + ".svg"))) {
         fd.toGraph(out);
       } catch (IOException e) {
         e.printStackTrace();
       }
       if (solution.isPresent()) {
         fd.substitute(solution.get());
+        if (!single) {
+          System.out.print("\t");
+        }
         fd.printAnnotation(System.out);
       }
     }
 
     if (solution.isEmpty()) {
       if (functionDefinitions.size() > 1) {
-        System.out.println(
-            functionDefinitions.stream()
-                    .map(FunctionDefinition::getFullyQualifiedName)
-                    .collect(Collectors.joining(", ", "{", "}"))
-                + " | UNSAT");
+        System.out.println(namesAsSet + " | UNSAT");
       } else {
-        System.out.println(functionDefinitions.get(0).getFullyQualifiedName() + " | UNSAT");
+        System.out.println(
+            functionDefinitions.values().iterator().next().getFullyQualifiedName() + " | UNSAT");
       }
       return empty();
     }
@@ -161,7 +209,7 @@ public class Program {
     } catch (UnificationError | TypeError unificationError) {
       throw new RuntimeException(unificationError);
     }
-    for (var entry : functionDefinitions) {
+    for (var entry : functionDefinitions.values()) {
       entry.printTo(out);
       out.println();
     }
@@ -169,13 +217,13 @@ public class Program {
 
   private void normalize() {
     // Maybe let the Loader normalize directly?
-    for (var fd : functionDefinitions) {
+    for (var fd : functionDefinitions.values()) {
       fd.normalize();
     }
   }
 
   private void unshare() {
-    for (var fd : functionDefinitions) {
+    for (var fd : functionDefinitions.values()) {
       fd.unshare();
     }
   }
@@ -184,7 +232,7 @@ public class Program {
     // TODO(lorenzleutgeb): It seems that `infer` is not idempotent. If we call it here,
     // we get strange results for the types of function definitions in this program.
     // That is wrong, since `infer` should indeed be idempotent.
-    for (var entry : functionDefinitions) {
+    for (var entry : functionDefinitions.values()) {
       entry.printHaskellTo(out);
       out.println();
     }

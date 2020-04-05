@@ -4,10 +4,10 @@ import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collection;
+import java.util.LinkedList;
+import java.util.ListIterator;
 import java.util.Optional;
-import javax.annotation.Nullable;
 import lombok.Value;
-import xyz.leutgeb.lorenz.lac.ast.Expression;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 
 @Value
@@ -15,10 +15,7 @@ public class Equivalence {
   Type left;
   Type right;
 
-  /** Optionally, keep the expression that justifies this equivalence. */
-  @Nullable Expression justification;
-
-  public Equivalence(Type left, Type right, @Nullable Expression justification) {
+  public Equivalence(Type left, Type right) {
     requireNonNull(left);
     requireNonNull(right);
 
@@ -34,19 +31,13 @@ public class Equivalence {
       this.left = left;
       this.right = right;
     }
-    this.justification = justification;
-  }
-
-  /** Constructs an instance without justification. Use with care. */
-  public Equivalence(Type left, Type right) {
-    this(left, right, null);
   }
 
   public Optional<Equivalence> substitute(UnificationVariable variable, Type result) {
     var leftSubstitute = left.substitute(variable, result);
     var rightSubstitute = right.substitute(variable, result);
     if (!leftSubstitute.equals(rightSubstitute)) {
-      return Optional.of(new Equivalence(leftSubstitute, rightSubstitute, justification));
+      return Optional.of(new Equivalence(leftSubstitute, rightSubstitute));
     }
     return Optional.empty();
   }
@@ -58,7 +49,7 @@ public class Equivalence {
   }
 
   public Collection<Equivalence> unify() throws UnificationError {
-    if (left == right) {
+    if (left == right || left.equals(right)) {
       return emptyList();
     }
     return left.decompose(right);
@@ -67,5 +58,35 @@ public class Equivalence {
   @Override
   public String toString() {
     return left + " ≈ " + right;
+  }
+
+  public static Substitution solve(LinkedList<Equivalence> equivalences) throws UnificationError {
+    final var solution = new Substitution();
+    while (!equivalences.isEmpty()) {
+      Equivalence e = equivalences.poll();
+      var more = e.unify();
+
+      if (!more.isEmpty()) {
+        equivalences.addAll(more);
+        continue;
+      }
+
+      if (!(e.getLeft() instanceof UnificationVariable)) {
+        continue;
+      }
+
+      var left = (UnificationVariable) e.getLeft();
+      e.occurs();
+
+      // Substitute
+      ListIterator<Equivalence> iterator = equivalences.listIterator();
+      while (iterator.hasNext()) {
+        Optional<Equivalence> substitute = iterator.next().substitute(left, e.getRight());
+        substitute.ifPresent(iterator::set);
+      }
+
+      solution.substitute(left, e.getRight());
+    }
+    return solution;
   }
 }

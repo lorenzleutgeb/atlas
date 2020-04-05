@@ -19,9 +19,8 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 
-public class Let implements Rule {
-  @Override
-  public RuleApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+public class Let {
+  public static Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
     final var expression = (LetExpression) obligation.getExpression();
     final var declared = expression.getDeclared();
     final var value = expression.getValue();
@@ -236,7 +235,7 @@ public class Let implements Rule {
                     .add(
                         new EqualityConstraint(
                             rEntry.getValue(),
-                            gammaDeltaQ.getCoefficient(
+                            gammaDeltaQ.getCoefficientOrZero(
                                 id ->
                                     varsForGamma.contains(id)
                                         ? 0
@@ -245,6 +244,6 @@ public class Let implements Rule {
               });
     }
 
-    return new RuleApplicationResult(List.of(p, r), crossConstraints);
+    return new Rule.ApplicationResult(List.of(p, r), crossConstraints);
   }
 }

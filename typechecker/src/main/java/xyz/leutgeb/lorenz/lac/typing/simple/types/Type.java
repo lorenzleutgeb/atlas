@@ -7,38 +7,21 @@ import xyz.leutgeb.lorenz.lac.unification.Generalizer;
 import xyz.leutgeb.lorenz.lac.unification.Substitution;
 import xyz.leutgeb.lorenz.lac.unification.TypeMismatch;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
-import xyz.leutgeb.lorenz.lac.unification.UnificationProblem;
-import xyz.leutgeb.lorenz.lac.unification.UnificationVariable;
 
-public abstract class Type {
-  public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
-    throw new UnsupportedOperationException("not implemented");
+public interface Type {
+  Collection<Equivalence> decompose(Type b) throws TypeMismatch;
+
+  boolean occurs(TypeVariable b);
+
+  Type substitute(TypeVariable v, Type t);
+
+  Type generalize(Generalizer g);
+
+  Type wiggle(Substitution wiggled, UnificationContext context);
+
+  default Type wiggle(UnificationContext context) {
+    return wiggle(new Substitution(), context);
   }
 
-  public boolean occurs(UnificationVariable b) {
-    return false;
-  }
-
-  public Type substitute(TypeVariable v, Type t) {
-    return this;
-  }
-
-  public Type generalize(Generalizer g) {
-    return this;
-  }
-
-  public Type wiggle(Substitution wiggled, UnificationProblem context) {
-    return this;
-  }
-
-  public Type wiggle(UnificationProblem problem) {
-    return wiggle(new Substitution(), problem);
-  }
-
-  public Type wiggle(UnificationContext context) {
-    return this;
-    // return wiggle(context.getProblem());
-  }
-
-  public abstract String toHaskell();
+  String toHaskell();
 }

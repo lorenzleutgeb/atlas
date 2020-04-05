@@ -8,14 +8,20 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.log4j.Log4j2;
+import xyz.leutgeb.lorenz.lac.IntIdGenerator;
+import xyz.leutgeb.lorenz.lac.Intro;
 import xyz.leutgeb.lorenz.lac.Util;
+import xyz.leutgeb.lorenz.lac.ast.Expression;
 import xyz.leutgeb.lorenz.lac.typing.simple.FunctionSignature;
+import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.FunctionType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 
@@ -23,49 +29,97 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 @Value
 public class UnificationContext {
   UnificationContext parent;
+
   /**
-   * Holds types for identifiers. This is pre-populated for constants (true, false) and extended
-   * through {@link #putType(String, Type)}, for example by walking over {@link
-   * xyz.leutgeb.lorenz.lac.ast.LetExpression}.
+   * Holds types for identifiers. This is extended through {@link #putType(String, Type)}, for
+   * example by walking over {@link xyz.leutgeb.lorenz.lac.ast.LetExpression}.
    */
   Map<String, Type> types;
-  /** For simple signature inference. */
-  UnificationProblem problem;
+
+  Map<String, Intro> intros;
 
   Set<String> hidden;
+
   Map<String, FunctionSignature> signatures;
 
-  private UnificationContext(UnificationContext parent) {
-    this(parent, parent.problem);
-  }
+  String functionInScope;
 
-  private UnificationContext() {
-    this(null, new UnificationProblem());
-  }
+  LinkedList<Equivalence> equivalences;
 
-  private UnificationContext(UnificationContext parent, UnificationProblem problem) {
+  IntIdGenerator intIdGenerator;
+
+  private UnificationContext(
+      UnificationContext parent,
+      Map<String, Type> types,
+      Map<String, Intro> intros,
+      Set<String> hidden,
+      Map<String, FunctionSignature> signatures,
+      String functionInScope,
+      LinkedList<Equivalence> equivalences,
+      IntIdGenerator intIdGenerator) {
     this.parent = parent;
-    this.problem = problem;
-    this.types = new LinkedHashMap<>();
-    this.hidden = new HashSet<>();
-    this.signatures = parent == null ? new HashMap<>() : parent.signatures;
+    this.types = types;
+    this.intros = intros;
+    this.hidden = hidden;
+    this.signatures = signatures;
+    this.functionInScope = functionInScope;
+    this.equivalences = equivalences;
+    this.intIdGenerator = intIdGenerator;
   }
 
   public static UnificationContext root() {
-    return new UnificationContext();
+    return new UnificationContext(
+        null,
+        new LinkedHashMap<>(),
+        new HashMap<>(),
+        new HashSet<>(),
+        new HashMap<>(),
+        null,
+        new LinkedList<>(),
+        new IntIdGenerator());
   }
 
   public UnificationContext child() {
-    return new UnificationContext(this);
+    return new UnificationContext(
+        this,
+        new LinkedHashMap<>(),
+        new HashMap<>(),
+        new HashSet<>(),
+        this.getSignatures(),
+        this.functionInScope,
+        this.equivalences,
+        this.intIdGenerator);
   }
 
-  public UnificationContext childWithNewUnfication() {
-    return new UnificationContext(this, new UnificationProblem());
+  public UnificationContext childWithNewVariables(String fqn) {
+    return new UnificationContext(
+        null,
+        new LinkedHashMap<>(),
+        new HashMap<>(),
+        new HashSet<>(),
+        this.getSignatures(),
+        fqn,
+        this.equivalences,
+        this.intIdGenerator);
+  }
+
+  public UnificationContext childWithNewProblem() {
+    return new UnificationContext(
+        null,
+        new LinkedHashMap<>(),
+        new HashMap<>(),
+        new HashSet<>(),
+        this.getSignatures(),
+        null,
+        new LinkedList<>(),
+        new IntIdGenerator());
   }
 
   public String toString() {
     return "["
-        + this.problem.toString()
+        + this.equivalences.stream()
+            .map(Object::toString)
+            .collect(Collectors.joining(", ", "{", "}"))
         + " {"
         + this.types.entrySet().stream()
             .map(e -> e.getKey() + " :: " + e.getValue())
@@ -74,41 +128,66 @@ public class UnificationContext {
   }
 
   /** Recursively looks up the signature of some identifier (given as {@link String}). */
-  public @Nonnull Type lookupType(final String key) {
-    Type t = lookupTypeInternal(key);
+  public @Nonnull Type getType(final String id) throws TypeError {
+    if (isHiddenRecursive(id)) {
+      throw new TypeError("'" + id + "' is out of scope.");
+    }
+    Type t = getTypeRecursive(id);
     if (t != null) {
       return t;
     } else {
-      var similar = Util.similar(key, iterateIdentifiers(), 0.5, 4);
+      var similar = Util.similar(id, iterateIdentifiers(), 0.5, 4);
+      var message = "'" + id + "' is not defined.";
       if (similar.isEmpty()) {
-        throw new RuntimeException("'" + key + "' is not defined ");
+        message += " (Did you mean " + similar + "?)";
       }
-      throw new RuntimeException("'" + key + "' is not defined. (Did you mean " + similar + "?)");
+      throw new TypeError(message);
     }
   }
 
-  public @Nonnull FunctionSignature lookupSignature(final String fqn) {
+  public Intro getIntro(final String id) {
+    return getIntroRecursive(id);
+  }
+
+  public @Nonnull FunctionSignature getSignature(final String fqn) throws TypeError {
     FunctionSignature t = signatures.get(fqn);
     if (t != null) {
       return t;
     } else {
-      var similar = Util.similar(fqn, iterateIdentifiers(), 0.5, 4);
+      var similar = Util.similar(fqn, signatures.keySet().iterator(), 0.5, 4);
+      var message = "'" + fqn + "' is not defined.";
       if (similar.isEmpty()) {
-        throw new RuntimeException("'" + fqn + "' is not defined ");
+        message += " (Did you mean " + similar + "?)";
       }
-      throw new RuntimeException("'" + fqn + "' is not defined. (Did you mean " + similar + "?)");
+      throw new TypeError(message);
     }
   }
 
-  private Type lookupTypeInternal(final String key) {
-    if (hidden.contains(key)) {
-      return null;
-    }
+  private Type getTypeInternal(final String key) {
+    return isHiddenRecursive(key) ? null : getTypeRecursive(key);
+  }
+
+  private boolean isHiddenRecursive(final String key) {
+    return hidden.contains(key) || (parent != null && parent.isHiddenRecursive(key));
+  }
+
+  private Type getTypeRecursive(final String key) {
     Type t = types.get(key);
     if (t != null) {
       return t;
     } else if (parent != null) {
-      return parent.lookupTypeInternal(key);
+      return parent.getTypeRecursive(key);
+    } else {
+      return null;
+    }
+  }
+
+  private Intro getIntroRecursive(final String key) {
+    Intro t = intros.get(key);
+    if (t != null) {
+      return t;
+    } else if (parent != null) {
+      return parent.getIntroRecursive(key);
     } else {
       return null;
     }
@@ -134,7 +213,7 @@ public class UnificationContext {
     return result;
   }
 
-  public void putType(String key, Type value) {
+  public void putType(String key, Type value, Expression intro) {
     if (value instanceof FunctionType) {
       throw new IllegalArgumentException("use putSignature");
     }
@@ -144,11 +223,12 @@ public class UnificationContext {
       return;
     }
 
-    if (hasType(key)) {
+    if (getTypeInternal(key) != null) {
       throw new RuntimeException("hiding of variables not possible (affected: '" + key + "')");
     }
 
     types.put(key, value);
+    intros.put(key, new Intro(this.functionInScope, intro));
   }
 
   private Iterator<String> iterateIdentifiers() {
@@ -164,7 +244,20 @@ public class UnificationContext {
     signatures.put(fullyQualifiedName, functionSignature);
   }
 
+  // TODO: Find out why exactly we need this method.
   public boolean hasSignature(String fqn) {
     return signatures.containsKey(fqn);
+  }
+
+  public void addIfNotEqual(Type a, Type b) {
+    Objects.requireNonNull(a);
+    Objects.requireNonNull(b);
+    if (!a.equals(b)) {
+      equivalences.add(new Equivalence(a, b));
+    }
+  }
+
+  public UnificationVariable fresh() {
+    return new UnificationVariable(intIdGenerator.next());
   }
 }

@@ -1,7 +1,13 @@
 package xyz.leutgeb.lorenz.lac.typing.simple;
 
 public class TypeError extends Exception {
-  static class NotInContext extends TypeError {
+  public TypeError() {}
+
+  public TypeError(String message) {
+    super(message);
+  }
+
+  public static class NotInContext extends TypeError {
     private final String name;
 
     public NotInContext(String name) {

@@ -121,6 +121,13 @@ public class Util {
     return IntStream.generate(() -> 0).limit(n).boxed().collect(Collectors.toList());
   }
 
+  public static boolean isConstant(List<Integer> xs) {
+    if (xs.size() < 2) {
+      return true;
+    }
+    return xs.subList(0, xs.size() - 1).stream().allMatch(x -> x == 0);
+  }
+
   public static RuntimeException bug(String message) {
     return new RuntimeException("bug: " + message);
   }
@@ -143,6 +150,9 @@ public class Util {
   }
 
   public static String stamp(Object o) {
+    if (o == null) {
+      return "null";
+    }
     return o.getClass().getSimpleName() + "_" + System.identityHashCode(o);
   }
 

@@ -16,7 +16,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.AnnotationHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 
-public class Match implements Rule {
+public class Match {
   public static AnnotatingContext pop(
       AnnotatingContext that, AnnotationHeuristic heuristic, String toPop) {
     final var newIds = new ArrayList<String>(that.size() - 1);
@@ -37,8 +37,7 @@ public class Match implements Rule {
     return heuristic.generateContext("extend", newIds);
   }
 
-  @Override
-  public RuleApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+  public static Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
     final var expression = (MatchExpression) obligation.getExpression();
 
     final var scrutinee = (Identifier) expression.getScrut();
@@ -141,6 +140,6 @@ public class Match implements Rule {
                   gammaxq.getRankCoefficient(id), gammaxsr.getRankCoefficient(id)));
     }
 
-    return new RuleApplicationResult(List.of(p, r), Collections.emptyList());
+    return new Rule.ApplicationResult(List.of(p, r), Collections.emptyList());
   }
 }

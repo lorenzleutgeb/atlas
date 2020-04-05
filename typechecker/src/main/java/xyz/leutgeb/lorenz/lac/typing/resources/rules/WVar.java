@@ -21,7 +21,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 
-public class WVar implements Rule {
+public class WVar {
   /**
    * Preconditions:
    *
@@ -73,8 +73,7 @@ public class WVar implements Rule {
     return difference(idsInContext, idsInExpression);
   }
 
-  @Override
-  public RuleApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+  public static Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
     final var candidates = redundantIds(obligation);
 
     if (candidates.isEmpty()) {
@@ -90,7 +89,7 @@ public class WVar implements Rule {
 
     final var gammaR = globals.getHeuristic().generateContext("weaken", remainingIds);
 
-    return new RuleApplicationResult(
+    return new Rule.ApplicationResult(
         singletonList(
             Pair.create(
                 new Obligation(

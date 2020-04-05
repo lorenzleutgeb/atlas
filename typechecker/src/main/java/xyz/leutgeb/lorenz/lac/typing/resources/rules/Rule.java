@@ -15,24 +15,23 @@ import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 
-public interface Rule
-    extends BiFunction<Obligation, AnnotatingGlobals, Rule.RuleApplicationResult> {
+public interface Rule extends BiFunction<Obligation, AnnotatingGlobals, Rule.ApplicationResult> {
   @Value
-  class RuleApplicationResult {
+  class ApplicationResult {
     @Nonnull @NonNull List<Pair<Obligation, List<Constraint>>> obligations;
     @Nonnull @NonNull List<Constraint> generalConstraints;
 
-    public static RuleApplicationResult empty() {
-      return new RuleApplicationResult(emptyList(), emptyList());
+    public static ApplicationResult empty() {
+      return new ApplicationResult(emptyList(), emptyList());
     }
 
-    public static RuleApplicationResult onlyConstraints(List<Constraint> constraints) {
-      return new RuleApplicationResult(
+    public static ApplicationResult onlyConstraints(List<Constraint> constraints) {
+      return new ApplicationResult(
           singletonList(Pair.create(Obligation.nothing(), constraints)), emptyList());
     }
 
-    public static RuleApplicationResult onlyObligations(List<Obligation> obligations) {
-      return new RuleApplicationResult(
+    public static ApplicationResult onlyObligations(List<Obligation> obligations) {
+      return new ApplicationResult(
           obligations.stream()
               .map(k -> Pair.create(k, (List<Constraint>) new ArrayList<Constraint>()))
               .collect(Collectors.toList()),

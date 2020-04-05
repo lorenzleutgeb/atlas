@@ -9,12 +9,11 @@ import xyz.leutgeb.lorenz.lac.unification.Equivalence;
 import xyz.leutgeb.lorenz.lac.unification.Generalizer;
 import xyz.leutgeb.lorenz.lac.unification.Substitution;
 import xyz.leutgeb.lorenz.lac.unification.TypeMismatch;
-import xyz.leutgeb.lorenz.lac.unification.UnificationProblem;
-import xyz.leutgeb.lorenz.lac.unification.UnificationVariable;
+import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 
 @Value
 @EqualsAndHashCode(callSuper = false)
-public class TreeType extends Type {
+public class TreeType implements Type {
   TypeVariable elementType;
 
   public TreeType(TypeVariable elementType) {
@@ -50,7 +49,7 @@ public class TreeType extends Type {
   }
 
   @Override
-  public Type wiggle(Substitution wiggled, UnificationProblem context) {
+  public Type wiggle(Substitution wiggled, UnificationContext context) {
     return new TreeType(elementType.wiggle(wiggled, context));
   }
 
@@ -65,7 +64,7 @@ public class TreeType extends Type {
   }
 
   @Override
-  public boolean occurs(UnificationVariable b) {
+  public boolean occurs(TypeVariable b) {
     return elementType.equals(b);
   }
 }

@@ -63,7 +63,8 @@ public class Haskell implements Runnable {
     }
     Multimap<String, FunctionDefinition> output = ArrayListMultimap.create();
     Multimap<String, String> imports = HashMultimap.create();
-    for (var fd : program.getFunctionDefinitions()) {
+    for (var entry : program.getFunctionDefinitions().entrySet()) {
+      var fd = entry.getValue();
       if (pattern.asMatchPredicate().test(fd.getFullyQualifiedName())) {
         output.put(fd.getModuleName(), fd);
         imports.putAll(

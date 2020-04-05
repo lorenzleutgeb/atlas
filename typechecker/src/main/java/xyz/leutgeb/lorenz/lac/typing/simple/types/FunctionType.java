@@ -14,12 +14,11 @@ import xyz.leutgeb.lorenz.lac.unification.Equivalence;
 import xyz.leutgeb.lorenz.lac.unification.Generalizer;
 import xyz.leutgeb.lorenz.lac.unification.Substitution;
 import xyz.leutgeb.lorenz.lac.unification.TypeMismatch;
-import xyz.leutgeb.lorenz.lac.unification.UnificationProblem;
-import xyz.leutgeb.lorenz.lac.unification.UnificationVariable;
+import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 
 @Value
 @EqualsAndHashCode(callSuper = false)
-public class FunctionType extends Type {
+public class FunctionType implements Type {
   ProductType from;
   Type to;
 
@@ -68,12 +67,12 @@ public class FunctionType extends Type {
     return new FunctionType((ProductType) from.substitute(v, t), to.substitute(v, t));
   }
 
-  public boolean occurs(UnificationVariable v) {
+  public boolean occurs(TypeVariable v) {
     return from.occurs(v) || to.occurs(v);
   }
 
   @Override
-  public Type wiggle(Substitution wiggled, UnificationProblem context) {
+  public Type wiggle(Substitution wiggled, UnificationContext context) {
     return new FunctionType(
         (ProductType) from.wiggle(wiggled, context), to.wiggle(wiggled, context));
   }

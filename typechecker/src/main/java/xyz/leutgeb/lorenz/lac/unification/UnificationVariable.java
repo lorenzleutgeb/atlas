@@ -28,7 +28,7 @@ public class UnificationVariable extends TypeVariable {
   }
 
   @Override
-  public UnificationVariable wiggle(Substitution wiggled, UnificationProblem context) {
+  public UnificationVariable wiggle(Substitution wiggled, UnificationContext problem) {
     return this;
   }
 

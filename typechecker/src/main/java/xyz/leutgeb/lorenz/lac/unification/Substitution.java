@@ -35,6 +35,9 @@ public class Substitution implements Function<Type, Type> {
   }
 
   private void put(TypeVariable variable, Type target) {
+    if (variable == target) {
+      return;
+    }
     if (variable instanceof UnificationVariable) {
       if (target.occurs((UnificationVariable) variable)) {
         throw new IllegalArgumentException("eager occurs check failed");

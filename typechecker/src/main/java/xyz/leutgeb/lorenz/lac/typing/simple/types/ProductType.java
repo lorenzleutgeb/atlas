@@ -13,12 +13,11 @@ import xyz.leutgeb.lorenz.lac.unification.Equivalence;
 import xyz.leutgeb.lorenz.lac.unification.Generalizer;
 import xyz.leutgeb.lorenz.lac.unification.Substitution;
 import xyz.leutgeb.lorenz.lac.unification.TypeMismatch;
-import xyz.leutgeb.lorenz.lac.unification.UnificationProblem;
-import xyz.leutgeb.lorenz.lac.unification.UnificationVariable;
+import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 
 @Value
 @EqualsAndHashCode(callSuper = false)
-public class ProductType extends Type {
+public class ProductType implements Type {
   List<Type> elements;
 
   @Override
@@ -50,7 +49,7 @@ public class ProductType extends Type {
   }
 
   @Override
-  public Type wiggle(Substitution wiggled, UnificationProblem context) {
+  public Type wiggle(Substitution wiggled, UnificationContext context) {
     return map(x -> x.wiggle(wiggled, context));
   }
 
@@ -83,7 +82,7 @@ public class ProductType extends Type {
   }
 
   @Override
-  public boolean occurs(UnificationVariable b) {
+  public boolean occurs(TypeVariable b) {
     return stream().anyMatch(x -> x.occurs(b));
   }
 

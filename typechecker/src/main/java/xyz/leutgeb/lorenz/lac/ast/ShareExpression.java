@@ -10,7 +10,9 @@ import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.hipparchus.util.Pair;
+import org.jgrapht.Graph;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
+import xyz.leutgeb.lorenz.lac.SizeEdge;
 import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
@@ -48,7 +50,11 @@ public class ShareExpression extends Expression {
   }
 
   public static Pair<Identifier, Identifier> clone(
-      Identifier identifier, Map<String, Integer> unshared, IntIdGenerator idGenerator) {
+      Identifier identifier, IntIdGenerator idGenerator) {
+    // TODO: Do not take intro from above, but really use the share expression that resulted as the
+    // intro.
+    final var intro = identifier.getIntro();
+
     final var primeIndex = identifier.getName().indexOf("'");
     final var rawIdentifier =
         identifier
@@ -57,11 +63,15 @@ public class ShareExpression extends Expression {
 
     return new Pair<>(
         new Identifier(
-            identifier.getSource(), rawIdentifier + "'" + idGenerator.next(), identifier.getType()),
+            identifier.getSource(),
+            rawIdentifier + "'" + idGenerator.next(),
+            identifier.getType(),
+            intro),
         new Identifier(
             identifier.getSource(),
             rawIdentifier + "'" + idGenerator.next(),
-            identifier.getType()));
+            identifier.getType(),
+            intro));
 
     /*
     final var primeIndex = identifier.getName().indexOf("'");
@@ -94,13 +104,13 @@ public class ShareExpression extends Expression {
   @Override
   protected Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
     var sub = context.child();
-    sub.putType(down.getFirst().getName(), up.infer(sub));
-    sub.putType(down.getSecond().getName(), up.infer(sub));
+    sub.putType(down.getFirst().getName(), up.infer(sub), this);
+    sub.putType(down.getSecond().getName(), up.infer(sub), this);
     return scope.infer(sub);
   }
 
   @Override
-  public Expression unshare(Map<String, Integer> unshared, IntIdGenerator idGenerator) {
+  public Expression unshare(IntIdGenerator idGenerator) {
     // throw new IllegalStateException("calling unshare on a ShareExpression is wrong, since the
     // translation is top-down");
     return this;
@@ -141,5 +151,17 @@ public class ShareExpression extends Expression {
     out.println();
     indent(out, indentation - 1);
     out.print(")");
+  }
+
+  @Override
+  public void analyzeSizes(Graph<Identifier, SizeEdge> sizeGraph) {
+    super.analyzeSizes(sizeGraph);
+    sizeGraph.addVertex(up);
+    sizeGraph.addVertex(down.getFirst());
+    sizeGraph.addVertex(down.getSecond());
+    sizeGraph.addEdge(up, down.getFirst(), SizeEdge.eq());
+    sizeGraph.addEdge(up, down.getSecond(), SizeEdge.eq());
+    sizeGraph.addEdge(down.getSecond(), up, SizeEdge.eq());
+    sizeGraph.addEdge(down.getFirst(), up, SizeEdge.eq());
   }
 }

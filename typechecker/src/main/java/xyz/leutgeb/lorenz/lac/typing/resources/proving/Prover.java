@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources.proving;
 
 import static xyz.leutgeb.lorenz.lac.Util.bug;
 import static xyz.leutgeb.lorenz.lac.Util.stack;
+import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF;
 
 import guru.nidi.graphviz.attribute.Label;
 import guru.nidi.graphviz.engine.Format;
@@ -36,6 +37,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.App;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Cmp;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Ite;
+import xyz.leutgeb.lorenz.lac.typing.resources.rules.Leaf;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Let;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Match;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Node;
@@ -47,16 +49,17 @@ import xyz.leutgeb.lorenz.lac.typing.resources.rules.WVar;
 
 @Log4j2
 public class Prover {
-  private static final Let letRule = new Let();
-  private static final App applicationRule = new App();
-  private static final Cmp comparisonRule = new Cmp();
-  private static final Ite ifThenElseRule = new Ite();
-  private static final Match matchRule = new Match();
-  private static final Node nodeRule = new Node();
-  private static final Share shareRule = new Share();
-  private static final Var variableRule = new Var();
-  private static final WVar weakenVariableRule = new WVar();
-  private static final W weakenRule = new W();
+  private static final Rule letRule = Let::apply;
+  private static final Rule applicationRule = App::apply;
+  private static final Rule comparisonRule = Cmp::apply;
+  private static final Rule ifThenElseRule = Ite::apply;
+  private static final Rule matchRule = Match::apply;
+  private static final Rule nodeRule = Node::apply;
+  private static final Rule shareRule = Share::apply;
+  private static final Rule variableRule = Var::apply;
+  private static final Rule weakenVariableRule = WVar::apply;
+  private static final Rule weakenRule = W::apply;
+  private static final Rule leafRule = Leaf::apply;
 
   /** Translates given obligation into a set of constraints that would prove given obligation. */
   public static Set<Constraint> prove(
@@ -78,7 +81,7 @@ public class Prover {
       final var rules = chooseRules(top);
 
       var nextObligation = top;
-      Rule.RuleApplicationResult ruleResult = null;
+      Rule.ApplicationResult ruleResult = null;
 
       while (!rules.isEmpty()) {
         final var rule = rules.pop();
@@ -194,7 +197,11 @@ public class Prover {
     } else if (e instanceof CallExpression) {
       return applicationRule;
     } else if (e instanceof Identifier) {
-      return variableRule;
+      if (LEAF.equals(e)) {
+        return leafRule;
+      } else {
+        return variableRule;
+      }
     } else if (e instanceof IfThenElseExpression) {
       return ifThenElseRule;
     } else if (e instanceof MatchExpression) {
@@ -204,7 +211,8 @@ public class Prover {
     } else if (e instanceof ShareExpression) {
       return shareRule;
     } else {
-      throw bug("could not choose a rule");
+      throw bug(
+          "could not choose a rule for expression of type " + e.getClass().getCanonicalName());
     }
   }
 }

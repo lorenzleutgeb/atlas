@@ -5,8 +5,11 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Value;
 import org.hipparchus.util.Pair;
+import org.jgrapht.Graph;
+import xyz.leutgeb.lorenz.lac.SizeEdge;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.AnnotationHeuristic;
-import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.RangeHeuristic;
+import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
 
 @Value
 public final class AnnotatingGlobals {
@@ -17,17 +20,21 @@ public final class AnnotatingGlobals {
   private final Map<String, Pair<Annotation, Annotation>> costFreeFunctionAnnotations;
 
   private final int cost;
-  private final AnnotationHeuristic heuristic = RangeHeuristic.DEFAULT;
+  private final AnnotationHeuristic heuristic = SmartRangeHeuristic.DEFAULT;
+
+  private final Graph<Identifier, SizeEdge> sizeAnalysis;
 
   public AnnotatingGlobals(
       Map<String, Pair<Annotation, Annotation>> functionAnnotations,
       Map<String, Pair<Annotation, Annotation>> costFreeFunctionAnnotations,
+      Graph<Identifier, SizeEdge> sizeAnalysis,
       int cost) {
     if (!(cost == 0 || cost == 1)) {
       throw new IllegalArgumentException("cost must be one or zero");
     }
     this.costFreeFunctionAnnotations = costFreeFunctionAnnotations;
     this.functionAnnotations = functionAnnotations;
+    this.sizeAnalysis = sizeAnalysis;
     this.cost = cost;
   }
 
@@ -35,7 +42,7 @@ public final class AnnotatingGlobals {
     if (cost == 0) {
       return this;
     }
-    return new AnnotatingGlobals(functionAnnotations, costFreeFunctionAnnotations, 0);
+    return new AnnotatingGlobals(functionAnnotations, costFreeFunctionAnnotations, sizeAnalysis, 0);
   }
 
   public boolean isCostFree() {

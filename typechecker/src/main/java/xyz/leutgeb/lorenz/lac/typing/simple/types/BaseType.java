@@ -6,18 +6,18 @@ import xyz.leutgeb.lorenz.lac.unification.Equivalence;
 import xyz.leutgeb.lorenz.lac.unification.TypeMismatch;
 
 @Deprecated
-public class BaseType extends Type {
+public class BaseType /* implements Type */ {
   public static final BaseType INSTANCE = new BaseType();
 
-  @Override
+  // @Override
   public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
-    if (!(b instanceof BaseType)) {
-      throw new TypeMismatch(this, b);
-    }
+    // if (!(b instanceof BaseType)) {
+    //  throw new TypeMismatch(this, b);
+    // }
     return Collections.emptyList();
   }
 
-  @Override
+  // @Override
   public String toHaskell() {
     return "Integer";
   }

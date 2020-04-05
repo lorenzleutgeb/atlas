@@ -2,7 +2,9 @@ package xyz.leutgeb.lorenz.lac.ast;
 
 import static com.google.common.collect.Sets.union;
 
+import com.google.common.collect.Sets;
 import java.io.PrintStream;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -15,6 +17,7 @@ import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
+import xyz.leutgeb.lorenz.lac.typing.simple.FunctionSignature;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeClass;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
@@ -58,18 +61,27 @@ public class BooleanExpression extends Expression {
   @Override
   public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
     // The next two lines hide polymorphism in favor of the "abstract base signature".
-    // context.getProblem().add(right.infer(context), BaseType.INSTANCE);
-    // context.getProblem().add(left.infer(context), BaseType.INSTANCE);
+    // context.add(right.infer(context), BaseType.INSTANCE);
+    // context.add(left.infer(context), BaseType.INSTANCE);
 
-    var ty = context.getProblem().fresh();
-    context.getProblem().addIfNotEqual(this, right.infer(context), ty);
-    context.getProblem().addIfNotEqual(this, left.infer(context), ty);
+    var ty = context.fresh();
+    context.addIfNotEqual(right.infer(context), ty);
+    context.addIfNotEqual(left.infer(context), ty);
 
-    if (operator == ComparisonOperator.EQ || operator == ComparisonOperator.NE) {
-      context.getProblem().addConstraint(new TypeConstraint(TypeClass.EQ, ty));
-    } else {
-      context.getProblem().addConstraint(new TypeConstraint(TypeClass.ORD, ty));
-    }
+    TypeClass tc =
+        Set.of(ComparisonOperator.EQ, ComparisonOperator.NE).contains(operator)
+            ? TypeClass.EQ
+            : TypeClass.ORD;
+    FunctionSignature functionSignature = context.getSignatures().get(context.getFunctionInScope());
+    context
+        .getSignatures()
+        .put(
+            context.getFunctionInScope(),
+            new FunctionSignature(
+                Sets.union(
+                    functionSignature.getConstraints(),
+                    Collections.singleton(new TypeConstraint(tc, ty))),
+                functionSignature.getType()));
     return BoolType.INSTANCE;
   }
 
@@ -121,14 +133,14 @@ public class BooleanExpression extends Expression {
   }
 
   @Override
-  public Expression unshare(Map<String, Integer> unshared, IntIdGenerator idGenerator) {
+  public Expression unshare(IntIdGenerator idGenerator) {
     if (!(left instanceof Identifier) || !(right instanceof Identifier)) {
       throw new IllegalStateException("must be in anf");
     }
     if (!left.equals(right)) {
       return this;
     }
-    var down = ShareExpression.clone((Identifier) left, unshared, idGenerator);
+    var down = ShareExpression.clone((Identifier) left, idGenerator);
     return new ShareExpression(
         this,
         (Identifier) left,

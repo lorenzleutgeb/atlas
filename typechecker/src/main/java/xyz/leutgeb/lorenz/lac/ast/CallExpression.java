@@ -4,6 +4,7 @@ import static com.google.common.collect.Sets.union;
 import static java.util.Collections.singleton;
 import static xyz.leutgeb.lorenz.lac.Util.notImplemented;
 
+import com.google.common.collect.Sets;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -78,43 +79,37 @@ public class CallExpression extends Expression {
   }
 
   public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
-    if (!context.hasSignature(name.getName())) {
-      throw new TypeError();
-    }
-
-    List<Type> xTy = new ArrayList<>(parameters.size());
-    for (int i = 0; i < parameters.size(); i++) {
-      Expression parameter = parameters.get(i);
-      xTy.add(parameter.infer(context));
-    }
-
     FunctionSignature signature =
-        context
-            .getSignatures()
-            .get(name.getName())
-            .wiggle(new Substitution(), context.getProblem());
+        context.getSignature(name.getName()).wiggle(new Substitution(), context);
 
     final var fTy = signature.getType();
-    name.infer(context);
-    for (var typeConstraint : signature.getConstraints()) {
-      context.getProblem().addConstraint(typeConstraint);
-    }
 
     if (fTy.getFrom().getElements().size() != parameters.size()) {
       throw new TypeError();
     }
 
-    for (int i = 0; i < parameters.size(); i++) {
-      Expression parameter = parameters.get(i);
-      context
-          .getProblem()
-          .addIfNotEqual(
-              this,
-              fTy.getFrom().getElements().get(i).wiggle(context),
-              parameter.infer(context).wiggle(context));
+    List<Type> xTy = new ArrayList<>(parameters.size());
+    for (Expression parameter : parameters) {
+      xTy.add(parameter.infer(context));
     }
-    var result = context.getProblem().fresh();
-    context.getProblem().addIfNotEqual(this, fTy, new FunctionType(xTy, result).wiggle(context));
+
+    name.infer(context);
+
+    if (!name.getName().equals(context.getFunctionInScope())
+        && !context.getSignatures().isEmpty()) {
+      FunctionSignature functionSignature =
+          context.getSignatures().get(context.getFunctionInScope());
+      context
+          .getSignatures()
+          .put(
+              context.getFunctionInScope(),
+              new FunctionSignature(
+                  Sets.union(functionSignature.getConstraints(), signature.getConstraints()),
+                  functionSignature.getType()));
+    }
+
+    var result = context.fresh();
+    context.addIfNotEqual(fTy, new FunctionType(xTy, result).wiggle(context));
     return result;
   }
 
@@ -191,7 +186,7 @@ public class CallExpression extends Expression {
   }
 
   @Override
-  public Expression unshare(Map<String, Integer> unshared, IntIdGenerator idGenerator) {
+  public Expression unshare(IntIdGenerator idGenerator) {
     boolean eqs = false;
     int a = -1, b = -1;
     for (int i = 0; i < parameters.size() - 1; i++) {
@@ -216,7 +211,7 @@ public class CallExpression extends Expression {
       return this;
     }
 
-    var down = ShareExpression.clone((Identifier) parameters.get(a), unshared, idGenerator);
+    var down = ShareExpression.clone((Identifier) parameters.get(a), idGenerator);
     var newParameters = new ArrayList<>(parameters);
     newParameters.set(a, down.getFirst());
     newParameters.set(b, down.getSecond());

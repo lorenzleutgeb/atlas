@@ -8,7 +8,7 @@ import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.FunctionType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.Substitution;
-import xyz.leutgeb.lorenz.lac.unification.UnificationProblem;
+import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 
 @Value
 public class FunctionSignature {
@@ -34,13 +34,19 @@ public class FunctionSignature {
     this.type = type;
   }
 
-  public FunctionSignature wiggle(Substitution wiggled, UnificationProblem context) {
-    final FunctionType wiggledType = (FunctionType) type.wiggle(wiggled, context);
+  public FunctionSignature wiggle(Substitution wiggled, UnificationContext problem) {
+    final FunctionType wiggledType = (FunctionType) type.wiggle(wiggled, problem);
     return new FunctionSignature(
         constraints.stream()
-            .map(typeConstraint -> typeConstraint.wiggle(wiggled, context))
+            .map(typeConstraint -> typeConstraint.wiggle(wiggled, problem))
             .collect(Collectors.toSet()),
         wiggledType);
+  }
+
+  public FunctionSignature apply(Substitution substitution) {
+    return new FunctionSignature(
+        constraints.stream().map(tc -> tc.apply(substitution)).collect(Collectors.toSet()),
+        (FunctionType) substitution.apply(type));
   }
 
   @Override

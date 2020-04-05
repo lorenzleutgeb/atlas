@@ -12,10 +12,13 @@ import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.hipparchus.util.Pair;
+import org.jgrapht.Graph;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
+import xyz.leutgeb.lorenz.lac.SizeEdge;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
+import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
@@ -55,14 +58,14 @@ public class LetExpression extends Expression {
 
   @Override
   public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
-    var declaredType = context.getProblem().fresh();
-    context.getProblem().addIfNotEqual(this, declaredType, value.infer(context).wiggle(context));
+    var declaredType = context.fresh();
+    context.addIfNotEqual(declaredType, value.infer(context).wiggle(context));
     var sub = context.child();
-    sub.putType(declared.getName(), declaredType);
-    sub.getProblem().addIfNotEqual(this, declaredType, declared.infer(sub).wiggle(context));
+    sub.putType(declared.getName(), declaredType, this);
+    sub.addIfNotEqual(declaredType, declared.infer(sub).wiggle(context));
 
-    var result = context.getProblem().fresh();
-    sub.getProblem().addIfNotEqual(this, result, body.infer(sub).wiggle(context));
+    var result = context.fresh();
+    sub.addIfNotEqual(result, body.infer(sub).wiggle(context));
     return result;
   }
 
@@ -126,9 +129,9 @@ public class LetExpression extends Expression {
   }
 
   @Override
-  public Expression unshare(Map<String, Integer> unshared, IntIdGenerator idGenerator) {
-    final var newValue = value.unshare(unshared, idGenerator);
-    final var newBody = body.unshare(unshared, idGenerator);
+  public Expression unshare(IntIdGenerator idGenerator) {
+    final var newValue = value.unshare(idGenerator);
+    final var newBody = body.unshare(idGenerator);
 
     final var intersection = intersection(newValue.freeVariables(), newBody.freeVariables());
 
@@ -138,16 +141,40 @@ public class LetExpression extends Expression {
 
     // Otherwise, there's some overlap between body and value.
     var target = pick(intersection);
-    var down = ShareExpression.clone(target, unshared, idGenerator);
+    var down = ShareExpression.clone(target, idGenerator);
     var result = ShareExpression.rename(target, down, Pair.create(newValue, newBody));
 
     Expression newThis =
         new LetExpression(source, declared, result.getFirst(), result.getSecond(), type);
 
     if (intersection.size() > 1) {
-      newThis = newThis.unshare(unshared, idGenerator);
+      newThis = newThis.unshare(idGenerator);
     }
 
     return new ShareExpression(this, target, down, newThis);
+  }
+
+  @Override
+  public void analyzeSizes(Graph<Identifier, SizeEdge> sizeGraph) {
+    super.analyzeSizes(sizeGraph);
+
+    if (!(value.getType() instanceof TreeType)) {
+      return;
+    }
+
+    if (value instanceof Tuple) {
+      sizeGraph.addVertex(declared);
+      sizeGraph.addVertex((Identifier) ((Tuple) value).getLeft());
+      sizeGraph.addVertex((Identifier) ((Tuple) value).getRight());
+      sizeGraph.addEdge(declared, (Identifier) ((Tuple) value).getLeft(), SizeEdge.gt());
+      sizeGraph.addEdge(declared, (Identifier) ((Tuple) value).getRight(), SizeEdge.gt());
+    }
+
+    if (value instanceof Identifier) {
+      sizeGraph.addVertex(declared);
+      sizeGraph.addVertex((Identifier) value);
+      sizeGraph.addEdge(declared, (Identifier) value, SizeEdge.eq());
+      sizeGraph.addEdge((Identifier) value, declared, SizeEdge.eq());
+    }
   }
 }

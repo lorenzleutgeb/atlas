@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources;
 import static xyz.leutgeb.lorenz.lac.Util.bug;
 import static xyz.leutgeb.lorenz.lac.Util.truncate;
 
+import com.google.common.collect.Comparators;
 import com.google.common.primitives.Ints;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -391,11 +392,11 @@ public class Annotation {
     return coefficients.get(index);
   }
 
-  private Coefficient getUnitCoefficientOrZero() {
+  public Coefficient getUnitCoefficientOrZero() {
     return getCoefficientOrZero(unitIndex(size));
   }
 
-  private Coefficient getUnitCoefficient() {
+  public Coefficient getUnitCoefficient() {
     return getCoefficient(unitIndex(size));
   }
 
@@ -417,6 +418,15 @@ public class Annotation {
 
   public String getName() {
     return this.name;
+  }
+
+  public List<Coefficient> toVector() {
+    return Stream.concat(
+            rankCoefficients.stream(),
+            coefficients.keySet().stream()
+                .sorted(Comparators.lexicographical(Integer::compareTo))
+                .map(coefficients::get))
+        .collect(Collectors.toList());
   }
 
   /*

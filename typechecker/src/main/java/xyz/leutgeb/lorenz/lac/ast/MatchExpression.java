@@ -15,7 +15,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.log4j.Log4j2;
 import org.hipparchus.util.Pair;
+import org.jgrapht.Graph;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
+import xyz.leutgeb.lorenz.lac.SizeEdge;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
@@ -30,7 +32,6 @@ public class MatchExpression extends Expression {
   private final Expression scrut;
   private final Expression leaf;
   private final Expression node;
-  private final Identifier leafPattern = Identifier.leaf();
   private final Tuple nodePattern;
 
   public MatchExpression(
@@ -58,7 +59,7 @@ public class MatchExpression extends Expression {
 
   @Override
   public Stream<? extends Expression> getChildren() {
-    return Stream.concat(Stream.of(scrut, leafPattern, nodePattern), follow());
+    return Stream.concat(Stream.of(scrut, nodePattern), follow());
   }
 
   public Stream<? extends Expression> follow() {
@@ -67,25 +68,25 @@ public class MatchExpression extends Expression {
 
   @Override
   public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
-    final var result = context.getProblem().fresh();
+    final var result = context.fresh();
 
-    final var scrutType = context.getProblem().fresh();
-    context.getProblem().addIfNotEqual(this, scrutType, scrut.infer(context).wiggle(context));
+    final var scrutType = context.fresh();
+    context.addIfNotEqual(scrutType, scrut.infer(context).wiggle(context));
 
     final Supplier<UnificationContext> sub = () -> context.hide(((Identifier) scrut).getName());
 
     // Case: leaf
     var subLeaf = sub.get();
-    subLeaf.getProblem().addIfNotEqual(this, result, leaf.infer(subLeaf).wiggle(subLeaf));
+    subLeaf.addIfNotEqual(result, leaf.infer(subLeaf).wiggle(subLeaf));
 
     // Case: node
     var subNode = sub.get();
     for (int i = 0; i < 3; i++) {
       subNode.putType(
-          ((Identifier) nodePattern.getElements().get(i)).getName(), subNode.getProblem().fresh());
+          ((Identifier) nodePattern.getElements().get(i)).getName(), subNode.fresh(), this);
     }
-    subNode.getProblem().addIfNotEqual(this, scrutType, nodePattern.infer(subNode).wiggle(subNode));
-    subNode.getProblem().addIfNotEqual(this, result, node.infer(subNode).wiggle(subNode));
+    subNode.addIfNotEqual(scrutType, nodePattern.infer(subNode).wiggle(subNode));
+    subNode.addIfNotEqual(result, node.infer(subNode).wiggle(subNode));
 
     return result;
   }
@@ -176,9 +177,9 @@ public class MatchExpression extends Expression {
   }
 
   @Override
-  public Expression unshare(Map<String, Integer> unshared, IntIdGenerator idGenerator) {
-    final var newLeaf = leaf.unshare(unshared, idGenerator);
-    final var newNode = node.unshare(unshared, idGenerator);
+  public Expression unshare(IntIdGenerator idGenerator) {
+    final var newLeaf = leaf.unshare(idGenerator);
+    final var newNode = node.unshare(idGenerator);
 
     if (!(scrut instanceof Identifier)) {
       throw new IllegalStateException("anf required");
@@ -200,7 +201,7 @@ public class MatchExpression extends Expression {
     }
 
     Identifier up = pick(intersection);
-    var down = ShareExpression.clone(up, unshared, idGenerator);
+    var down = ShareExpression.clone(up, idGenerator);
     var result = ShareExpression.rename(up, down, Pair.create(newLeaf, newNode));
 
     Expression newThis =
@@ -208,9 +209,19 @@ public class MatchExpression extends Expression {
             Derived.unshare(this), scrut, result.getFirst(), nodePattern, result.getSecond(), type);
 
     if (intersection.size() > 1) {
-      newThis = newThis.unshare(unshared, idGenerator);
+      newThis = newThis.unshare(idGenerator);
     }
 
     return new ShareExpression(this, up, down, newThis);
+  }
+
+  @Override
+  public void analyzeSizes(Graph<Identifier, SizeEdge> sizeGraph) {
+    super.analyzeSizes(sizeGraph);
+    sizeGraph.addVertex((Identifier) scrut);
+    sizeGraph.addVertex((Identifier) nodePattern.getLeft());
+    sizeGraph.addVertex((Identifier) nodePattern.getRight());
+    sizeGraph.addEdge((Identifier) scrut, (Identifier) nodePattern.getLeft(), SizeEdge.gt());
+    sizeGraph.addEdge((Identifier) scrut, (Identifier) nodePattern.getRight(), SizeEdge.gt());
   }
 }

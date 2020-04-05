@@ -18,6 +18,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
+import xyz.leutgeb.lorenz.lac.SizeEdge;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
@@ -163,7 +164,7 @@ public abstract class Expression extends Syntax {
         .collect(Collectors.toSet());
   }
 
-  public Expression unshare(Map<String, Integer> unshared, IntIdGenerator idGenerator) {
+  public Expression unshare(IntIdGenerator idGenerator) {
     return this;
   }
 
@@ -173,5 +174,9 @@ public abstract class Expression extends Syntax {
     } else {
       return "□";
     }
+  }
+
+  public void analyzeSizes(org.jgrapht.Graph<Identifier, SizeEdge> sizeGraph) {
+    getChildren().forEach(e -> e.analyzeSizes(sizeGraph));
   }
 }

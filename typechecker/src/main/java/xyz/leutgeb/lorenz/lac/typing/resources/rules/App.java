@@ -18,7 +18,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.OffsetConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 
 @Log4j2
-public class App implements Rule {
+public class App {
   private static List<Constraint> increment(Annotation left, Annotation right, int cost) {
     if (cost == 0) {
       return EqualityConstraint.eq(left, right);
@@ -47,14 +47,13 @@ public class App implements Rule {
         .collect(toList());
   }
 
-  @Override
-  public RuleApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+  public static Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
     final var expression = (CallExpression) obligation.getExpression();
 
     // Look up global annotation for this function.
     final var annotation = globals.getDependingOnCost(expression.getName().getName());
 
-    return RuleApplicationResult.onlyConstraints(
+    return Rule.ApplicationResult.onlyConstraints(
         append(
             increment(
                 obligation.getContext().getAnnotation(),

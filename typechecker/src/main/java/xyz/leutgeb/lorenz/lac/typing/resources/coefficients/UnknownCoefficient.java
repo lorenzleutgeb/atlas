@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.coefficients;
 
+import static xyz.leutgeb.lorenz.lac.Util.bug;
 import static xyz.leutgeb.lorenz.lac.Util.randomHex;
 
 import com.microsoft.z3.Context;
@@ -14,6 +15,7 @@ import xyz.leutgeb.lorenz.lac.Util;
 public class UnknownCoefficient extends Coefficient {
   int id;
   String name;
+  boolean negated;
 
   public UnknownCoefficient(int id) {
     this(id, "");
@@ -22,6 +24,17 @@ public class UnknownCoefficient extends Coefficient {
   private UnknownCoefficient(int id, String name) {
     this.id = id;
     this.name = name;
+    this.negated = false;
+  }
+
+  private UnknownCoefficient(int id, String name, boolean negated) {
+    this.id = id;
+    this.name = name;
+    this.negated = negated;
+  }
+
+  public UnknownCoefficient negate() {
+    return new UnknownCoefficient(id, name, !negated);
   }
 
   public static UnknownCoefficient unknown() {
@@ -37,19 +50,24 @@ public class UnknownCoefficient extends Coefficient {
 
   @Override
   public String toString() {
+    final var prefix = negated ? "-" : "";
     if (name.isEmpty()) {
-      return "∂" + Util.generateSubscript(id);
+      return prefix + "∂" + Util.generateSubscript(id);
     } else {
-      return name;
+      return prefix + name;
     }
   }
 
   public RealExpr encode(Context ctx, Map<Coefficient, RealExpr> coefficients) {
-    return coefficients.get(this);
+    final var inner = coefficients.get(this);
+    return negated ? (RealExpr) ctx.mkUnaryMinus(inner) : inner;
   }
 
   @Override
   public Coefficient replace(Coefficient target, Coefficient replacement) {
+    if (negated) {
+      throw bug("don't know how to replace negated coefficient");
+    }
     if (target instanceof UnknownCoefficient) {
       if (((UnknownCoefficient) target).id == id) {
         return replacement;

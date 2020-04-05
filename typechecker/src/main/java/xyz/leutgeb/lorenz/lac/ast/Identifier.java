@@ -11,6 +11,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
+import xyz.leutgeb.lorenz.lac.Intro;
 import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Predefined;
@@ -26,9 +27,9 @@ public class Identifier extends Expression {
   public static final Identifier LEAF = new Identifier(Predefined.INSTANCE, "leaf");
   private static final Set<String> CONSTANT_NAMES = Set.of("true", "false", "leaf");
   private static final Set<String> BOOLEAN_NAMES = Set.of("true", "false");
-  private static int freshness = 1;
 
   @NonNull @Getter private final String name;
+  @Getter private Intro intro;
 
   private Identifier(Source source, @NonNull String name) {
     super(source);
@@ -36,23 +37,16 @@ public class Identifier extends Expression {
     this.name = name;
   }
 
-  public Identifier(Source source, @NonNull String name, Type type) {
+  public Identifier(Source source, @NonNull String name, Type type, Intro intro) {
     super(source, type);
     Objects.requireNonNull(name);
     this.name = name;
-  }
-
-  public static Identifier leaf() {
-    return new Identifier(Predefined.INSTANCE, "leaf");
+    this.intro = intro;
   }
 
   public static Identifier getSugar(Source source, IntIdGenerator idGenerator) {
     return get("var" + idGenerator.next(), source);
     // return get("∂" + Util.generateSubscript(freshness++));
-  }
-
-  private static Identifier get(String name) {
-    return new Identifier(Predefined.INSTANCE, name);
   }
 
   public static Identifier get(String name, Source source) {
@@ -76,7 +70,7 @@ public class Identifier extends Expression {
   @Override
   public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
     if (name.equals(LEAF.name)) {
-      return new TreeType(context.getProblem().fresh());
+      return new TreeType(context.fresh());
     }
     if (BOOLEAN_NAMES.contains(name)) {
       return BoolType.INSTANCE;
@@ -85,7 +79,8 @@ public class Identifier extends Expression {
     if (context.hasSignature(this.name)) {
       return context.getSignatures().get(this.name).getType();
     }
-    return context.lookupType(this.name);
+    this.intro = context.getIntro(this.name);
+    return context.getType(this.name);
   }
 
   @Override
@@ -110,7 +105,7 @@ public class Identifier extends Expression {
 
     Identifier that = (Identifier) o;
 
-    return name.equals(that.name);
+    return name.equals(that.name) && Objects.equals(intro, that.intro);
   }
 
   @Override
@@ -145,7 +140,7 @@ public class Identifier extends Expression {
     if (renaming.containsValue(name)) {
       throw new IllegalArgumentException("renaming something to pre-existing name");
     }
-    return new Identifier(Derived.rename(this), renaming.getOrDefault(name, name), type);
+    return new Identifier(Derived.rename(this), renaming.getOrDefault(name, name), type, intro);
   }
 
   @Override

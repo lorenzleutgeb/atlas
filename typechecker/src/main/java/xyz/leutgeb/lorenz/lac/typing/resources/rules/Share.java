@@ -16,9 +16,8 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 
-public class Share implements Rule {
-  @Override
-  public RuleApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+public class Share {
+  public static Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
     // This is denoted by \/(Q) in the paper.
     final var gammazSQ = obligation.getContext();
 
@@ -48,7 +47,7 @@ public class Share implements Rule {
     gammaxyQIds.add(xy.getSecond().getName());
     final var gammaxyQ = globals.getHeuristic().generateContext("share", gammaxyQIds);
 
-    return new RuleApplicationResult(
+    return new Rule.ApplicationResult(
         singletonList(
             Pair.create(
                 obligation.keepCost(gammaxyQ, expression.getScope(), obligation.getAnnotation()),

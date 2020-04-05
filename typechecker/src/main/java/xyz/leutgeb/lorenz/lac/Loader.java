@@ -1,12 +1,29 @@
 package xyz.leutgeb.lorenz.lac;
 
+import com.google.common.base.Functions;
+import lombok.Getter;
+import lombok.Value;
+import org.antlr.v4.runtime.CharStreams;
+import org.jgrapht.Graph;
+import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector;
+import org.jgrapht.alg.interfaces.StrongConnectivityAlgorithm;
+import org.jgrapht.graph.AsSubgraph;
+import org.jgrapht.graph.DefaultDirectedGraph;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.EdgeReversedGraph;
+import org.jgrapht.nio.ExportException;
+import org.jgrapht.nio.dot.DOTExporter;
+import org.jgrapht.traverse.BreadthFirstIterator;
+import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
+import xyz.leutgeb.lorenz.lac.ast.Program;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Spliterators;
@@ -16,30 +33,16 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import lombok.Getter;
-import lombok.Value;
-import org.antlr.v4.runtime.CharStreams;
-import org.jgrapht.graph.AsSubgraph;
-import org.jgrapht.graph.DefaultEdge;
-import org.jgrapht.graph.DirectedAcyclicGraph;
-import org.jgrapht.graph.EdgeReversedGraph;
-import org.jgrapht.nio.ExportException;
-import org.jgrapht.nio.dot.DOTExporter;
-import org.jgrapht.traverse.BreadthFirstIterator;
-import org.jgrapht.traverse.TopologicalOrderIterator;
-import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
-import xyz.leutgeb.lorenz.lac.ast.Program;
 
 @Value
 public class Loader {
   private static final String DOT_EXTENSION = ".ml";
+
   @Getter private final Map<String, FunctionDefinition> functionDefinitions = new HashMap<>();
+
   Path home;
 
-  // Edges in this graph point from the dependency to the dependant. This way,
-  // it can be topologically traversed for simple type inference.
-  private final DirectedAcyclicGraph<String, DefaultEdge> g =
-      new DirectedAcyclicGraph<>(DefaultEdge.class);
+  private final Graph<String, DefaultEdge> g = new DefaultDirectedGraph<>(DefaultEdge.class);
 
   public Loader(Path home) {
     if (!Files.exists(home) || !Files.isDirectory(home) || !Files.isReadable(home)) {
@@ -153,30 +156,27 @@ public class Loader {
             .collect(Collectors.toCollection(Stack::new));
     load(stack);
 
-    final var reversed = new EdgeReversedGraph<>(g);
+    final var plainSubgraph =
+        new AsSubgraph<>(
+            g,
+            names.stream()
+                .flatMap(
+                    name ->
+                        StreamSupport.stream(
+                            Spliterators.spliteratorUnknownSize(
+                                new BreadthFirstIterator<>(new EdgeReversedGraph<>(g), name), 0),
+                            false))
+                .collect(Collectors.toSet()));
 
-    // Is this really the best way to get a set of reachable nodes?
-    final var connectedSet =
-        names.stream()
-            .flatMap(
-                name -> {
-                  final var bfi = new BreadthFirstIterator<>(reversed, name);
-                  return StreamSupport.stream(Spliterators.spliteratorUnknownSize(bfi, 0), false);
-                })
-            .collect(Collectors.toSet());
+    StrongConnectivityAlgorithm<String, DefaultEdge> scAlg =
+        new KosarajuStrongConnectivityInspector<>(plainSubgraph);
+    List<Graph<String, DefaultEdge>> stronglyConnectedSubgraphs =
+        scAlg.getStronglyConnectedComponents();
 
-    final var iterator = new TopologicalOrderIterator<>(new AsSubgraph<>(g, connectedSet));
-
-    final var result = new ArrayList<FunctionDefinition>();
-    while (iterator.hasNext()) {
-      final var fqn = iterator.next();
-      final var fd = functionDefinitions.get(fqn);
-      if (fd == null) {
-        throw new RuntimeException("no definition for '" + fqn + "'");
-      }
-      result.add(fd);
-    }
-    return new Program(result);
+    return new Program(
+        plainSubgraph.vertexSet().stream()
+            .collect(Collectors.toMap(Functions.identity(), functionDefinitions::get)),
+        stronglyConnectedSubgraphs.stream().map(Graph::vertexSet).collect(Collectors.toList()));
   }
 
   private Path path(String moduleName) {
