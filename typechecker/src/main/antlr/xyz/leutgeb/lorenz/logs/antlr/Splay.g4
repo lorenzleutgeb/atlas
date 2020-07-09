@@ -87,7 +87,7 @@ SQUARE_CLOSE : ']';
 CURLY_OPEN : '{';
 CURLY_CLOSE : '}';
 
-EQ : '==';
+EQ : '==' | '⩵';
 NE : '!=' | '≠';
 LT : '<';
 LE : '<=' | '≤';

@@ -11,7 +11,7 @@ import java.util.Stack;
 import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.hipparchus.util.Pair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.Graph;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.SizeEdge;
@@ -38,8 +38,9 @@ public class LetExpression extends Expression {
     this.body = body;
   }
 
-  private LetExpression(
+  public LetExpression(
       Source source, Identifier declared, Expression value, Expression body, Type type) {
+    // TODO: This constructor was made public only for testing purposes. Make it private again?
     super(source, type);
     this.declared = declared;
     this.value = value;
@@ -48,7 +49,7 @@ public class LetExpression extends Expression {
 
   @Override
   public Stream<? extends Expression> getChildren() {
-    return Stream.concat(follow(), Stream.of(declared));
+    return Stream.concat(Stream.of(declared), follow());
   }
 
   @Override
@@ -70,9 +71,8 @@ public class LetExpression extends Expression {
   }
 
   @Override
-  public Expression normalize(
-      Stack<Pair<Identifier, Expression>> context, IntIdGenerator idGenerator) {
-    Stack<Pair<Identifier, Expression>> sub = new Stack<>();
+  public Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
+    Stack<Normalization> sub = new Stack<>();
     return new LetExpression(
             source, declared, value.normalize(sub, idGenerator), body.normalizeAndBind(idGenerator))
         .bindAll(sub);
@@ -88,7 +88,7 @@ public class LetExpression extends Expression {
   public void printTo(PrintStream out, int indentation) {
     out.print("let ");
     declared.printTo(out, indentation);
-    out.print(" = ");
+    out.print(" ≔ ");
     value.printTo(out, indentation + 1);
     // out.println();
     // indent(out, indentation);
@@ -125,13 +125,13 @@ public class LetExpression extends Expression {
 
   @Override
   public String toString() {
-    return "let " + declared + " = " + value.terminalOrBox() + " in " + body.terminalOrBox();
+    return "let " + declared + " ≔ " + value.terminalOrBox() + " in " + body.terminalOrBox();
   }
 
   @Override
-  public Expression unshare(IntIdGenerator idGenerator) {
-    final var newValue = value.unshare(idGenerator);
-    final var newBody = body.unshare(idGenerator);
+  public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
+    final var newValue = value.unshare(idGenerator, lazy);
+    final var newBody = body.unshare(idGenerator, lazy);
 
     final var intersection = intersection(newValue.freeVariables(), newBody.freeVariables());
 
@@ -142,13 +142,13 @@ public class LetExpression extends Expression {
     // Otherwise, there's some overlap between body and value.
     var target = pick(intersection);
     var down = ShareExpression.clone(target, idGenerator);
-    var result = ShareExpression.rename(target, down, Pair.create(newValue, newBody));
+    var result = ShareExpression.rename(target, down, Pair.of(newValue, newBody));
 
     Expression newThis =
-        new LetExpression(source, declared, result.getFirst(), result.getSecond(), type);
+        new LetExpression(source, declared, result.getLeft(), result.getRight(), type);
 
     if (intersection.size() > 1) {
-      newThis = newThis.unshare(idGenerator);
+      newThis = newThis.unshare(idGenerator, lazy);
     }
 
     return new ShareExpression(this, target, down, newThis);

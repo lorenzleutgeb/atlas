@@ -3,12 +3,14 @@ package xyz.leutgeb.lorenz.lac.typing.resources.proving;
 import static xyz.leutgeb.lorenz.lac.Util.bug;
 
 import guru.nidi.graphviz.attribute.Label;
+import java.util.List;
 import java.util.Map;
 import lombok.Value;
 import org.jgrapht.nio.Attribute;
 import org.jgrapht.nio.AttributeType;
 import org.jgrapht.nio.DefaultAttribute;
 import xyz.leutgeb.lorenz.lac.NidiAttribute;
+import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.ast.Expression;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
@@ -40,7 +42,27 @@ public class Obligation {
     }
 
     this.annotation = annotation;
+    if (cost != 0 && cost != 1) {
+      throw new IllegalArgumentException("cost must be 0 or 1");
+    }
     this.cost = cost;
+  }
+
+  public Obligation(
+      List<String> contextIds,
+      Annotation contextAnnotation,
+      Expression expression,
+      Annotation annotation) {
+    this(contextIds, contextAnnotation, expression, annotation, 1);
+  }
+
+  public Obligation(
+      List<String> contextIds,
+      Annotation contextAnnotation,
+      Expression expression,
+      Annotation annotation,
+      int cost) {
+    this(new AnnotatingContext(contextIds, contextAnnotation), expression, annotation, cost);
   }
 
   public static Obligation nothing() {
@@ -76,8 +98,7 @@ public class Obligation {
         "shape",
         new DefaultAttribute<>("none", AttributeType.STRING),
         "label",
-        new NidiAttribute<>(
-            Label.of(context.toString() + " ⊦ " + expression + " | " + annotation.getName())));
+        new NidiAttribute<>(Label.of(toString())));
   }
 
   @Override
@@ -85,7 +106,12 @@ public class Obligation {
     if (this.isNothing()) {
       return "nothing";
     }
-    final var costStr = cost != 1 ? String.valueOf(cost) : "";
-    return context + " ⊦" + costStr + " " + expression + " | " + annotation;
+    return context
+        + " ⊦"
+        + Util.generateSubscript(cost)
+        + " "
+        + expression
+        + " | "
+        + annotation.getName();
   }
 }

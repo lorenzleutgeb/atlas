@@ -13,8 +13,8 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.extern.log4j.Log4j2;
-import org.hipparchus.util.Pair;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.Graph;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.SizeEdge;
@@ -27,7 +27,7 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@Log4j2
+@Slf4j
 public class MatchExpression extends Expression {
   private final Expression scrut;
   private final Expression leaf;
@@ -59,7 +59,7 @@ public class MatchExpression extends Expression {
 
   @Override
   public Stream<? extends Expression> getChildren() {
-    return Stream.concat(Stream.of(scrut, nodePattern), follow());
+    return Stream.of(scrut, leaf, nodePattern, node);
   }
 
   public Stream<? extends Expression> follow() {
@@ -92,8 +92,7 @@ public class MatchExpression extends Expression {
   }
 
   @Override
-  public Expression normalize(
-      Stack<Pair<Identifier, Expression>> context, IntIdGenerator idGenerator) {
+  public Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
     if (scrut.isImmediate()) {
       return new MatchExpression(
           source,
@@ -130,13 +129,13 @@ public class MatchExpression extends Expression {
     out.println(" with");
 
     indent(out, indentation);
-    out.print("| leaf -> ");
+    out.print("| leaf → ");
     leaf.printTo(out, indentation + 1);
     out.println();
     indent(out, indentation);
     out.print("| ");
     nodePattern.printTo(out, indentation + 1);
-    out.print(" -> ");
+    out.print(" → ");
     node.printTo(out, indentation + 1);
   }
 
@@ -177,9 +176,9 @@ public class MatchExpression extends Expression {
   }
 
   @Override
-  public Expression unshare(IntIdGenerator idGenerator) {
-    final var newLeaf = leaf.unshare(idGenerator);
-    final var newNode = node.unshare(idGenerator);
+  public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
+    final var newLeaf = leaf.unshare(idGenerator, lazy);
+    final var newNode = node.unshare(idGenerator, lazy);
 
     if (!(scrut instanceof Identifier)) {
       throw new IllegalStateException("anf required");
@@ -200,16 +199,23 @@ public class MatchExpression extends Expression {
       return new MatchExpression(source, scrut, newLeaf, nodePattern, newNode, type);
     }
 
+    if (lazy) {
+      log.info(
+          "Did not create sharing expression for {} because aggressive unsharing is enabled.",
+          intersection);
+      return new MatchExpression(source, scrut, newLeaf, nodePattern, newNode, type);
+    }
+
     Identifier up = pick(intersection);
     var down = ShareExpression.clone(up, idGenerator);
-    var result = ShareExpression.rename(up, down, Pair.create(newLeaf, newNode));
+    var result = ShareExpression.rename(up, down, Pair.of(newLeaf, newNode));
 
     Expression newThis =
         new MatchExpression(
-            Derived.unshare(this), scrut, result.getFirst(), nodePattern, result.getSecond(), type);
+            Derived.unshare(this), scrut, result.getLeft(), nodePattern, result.getRight(), type);
 
     if (intersection.size() > 1) {
-      newThis = newThis.unshare(idGenerator);
+      newThis = newThis.unshare(idGenerator, lazy);
     }
 
     return new ShareExpression(this, up, down, newThis);

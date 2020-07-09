@@ -29,6 +29,6 @@ public class Var {
     }
 
     return Rule.ApplicationResult.onlyConstraints(
-        EqualityConstraint.eq(obligation.getAnnotation(), context.getAnnotation()));
+        EqualityConstraint.eq("(var)", obligation.getAnnotation(), context.getAnnotation()));
   }
 }

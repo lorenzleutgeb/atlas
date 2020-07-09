@@ -1,9 +1,7 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
 import static com.google.common.collect.Sets.intersection;
-import static xyz.leutgeb.lorenz.lac.Util.indent;
-import static xyz.leutgeb.lorenz.lac.Util.notImplemented;
-import static xyz.leutgeb.lorenz.lac.Util.pick;
+import static xyz.leutgeb.lorenz.lac.Util.*;
 
 import java.io.PrintStream;
 import java.util.Map;
@@ -12,8 +10,8 @@ import java.util.Stack;
 import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.extern.log4j.Log4j2;
-import org.hipparchus.util.Pair;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
@@ -25,7 +23,7 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@Log4j2
+@Slf4j
 public class IfThenElseExpression extends Expression {
   private final Expression condition;
   private final Expression truthy;
@@ -63,12 +61,12 @@ public class IfThenElseExpression extends Expression {
   }
 
   @Override
-  public Expression normalize(
-      Stack<Pair<Identifier, Expression>> context, IntIdGenerator idGenerator) {
+  public Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
     // TODO: Only create a new expression if normalization actually changes something!
     return new IfThenElseExpression(
         Derived.anf(this),
-        condition.forceImmediate(context, idGenerator),
+        // condition.forceImmediate(context, idGenerator),
+        condition,
         truthy.normalizeAndBind(idGenerator),
         falsy.normalizeAndBind(idGenerator));
   }
@@ -113,14 +111,16 @@ public class IfThenElseExpression extends Expression {
   }
 
   @Override
-  public Expression unshare(IntIdGenerator idGenerator) {
+  public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
+    /*
     if (!(condition instanceof Identifier)) {
       throw new IllegalStateException("must be in anf");
     }
+     */
 
     // First, ensure that subexpressions are unshared.
-    final var newT = truthy.unshare(idGenerator);
-    final var newF = falsy.unshare(idGenerator);
+    final var newT = truthy.unshare(idGenerator, lazy);
+    final var newF = falsy.unshare(idGenerator, lazy);
 
     Set<Identifier> freeT = newT.freeVariables();
     Set<Identifier> freeF = newF.freeVariables();
@@ -137,19 +137,25 @@ public class IfThenElseExpression extends Expression {
       return new IfThenElseExpression(source, condition, newT, newF, type);
     }
 
+    if (lazy) {
+      log.info(
+          "Did not create sharing expression for {} because aggressive unsharing is enabled.",
+          intersection);
+      return new IfThenElseExpression(source, condition, newT, newF, type);
+    }
+
     var target = pick(intersection);
     var down = ShareExpression.clone(target, idGenerator);
-    var result = ShareExpression.rename(target, down, Pair.create(newT, newF));
+    var result = ShareExpression.rename(target, down, Pair.of(newT, newF));
 
-    var replacement =
-        new ShareExpression(
-            this,
-            target,
-            down,
-            new IfThenElseExpression(
-                source, condition, result.getFirst(), result.getSecond(), type));
+    Expression newThis =
+        new IfThenElseExpression(source, condition, result.getLeft(), result.getRight(), type);
 
-    return intersection.size() > 1 ? replacement.unshare(idGenerator) : replacement;
+    if (intersection.size() > 1) {
+      newThis = newThis.unshare(idGenerator, lazy);
+    }
+
+    return new ShareExpression(this, target, down, newThis);
   }
 
   @Override

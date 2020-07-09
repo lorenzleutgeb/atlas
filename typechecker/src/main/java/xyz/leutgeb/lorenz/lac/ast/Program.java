@@ -1,52 +1,53 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
-import static guru.nidi.graphviz.model.Factory.graph;
 import static java.util.Optional.empty;
+import static java.util.stream.Collectors.joining;
+import static xyz.leutgeb.lorenz.lac.Util.flatten;
 
-import guru.nidi.graphviz.engine.Engine;
-import guru.nidi.graphviz.engine.Format;
-import guru.nidi.graphviz.engine.Graphviz;
-import guru.nidi.graphviz.model.Graph;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.Getter;
-import org.hipparchus.util.Pair;
+import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
-import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemException;
+import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
+import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
-import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemUnsatisfiableException;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.Equivalence;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
+@Slf4j
 public class Program {
   @Getter private final Map<String, FunctionDefinition> functionDefinitions;
-  private final List<Set<String>> order;
 
-  public Program(Map<String, FunctionDefinition> functionDefinitions, List<Set<String>> order) {
-    // functionDefinitions.forEach(Objects::requireNonNull);
+  // Note that this could also be List<Set<...>> since the order of nodes within the same
+  // SCC doesn't really matter. However we chose to still sort them to get consistent outputs
+  // without resorting in multiple places.
+  private final List<List<String>> order;
+  private final String name;
+  private final Path basePath;
+
+  public Program(Map<String, FunctionDefinition> functionDefinitions, List<List<String>> order) {
     this.functionDefinitions = functionDefinitions;
     this.order = order;
+    this.name = flatten(this.order).stream().map(Util::fqnToFlatFilename).collect(joining("+"));
+    this.basePath = Paths.get(".", "out");
   }
 
   public void infer() throws UnificationError, TypeError {
-    normalize();
     var root = UnificationContext.root();
-    for (Set<String> component : order) {
+    for (List<String> component : order) {
       final var ctx = root.childWithNewProblem();
       for (var fqn : component) {
         var fd = get(fqn);
@@ -71,170 +72,102 @@ public class Program {
     return functionDefinitions.get(fqn);
   }
 
-  public Optional<Map<String, Pair<Annotation, Annotation>>> solve()
-      throws UnificationError, TypeError, ConstraintSystemException {
+  public Optional<Map<String, FunctionAnnotation>> solve() {
     return solve(new HashMap<>(), new HashSet<>());
   }
 
-  public Optional<Map<String, Pair<Annotation, Annotation>>> solve(
-      Map<String, Pair<Annotation, Annotation>> functionAnnotations)
-      throws UnificationError, TypeError, ConstraintSystemException {
+  public Optional<Map<String, FunctionAnnotation>> solve(
+      Map<String, FunctionAnnotation> functionAnnotations) {
     return solve(functionAnnotations, new HashSet<>());
   }
 
-  public Optional<Map<String, Pair<Annotation, Annotation>>> solve(
-      Map<String, Pair<Annotation, Annotation>> functionAnnotations,
-      Set<Constraint> outsideConstraints)
-      throws UnificationError, TypeError, ConstraintSystemException {
-    final var costFreeFunctionAnnotations = new HashMap<String, Pair<Annotation, Annotation>>();
-    final var name =
-        functionDefinitions.keySet().stream()
-            .map(fqn -> fqn.replace(".", "~"))
-            .collect(Collectors.joining("+"));
+  public Optional<Map<String, FunctionAnnotation>> solve(
+      Map<String, FunctionAnnotation> functionAnnotations, Set<Constraint> outsideConstraints) {
+    final var costFreeFunctionAnnotations = new HashMap<String, FunctionAnnotation>();
+    final var heuristic = SmartRangeHeuristic.DEFAULT;
+    final var prover = new Prover(name, null, basePath);
 
-    final var basePath = Paths.get(".", "out");
+    // SCCs are split by ";" and function names within SCCs are split by ",".
+    // That's reasonably readable without brackes for sets/sequences.
+    final var namesAsSet =
+        order.stream()
+            .map(x -> x.stream().sorted().map(Object::toString).collect(Collectors.joining(", ")))
+            .collect(Collectors.joining("; "));
 
-    unshare();
-    for (var entry : functionDefinitions.entrySet()) {
-      try (final var out =
-          Files.newOutputStream(
-              basePath.resolve(entry.getKey().replace(".", "~") + "-unshared.ml"))) {
-        entry.getValue().printTo(new PrintStream(out));
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+    if (functionDefinitions.values().stream()
+        .map(FunctionDefinition::runaway)
+        .anyMatch(Predicate.not(Set::isEmpty))) {
+      log.info(namesAsSet + " | UNSAT");
+      return Optional.empty();
     }
 
-    final var accumulatedConstraints = new HashSet<>(outsideConstraints);
+    forEach(fd -> fd.stubAnnotations(functionAnnotations, costFreeFunctionAnnotations, heuristic));
 
-    for (var fd : functionDefinitions.values()) {
-      final var globals =
-          new AnnotatingGlobals(functionAnnotations, costFreeFunctionAnnotations, null, 1);
-      try (final var out =
-          Files.newOutputStream(basePath.resolve(fd.getFullyQualifiedName() + "-sizes.svg"))) {
-        fd.stubAnnotations(
-            functionAnnotations, costFreeFunctionAnnotations, globals.getHeuristic(), out);
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+    forEach(
+        fd -> {
+          final var globals =
+              new AnnotatingGlobals(
+                  functionAnnotations,
+                  costFreeFunctionAnnotations,
+                  fd.getSizeAnalysis(),
+                  heuristic);
+          prover.setGlobals(globals);
+          prover.prove(fd.getTypingObligation(1));
+        });
+
+    try {
+      prover.plot();
+    } catch (IOException e) {
+      e.printStackTrace();
     }
 
-    for (var fd : functionDefinitions.values()) {
-      try (final var out =
-          Files.newOutputStream(basePath.resolve(fd.getFullyQualifiedName() + "-proof.svg"))) {
-        final var globals =
-            new AnnotatingGlobals(
-                functionAnnotations, costFreeFunctionAnnotations, fd.getSizeAnalysis(), 1);
-        accumulatedConstraints.addAll(fd.infer(globals, out));
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-      // System.out.println(fd.getFullyQualifiedName());
-    }
-
-    System.out.println(accumulatedConstraints.size() + " constraints accumulated");
+    final var accumulatedConstraints = prover.getAccumulatedConstraints();
+    accumulatedConstraints.addAll(outsideConstraints);
+    log.info(accumulatedConstraints.size() + " constraints accumulated");
 
     // This is the entrypoint of new-style solving. We get a bunch of constraints
     // that need to be fulfilled in order to typecheck the program.
     Optional<Map<Coefficient, KnownCoefficient>> solution =
         ConstraintSystemSolver.solve(accumulatedConstraints, name);
-    // final boolean solved = constraints.solve();
 
-    if (false) {
-      Graph g =
-          ConstraintSystemSolver.toGraph(
-              graph(name)
-                  .directed()
-                  .graphAttr()
-                  .with("ranksep", "2.5")
-                  .graphAttr()
-                  .with("splines", "ortho") /*.graphAttr().with(Rank.RankDir.BOTTOM_TO_TOP)*/,
-              accumulatedConstraints);
-      var viz = Graphviz.fromGraph(g);
-      try (final var out = Files.newOutputStream(basePath.resolve(name + "-constraints.svg"))) {
-        viz.engine(Engine.DOT).render(Format.SVG).toOutputStream(out);
+    if (accumulatedConstraints.size() < 50) {
+      try {
+        Constraint.plot(name, accumulatedConstraints, basePath);
       } catch (IOException e) {
         e.printStackTrace();
       }
     }
 
-    if (false) {
-      throw new ConstraintSystemUnsatisfiableException("constraint system is unsatisfiable");
-    }
-
-    final var namesAsSet =
-        functionDefinitions.values().stream()
-            .map(FunctionDefinition::getFullyQualifiedName)
-            .collect(Collectors.joining(", ", "{", "}"));
-
-    final var single = functionDefinitions.size() == 1;
-
-    if (solution.isPresent() && !single) {
-      System.out.println(namesAsSet + ":");
-    }
-
-    for (var fd : functionDefinitions.values()) {
-      // fd.printAnnotation(System.out);
-      try (final var out =
-          Files.newOutputStream(
-              basePath.resolve(fd.getFullyQualifiedName().replace(".", "~") + ".svg"))) {
-        fd.toGraph(out);
-      } catch (IOException e) {
-        e.printStackTrace();
+    if (solution.isPresent()) {
+      forEach(fd -> fd.substitute(solution.get()));
+      if (!(functionDefinitions.size() == 1)) {
+        log.info(namesAsSet + ":");
       }
-      if (solution.isPresent()) {
-        fd.substitute(solution.get());
-        if (!single) {
-          System.out.print("\t");
+      for (var group : order) {
+        for (var fqn : group) {
+          log.info(functionDefinitions.get(fqn).getAnnotationString());
         }
-        fd.printAnnotation(System.out);
       }
-    }
-
-    if (solution.isEmpty()) {
-      if (functionDefinitions.size() > 1) {
-        System.out.println(namesAsSet + " | UNSAT");
-      } else {
-        System.out.println(
-            functionDefinitions.values().iterator().next().getFullyQualifiedName() + " | UNSAT");
-      }
+      return Optional.of(functionAnnotations);
+    } else {
+      log.info(namesAsSet + " | UNSAT");
       return empty();
     }
-    return Optional.of(functionAnnotations);
   }
 
-  public void printTo(PrintStream out) {
-    try {
-      infer();
-    } catch (UnificationError | TypeError unificationError) {
-      throw new RuntimeException(unificationError);
-    }
-    for (var entry : functionDefinitions.values()) {
-      entry.printTo(out);
-      out.println();
-    }
+  public void normalize() {
+    forEach(FunctionDefinition::normalize);
   }
 
-  private void normalize() {
-    // Maybe let the Loader normalize directly?
-    for (var fd : functionDefinitions.values()) {
-      fd.normalize();
-    }
+  public void unshare() {
+    unshare(Expression.DEFAULT_LAZY);
   }
 
-  private void unshare() {
-    for (var fd : functionDefinitions.values()) {
-      fd.unshare();
-    }
+  public void unshare(boolean lazy) {
+    forEach(x -> x.unshare(lazy));
   }
 
-  public void printHaskellTo(PrintStream out) {
-    // TODO(lorenzleutgeb): It seems that `infer` is not idempotent. If we call it here,
-    // we get strange results for the types of function definitions in this program.
-    // That is wrong, since `infer` should indeed be idempotent.
-    for (var entry : functionDefinitions.values()) {
-      entry.printHaskellTo(out);
-      out.println();
-    }
+  private void forEach(Consumer<FunctionDefinition> f) {
+    functionDefinitions.values().forEach(f);
   }
 }

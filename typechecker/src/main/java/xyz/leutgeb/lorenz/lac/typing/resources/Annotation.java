@@ -1,15 +1,16 @@
 package xyz.leutgeb.lorenz.lac.typing.resources;
 
-import static xyz.leutgeb.lorenz.lac.Util.bug;
-import static xyz.leutgeb.lorenz.lac.Util.truncate;
+import static java.util.Collections.unmodifiableList;
+import static java.util.Collections.unmodifiableMap;
+import static java.util.Objects.requireNonNullElse;
+import static java.util.stream.Collectors.*;
+import static xyz.leutgeb.lorenz.lac.Util.*;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 
-import com.google.common.collect.Comparators;
 import com.google.common.primitives.Ints;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.java.Log;
 import org.hipparchus.fraction.Fraction;
@@ -17,91 +18,66 @@ import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 @Log
 public class Annotation {
-  private static final Annotation EMPTY = empty();
-  final String name;
-  private final int size;
   private final List<Coefficient> rankCoefficients;
   private final Map<List<Integer>, Coefficient> coefficients;
+  String name;
 
   public Annotation(
       List<Coefficient> rankCoefficients,
       Map<List<Integer>, Coefficient> coefficients,
       String name) {
-    this.rankCoefficients = rankCoefficients;
-    this.coefficients = coefficients;
-    this.size = rankCoefficients.size();
     this.name = name;
+    this.rankCoefficients = unmodifiableList(rankCoefficients);
+
     for (var l : coefficients.keySet()) {
-      if (l.size() != this.size + 1) {
+      if (l.size() != this.size() + 1) {
         throw new IllegalArgumentException();
       }
     }
-    // System.out.println("Annotation size: " + size);
+
+    this.coefficients = unmodifiableMap(coefficients);
   }
 
   public Annotation(int size, String name) {
-    rankCoefficients = new ArrayList<>(size);
-    coefficients = new LinkedHashMap<>();
-    this.size = size;
+    this.rankCoefficients = repeat(ZERO, size).collect(toUnmodifiableList());
+    this.coefficients = new LinkedHashMap<>();
     this.name = name;
-
-    for (int i = 0; i < size; i++) {
-      rankCoefficients.add(KnownCoefficient.ZERO);
-    }
-    // System.out.println("Annotation size: " + size);
   }
 
+  public static Annotation knownConstant(int size, String name, int potential) {
+    return constant(size, name, new KnownCoefficient(new Fraction(potential)));
+  }
+
+  /**
+   * Constructs an annotation with given size that has given constant potential. Note that the given
+   * potential might be an unknown coefficient.
+   */
+  public static Annotation constant(int size, String name, Coefficient potential) {
+    final var result = new Annotation(size, name);
+    result.coefficients.put(unitIndex(size), potential);
+    return result;
+  }
+
+  /** Constructs an annotation of given size that has a constant but unknown potential. */
+  public static Annotation constant(int size, String name) {
+    return constant(size, name, UnknownCoefficient.unknown("constant"));
+  }
+
+  /** Constructs an annotation of given size that has zero potential. */
+  public static Annotation zero(int size, String name) {
+    return new Annotation(size, name);
+  }
+
+  public static Annotation zero(int size) {
+    return zero(size, "zero-" + size);
+  }
+
+  /** Constructs an annotation of zero size that has zero potential. */
   public static Annotation empty() {
-    return new Annotation(0, "0");
-  }
-
-  @Deprecated
-  public static Annotation merge(Annotation... as) {
-    if (as.length == 0) {
-      return EMPTY;
-    }
-
-    if (as.length == 1) {
-      return as[0];
-    }
-
-    int size = 0;
-    for (var a : as) {
-      size += a.size();
-    }
-
-    if (size == 0) {
-      return EMPTY;
-    }
-
-    final var rankCoefficients = new ArrayList<Coefficient>(size);
-    final var coefficients = new LinkedHashMap<List<Integer>, Coefficient>();
-    final var name = new StringBuilder();
-    for (int i = 0; i < as.length; i++) {
-      final var a = as[i];
-      name.append(a.name);
-      rankCoefficients.add(a.getRankCoefficient());
-
-      for (var e : a.getCoefficients()) {
-        final var l = new ArrayList<Integer>(size + 1);
-        for (int j = 0; j < i; j++) {
-          l.add(0);
-        }
-        for (int j = 0; j < e.getKey().size() - 1; j++) {
-          l.add(e.getKey().get(j));
-        }
-        for (int j = 0; j < (size - i - a.size()); j++) {
-          l.add(0);
-        }
-        l.add(e.getKey().get(e.getKey().size() - 1));
-        coefficients.put(l, e.getValue());
-      }
-    }
-    return new Annotation(rankCoefficients, coefficients, name.toString());
+    return zero(0);
   }
 
   public static boolean isUnitIndex(List<Integer> index) {
@@ -125,203 +101,127 @@ public class Annotation {
     return unitIndex;
   }
 
+  private static <K> boolean coefficientsEqualUnderZeroClosure(
+      Map<K, Coefficient> a, Map<K, Coefficient> b) {
+    return a.entrySet().stream()
+            .allMatch(entry -> entry.getValue().equals(b.getOrDefault(entry.getKey(), ZERO)))
+        && b.entrySet().stream()
+            .allMatch(entry -> entry.getValue().equals(a.getOrDefault(entry.getKey(), ZERO)));
+  }
+
+  public List<Integer> getUnitIndex() {
+    return unitIndex(size());
+  }
+
   public Annotation substitute(Map<Coefficient, KnownCoefficient> solution) {
-    final var rankCoefficients = new ArrayList<Coefficient>(this.rankCoefficients.size());
-    final var coefficients = new LinkedHashMap<List<Integer>, Coefficient>();
-    for (var entry : this.coefficients.entrySet()) {
-      if (entry.getValue() instanceof KnownCoefficient) {
-        coefficients.put(entry.getKey(), entry.getValue());
-        continue;
-      }
-      if (!solution.containsKey(entry.getValue())) {
-        // In this case we could not find a known coefficient to replace
-        // an unknown coefficient. One possible workaround is to fall
-        // back to zero:
-        //
-        //  coefficients.put(entry.getKey(), KnownCoefficient.ZERO);
-        //
-        // However, it is very likely that this actually is a symptom of
-        // and implementation error.
-        throw bug("cannot substitute value");
-      }
-      coefficients.put(entry.getKey(), solution.get(entry.getValue()));
-    }
-    for (var coefficient : this.rankCoefficients) {
-      if (!solution.containsKey((coefficient))) {
-        throw bug("cannot subs");
-      }
-      rankCoefficients.add(solution.get(coefficient));
-    }
-    return new Annotation(rankCoefficients, coefficients, this.name);
-  }
-
-  public void add(List<Integer> f, Coefficient coefficient) {
-    if (f.size() != size + 1) {
-      throw new IllegalArgumentException(
-          "expected one more integer than there are trees being annotated");
-    }
-    if (this.coefficients.containsKey(f)) {
-      throw new IllegalArgumentException("annotation already contains this key");
-    }
-    this.coefficients.put(f, coefficient);
-  }
-
-  @Deprecated
-  public void add(Coefficient coefficient, ConstraintSystemSolver context) {
-    var f = new ArrayList<Integer>(size + 1);
-    for (int i = 0; i < size; i++) {
-      f.add(0);
-    }
-    f.add(2);
-    coefficients.compute(f, (k, v) -> v == null ? coefficient : v.add(coefficient, context));
-  }
-
-  public void add(Coefficient coefficient, int... index) {
-    var f = Ints.asList(index);
-    if (f.size() != size + 1) {
-      throw new IllegalArgumentException(
-          "expected one more integer than there are trees being annotated");
-    }
-    if (this.coefficients.containsKey(f)) {
-      throw new IllegalArgumentException("annotation already contains this key");
-    }
-    this.coefficients.put(f, coefficient);
-  }
-
-  @Deprecated
-  public Coefficient getOrFreshForReal(ConstraintSystemSolver context, int... index) {
-    var f = Ints.asList(index);
-    if (f.size() != size + 1) {
-      throw new IllegalArgumentException(
-          "expected one more integer than there are trees being annotated");
-    }
-    return this.coefficients.computeIfAbsent(f, k -> UnknownCoefficient.unknown());
+    return new Annotation(
+        this.rankCoefficients.stream()
+            .map(
+                coefficient ->
+                    coefficient instanceof KnownCoefficient
+                        ? coefficient
+                        : solution.getOrDefault(coefficient, ZERO))
+            .collect(toList()),
+        this.coefficients.entrySet().stream()
+            .collect(
+                toMap(
+                    Map.Entry::getKey,
+                    entry ->
+                        entry.getValue() instanceof KnownCoefficient
+                            ? entry.getValue()
+                            : solution.getOrDefault(entry.getValue(), ZERO))),
+        this.name);
   }
 
   public Coefficient getCoefficientOrZero(int... index) {
-    final var result = getCoefficient(index);
-    if (result == null) {
-      // log.warning("Zeroing a coefficient because of absent counterpart.");
-      return KnownCoefficient.ZERO;
-    }
-    return result;
+    return requireNonNullElse(getCoefficient(index), ZERO);
   }
 
   public Coefficient getCoefficientOrZero(List<Integer> index) {
-    if (index.size() != size + 1) {
+    if (index.size() != size() + 1) {
       throw new IllegalArgumentException();
     }
-    return coefficients.getOrDefault(index, KnownCoefficient.ZERO);
-  }
-
-  public String toShortString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append(" ");
-    for (int i = 0; i < size; i++) {
-      final var q = rankCoefficients.get(i);
-      sb.append(q);
-
-      if (i < size - 1) {
-        sb.append(" , ");
-      }
-    }
-    if (size > 0) {
-      sb.append(", ");
-    }
-    var entries = coefficients.entrySet();
-    int i = 0;
-    for (var entry : entries) {
-      final var q = entry.getValue();
-      sb.append(q);
-      if (i < coefficients.size() - 1) {
-        sb.append(" , ");
-      }
-
-      i++;
-    }
-    return truncate(sb.toString(), 1000);
+    return coefficients.getOrDefault(index, ZERO);
   }
 
   public String toString() {
-    StringBuilder sb = new StringBuilder();
+    StringBuilder sb = new StringBuilder("[");
     boolean nonzero = false;
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < size(); i++) {
       final var q = rankCoefficients.get(i);
-      if (q == KnownCoefficient.ZERO) {
+      if (q == ZERO) {
         continue;
       }
       nonzero = true;
-      sb.append(q);
-      sb.append(" · ");
-      sb.append("rk(t");
-      sb.append(Util.generateSubscript(i + 1));
-      sb.append(")");
+      sb.append(i).append(" ↦ ").append(q);
 
-      if (i < size - 1) {
-        sb.append(" + ");
+      if (i < size() - 1) {
+        sb.append(", ");
       }
     }
-    if (size > 0 && nonzero) {
-      sb.append(" + ");
-    }
-    sb.append(
+    final var schoenmakerPart =
         coefficients.entrySet().stream()
-            .filter(e -> !e.getValue().equals(KnownCoefficient.ZERO))
+            .filter(e -> e.getValue() != ZERO)
             .map(
                 e -> {
-                  final var sb2 = new StringBuilder();
-                  sb2.append(e.getValue());
-                  sb2.append(" · ");
-                  sb2.append("lg(");
-
-                  for (int j = 0; j < e.getKey().size() - 1; j++) {
-                    sb2.append(e.getKey().get(j));
-                    sb2.append(" · ");
-                    sb2.append("|t");
-                    sb2.append(Util.generateSubscript(j + 1));
-                    sb2.append("| + ");
-
-                    /*
-                    if (j < e.getKey().size() - 1) {
-                      sb2.append(" + ");
-                    }
-                     */
-                  }
-                  sb2.append(e.getKey().get(e.getKey().size() - 1));
-                  sb2.append(")");
-                  return sb2.toString();
+                  final var index = e.getKey();
+                  final var coefficient = e.getValue();
+                  return index.stream().map(Object::toString).collect(joining(", ", "(", ")"))
+                      + " ↦ "
+                      + coefficient;
                 })
-            .collect(Collectors.joining(" + ")));
+            .collect(Collectors.joining(", "));
 
-    var result = sb.toString();
-    if (result.equals("")) {
-      return "0";
+    if (!schoenmakerPart.equals("") && size() > 0 && nonzero) {
+      sb.append(", ");
     }
-    return result;
+
+    sb.append(schoenmakerPart);
+
+    if (sb.length() == 1) {
+      return "∅";
+    }
+
+    return sb.append("]").toString();
   }
 
-  public String toStringForParameters(List<String> parameters, boolean simplify) {
+  public String toLongString() {
+    return toLongString(
+        IntStream.rangeClosed(1, size())
+            .mapToObj(i -> "t" + Util.generateSubscript(i))
+            .collect(toList()),
+        true);
+  }
+
+  public String toLongString(List<String> parameters) {
+    return toLongString(parameters, true);
+  }
+
+  public String toLongString(List<String> parameters, boolean simplify) {
     StringBuilder sb = new StringBuilder();
     boolean nonzero = false;
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < size(); i++) {
       final var q = rankCoefficients.get(i);
-      if (q == KnownCoefficient.ZERO && simplify) {
+      if (q == ZERO && simplify) {
         continue;
       }
       nonzero = true;
-      sb.append(q);
-      sb.append(" · ");
-      sb.append("rank(");
+      if (!(q instanceof KnownCoefficient)
+          || !(((KnownCoefficient) q).getValue().equals(new Fraction(1)))) {
+        sb.append(q);
+        sb.append(" · ");
+      }
+      sb.append("rk(");
       sb.append(parameters.get(i));
       sb.append(")");
 
-      if (i < size - 1) {
+      if (i < size() - 1) {
         sb.append(" + ");
       }
     }
     final var schoenmakerPart =
         coefficients.entrySet().stream()
-            .filter(e -> e.getValue() != KnownCoefficient.ZERO)
+            .filter(e -> e.getValue() != ZERO)
             .filter(e -> !Annotation.isUnitIndex(e.getKey()))
             .map(
                 e -> {
@@ -346,11 +246,11 @@ public class Annotation {
                   if (!coefficient.equals(new KnownCoefficient(Fraction.ONE)) || !simplify) {
                     result = coefficient + " · ";
                   }
-                  return result + "log(" + String.join(" + ", items) + ")";
+                  return result + "lg(" + String.join(" + ", items) + ")";
                 })
             .collect(Collectors.joining(" + "));
 
-    if (!schoenmakerPart.equals("") && size > 0 && nonzero) {
+    if (!schoenmakerPart.equals("") && size() > 0 && nonzero) {
       sb.append(" + ");
     }
 
@@ -376,14 +276,14 @@ public class Annotation {
   }
 
   public Coefficient getRankCoefficient() {
-    if (size != 1) {
+    if (size() != 1) {
       throw new IllegalStateException("must be of size exactly 1");
     }
     return getRankCoefficient(0);
   }
 
   public Coefficient getCoefficient(List<Integer> index) {
-    if (index.size() != size + 1) {
+    if (index.size() != size() + 1) {
       throw new IllegalArgumentException();
     }
     if (!coefficients.containsKey(index)) {
@@ -393,11 +293,11 @@ public class Annotation {
   }
 
   public Coefficient getUnitCoefficientOrZero() {
-    return getCoefficientOrZero(unitIndex(size));
+    return getCoefficientOrZero(unitIndex(size()));
   }
 
   public Coefficient getUnitCoefficient() {
-    return getCoefficient(unitIndex(size));
+    return getCoefficient(unitIndex(size()));
   }
 
   private Coefficient getCoefficient(int... index) {
@@ -413,34 +313,36 @@ public class Annotation {
   }
 
   public int size() {
-    return this.size;
+    return rankCoefficients.size();
   }
 
   public String getName() {
     return this.name;
   }
 
-  public List<Coefficient> toVector() {
-    return Stream.concat(
-            rankCoefficients.stream(),
-            coefficients.keySet().stream()
-                .sorted(Comparators.lexicographical(Integer::compareTo))
-                .map(coefficients::get))
-        .collect(Collectors.toList());
+  public void setName(String name) {
+    this.name = name;
   }
 
-  /*
-  public Annotation extend(int newSize, int ) {
-    if (newSize <= size) {
-      throw new IllegalArgumentException("new size must be larger than size of this");
-    }
-    final var result = new Annotation(newSize);
-    for (int i = 0; i < size; i++) {
-      result.rankCoefficients.set(i, this.rankCoefficients.get(i));
-    }
-    for (var entry : coefficients.entrySet()) {
-
-    }
+  public boolean coefficientsEqual(Annotation other) {
+    return Objects.equals(rankCoefficients, other.rankCoefficients)
+        && coefficientsEqualUnderZeroClosure(coefficients, other.coefficients);
+    // && Objects.equals(coefficients, other.coefficients);
   }
-   */
+
+  public Annotation reorder(List<Integer> reorderedIndices) {
+    return new Annotation(
+        Util.reorder(rankCoefficients, reorderedIndices),
+        coefficients.entrySet().stream()
+            .collect(
+                Collectors.toMap(
+                    (Map.Entry<List<Integer>, Coefficient> entry) -> {
+                      final List<Integer> mappedKey =
+                          Util.reorder(entry.getKey(), reorderedIndices);
+                      mappedKey.add(entry.getKey().get(entry.getKey().size() - 1));
+                      return mappedKey;
+                    },
+                    Map.Entry::getValue)),
+        name);
+  }
 }

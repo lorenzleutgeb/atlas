@@ -6,17 +6,12 @@ import static xyz.leutgeb.lorenz.lac.Util.notImplemented;
 
 import com.google.common.collect.Sets;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.Value;
-import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
@@ -114,8 +109,7 @@ public class CallExpression extends Expression {
   }
 
   @Override
-  public Expression normalize(
-      Stack<Pair<Identifier, Expression>> context, IntIdGenerator idGenerator) {
+  public Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
     if (parameters.stream().allMatch(Expression::isImmediate)) {
       return this;
     }
@@ -186,7 +180,7 @@ public class CallExpression extends Expression {
   }
 
   @Override
-  public Expression unshare(IntIdGenerator idGenerator) {
+  public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
     boolean eqs = false;
     int a = -1, b = -1;
     for (int i = 0; i < parameters.size() - 1; i++) {
@@ -213,8 +207,8 @@ public class CallExpression extends Expression {
 
     var down = ShareExpression.clone((Identifier) parameters.get(a), idGenerator);
     var newParameters = new ArrayList<>(parameters);
-    newParameters.set(a, down.getFirst());
-    newParameters.set(b, down.getSecond());
+    newParameters.set(a, down.getLeft());
+    newParameters.set(b, down.getRight());
 
     return new ShareExpression(
         this,

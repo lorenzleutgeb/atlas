@@ -1,15 +1,10 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
 import java.io.PrintStream;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.NonNull;
-import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.Intro;
 import xyz.leutgeb.lorenz.lac.Util;
@@ -45,8 +40,7 @@ public class Identifier extends Expression {
   }
 
   public static Identifier getSugar(Source source, IntIdGenerator idGenerator) {
-    return get("var" + idGenerator.next(), source);
-    // return get("∂" + Util.generateSubscript(freshness++));
+    return get("∂" + Util.generateSubscript(idGenerator.next()), source);
   }
 
   public static Identifier get(String name, Source source) {
@@ -84,8 +78,7 @@ public class Identifier extends Expression {
   }
 
   @Override
-  public Expression normalize(
-      Stack<Pair<Identifier, Expression>> context, IntIdGenerator idGenerator) {
+  public Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
     return this;
   }
 
@@ -152,5 +145,10 @@ public class Identifier extends Expression {
     } else {
       out.print(name);
     }
+  }
+
+  @Override
+  public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
+    return this;
   }
 }

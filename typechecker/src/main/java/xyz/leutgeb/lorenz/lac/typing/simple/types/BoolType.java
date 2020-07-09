@@ -2,12 +2,9 @@ package xyz.leutgeb.lorenz.lac.typing.simple.types;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Set;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
-import xyz.leutgeb.lorenz.lac.unification.Equivalence;
-import xyz.leutgeb.lorenz.lac.unification.Generalizer;
-import xyz.leutgeb.lorenz.lac.unification.Substitution;
-import xyz.leutgeb.lorenz.lac.unification.TypeMismatch;
-import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
+import xyz.leutgeb.lorenz.lac.unification.*;
 
 public class BoolType implements Type {
   public static final BoolType INSTANCE = new BoolType();
@@ -38,6 +35,11 @@ public class BoolType implements Type {
   @Override
   public Type wiggle(Substitution wiggled, UnificationContext context) {
     return this;
+  }
+
+  @Override
+  public Set<TypeVariable> variables() {
+    return Collections.emptySet();
   }
 
   @Override

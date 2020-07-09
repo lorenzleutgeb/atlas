@@ -1,5 +1,7 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.indices;
 
+import static java.util.stream.Collectors.joining;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -30,5 +32,16 @@ public class MapIndex implements Index {
   @Override
   public Integer getAssociatedIndex(String id) {
     return associatedIndices.get(id);
+  }
+
+  @Override
+  public String toString() {
+    return "["
+        + associatedIndices.entrySet().stream()
+            .map(entry -> entry.getKey() + " ↦ " + entry.getValue())
+            .collect(joining(", ", "[", "]"))
+        + ", "
+        + getOffsetIndex()
+        + "]";
   }
 }

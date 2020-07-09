@@ -1,5 +1,3 @@
-import org.gradle.api.internal.tasks.testing.TestDescriptorInternal
-
 val rootPackage = "xyz.leutgeb.lorenz.lac"
 val rootPackagePath = rootPackage.replace(".", "/")
 
@@ -8,7 +6,7 @@ plugins {
     application
     antlr
 
-    id("com.diffplug.gradle.spotless") version "3.25.0"
+    id("com.diffplug.gradle.spotless") version "4.4.0"
 }
 
 repositories {
@@ -48,6 +46,7 @@ dependencies {
     annotationProcessor(lombok)
 
     // Maths
+    // TODO: This is a candidate for removal. Just org.hipparchus.fraction.Fraction is barely used.
     implementation("org.hipparchus:hipparchus-core:1.6")
 
     // Graphs
@@ -62,11 +61,10 @@ dependencies {
 
     // Testing
     fun jupiter(x: String): String {
-        return "org.junit.jupiter:junit-jupiter-$x:5.6.0"
+        return "org.junit.jupiter:junit-jupiter$x:5.6.2"
     }
-    testImplementation(jupiter("api"))
-    testImplementation(jupiter("params"))
-    testRuntimeOnly(jupiter("engine"))
+    testImplementation(jupiter("-params"))
+    testRuntimeOnly(jupiter(""))
 
     // The Z3 Theorem Prover
     // See https://github.com/Z3Prover/z3#java
@@ -74,6 +72,11 @@ dependencies {
 
     // Graph output
     implementation("guru.nidi:graphviz-java:0.15.0")
+
+    // Logging
+    implementation("org.slf4j:slf4j-simple:1.7.30")
+
+    testImplementation("tech.tablesaw:tablesaw-core:0.38.1")
 }
 
 application {
@@ -81,7 +84,8 @@ application {
 }
 
 tasks.withType<JavaCompile> {
-    options.compilerArgs.addAll(arrayOf("-Xlint:unchecked", "-Xlint:deprecation"))
+    // TODO: Remove --enable-preview as soon as Records are stable.
+    options.compilerArgs.addAll(arrayOf("-Xlint:unchecked", "-Xlint:deprecation", "--enable-preview"))
 }
 
 tasks.withType<AntlrTask> {
@@ -102,17 +106,12 @@ tasks.test {
     testLogging {
         events("passed", "skipped", "failed")
     }
-    // See https://github.com/junit-team/junit5/issues/2041#issuecomment-539712030
-    afterTest(KotlinClosure2<TestDescriptor, TestResult, Any>({ descriptor, result ->
-        val test = descriptor as TestDescriptorInternal
-        val classDisplayName = if (test.className == test.classDisplayName) test.classDisplayName else "${test.className} [${test.classDisplayName}]"
-        val testDisplayName = if (test.name == test.displayName) test.displayName else "${test.name} [${test.displayName}]"
-        println("\n$classDisplayName > $testDisplayName: ${result.resultType}")
-    }))
+    // TODO: Remove --enable-preview as soon as Records are stable.
+    jvmArgs("--enable-preview")
 }
 
 tasks.withType<Wrapper> {
-    gradleVersion = "6.3"
+    gradleVersion = "6.5"
     distributionType = Wrapper.DistributionType.ALL
 }
 
@@ -124,7 +123,7 @@ spotless {
         // Please do not add any custom configuration here.
         // We just bow and abide to Google's rules,
         // trading off individualism for simplicity.
-        googleJavaFormat()
+        googleJavaFormat("1.8")
         // Explicitly point gjf at src, otherwise it will also check build and find ANTLR generated code.
         target("src/**/*.java")
     }

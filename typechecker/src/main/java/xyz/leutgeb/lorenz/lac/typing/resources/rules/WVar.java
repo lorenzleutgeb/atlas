@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.ast.Expression;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
@@ -37,24 +36,33 @@ public class WVar {
    * @return
    */
   private static List<Constraint> weakenIdentifier(
-      AnnotatingContext gammaR, AnnotatingContext gammaxQ, String x) {
+      AnnotatingContext gammaR, AnnotatingContext gammaxQ, String x, Expression expression) {
     return concat(
-            // r_{(\vec{a}, b)} = q_{(\vec{a}, 0, b)}
             gammaR.stream()
                 .map(
                     rIndex -> {
                       final var qIndex = rIndex.mask(x, 0);
 
                       return new EqualityConstraint(
-                          rIndex.getValue(), gammaxQ.getCoefficient(qIndex));
+                          rIndex.getValue(),
+                          gammaxQ.getCoefficient(qIndex),
+                          "(w:var) r_{(\\vec{a}, b)} = q_{(\\vec{a}, 0, b)} when removing "
+                              + x
+                              + " for expression `"
+                              + expression
+                              + "`");
                     }),
-
-            // r_i = q_i
             gammaR.getIds().stream()
                 .map(
                     e ->
                         new EqualityConstraint(
-                            gammaR.getRankCoefficient(e), gammaxQ.getRankCoefficient(e))))
+                            gammaR.getRankCoefficient(e),
+                            gammaxQ.getRankCoefficient(e),
+                            "(w:var) r_i = q_i when removing "
+                                + x
+                                + " for expression `"
+                                + expression
+                                + "`")))
         .collect(toList());
   }
 
@@ -91,13 +99,12 @@ public class WVar {
 
     return new Rule.ApplicationResult(
         singletonList(
-            Pair.create(
-                new Obligation(
-                    gammaR,
-                    obligation.getExpression(),
-                    obligation.getAnnotation(),
-                    obligation.getCost()),
-                weakenIdentifier(gammaR, context, idToWeaken))),
+            new Obligation(
+                gammaR,
+                obligation.getExpression(),
+                obligation.getAnnotation(),
+                obligation.getCost())),
+        singletonList(weakenIdentifier(gammaR, context, idToWeaken, obligation.getExpression())),
         emptyList());
   }
 }

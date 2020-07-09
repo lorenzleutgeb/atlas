@@ -10,7 +10,6 @@ import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.W;
 
 class RangeHeuristicTest {
-
   @Test
   void generate() {
     var it = new RangeHeuristic(0, 4);

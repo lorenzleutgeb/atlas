@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Value;
+import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.Substitution;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
@@ -24,16 +25,15 @@ public class TypeConstraint {
     if (typeClass.getArity() != binding.size()) {
       throw new IllegalArgumentException("number of variables does not match length of binding");
     }
+    if (binding.stream().anyMatch(t -> t instanceof TreeType)) {
+      throw new IllegalArgumentException("cannot constrain the type Tree");
+    }
     this.constrained = binding;
     this.typeClass = typeClass;
   }
 
   public TypeConstraint(TypeClass typeClass, Type... binding) {
-    if (typeClass.getArity() != binding.length) {
-      throw new IllegalArgumentException("number of variables does not match length of binding");
-    }
-    this.constrained = Arrays.asList(binding);
-    this.typeClass = typeClass;
+    this(typeClass, Arrays.asList(binding));
   }
 
   public static Set<TypeConstraint> minimize(Set<TypeConstraint> constraints) {
@@ -45,6 +45,14 @@ public class TypeConstraint {
       }
     }
     return minimizedConstraints;
+  }
+
+  public static TypeConstraint eq(Type alpha) {
+    return new TypeConstraint(TypeClass.EQ, alpha);
+  }
+
+  public static TypeConstraint ord(Type alpha) {
+    return new TypeConstraint(TypeClass.ORD, alpha);
   }
 
   public boolean appliesTo(Type type) {

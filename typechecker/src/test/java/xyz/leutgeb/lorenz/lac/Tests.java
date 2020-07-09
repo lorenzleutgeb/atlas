@@ -1,14 +1,41 @@
 package xyz.leutgeb.lorenz.lac;
 
+import static java.util.Collections.*;
+import static org.hipparchus.fraction.Fraction.ONE;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static xyz.leutgeb.lorenz.lac.Util.fqnToFlatFilename;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.eq;
+import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.ord;
+import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.ALPHA;
+import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.BETA;
+
+import guru.nidi.graphviz.engine.Format;
+import guru.nidi.graphviz.engine.Graphviz;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.hipparchus.fraction.Fraction;
-import org.hipparchus.util.Pair;
+import org.jgrapht.nio.AttributeType;
+import org.jgrapht.nio.DefaultAttribute;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.ast.Program;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
@@ -16,7 +43,6 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.InequalityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.LessThanOrEqualConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.OffsetConstraint;
 import xyz.leutgeb.lorenz.lac.typing.simple.FunctionSignature;
-import xyz.leutgeb.lorenz.lac.typing.simple.TypeClass;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.BoolType;
@@ -24,44 +50,14 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptyMap;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.singleton;
-import static java.util.Collections.singletonList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
-import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.ALPHA;
-import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.BETA;
-
 @Timeout(value = 1, unit = TimeUnit.MINUTES)
 public class Tests {
-  private static final String PLUS = "~";
-  private static final TreeType ATREE = new TreeType(ALPHA);
+  static final TreeType ATREE = new TreeType(ALPHA);
   private static final TreeType BTREE = new TreeType(BETA);
   private static final BoolType BOOL = BoolType.INSTANCE;
   private static final File OUT = new File("out");
 
-  private static Loader loader() {
+  public static Loader loader() {
     return new Loader(Path.of(".", "src", "test", "resources", "examples"));
   }
 
@@ -79,14 +75,12 @@ public class Tests {
             sig(singleton(eq(ALPHA)), ALPHA, ATREE, BOOL),
             ExpectedResult.UNKNOWN),
         arguments("LeftList.postorder", sig(ATREE, ATREE, ATREE), ExpectedResult.UNKNOWN),
-        arguments("SplayTree.splay_max", sig(Set.of(eq(ATREE)), ATREE, ATREE), ExpectedResult.SAT),
+        arguments("SplayTree.splay_max", sig(ATREE, ATREE), ExpectedResult.SAT),
         arguments(
-            "SplayTree.splay",
-            sig(Set.of(eq(ATREE), ord(ALPHA)), ALPHA, ATREE, ATREE),
-            ExpectedResult.SAT),
+            "SplayTree.splay", sig(Set.of(ord(ALPHA)), ALPHA, ATREE, ATREE), ExpectedResult.SAT),
         arguments(
             "SplayTree.delete",
-            sig(Set.of(eq(ATREE), ord(ALPHA)), ALPHA, ATREE, ATREE),
+            sig(Set.of(ord(ALPHA)), ALPHA, ATREE, ATREE),
             ExpectedResult.UNKNOWN),
         arguments(
             "SkewHeap.merge",
@@ -130,14 +124,6 @@ public class Tests {
         arguments("Scratch.first_nonempty_and_second_empty", sig(ATREE, BTREE, BOOL), 1));
   }
 
-  private static TypeConstraint eq(Type alpha) {
-    return new TypeConstraint(TypeClass.EQ, alpha);
-  }
-
-  private static TypeConstraint ord(Type alpha) {
-    return new TypeConstraint(TypeClass.ORD, alpha);
-  }
-
   private static FunctionSignature sig(Set<TypeConstraint> constraints, Type... types) {
     return new FunctionSignature(constraints, types);
   }
@@ -170,18 +156,47 @@ public class Tests {
         arguments("Infinite.infinite_19b"));
   }
 
-  private Program loadAndInfer(String fqn) throws UnificationError, TypeError, IOException {
+  static NidiExporter<Identifier, SizeEdge> exporter() {
+    final var exporter =
+        new NidiExporter<Identifier, SizeEdge>(
+            identifier ->
+                identifier.getName()
+                    + "_"
+                    + (identifier.getIntro() == null
+                        ? "null"
+                        : (identifier.getIntro().getFqn()
+                            + "_"
+                            + Util.stamp(identifier.getIntro().getExpression()))));
+    exporter.setVertexAttributeProvider(
+        v -> {
+          return Map.of("label", new DefaultAttribute<>(v.getName(), AttributeType.STRING));
+        });
+    exporter.setEdgeAttributeProvider(
+        e -> {
+          return Map.of(
+              // "label",
+              // new DefaultAttribute<>(e.getKind().toString(), AttributeType.STRING),
+              "color",
+              new DefaultAttribute<>(
+                  e.getKind().equals(SizeEdge.Kind.EQ) ? "blue4" : "red", AttributeType.STRING));
+        });
+    return exporter;
+  }
+
+  private Program loadAndNormalizeAndInferAndUnshare(String fqn)
+      throws UnificationError, TypeError, IOException {
     final var result = loader().load(fqn);
+    result.normalize();
     result.infer();
+    result.unshare();
     return result;
   }
 
   @ParameterizedTest
   @MethodSource("nonConstantCostDefinitions")
   void nonConstantCost(String fqn, FunctionSignature expectedSignature) throws Exception {
-    final var program = loadAndInfer(fqn);
+    final var program = loadAndNormalizeAndInferAndUnshare(fqn);
     for (var e : program.getFunctionDefinitions().values()) {
-      e.printTo(new PrintStream(new File(OUT, e.getName() + ".ml").getAbsoluteFile()));
       e.printHaskellTo(new PrintStream(new File(OUT, e.getName() + ".hs").getAbsoluteFile()));
     }
 
@@ -198,10 +213,11 @@ public class Tests {
   }
 
   @Test
+  @Disabled("too complex, see separate test classes")
   void splay() throws Exception {
     final String fqn = "SplayTree.splay";
-    final var expectedSignature = sig(Set.of(eq(ATREE), ord(ALPHA)), ALPHA, ATREE, ATREE);
-    final var program = loadAndInfer(fqn);
+    final var expectedSignature = sig(singleton(ord(ALPHA)), ALPHA, ATREE, ATREE);
+    final var program = loadAndNormalizeAndInferAndUnshare(fqn);
     final var definition = program.getFunctionDefinitions().get(fqn);
 
     assertNotNull(definition);
@@ -209,19 +225,19 @@ public class Tests {
 
     // Taken from Example 8.
     final List<Coefficient> rankCoefficients = new ArrayList<>(1);
-    rankCoefficients.add(new KnownCoefficient(Fraction.ONE));
+    rankCoefficients.add(new KnownCoefficient(ONE));
 
     final Map<List<Integer>, Coefficient> schoenmakers = new HashMap<>();
     schoenmakers.put(List.of(0, 1), new KnownCoefficient(new Fraction(3, 1)));
-    schoenmakers.put(List.of(0, 2), new KnownCoefficient(Fraction.ONE));
+    schoenmakers.put(List.of(0, 2), new KnownCoefficient(ONE));
 
     final List<Coefficient> resultRankCoefficients = new ArrayList<>(1);
-    resultRankCoefficients.add(new KnownCoefficient(Fraction.ONE));
+    resultRankCoefficients.add(new KnownCoefficient(ONE));
 
-    final var predefinedAnnotations = new HashMap<String, Pair<Annotation, Annotation>>();
+    final var predefinedAnnotations = new HashMap<String, FunctionAnnotation>();
     predefinedAnnotations.put(
         fqn,
-        new Pair<>(
+        new FunctionAnnotation(
             new Annotation(rankCoefficients, schoenmakers, "predefined"),
             new Annotation(resultRankCoefficients, emptyMap(), "predefined")));
 
@@ -231,23 +247,19 @@ public class Tests {
   @ParameterizedTest
   @MethodSource("infiniteCostDefinitions")
   void infiniteCost(String fqn) throws Exception {
-    final var program = loadAndInfer(fqn);
-    final var definition = program.getFunctionDefinitions().get(fqn);
-
-    assertNotNull(definition);
+    final var program = loadAndNormalizeAndInferAndUnshare(fqn);
     System.out.println("Testing " + fqn);
-    assertEquals(definition.getAnnotatedSignature(), definition.getInferredSignature());
-    assertEquals(Optional.empty(), program.solve());
+    final var solution = program.solve();
+    assertTrue(solution.isEmpty());
   }
 
   @Test
   void revAppend() throws Exception {
     final var fqn = "LeftList.rev_append";
     final var expectedSignature = sig(ATREE, ATREE, ATREE);
-    final var program = loadAndInfer(fqn);
+    final var program = loadAndNormalizeAndInferAndUnshare(fqn);
     final var definition = program.getFunctionDefinitions().get(fqn);
 
-    assertNotNull(definition);
     System.out.println("Testing " + fqn);
     assertEquals(expectedSignature, definition.getInferredSignature());
 
@@ -255,30 +267,30 @@ public class Tests {
   }
 
   @Test
+  @Disabled("too complex, see separate test classes")
   void splayZigZig() throws Exception {
     final var fqn = "SplayTree.splay_zigzig";
-    final var expectedSignature = sig(Set.of(eq(ATREE)), ALPHA, ATREE, ATREE);
-    final var program = loadAndInfer(fqn);
+    final var expectedSignature = sig(ALPHA, ATREE, ATREE);
+    final var program = loadAndNormalizeAndInferAndUnshare(fqn);
     final var definition = program.getFunctionDefinitions().get(fqn);
 
-    assertNotNull(definition);
     assertEquals(expectedSignature, definition.getInferredSignature());
 
     // Taken from Example 8.
     final List<Coefficient> rankCoefficients = new ArrayList<>(1);
-    rankCoefficients.add(new KnownCoefficient(Fraction.ONE));
+    rankCoefficients.add(new KnownCoefficient(ONE));
 
     final Map<List<Integer>, Coefficient> schoenmakers = new HashMap<>();
     schoenmakers.put(List.of(0, 1), new KnownCoefficient(new Fraction(3, 1)));
-    schoenmakers.put(List.of(0, 2), new KnownCoefficient(Fraction.ONE));
+    schoenmakers.put(List.of(0, 2), new KnownCoefficient(ONE));
 
     final List<Coefficient> resultRankCoefficients = new ArrayList<>(1);
-    resultRankCoefficients.add(new KnownCoefficient(Fraction.ONE));
+    resultRankCoefficients.add(new KnownCoefficient(ONE));
 
-    final var predefinedAnnotations = new HashMap<String, Pair<Annotation, Annotation>>();
+    final var predefinedAnnotations = new HashMap<String, FunctionAnnotation>();
     predefinedAnnotations.put(
         fqn,
-        new Pair<>(
+        new FunctionAnnotation(
             new Annotation(rankCoefficients, schoenmakers, "predefined"),
             new Annotation(resultRankCoefficients, emptyMap(), "predefined")));
 
@@ -289,7 +301,7 @@ public class Tests {
   @MethodSource("constantCostDefinitions")
   void constantCost(final String fqn, FunctionSignature expectedSignature, int constantCost)
       throws Exception {
-    final var program = loadAndInfer(fqn);
+    final var program = loadAndNormalizeAndInferAndUnshare(fqn);
     final var definition = program.getFunctionDefinitions().get(fqn);
 
     assertNotNull(definition);
@@ -306,17 +318,14 @@ public class Tests {
     // We show that it is possible to type the function in such a way that the difference between
     // the potential of the arguments and the potential of the result is exactly the cost that we
     // expect.
-    final var tightInput = UnknownCoefficient.unknown("tightInput");
-    final var tightResult = UnknownCoefficient.unknown("tightResult");
-    final var tight = new HashMap<String, Pair<Annotation, Annotation>>();
+    final var tightInput = new UnknownCoefficient("tightInput");
+    final var tightResult = new UnknownCoefficient("tightResult");
+    final var tight = new HashMap<String, FunctionAnnotation>();
     tight.put(
         fqn,
-        new Pair<>(
-            new Annotation(
-                args,
-                Map.of(
-                    unitIndex((int) expectedSignature.getType().getFrom().treeSize()), tightInput),
-                "expectedArgs"),
+        new FunctionAnnotation(
+            Annotation.constant(
+                (int) expectedSignature.getType().getFrom().treeSize(), "expectedArgs", tightInput),
             new Annotation(
                 returnsTree ? singletonList(ZERO) : emptyList(),
                 returnsTree ? Map.of(unitIndex(1), tightResult) : emptyMap(),
@@ -327,18 +336,19 @@ public class Tests {
             .solve(
                 tight,
                 singleton(
-                    new OffsetConstraint(tightInput, tightResult, new Fraction(constantCost))))
+                    new OffsetConstraint(
+                        tightInput, tightResult, new Fraction(constantCost), "outside")))
             .isPresent());
 
     if (constantCost > 0) {
       // We show that it is impossible to type the function in such a way that the the potential of
       // the arguments is less than we expect.
-      final var tooSmallInput = UnknownCoefficient.unknown("tightInput");
-      final var tooSmall = new HashMap<String, Pair<Annotation, Annotation>>();
+      final var tooSmallInput = new UnknownCoefficient("tightInput");
+      final var tooSmall = new HashMap<String, FunctionAnnotation>();
       final var costKnownCoefficient = new KnownCoefficient(new Fraction(constantCost - 1));
       tooSmall.put(
           fqn,
-          new Pair<>(
+          new FunctionAnnotation(
               new Annotation(
                   args,
                   Map.of(
@@ -354,8 +364,12 @@ public class Tests {
           program
               .solve(
                   tooSmall,
-                  singleton(new LessThanOrEqualConstraint(tooSmallInput, costKnownCoefficient)))
-              .isEmpty());
+                  singleton(
+                      new LessThanOrEqualConstraint(
+                          tooSmallInput, costKnownCoefficient, "outside constraint")))
+              .isEmpty(),
+          "No solution is expected, since it should not be possible to type the program with a cost of "
+              + (constantCost - 1));
     }
 
     if (!returnsTree) {
@@ -364,12 +378,12 @@ public class Tests {
 
     // We show that it is impossible to type the function in such a way that the the potential of
     // the arguments is less than the potential of the result.
-    final var generatorInput = UnknownCoefficient.unknown("generatorInput");
-    final var generatorResult = UnknownCoefficient.unknown("generatorResult");
-    final var symbolicGenerator = new HashMap<String, Pair<Annotation, Annotation>>();
+    final var generatorInput = new UnknownCoefficient("generatorInput");
+    final var generatorResult = new UnknownCoefficient("generatorResult");
+    final var symbolicGenerator = new HashMap<String, FunctionAnnotation>();
     symbolicGenerator.put(
         fqn,
-        new Pair<>(
+        new FunctionAnnotation(
             new Annotation(
                 args,
                 Map.of(
@@ -386,41 +400,62 @@ public class Tests {
         program.solve(
             symbolicGenerator,
             Set.of(
-                new LessThanOrEqualConstraint(generatorInput, generatorResult),
-                new InequalityConstraint(generatorInput, generatorResult))));
+                new LessThanOrEqualConstraint(
+                    generatorInput, generatorResult, "outside constraint"),
+                new InequalityConstraint(generatorInput, generatorResult, "outside constraint"))));
   }
 
   @Test
-  void all() throws Exception {
+  void dumps() throws Exception {
     final var loader = loader();
     loader.autoload();
     final var program = loader.all();
     loader.exportGraph(new FileOutputStream(new File(OUT, "all.dot")));
+    for (var fd : program.getFunctionDefinitions().values()) {
+      fd.printTo(
+          new PrintStream(
+              new File(OUT, fqnToFlatFilename(fd.getFullyQualifiedName()) + "-loaded.ml")
+                  .getAbsoluteFile()));
+    }
+    program.normalize();
+    for (var fd : program.getFunctionDefinitions().values()) {
+      fd.printTo(
+          new PrintStream(
+              new File(OUT, fqnToFlatFilename(fd.getFullyQualifiedName()) + "-normalized.ml")
+                  .getAbsoluteFile()));
+    }
     program.infer();
+    program.unshare();
+    for (var fd : program.getFunctionDefinitions().values()) {
+      fd.printTo(
+          new PrintStream(
+              new File(OUT, fqnToFlatFilename(fd.getFullyQualifiedName()) + "-unshared.ml")
+                  .getAbsoluteFile()));
+    }
+
+    final var exporter = exporter();
+
+    for (var fd : program.getFunctionDefinitions().values()) {
+      fd.analyzeSizes();
+      final var exp = exporter.transform(fd.getSizeAnalysis());
+      final var viz = Graphviz.fromGraph(exp);
+      try {
+        viz.render(Format.SVG)
+            .toOutputStream(
+                new PrintStream(
+                    new File(OUT, fqnToFlatFilename(fd.getFullyQualifiedName()) + "-sizes.svg")));
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+
     for (var fd : program.getFunctionDefinitions().values()) {
       System.out.println(fd.getFullyQualifiedName() + " ∷ " + fd.getInferredSignature());
     }
   }
 
   @Test
-  void fiddle() throws Exception {
-    // Program program = loader.loadInline("swp t = match t with | (l, m, r) -> (r, m, l)");
-    // Program program = loader.loadInline("g x y = (x, y, x)");
-    final var program = loadAndInfer("LeftList.postorder");
-    final var tight = new HashMap<String, Pair<Annotation, Annotation>>();
-    final var args = new ArrayList<Coefficient>();
-    for (int i = 0; i < 1; i++) {
-      args.add(ZERO);
-    }
-
-    tight.put(
-        "LeftList.cons",
-        new Pair<>(
-            new Annotation(args, emptyMap(), "expected"),
-            new Annotation(singletonList(ZERO), emptyMap(), "expected")));
-    assertTrue(program.solve(tight).isPresent());
-    assertNotNull(program);
-  }
+  void fiddle() throws Exception {}
 
   private enum ExpectedResult {
     SAT,

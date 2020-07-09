@@ -6,7 +6,6 @@ import java.util.Stack;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
-import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
@@ -36,8 +35,12 @@ public class Number extends Expression {
   }
 
   @Override
-  public Expression normalize(
-      Stack<Pair<Identifier, Expression>> context, IntIdGenerator idGenerator) {
+  public Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
+    return this;
+  }
+
+  @Override
+  public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
     return this;
   }
 }

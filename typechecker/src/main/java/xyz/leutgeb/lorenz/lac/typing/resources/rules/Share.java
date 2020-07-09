@@ -9,7 +9,6 @@ import static xyz.leutgeb.lorenz.lac.Util.bug;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.lac.ast.ShareExpression;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
@@ -25,14 +24,14 @@ public class Share {
 
     // This is a pair, the elements are called x and y in the paper.
     final var xy = expression.getDown();
-    final var x = xy.getFirst().getName();
-    final var y = xy.getSecond().getName();
+    final var x = xy.getLeft().getName();
+    final var y = xy.getRight().getName();
 
     // This is called z in the paper.
     final var z = expression.getUp().getName();
 
-    if (gammazSQ.getIds().contains(xy.getFirst().getName())
-        || gammazSQ.getIds().contains(xy.getSecond().getName())) {
+    if (gammazSQ.getIds().contains(xy.getLeft().getName())
+        || gammazSQ.getIds().contains(xy.getRight().getName())) {
       throw bug("an id that is introduced here is already in the context");
     }
 
@@ -43,68 +42,89 @@ public class Share {
 
     final var gammaxyQIds = new ArrayList<>(gammazSQ.getIds());
     gammaxyQIds.remove(z);
-    gammaxyQIds.add(xy.getFirst().getName());
-    gammaxyQIds.add(xy.getSecond().getName());
+    gammaxyQIds.add(xy.getLeft().getName());
+    gammaxyQIds.add(xy.getRight().getName());
     final var gammaxyQ = globals.getHeuristic().generateContext("share", gammaxyQIds);
 
     return new Rule.ApplicationResult(
         singletonList(
-            Pair.create(
-                obligation.keepCost(gammaxyQ, expression.getScope(), obligation.getAnnotation()),
-                concat(
-                        gammazSQ.getIds().stream()
-                            .map(
-                                id ->
-                                    id.equals(z)
-                                        ? new EqualsSumConstraint(
-                                            gammazSQ.getRankCoefficient(id),
-                                            List.of(
-                                                gammaxyQ.getRankCoefficient(x),
-                                                gammaxyQ.getRankCoefficient(y)))
-                                        : new EqualityConstraint(
-                                            gammaxyQ.getRankCoefficient(id),
-                                            gammazSQ.getRankCoefficient(id))),
+            obligation.keepCost(gammaxyQ, expression.getScope(), obligation.getAnnotation())),
+        singletonList(
+            concat(
+                    gammazSQ.getIds().stream()
+                        .map(
+                            id ->
+                                id.equals(z)
+                                    ? new EqualsSumConstraint(
+                                        gammazSQ.getRankCoefficient(id),
+                                        List.of(
+                                            gammaxyQ.getRankCoefficient(x),
+                                            gammaxyQ.getRankCoefficient(y)),
+                                        "(share) rank coefficients are sum-equal when"
+                                            + expression.getUp()
+                                            + " as "
+                                            + expression.getDown()
+                                            + " in expression `"
+                                            + expression.getScope()
+                                            + "`")
+                                    : new EqualityConstraint(
+                                        gammaxyQ.getRankCoefficient(id),
+                                        gammazSQ.getRankCoefficient(id),
+                                        "(share) rank coefficients are equal when sharing "
+                                            + expression.getUp()
+                                            + " as "
+                                            + expression.getDown()
+                                            + " in expression `"
+                                            + expression.getScope()
+                                            + "`")),
 
-                        // Version 1:
-                        gammaxyQ.stream()
-                            .map(
-                                qEntry -> {
-                                  final var index = qEntry.getAssociatedIndices();
-                                  final var unsharedIndex = new HashMap<>(index);
-                                  unsharedIndex.put(z, index.get(x) + index.get(y));
-                                  return new EqualityConstraint(
-                                      gammaxyQ.getCoefficient(
-                                          qEntry.getAssociatedIndices(), qEntry.getOffsetIndex()),
-                                      gammazSQ.getCoefficientOrZero(
-                                          unsharedIndex, qEntry.getOffsetIndex()));
-                                }))
+                    // Version 1:
+                    gammaxyQ.stream()
+                        .map(
+                            qEntry -> {
+                              final var index = qEntry.getAssociatedIndices();
+                              final var unsharedIndex = new HashMap<>(index);
+                              unsharedIndex.put(z, index.get(x) + index.get(y));
+                              return new EqualityConstraint(
+                                  gammaxyQ.getCoefficient(
+                                      qEntry.getAssociatedIndices(), qEntry.getOffsetIndex()),
+                                  gammazSQ.getCoefficientOrZero(
+                                      unsharedIndex, qEntry.getOffsetIndex()),
+                                  "(share) ? "
+                                      + expression.getUp()
+                                      + " as "
+                                      + expression.getDown()
+                                      + " in expression `"
+                                      + expression.getScope()
+                                      + "`");
+                            }))
 
-                    // Version 2:
-                    /*
-                                        gammazSQ
-                                            .streamIndices()
-                                            .flatMap(
-                                                entry -> {
-                                                  final var index = entry.getFirst();
-                                                  final var a = index.get(z);
-                                                  return rangeClosed(0, a)
-                                                      .mapToObj(
-                                                          a1 -> {
-                                                            final var a2 = a - a1;
+                // Version 2:
+                /*
+                                    gammazSQ
+                                        .streamIndices()
+                                        .flatMap(
+                                            entry -> {
+                                              final var index = entry.getLeft();
+                                              final var a = index.get(z);
+                                              return rangeClosed(0, a)
+                                                  .mapToObj(
+                                                      a1 -> {
+                                                        final var a2 = a - a1;
 
-                                                            final var sharedIndex = new HashMap<>(index);
-                                                            sharedIndex.put(x, a1);
-                                                            sharedIndex.put(y, a2);
+                                                        final var sharedIndex = new HashMap<>(index);
+                                                        sharedIndex.put(x, a1);
+                                                        sharedIndex.put(y, a2);
 
-                                                            return new EqualityConstraint(
-                                                                gammaxyQ.getCoefficient(
-                                                                    sharedIndex, entry.getSecond()),
-                                                                gammazSQ.getCoefficient(
-                                                                    sharedIndex, entry.getSecond()));
-                                                          });
-                                                }))
-                    */
-                    .collect(toList()))),
+                                                        return new EqualityConstraint(
+                                                            gammaxyQ.getCoefficient(
+                                                                sharedIndex, entry.getRight()),
+                                                            gammazSQ.getCoefficient(
+                                                                sharedIndex, entry.getRight()));
+                                                      });
+                                            }))
+                */
+                .collect(toList())),
         emptyList());
 
     /*
@@ -134,25 +154,25 @@ public class Share {
             sharedEntry -> {
               context
                   .streamIndices()
-                  .filter(entry -> entry.getSecond().equals(sharedEntry.getSecond()))
+                  .filter(entry -> entry.getRight().equals(sharedEntry.getRight()))
                   .filter(
                       entry ->
-                          entry.getFirst().entrySet().stream()
+                          entry.getLeft().entrySet().stream()
                               .filter(entryToCheck -> !entryToCheck.getKey().equals(up.getName()))
                               .allMatch(
                                   entryToCheck ->
                                       entryToCheck
                                           .getValue()
                                           .equals(
-                                              sharedEntry.getFirst().get(entryToCheck.getKey()))))
+                                              sharedEntry.getLeft().get(entryToCheck.getKey()))))
                   .filter(
                       entry ->
                           entry
-                              .getFirst()
+                              .getLeft()
                               .get(up.getName())
                               .equals(
-                                  sharedEntry.getFirst().get(down.getFirst().getName())
-                                      + sharedEntry.getFirst().get(down.getSecond().getName())))
+                                  sharedEntry.getLeft().get(down.getLeft().getName())
+                                      + sharedEntry.getLeft().get(down.getRight().getName())))
                   .forEach(
                       entry -> {
                         constraints.eq(

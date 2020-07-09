@@ -1,19 +1,19 @@
 package xyz.leutgeb.lorenz.lac.typing.simple.types;
 
+import static java.util.Collections.emptySet;
+
+import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
-import xyz.leutgeb.lorenz.lac.unification.Equivalence;
-import xyz.leutgeb.lorenz.lac.unification.Generalizer;
-import xyz.leutgeb.lorenz.lac.unification.Substitution;
-import xyz.leutgeb.lorenz.lac.unification.TypeMismatch;
-import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
+import xyz.leutgeb.lorenz.lac.unification.*;
 
 @Value
 @EqualsAndHashCode(callSuper = false)
@@ -51,6 +51,11 @@ public class ProductType implements Type {
   @Override
   public Type wiggle(Substitution wiggled, UnificationContext context) {
     return map(x -> x.wiggle(wiggled, context));
+  }
+
+  @Override
+  public Set<TypeVariable> variables() {
+    return elements.stream().map(Type::variables).reduce(emptySet(), Sets::union);
   }
 
   @Override

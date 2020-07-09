@@ -18,7 +18,6 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.hipparchus.util.Pair;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import xyz.leutgeb.lorenz.lac.SizeEdge;
@@ -38,12 +37,13 @@ import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 public class W {
   private static List<Constraint> compareCoefficientsGreaterOrEqual(
       Annotation left, Annotation right) {
-    return compareCoefficients(left, right, GreaterThanOrEqualConstraint::new);
+    return compareCoefficients(
+        left, right, (x, y) -> new GreaterThanOrEqualConstraint(x, y, "(w)"));
   }
 
   private static List<Constraint> compareCoefficientsLessOrEqual(
       Annotation left, Annotation right) {
-    return compareCoefficients(left, right, LessThanOrEqualConstraint::new);
+    return compareCoefficients(left, right, (x, y) -> new LessThanOrEqualConstraint(x, y, "(w)"));
   }
 
   private static List<Constraint> compareCoefficients(
@@ -80,6 +80,8 @@ public class W {
       vertices.put(stringIdentifier, matches.get(0));
     }
 
+    // NOTE: For the identifier `leaf` we know that it's size is 1 by definition.
+
     if (vertices != null) {
       var ids = List.copyOf(vertices.keySet());
       Map<String, Identifier> finalVertices = vertices;
@@ -105,7 +107,7 @@ public class W {
         .mapToObj(
             i ->
                 new LessThanOrEqualConstraint(
-                    left.getRankCoefficient(i), right.getRankCoefficient(i)))
+                    left.getRankCoefficient(i), right.getRankCoefficient(i), "(w:farkas)"))
         .forEach(constraints::add);
 
     final var variablePotentialFunctionIndices =
@@ -132,7 +134,8 @@ public class W {
     // Note: If b never changes to be nonzero, this could be refactored, generating f
     // element by element in the multiplication loop below. No explicit allocation of f
     // in a list would be required.
-    final var f = Stream.generate(UnknownCoefficient::unknown).limit(m).collect(toList());
+    final var f =
+        Stream.generate(() -> UnknownCoefficient.unknown("wf")).limit(m).collect(toList());
 
     final var cp = left.getUnitCoefficientOrZero();
     final var cq = right.getUnitCoefficientOrZero();
@@ -141,7 +144,7 @@ public class W {
     //                       to c_p ≤ c_q.)
     // If we were to generate b as all zeros, it'd look as follows:
     // final var b = Stream.generate(() -> ZERO).limit(m).collect(toList());
-    constraints.add(new LessThanOrEqualConstraint(cp, cq));
+    constraints.add(new LessThanOrEqualConstraint(cp, cq, "(w:farkas)"));
 
     final var p =
         variablePotentialFunctionIndices.stream().map(left::getCoefficientOrZero).collect(toList());
@@ -167,9 +170,9 @@ public class W {
         }
       }
       sum.add(q.get(j));
-      UnknownCoefficient x = UnknownCoefficient.unknown();
+      UnknownCoefficient x = UnknownCoefficient.unknown("wx");
       constraints.add(new EqualsSumConstraint(x, sum));
-      constraints.add(new LessThanOrEqualConstraint(p.get(j), x));
+      constraints.add(new LessThanOrEqualConstraint(p.get(j), x, "(w:farkas)"));
     }
 
     return constraints;
@@ -184,17 +187,17 @@ public class W {
 
     return new Rule.ApplicationResult(
         singletonList(
-            Pair.create(
-                obligation.keepCost(
-                    new AnnotatingContext(obligation.getContext().getIds(), p),
-                    obligation.getExpression(),
-                    pp),
-                append(
-                    compareCoefficientsLessOrEqualUsingFarkas(
-                        obligation.getContext().getIds(), p, q, globals.getSizeAnalysis()),
-                    // compareCoefficientsLessOrEqualUsingFarkas(qp, pp)
-                    // compareCoefficientsLessOrEqual(p, q),
-                    compareCoefficientsGreaterOrEqual(pp, qp)))),
+            obligation.keepCost(
+                new AnnotatingContext(obligation.getContext().getIds(), p),
+                obligation.getExpression(),
+                pp)),
+        singletonList(
+            append(
+                compareCoefficientsLessOrEqualUsingFarkas(
+                    obligation.getContext().getIds(), p, q, globals.getSizeAnalysis()),
+                // compareCoefficientsLessOrEqualUsingFarkas(qp, pp)
+                // compareCoefficientsLessOrEqual(p, q),
+                compareCoefficientsGreaterOrEqual(pp, qp))),
         emptyList());
   }
 
@@ -212,7 +215,7 @@ public class W {
     //
     // Now, we would reach
     //
-    //   t3, t1'' | Q |- (t3, x, t1'') | Q'
+    //   t3, t1'' | Q ⊢ (t3, x, t1'') | Q'
     //
     // and apply (w), followed by (node).
     //

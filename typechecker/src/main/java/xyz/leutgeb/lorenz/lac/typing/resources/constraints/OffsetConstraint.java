@@ -21,8 +21,8 @@ import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 public class OffsetConstraint extends EqualityConstraint {
   private final Fraction offset;
 
-  public OffsetConstraint(Coefficient left, Coefficient right, Fraction offset) {
-    super(left, right);
+  public OffsetConstraint(Coefficient left, Coefficient right, Fraction offset, String reason) {
+    super(left, right, reason);
     this.offset = offset;
   }
 

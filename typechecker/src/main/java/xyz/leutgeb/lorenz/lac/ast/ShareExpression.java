@@ -9,7 +9,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
-import org.hipparchus.util.Pair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.Graph;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.SizeEdge;
@@ -35,11 +35,27 @@ public class ShareExpression extends Expression {
     super(Derived.unshare(source));
     this.up = up;
     this.down = down;
+    // TODO: Prettify...
+    /*
+    this.down =
+        Pair.of(
+            new Identifier(
+                down.getLeft().source,
+                down.getLeft().getName(),
+                down.getLeft().type,
+                new Intro(down.getLeft().getIntro().getFqn(), this)),
+            new Identifier(
+                down.getRight().source,
+                down.getRight().getName(),
+                down.getRight().type,
+                new Intro(down.getRight().getIntro().getFqn(), this)));
+     */
+
     this.scope = scope;
     this.type = scope.getType();
 
-    if (up.getName().equals(down.getFirst().getName())
-        || up.getName().equals(down.getSecond().getName())) {
+    if (up.getName().equals(down.getLeft().getName())
+        || up.getName().equals(down.getRight().getName())) {
       throw new IllegalArgumentException(
           "name of unshared variable is the same as one of its replacements");
     }
@@ -51,9 +67,9 @@ public class ShareExpression extends Expression {
 
   public static Pair<Identifier, Identifier> clone(
       Identifier identifier, IntIdGenerator idGenerator) {
-    // TODO: Do not take intro from above, but really use the share expression that resulted as the
-    // intro.
+    final var source = Derived.unshare(identifier);
     final var intro = identifier.getIntro();
+    final var type = identifier.getType();
 
     final var primeIndex = identifier.getName().indexOf("'");
     final var rawIdentifier =
@@ -61,39 +77,18 @@ public class ShareExpression extends Expression {
             .getName()
             .substring(0, primeIndex < 0 ? identifier.getName().length() : primeIndex);
 
-    return new Pair<>(
+    return Pair.of(
         new Identifier(
-            identifier.getSource(),
-            rawIdentifier + "'" + idGenerator.next(),
-            identifier.getType(),
-            intro),
+            source, rawIdentifier + Util.generateSubscript(idGenerator.next()), type, intro),
         new Identifier(
-            identifier.getSource(),
-            rawIdentifier + "'" + idGenerator.next(),
-            identifier.getType(),
-            intro));
-
-    /*
-    final var primeIndex = identifier.getName().indexOf("'");
-    final var rawIdentifier = identifier.getName().substring(0, primeIndex < 0 ? identifier.getName().length() : primeIndex);
-
-    final var rawIdentifier = identifier.getName().replace("'", "");
-    final var n = unshared.merge(rawIdentifier, 2, (k, v) -> v + 2);
-    return new Pair<>(
-        new Identifier(identifier.getSource(), rawIdentifier + Util.repeat("'", n - 1)),
-        new Identifier(identifier.getSource(), rawIdentifier + Util.repeat("'", n)));
-
-    return new Pair<>(
-            new Identifier(identifier.getSource(), rawIdentifier + "'" + freshness++),
-            new Identifier(identifier.getSource(), rawIdentifier + "'" + freshness++));
-     */
+            source, rawIdentifier + Util.generateSubscript(idGenerator.next()), type, intro));
   }
 
   public static Pair<Expression, Expression> rename(
       Identifier up, Pair<Identifier, Identifier> down, Pair<Expression, Expression> expressions) {
-    return Pair.create(
-        expressions.getFirst().rename(Map.of(up.getName(), down.getFirst().getName())),
-        expressions.getSecond().rename(Map.of(up.getName(), down.getSecond().getName())));
+    return Pair.of(
+        expressions.getLeft().rename(Map.of(up.getName(), down.getLeft().getName())),
+        expressions.getRight().rename(Map.of(up.getName(), down.getRight().getName())));
   }
 
   @Override
@@ -104,17 +99,9 @@ public class ShareExpression extends Expression {
   @Override
   protected Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
     var sub = context.child();
-    sub.putType(down.getFirst().getName(), up.infer(sub), this);
-    sub.putType(down.getSecond().getName(), up.infer(sub), this);
+    sub.putType(down.getLeft().getName(), up.infer(sub), this);
+    sub.putType(down.getRight().getName(), up.infer(sub), this);
     return scope.infer(sub);
-  }
-
-  @Override
-  public Expression unshare(IntIdGenerator idGenerator) {
-    // throw new IllegalStateException("calling unshare on a ShareExpression is wrong, since the
-    // translation is top-down");
-    return this;
-    // return new ShareExpression(this, up, down, scope.unshare(unshared, idGenerator));
   }
 
   @Override
@@ -126,15 +113,19 @@ public class ShareExpression extends Expression {
   public Set<Identifier> freeVariables() {
     final var result = super.freeVariables();
     result.add(up);
-    result.remove(down.getFirst());
-    result.remove(down.getSecond());
+    // This is quite ugly. We cannot use equals, since the intro of occurrences of
+    // down.get(Left|Right) does not get reset to this.
+    result.removeIf(
+        x ->
+            x.getName().equals(down.getLeft().getName())
+                || x.getName().equals(down.getRight().getName()));
     return result;
   }
 
   @Override
   public Expression rename(Map<String, String> renaming) {
-    if (renaming.containsKey(down.getFirst().getName())
-        || renaming.containsKey(down.getSecond().getName())) {
+    if (renaming.containsKey(down.getLeft().getName())
+        || renaming.containsKey(down.getRight().getName())) {
       throw new IllegalArgumentException("wat");
     }
 
@@ -142,10 +133,15 @@ public class ShareExpression extends Expression {
   }
 
   @Override
+  public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
+    return this;
+  }
+
+  @Override
   public void printTo(PrintStream out, int indentation) {
     out.print("share ");
     up.printTo(out, indentation);
-    out.print(" as (" + down.getFirst() + ", " + down.getSecond() + ") in (\n");
+    out.print(" ≡ " + down.getLeft() + " ≡ " + down.getRight() + " in (\n");
     indent(out, indentation);
     scope.printTo(out, indentation + 1);
     out.println();
@@ -157,11 +153,11 @@ public class ShareExpression extends Expression {
   public void analyzeSizes(Graph<Identifier, SizeEdge> sizeGraph) {
     super.analyzeSizes(sizeGraph);
     sizeGraph.addVertex(up);
-    sizeGraph.addVertex(down.getFirst());
-    sizeGraph.addVertex(down.getSecond());
-    sizeGraph.addEdge(up, down.getFirst(), SizeEdge.eq());
-    sizeGraph.addEdge(up, down.getSecond(), SizeEdge.eq());
-    sizeGraph.addEdge(down.getSecond(), up, SizeEdge.eq());
-    sizeGraph.addEdge(down.getFirst(), up, SizeEdge.eq());
+    sizeGraph.addVertex(down.getLeft());
+    sizeGraph.addVertex(down.getRight());
+    sizeGraph.addEdge(up, down.getLeft(), SizeEdge.eq());
+    sizeGraph.addEdge(up, down.getRight(), SizeEdge.eq());
+    sizeGraph.addEdge(down.getRight(), up, SizeEdge.eq());
+    sizeGraph.addEdge(down.getLeft(), up, SizeEdge.eq());
   }
 }

@@ -33,33 +33,6 @@ public class Equivalence {
     }
   }
 
-  public Optional<Equivalence> substitute(UnificationVariable variable, Type result) {
-    var leftSubstitute = left.substitute(variable, result);
-    var rightSubstitute = right.substitute(variable, result);
-    if (!leftSubstitute.equals(rightSubstitute)) {
-      return Optional.of(new Equivalence(leftSubstitute, rightSubstitute));
-    }
-    return Optional.empty();
-  }
-
-  public void occurs() throws OccursError {
-    if (left instanceof UnificationVariable && right.occurs((UnificationVariable) left)) {
-      throw new OccursError(left, right);
-    }
-  }
-
-  public Collection<Equivalence> unify() throws UnificationError {
-    if (left == right || left.equals(right)) {
-      return emptyList();
-    }
-    return left.decompose(right);
-  }
-
-  @Override
-  public String toString() {
-    return left + " ≈ " + right;
-  }
-
   public static Substitution solve(LinkedList<Equivalence> equivalences) throws UnificationError {
     final var solution = new Substitution();
     while (!equivalences.isEmpty()) {
@@ -88,5 +61,32 @@ public class Equivalence {
       solution.substitute(left, e.getRight());
     }
     return solution;
+  }
+
+  public Optional<Equivalence> substitute(UnificationVariable variable, Type result) {
+    var leftSubstitute = left.substitute(variable, result);
+    var rightSubstitute = right.substitute(variable, result);
+    if (!leftSubstitute.equals(rightSubstitute)) {
+      return Optional.of(new Equivalence(leftSubstitute, rightSubstitute));
+    }
+    return Optional.empty();
+  }
+
+  public void occurs() throws OccursError {
+    if (left instanceof UnificationVariable && right.occurs((UnificationVariable) left)) {
+      throw new OccursError(left, right);
+    }
+  }
+
+  public Collection<Equivalence> unify() throws UnificationError {
+    if (left == right || left.equals(right)) {
+      return emptyList();
+    }
+    return left.decompose(right);
+  }
+
+  @Override
+  public String toString() {
+    return left + " ≈ " + right;
   }
 }

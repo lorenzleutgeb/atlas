@@ -3,18 +3,12 @@ package xyz.leutgeb.lorenz.lac.typing.simple.types;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.copyOf;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import com.google.common.collect.Sets;
+import java.util.*;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
-import xyz.leutgeb.lorenz.lac.unification.Equivalence;
-import xyz.leutgeb.lorenz.lac.unification.Generalizer;
-import xyz.leutgeb.lorenz.lac.unification.Substitution;
-import xyz.leutgeb.lorenz.lac.unification.TypeMismatch;
-import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
+import xyz.leutgeb.lorenz.lac.unification.*;
 
 @Value
 @EqualsAndHashCode(callSuper = false)
@@ -75,6 +69,11 @@ public class FunctionType implements Type {
   public Type wiggle(Substitution wiggled, UnificationContext context) {
     return new FunctionType(
         (ProductType) from.wiggle(wiggled, context), to.wiggle(wiggled, context));
+  }
+
+  @Override
+  public Set<TypeVariable> variables() {
+    return Sets.union(from.variables(), to.variables());
   }
 
   @Override

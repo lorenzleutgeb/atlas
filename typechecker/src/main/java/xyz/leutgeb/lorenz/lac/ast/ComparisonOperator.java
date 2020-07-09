@@ -1,24 +1,35 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
+import static java.util.function.Predicate.isEqual;
+
 import java.io.PrintStream;
+import java.util.Collections;
+import java.util.List;
 
 public enum ComparisonOperator {
-  EQ("=="),
-  NE("!="),
-  LT("<"),
-  LE("<="),
-  GT(">"),
-  GE(">=");
+  EQ(List.of("⩵", "==")),
+  NE(List.of("≠", "!=")),
+  LT(List.of("⪱", "<")),
+  LE(List.of("⪯", "<=")),
+  GT(List.of("⪲", ">")),
+  GE(List.of("⪰", ">="));
 
-  private final String token;
+  private final List<String> tokens;
 
   ComparisonOperator(String token) {
-    this.token = token;
+    this(Collections.singletonList(token));
+  }
+
+  ComparisonOperator(List<String> tokens) {
+    if (tokens.isEmpty()) {
+      throw new IllegalArgumentException();
+    }
+    this.tokens = Collections.unmodifiableList(tokens);
   }
 
   public static ComparisonOperator fromToken(String token) {
     for (ComparisonOperator op : ComparisonOperator.values()) {
-      if (op.token.equals(token)) {
+      if (op.tokens.stream().anyMatch(isEqual(token))) {
         return op;
       }
     }
@@ -26,11 +37,11 @@ public enum ComparisonOperator {
   }
 
   public void printTo(PrintStream out) {
-    out.print(token);
+    out.print(tokens.get(0));
   }
 
   @Override
   public String toString() {
-    return token;
+    return tokens.get(0);
   }
 }

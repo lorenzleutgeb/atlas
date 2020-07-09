@@ -3,43 +3,28 @@ package xyz.leutgeb.lorenz.lac.typing.resources.solving;
 import static com.microsoft.z3.Status.SATISFIABLE;
 import static com.microsoft.z3.Status.UNKNOWN;
 import static java.util.Optional.empty;
-import static xyz.leutgeb.lorenz.lac.Util.bug;
-import static xyz.leutgeb.lorenz.lac.Util.ensureLibrary;
-import static xyz.leutgeb.lorenz.lac.Util.rawObjectNode;
-import static xyz.leutgeb.lorenz.lac.Util.signum;
+import static xyz.leutgeb.lorenz.lac.Util.*;
 
 import com.google.common.collect.HashBiMap;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
-import com.microsoft.z3.Model;
-import com.microsoft.z3.Optimize;
-import com.microsoft.z3.RatNum;
-import com.microsoft.z3.RealExpr;
-import com.microsoft.z3.Status;
-import guru.nidi.graphviz.attribute.Label;
-import guru.nidi.graphviz.attribute.Records;
-import guru.nidi.graphviz.model.Graph;
-import guru.nidi.graphviz.model.Node;
+import com.microsoft.z3.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 
-@Log4j2
+@Slf4j
 public class ConstraintSystemSolver {
   static {
     ensureLibrary("z3java");
@@ -83,7 +68,7 @@ public class ConstraintSystemSolver {
   }
 
   public static Optional<Map<Coefficient, KnownCoefficient>> solve(
-      Set<Constraint> constraints, String name) throws ConstraintSystemException {
+      Set<Constraint> constraints, String name) {
     final var unsatCore = true;
     final var ctx = new Context(z3Config(unsatCore));
     final var solver = ctx.mkSolver();
@@ -97,15 +82,27 @@ public class ConstraintSystemSolver {
 
     final var generatedCoefficients = HashBiMap.<RealExpr, Coefficient>create();
 
-    for (var constraint : constraints) {
-      for (var coefficient : constraint.occurringCoefficients()) {
-        generatedCoefficients
-            .inverse()
-            .computeIfAbsent(
-                coefficient,
-                (Coefficient c) ->
-                    ctx.mkRealConst("q" + "q_unknown_" + generatedCoefficients.size()));
+    // final var coefficients =
+    // constraints.stream().map(Constraint::occurringCoefficients).reduce(emptySet(), Sets::union);
+    final var coefficients = new HashSet<Coefficient>();
+    for (Constraint constraint : constraints) {
+      coefficients.addAll(constraint.occurringCoefficients());
+    }
+
+    for (var coefficient : coefficients) {
+      if (!(coefficient instanceof UnknownCoefficient)) {
+        continue;
       }
+      if (generatedCoefficients.inverse().containsKey(coefficient)) {
+        continue;
+      }
+      generatedCoefficients
+          .inverse()
+          .computeIfAbsent(
+              coefficient,
+              (Coefficient c) ->
+                  // ctx.mkRealConst("q" + "q_unknown_" + generatedCoefficients.size()
+                  ctx.mkRealConst(((UnknownCoefficient) c).getName()));
     }
 
     // Encode all coefficients as constants.
@@ -142,19 +139,23 @@ public class ConstraintSystemSolver {
       } else {
         if (unsatCore) {
           solver.assertAndTrack(
-              c.encode(ctx, generatedCoefficients.inverse()),
-              ctx.mkBoolConst(
-                  c.getId() + " " + c.getClass().getSimpleName().replace("constraint", "")));
+              c.encode(ctx, generatedCoefficients.inverse()), ctx.mkBoolConst(c.getTracking()));
+          // c.getId() + " " + c.getClass().getSimpleName().replace("Constraint", "")));
         } else {
           solver.add(c.encode(ctx, generatedCoefficients.inverse()));
         }
       }
     }
 
+    log.info("Coefficients: " + generatedCoefficients.keySet().size());
+    log.info("Constraints: " + constraints.size());
+
     // log.debug(solver.toString());
     // TODO: Parameterize location.
-    try (PrintWriter out = new PrintWriter(new File("out", name + ".smt"))) {
+    File smtFile = new File("out", name + ".smt");
+    try (PrintWriter out = new PrintWriter(smtFile)) {
       out.println(optimize ? opt : solver);
+      log.info("Wrote SMT instance to {}.", smtFile);
     } catch (FileNotFoundException e) {
       // This is not essential.
     }
@@ -163,6 +164,7 @@ public class ConstraintSystemSolver {
     if (optimize) {
       optionalModel = check(opt::Check, opt::getModel, opt::getUnsatCore, constraints);
     } else {
+      // System.out.println(solver);
       optionalModel = check(solver::check, solver::getModel, solver::getUnsatCore, constraints);
     }
     if (optionalModel.isEmpty()) {
@@ -208,10 +210,9 @@ public class ConstraintSystemSolver {
       Supplier<Status> check,
       Supplier<Model> getModel,
       Supplier<BoolExpr[]> getUnsatCore,
-      Set<Constraint> constraints)
-      throws ConstraintSystemTimeoutException {
+      Set<Constraint> constraints) {
     final var start = Instant.now();
-    System.out.println("Invoking z3 at " + start);
+    log.info("Invoking z3 at " + start);
     var status = check.get();
     final var stop = Instant.now();
     log.debug("Solving time: " + (Duration.between(start, stop)));
@@ -219,58 +220,38 @@ public class ConstraintSystemSolver {
       return Optional.of(getModel.get());
     } else if (UNKNOWN.equals(status)) {
       log.error("Attempt to solve constraint system yielded unknown result.");
-      throw new ConstraintSystemTimeoutException("satisfiability of constraints unknown");
+      throw new RuntimeException(new TimeoutException("satisfiability of constraints unknown"));
     }
-    // log.error("Constraint system is unsatisfiable!");
+    log.error("Constraint system is unsatisfiable!");
     final var core = getUnsatCore.get();
     if (core.length > 0) {
       Set<String> coreSet =
           Arrays.stream(getUnsatCore.get())
-              .map(x -> x.toString().substring(1).split(" ")[0])
+              // .map(x -> x.toString().substring(1).split(" ")[0])
+              .map(Object::toString)
+              .map(x -> x.substring(1, x.length() - 1))
               .collect(Collectors.toSet());
-      constraints.forEach(c -> c.setCore(coreSet.contains(c.getId())));
+
+      log.info(
+          "Unsatisfiable core (raw from Z3):\n{}",
+          coreSet.stream().collect(Collectors.joining("\n")));
+
+      constraints.stream()
+          // .filter(c -> coreSet.contains(c.getTracking()))
+          // .forEach(c -> c.setCore(true));
+          .forEach(c -> c.markCoreByTrackings(coreSet));
+
       /*
-      log.error(
-          "Unsatisfiable core:\n\t"
-              + Arrays.stream(getUnsatCore.get())
-                  .map(Objects::toString)
-                  .collect(Collectors.joining("\n\t")));
+      final String unsatCoreLog =
+          constraints.stream()
+              .filter(Constraint::isCore)
+              .map(c -> c.getTracking() + "\t" + c + "\t" + c.getReason())
+              .collect(Collectors.joining("\n"));
+      log.info("Unsatisfiable core:\n{}", unsatCoreLog);
        */
     } else {
       throw bug("Unsatisfiable core is empty, even though constraint system is unsatisfiable!");
     }
     return empty();
-  }
-
-  public static Graph toGraph(Graph graph, Set<Constraint> constraints) {
-    var nodes = new HashMap<Coefficient, Node>();
-
-    // var clusters = new HashMap<String, Graph>();
-
-    for (var constraint : constraints) {
-      for (var it : constraint.occurringCoefficients()) {
-        var s = it.toString();
-        var label = s.startsWith("h") ? Records.of(s.substring(1).split(",")) : Label.of(s);
-        nodes.put(it, rawObjectNode(it).with(label));
-        // if (it instanceof  UnknownCoefficient) {
-        //	var name = ((UnknownCoefficient) it).getName().split(" ")[0];
-        //	var cluster = clusters.getOrDefault(name, graph(name).cluster());
-        //  var node = objectNode(it);
-        //	cluster = cluster.with(node);
-        //	clusters.put(name, cluster);
-        // }
-        // graph = graph.with(objectNode(it));
-      }
-    }
-
-    // for (var cluster : clusters.values()) {
-    //  graph = graph.with(cluster);
-    // }
-
-    for (var it : constraints) {
-      graph = it.toGraph(graph, nodes);
-    }
-
-    return graph;
   }
 }

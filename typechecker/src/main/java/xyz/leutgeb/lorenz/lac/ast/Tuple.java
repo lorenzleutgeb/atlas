@@ -3,16 +3,11 @@ package xyz.leutgeb.lorenz.lac.ast;
 import static com.google.common.collect.Sets.union;
 
 import java.io.PrintStream;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
-import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
@@ -35,7 +30,8 @@ public class Tuple extends Expression {
     this.elements = elements;
   }
 
-  private Tuple(Source source, List<Expression> elements, Type type) {
+  public Tuple(Source source, List<Expression> elements, Type type) {
+    // TODO: This constructor was made public for testing purposes only. Make it private again?
     super(source, type);
     if (elements.size() != 3) {
       throw new IllegalArgumentException("only tuples with exactly three elements are supported");
@@ -71,8 +67,7 @@ public class Tuple extends Expression {
   }
 
   @Override
-  public Expression normalize(
-      Stack<Pair<Identifier, Expression>> context, IntIdGenerator idGenerator) {
+  public Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
     if (elements.stream().allMatch(Expression::isImmediate)) {
       return this;
     }
@@ -122,7 +117,7 @@ public class Tuple extends Expression {
   }
 
   @Override
-  public Expression unshare(IntIdGenerator idGenerator) {
+  public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
     // NOTE: The only sharing possible is left and right, since sharing of either of the
     // two with middle would mean a type error.
     if (!(getLeft() instanceof Identifier) || !(getRight() instanceof Identifier)) {
@@ -136,7 +131,7 @@ public class Tuple extends Expression {
         this,
         (Identifier) getLeft(),
         down,
-        new Tuple(source, List.of(down.getFirst(), getMiddle(), down.getSecond()), type));
+        new Tuple(source, List.of(down.getLeft(), getMiddle(), down.getRight()), type));
   }
 
   @Override

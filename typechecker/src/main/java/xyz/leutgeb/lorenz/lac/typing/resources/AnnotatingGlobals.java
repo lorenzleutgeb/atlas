@@ -4,7 +4,6 @@ import java.util.Map;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Value;
-import org.hipparchus.util.Pair;
 import org.jgrapht.Graph;
 import xyz.leutgeb.lorenz.lac.SizeEdge;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
@@ -12,59 +11,55 @@ import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.AnnotationHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
 
 @Value
-public final class AnnotatingGlobals {
+public class AnnotatingGlobals {
   @Getter(value = AccessLevel.NONE)
-  private final Map<String, Pair<Annotation, Annotation>> functionAnnotations;
+  Map<String, FunctionAnnotation> functionAnnotations;
 
   @Getter(value = AccessLevel.NONE)
-  private final Map<String, Pair<Annotation, Annotation>> costFreeFunctionAnnotations;
+  Map<String, FunctionAnnotation> costFreeFunctionAnnotations;
 
-  private final int cost;
-  private final AnnotationHeuristic heuristic = SmartRangeHeuristic.DEFAULT;
+  AnnotationHeuristic heuristic;
 
-  private final Graph<Identifier, SizeEdge> sizeAnalysis;
+  Graph<Identifier, SizeEdge> sizeAnalysis;
 
   public AnnotatingGlobals(
-      Map<String, Pair<Annotation, Annotation>> functionAnnotations,
-      Map<String, Pair<Annotation, Annotation>> costFreeFunctionAnnotations,
+      Map<String, FunctionAnnotation> functionAnnotations,
+      Map<String, FunctionAnnotation> costFreeFunctionAnnotations,
       Graph<Identifier, SizeEdge> sizeAnalysis,
-      int cost) {
-    if (!(cost == 0 || cost == 1)) {
-      throw new IllegalArgumentException("cost must be one or zero");
-    }
+      AnnotationHeuristic heuristic) {
     this.costFreeFunctionAnnotations = costFreeFunctionAnnotations;
     this.functionAnnotations = functionAnnotations;
     this.sizeAnalysis = sizeAnalysis;
-    this.cost = cost;
+    this.heuristic = heuristic;
   }
 
-  public AnnotatingGlobals costFree() {
-    if (cost == 0) {
-      return this;
-    }
-    return new AnnotatingGlobals(functionAnnotations, costFreeFunctionAnnotations, sizeAnalysis, 0);
-  }
-
-  public boolean isCostFree() {
-    return cost == 0;
+  public AnnotatingGlobals(
+      Map<String, FunctionAnnotation> functionAnnotations,
+      Map<String, FunctionAnnotation> costFreeFunctionAnnotations,
+      Graph<Identifier, SizeEdge> sizeAnalysis) {
+    this(
+        functionAnnotations,
+        costFreeFunctionAnnotations,
+        sizeAnalysis,
+        SmartRangeHeuristic.DEFAULT);
   }
 
   public void addFunctionAnnotation(
-      String name, Pair<Annotation, Annotation> withCost, Pair<Annotation, Annotation> costFree) {
-    if (withCost.getSecond().size() > 1 || costFree.getSecond().size() > 1) {
+      String name, FunctionAnnotation withCost, FunctionAnnotation costFree) {
+    if (withCost.to().size() > 1 || costFree.to().size() > 1) {
       throw new IllegalArgumentException("annotation of result can be of size one at most");
     }
-    if (withCost.getFirst().size() != costFree.getFirst().size()) {
+    if (withCost.from().size() != costFree.from().size()) {
       throw new IllegalArgumentException("size mismatch");
     }
-    if (withCost.getSecond().size() != costFree.getSecond().size()) {
+    if (withCost.to().size() != costFree.to().size()) {
       throw new IllegalArgumentException("size mismatch");
     }
     functionAnnotations.put(name, withCost);
     costFreeFunctionAnnotations.put(name, costFree);
   }
 
-  public Pair<Annotation, Annotation> getDependingOnCost(String name) {
+  public FunctionAnnotation getDependingOnCost(String name, int cost) {
     if (cost == 0) {
       return costFreeFunctionAnnotations.get(name);
     } else if (cost == 1) {

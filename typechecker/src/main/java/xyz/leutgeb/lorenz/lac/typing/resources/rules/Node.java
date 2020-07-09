@@ -37,15 +37,10 @@ public class Node {
     return Rule.ApplicationResult.onlyConstraints(
         Stream.concat(
                 Stream.of(
-                    // q_1 = q_2 = q_{*}'
-                    new EqualityConstraint(q1, q2),
-                    new EqualityConstraint(q2, rankCoefficient),
-
-                    // q_{1,0,0} = q_{0,1,0} = q_{*}'
-                    new EqualityConstraint(q100, q010),
-                    new EqualityConstraint(q010, rankCoefficient)),
-
-                // q_{a,a,b} = q'_{a,b}
+                    new EqualityConstraint(q1, q2, "(node) q_1 = q_2"),
+                    new EqualityConstraint(q2, rankCoefficient, "(node) q_2 = q_{*}'"),
+                    new EqualityConstraint(q100, q010, "(node) q_{1,0,0} = q_{0,1,0}"),
+                    new EqualityConstraint(q010, rankCoefficient, "(node) q_{0,1,0} = q_{*}'")),
                 q.stream()
                     .filter(
                         qEntry ->
@@ -56,11 +51,12 @@ public class Node {
                     .map(
                         qEntry -> {
                           var a = qEntry.getAssociatedIndices().get(leftId);
-                          var b = qEntry.getOffsetIndex();
+                          var c = qEntry.getOffsetIndex();
                           return new EqualityConstraint(
-                              obligation.getAnnotation().getCoefficient(List.of(a, b)),
                               q.getCoefficient(
-                                  qEntry.getAssociatedIndices(), qEntry.getOffsetIndex()));
+                                  qEntry.getAssociatedIndices(), qEntry.getOffsetIndex()),
+                              obligation.getAnnotation().getCoefficientOrZero(List.of(a, c)),
+                              "(node) q_{a,a,c} = q'_{a,c} for expression `" + expression + "`");
                         }))
             .collect(Collectors.toList()));
   }

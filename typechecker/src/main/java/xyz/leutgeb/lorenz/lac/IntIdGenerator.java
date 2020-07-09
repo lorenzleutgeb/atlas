@@ -13,6 +13,10 @@ public class IntIdGenerator implements Iterator<Integer> {
     this.highestId = initial;
   }
 
+  public static IntIdGenerator human() {
+    return new IntIdGenerator(1);
+  }
+
   @Override
   public boolean hasNext() {
     return highestId != Integer.MAX_VALUE;

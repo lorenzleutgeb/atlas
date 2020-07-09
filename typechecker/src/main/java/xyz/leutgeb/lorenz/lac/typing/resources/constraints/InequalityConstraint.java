@@ -12,19 +12,20 @@ import guru.nidi.graphviz.model.Node;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
-import lombok.extern.log4j.Log4j2;
+import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 
-@Data
-@Log4j2
+@Value
+@Slf4j
 @EqualsAndHashCode(callSuper = true)
 public class InequalityConstraint extends Constraint {
-  @NonNull protected final Coefficient left, right;
+  @NonNull protected Coefficient left, right;
 
-  public InequalityConstraint(Coefficient left, Coefficient right) {
+  public InequalityConstraint(Coefficient left, Coefficient right, String reason) {
+    super(reason);
     Objects.requireNonNull(left);
     Objects.requireNonNull(right);
     if (left.equals(right)) {
@@ -53,12 +54,12 @@ public class InequalityConstraint extends Constraint {
   @Override
   public Constraint replace(Coefficient target, Coefficient replacement) {
     return new InequalityConstraint(
-        left.replace(target, replacement), right.replace(target, replacement));
+        left.replace(target, replacement), right.replace(target, replacement), getReason());
   }
 
   @Override
   public Set<Coefficient> occurringCoefficients() {
-    return Set.of(left, right);
+    return Set.of(left.canonical(), right.canonical());
   }
 
   @Override

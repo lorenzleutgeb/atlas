@@ -1,7 +1,7 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 
 import static guru.nidi.graphviz.model.Link.to;
-import static xyz.leutgeb.lorenz.lac.Util.bug;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 
 import com.google.common.collect.BiMap;
 import com.microsoft.z3.BoolExpr;
@@ -10,25 +10,25 @@ import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 
 @Data
-@Log4j2
+@Slf4j
 @EqualsAndHashCode(callSuper = true)
 public class EqualityConstraint extends Constraint {
   @NonNull protected final Coefficient left, right;
 
-  public EqualityConstraint(Coefficient left, Coefficient right) {
+  public EqualityConstraint(Coefficient left, Coefficient right, String reason) {
+    super(reason);
     Objects.requireNonNull(left);
     Objects.requireNonNull(right);
     if (left.equals(right)) {
@@ -39,51 +39,47 @@ public class EqualityConstraint extends Constraint {
     this.right = right;
   }
 
-  public static List<Constraint> eq(Coefficient... coefficients) {
-    final var result = new ArrayList<Constraint>();
-    for (int i = 0; i < coefficients.length - 1; i++) {
-      for (int j = i + 1; j < coefficients.length; j++) {
-        if (!coefficients[i].equals(coefficients[j])) {
-          result.add(new EqualityConstraint(coefficients[i], coefficients[j]));
-        }
-      }
-    }
-    return result;
+  public static List<Constraint> eqRanks(
+      Iterable<String> ids, AnnotatingContext left, AnnotatingContext right, String reason) {
+    return StreamSupport.stream(ids.spliterator(), false)
+        .map(
+            id ->
+                new EqualityConstraint(
+                    left.getRankCoefficient(id), right.getRankCoefficient(id), reason))
+        .collect(Collectors.toList());
   }
 
-  public static List<Constraint> eq(Annotation... annotations) {
+  public static List<Constraint> eq(String reason, Annotation left, Annotation right) {
+    if (left.size() != right.size()) {
+      throw new IllegalArgumentException("annotations of different sizes cannot be equal");
+    }
     final var result = new ArrayList<Constraint>();
-    for (int i = 0; i < annotations.length - 1; i++) {
-      for (int j = i + 1; j < annotations.length; j++) {
-        if (annotations[i].size() != annotations[j].size()) {
-          throw new IllegalArgumentException("annotations of different sizes cannot be equal");
-        }
-        if (annotations[i].size() > 1) {
-          log.warn(
-              "you are equating annotations of size larger than one directly, that could turn out badly");
-        }
-        final int size = annotations[i].size();
-        for (int x = 0; x < size; x++) {
-          result.addAll(
-              eq(annotations[i].getRankCoefficient(x), annotations[j].getRankCoefficient(x)));
-        }
 
-        // if (annotations[i].getCoefficients().size() != annotations[j].getCoefficients().size()) {
-        //  throw new UnsupportedOperationException(
-        //      "annotations have different number of coefficients");
-        // }
+    final int size = left.size();
+    for (int x = 0; x < size; x++) {
+      if (left.getRankCoefficient(x).equals(right.getRankCoefficient(x))) {
+        continue;
+      }
+      result.add(
+          new EqualityConstraint(left.getRankCoefficient(x), right.getRankCoefficient(x), reason));
+    }
 
-        for (Map.Entry<List<Integer>, Coefficient> entry : annotations[i].getCoefficients()) {
-          var other = annotations[j].getCoefficient(entry.getKey());
+    final Set<List<Integer>> leftIndices = new HashSet<>();
+    for (Map.Entry<List<Integer>, Coefficient> entry : left.getCoefficients()) {
+      leftIndices.add(entry.getKey());
+      var other = right.getCoefficientOrZero(entry.getKey());
+      if (entry.getValue().equals(other)) {
+        continue;
+      }
+      result.add(new EqualityConstraint(entry.getValue(), other, reason));
+    }
 
-          if (other == null) {
-            throw bug("some coefficient is missing");
-          }
-
-          result.addAll(eq(entry.getValue(), other));
-        }
+    for (Map.Entry<List<Integer>, Coefficient> entry : right.getCoefficients()) {
+      if (!leftIndices.contains(entry.getKey())) {
+        result.add(new EqualityConstraint(entry.getValue(), ZERO, reason));
       }
     }
+
     return result;
   }
 
@@ -106,12 +102,12 @@ public class EqualityConstraint extends Constraint {
   @Override
   public Constraint replace(Coefficient target, Coefficient replacement) {
     return new EqualityConstraint(
-        left.replace(target, replacement), right.replace(target, replacement));
+        left.replace(target, replacement), right.replace(target, replacement), getReason());
   }
 
   @Override
   public Set<Coefficient> occurringCoefficients() {
-    return Set.of(left, right);
+    return Set.of(left.canonical(), right.canonical());
   }
 
   @Override

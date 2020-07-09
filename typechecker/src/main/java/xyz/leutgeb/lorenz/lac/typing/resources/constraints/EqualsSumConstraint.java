@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 import static com.google.common.collect.Sets.union;
 import static guru.nidi.graphviz.model.Link.to;
 import static java.util.Collections.singleton;
+import static java.util.stream.Collectors.toSet;
 import static xyz.leutgeb.lorenz.lac.Util.objectNode;
 
 import com.google.common.collect.BiMap;
@@ -16,9 +17,9 @@ import guru.nidi.graphviz.model.Link;
 import guru.nidi.graphviz.model.LinkTarget;
 import guru.nidi.graphviz.model.Node;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
@@ -30,9 +31,17 @@ public class EqualsSumConstraint extends Constraint {
   Coefficient left;
   Collection<Coefficient> sum;
 
-  public EqualsSumConstraint(Coefficient left, Collection<Coefficient> sum) {
+  public EqualsSumConstraint(Coefficient left, Collection<Coefficient> sum, String reason) {
+    super(reason);
+    if (sum.isEmpty()) {
+      throw new IllegalArgumentException("cannot sum nothing");
+    }
     this.left = left;
     this.sum = sum;
+  }
+
+  public EqualsSumConstraint(Coefficient left, Collection<Coefficient> sum) {
+    this(left, sum, "?");
   }
 
   @Override
@@ -52,8 +61,13 @@ public class EqualsSumConstraint extends Constraint {
   public Graph toGraph(Graph graph, Map<Coefficient, Node> nodes) {
     var aux = objectNode(this, "Σ", "_aux").with("style", "dashed").with("shape", "hexagon");
 
+    if (sum.stream().map(Coefficient::canonical).anyMatch(Predicate.not(nodes::containsKey))) {
+      throw new RuntimeException("missing node for some coefficient");
+    }
+
     var link =
         sum.stream()
+            .map(Coefficient::canonical)
             .map(nodes::get)
             .map(Link::to)
             .map(x -> x.with(Color.ORANGERED))
@@ -73,6 +87,7 @@ public class EqualsSumConstraint extends Constraint {
 
   @Override
   public Set<Coefficient> occurringCoefficients() {
-    return union(singleton(left), new HashSet<>(sum));
+    return union(
+        singleton(left.canonical()), sum.stream().map(Coefficient::canonical).collect(toSet()));
   }
 }

@@ -2,10 +2,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources.heuristics;
 
 import static com.google.common.collect.Lists.cartesianProduct;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toUnmodifiableList;
+import static java.util.stream.Collectors.*;
 import static java.util.stream.IntStream.range;
 import static java.util.stream.Stream.concat;
 
@@ -38,7 +35,7 @@ public class SmartRangeHeuristic implements AnnotationHeuristic {
     return new Annotation(
         range(0, size)
             .mapToObj(i -> currentFreshness + Util.generateSubscript(i))
-            .map(UnknownCoefficient::unknown)
+            .map(UnknownCoefficient::new)
             .collect(toList()),
         cartesianProduct(
                 concat(Stream.generate(() -> as).limit(size), Stream.of(bs))
@@ -50,11 +47,11 @@ public class SmartRangeHeuristic implements AnnotationHeuristic {
                 toMap(
                     identity(),
                     l ->
-                        UnknownCoefficient.unknown(
+                        new UnknownCoefficient(
                             currentFreshness
                                 + l.stream()
                                     .map(Util::generateSubscript)
                                     .collect(joining(" ", "₍", "₎"))))),
-        String.valueOf(currentFreshness));
+        namePrefix + currentFreshness);
   }
 }

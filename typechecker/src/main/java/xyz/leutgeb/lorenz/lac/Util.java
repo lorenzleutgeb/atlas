@@ -1,30 +1,28 @@
 package xyz.leutgeb.lorenz.lac;
 
 import static guru.nidi.graphviz.model.Factory.node;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Stream.generate;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 
 import com.microsoft.z3.RatNum;
 import guru.nidi.graphviz.model.Node;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Random;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import lombok.extern.log4j.Log4j2;
+import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.similarity.JaroWinklerDistance;
 import org.apache.commons.text.similarity.SimilarityScore;
 import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 
-@Log4j2
+@Slf4j
 public class Util {
   private static final SimilarityScore<Double> SIMILARITY = new JaroWinklerDistance();
   private static final Random RANDOM = new Random();
@@ -34,6 +32,26 @@ public class Util {
     for (char ch : String.valueOf(i).toCharArray()) {
       if (Character.isDigit(ch)) {
         sb.append((char) ('\u2080' + (ch - '0')));
+      } else {
+        sb.append(ch);
+      }
+    }
+    return sb.toString();
+  }
+
+  public static String generateSuperscript(int i) {
+    StringBuilder sb = new StringBuilder();
+    for (char ch : String.valueOf(i).toCharArray()) {
+      if (Character.isDigit(ch)) {
+        if (ch == '1') {
+          sb.append('\u00b9');
+        } else if (ch == '2') {
+          sb.append('\u00b2');
+        } else if (ch == '3') {
+          sb.append('\u00b3');
+        } else {
+          sb.append((char) ('\u2080' + (ch - '0')));
+        }
       } else {
         sb.append(ch);
       }
@@ -87,7 +105,7 @@ public class Util {
     try {
       System.loadLibrary(name);
     } catch (UnsatisfiedLinkError e) {
-      log.fatal(
+      log.error(
           "The library '"
               + name
               + "' is required, but could not be loaded. Make sure that a file named 'lib"
@@ -118,7 +136,11 @@ public class Util {
   }
 
   public static List<Integer> zero(int n) {
-    return IntStream.generate(() -> 0).limit(n).boxed().collect(Collectors.toList());
+    return repeat(0, n).collect(toList());
+  }
+
+  public static List<Coefficient> zeroCoefficients(int n) {
+    return repeat(ZERO, n).collect(Collectors.toList());
   }
 
   public static boolean isConstant(List<Integer> xs) {
@@ -128,12 +150,16 @@ public class Util {
     return xs.subList(0, xs.size() - 1).stream().allMatch(x -> x == 0);
   }
 
+  public static String fqnToFlatFilename(String fqn) {
+    return fqn.replace(".", "~");
+  }
+
   public static RuntimeException bug(String message) {
     return new RuntimeException("bug: " + message);
   }
 
   private static String randomHex(int length) {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     while (sb.length() < length) {
       sb.append(String.format("%08x", RANDOM.nextInt()));
     }
@@ -190,6 +216,10 @@ public class Util {
     return new UnsupportedOperationException("not implemented: " + feature);
   }
 
+  public static <T> Stream<T> repeat(final T item, long times) {
+    return generate(() -> item).limit(times);
+  }
+
   public static String repeat(String str, int times) {
     return new String(new char[times]).replace("\0", str);
   }
@@ -233,5 +263,22 @@ public class Util {
       }
       return result;
     };
+  }
+
+  public static <E> List<E> flatten(List<List<E>> list) {
+    return list.stream().flatMap(Collection::stream).collect(toList());
+  }
+
+  // public static <Kx, Ky, V> Map<Ky, V> rekey(Map<Kx, V> map, Function<Kx, Ky> rekeyingFunction) {
+  //  return map.entrySet().stream().collect(toMap(rekeyingFunction, e -> e.getValue()));
+  // }
+
+  public static <E> List<E> reorder(List<E> list, List<Integer> indices) {
+    return indices.stream().map(list::get).collect(toList());
+  }
+
+  @SafeVarargs
+  public static <K> Map<List<K>, Coefficient> ones(List<K>... indices) {
+    return Stream.of(indices).collect(Collectors.toMap(Function.identity(), x -> ONE));
   }
 }

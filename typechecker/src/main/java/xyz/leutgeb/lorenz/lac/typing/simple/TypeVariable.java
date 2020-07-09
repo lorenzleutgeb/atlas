@@ -1,13 +1,11 @@
 package xyz.leutgeb.lorenz.lac.typing.simple;
 
+import static java.util.Collections.singleton;
+
 import java.util.Collection;
+import java.util.Set;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
-import xyz.leutgeb.lorenz.lac.unification.Equivalence;
-import xyz.leutgeb.lorenz.lac.unification.Generalizer;
-import xyz.leutgeb.lorenz.lac.unification.Substitution;
-import xyz.leutgeb.lorenz.lac.unification.TypeMismatch;
-import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
-import xyz.leutgeb.lorenz.lac.unification.UnificationVariable;
+import xyz.leutgeb.lorenz.lac.unification.*;
 
 public class TypeVariable implements Type {
   public static final TypeVariable ALPHA = new TypeVariable("α");
@@ -43,6 +41,11 @@ public class TypeVariable implements Type {
     var result = problem.fresh();
     wiggled.substitute(this, result);
     return result;
+  }
+
+  @Override
+  public Set<TypeVariable> variables() {
+    return singleton(this);
   }
 
   @Override

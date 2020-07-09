@@ -9,6 +9,7 @@ import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.toList;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.minimize;
 
+import com.google.common.collect.Sets;
 import guru.nidi.graphviz.attribute.Records;
 import guru.nidi.graphviz.attribute.Shape;
 import guru.nidi.graphviz.engine.Format;
@@ -19,33 +20,23 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Data;
-import lombok.extern.log4j.Log4j2;
-import org.hipparchus.util.Pair;
+import lombok.extern.slf4j.Slf4j;
 import org.jgrapht.graph.DirectedMultigraph;
-import org.jgrapht.nio.AttributeType;
-import org.jgrapht.nio.DefaultAttribute;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.Loader;
-import xyz.leutgeb.lorenz.lac.NidiExporter;
 import xyz.leutgeb.lorenz.lac.SizeEdge;
-import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
-import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
-import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.AnnotationHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
-import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
-import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemUnsatisfiableException;
 import xyz.leutgeb.lorenz.lac.typing.simple.FunctionSignature;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
@@ -59,7 +50,7 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
 @Data
-@Log4j2
+@Slf4j
 public class FunctionDefinition {
   private final String moduleName;
   private final String name;
@@ -67,8 +58,8 @@ public class FunctionDefinition {
   private Expression body;
   private FunctionSignature inferredSignature;
   private FunctionSignature annotatedSignature;
-  private Pair<Annotation, Annotation> annotation;
-  private org.jgrapht.Graph<Identifier, SizeEdge> sizeAnalysis;
+  private FunctionAnnotation annotation;
+  private org.jgrapht.Graph<Identifier, SizeEdge> sizeAnalysis = null;
 
   public FunctionDefinition(
       String moduleName,
@@ -99,7 +90,6 @@ public class FunctionDefinition {
     }
     */
 
-    // var sub = context.childWithNewUnfication();
     final var sub = context.childWithNewVariables(getFullyQualifiedName());
     for (int i = 0; i < arguments.size(); i++) {
       sub.putType(
@@ -143,14 +133,13 @@ public class FunctionDefinition {
     if (inferredSignature != null) {
       return;
     }
-    body = body.normalizeAndBind(new IntIdGenerator());
+    body = body.normalizeAndBind(IntIdGenerator.human());
   }
 
   public void substitute(Map<Coefficient, KnownCoefficient> solution) {
     annotation =
-        new Pair<>(
-            annotation.getFirst().substitute(solution),
-            annotation.getSecond().substitute(solution));
+        new FunctionAnnotation(
+            annotation.from().substitute(solution), annotation.to().substitute(solution));
   }
 
   private List<String> treeLikeArguments() {
@@ -169,45 +158,20 @@ public class FunctionDefinition {
     return ids;
   }
 
-  public void stubAnnotations(
-      Map<String, Pair<Annotation, Annotation>> functionAnnotations,
-      Map<String, Pair<Annotation, Annotation>> costFreeFunctionAnnotations,
-      AnnotationHeuristic heuristic,
-      OutputStream out) {
-
-    sizeAnalysis = new DirectedMultigraph<Identifier, SizeEdge>(SizeEdge.class);
-    body.analyzeSizes(sizeAnalysis);
-
-    final NidiExporter<Identifier, SizeEdge> exporter =
-        new NidiExporter<>(
-            identifier ->
-                identifier.getName()
-                    + "_"
-                    + (identifier.getIntro() == null
-                        ? "null"
-                        : (identifier.getIntro().getFqn()
-                            + "_"
-                            + Util.stamp(identifier.getIntro().getExpression()))));
-    exporter.setVertexAttributeProvider(
-        v -> {
-          return Map.of("label", new DefaultAttribute<>(v.getName(), AttributeType.STRING));
-        });
-    exporter.setEdgeAttributeProvider(
-        e -> {
-          return Map.of(
-              // "label",
-              // new DefaultAttribute<>(e.getKind().toString(), AttributeType.STRING),
-              "color",
-              new DefaultAttribute<>(
-                  e.getKind().equals(SizeEdge.Kind.EQ) ? "blue4" : "red", AttributeType.STRING));
-        });
-    final var exp = exporter.transform(sizeAnalysis);
-    final var viz = Graphviz.fromGraph(exp);
-    try {
-      viz.render(Format.SVG).toOutputStream(out);
-    } catch (IOException e) {
-      e.printStackTrace();
+  public void analyzeSizes() {
+    if (sizeAnalysis != null) {
+      return;
     }
+    sizeAnalysis = new DirectedMultigraph<>(SizeEdge.class);
+    body.analyzeSizes(sizeAnalysis);
+  }
+
+  public void stubAnnotations(
+      Map<String, FunctionAnnotation> functionAnnotations,
+      Map<String, FunctionAnnotation> costFreeFunctionAnnotations,
+      AnnotationHeuristic heuristic) {
+
+    analyzeSizes();
 
     final var treeLikeArguments = treeLikeArguments();
     var predefined = functionAnnotations.get(getFullyQualifiedName());
@@ -216,21 +180,20 @@ public class FunctionDefinition {
 
     if (predefined == null) {
       annotation =
-          new Pair<>(
+          new FunctionAnnotation(
               heuristic.generate("args", treeLikeArguments.size()),
-              returnsTree ? heuristic.generate("return", 1) : Annotation.empty());
+              heuristic.generate("return", returnsTree ? 1 : 0));
     } else {
-      if (predefined.getFirst().size() != treeLikeArguments.size()) {
+      if (predefined.from().size() != treeLikeArguments.size()) {
         throw new IllegalArgumentException(
             "the predefined annotation for parameters of "
                 + getFullyQualifiedName()
                 + " is expected to be of size "
                 + treeLikeArguments.size()
                 + " but it is only of size "
-                + predefined.getFirst().size());
+                + predefined.from().size());
       }
-      if ((returnsTree && predefined.getSecond().size() != 1)
-          || (!returnsTree && predefined.getSecond().size() != 0)) {
+      if (returnsTree ? predefined.to().size() != 1 : predefined.to().size() != 0) {
 
         throw new IllegalArgumentException(
             "the predefined annotation for the result of "
@@ -238,77 +201,45 @@ public class FunctionDefinition {
                 + " is expected to be of size "
                 + treeLikeArguments.size()
                 + " but it is only of size "
-                + predefined.getSecond().size());
+                + predefined.to().size());
       }
       annotation = predefined;
     }
 
     var costFreeAnnotation =
-        new Pair<>(
-            heuristic.generate("cfargs", annotation.getFirst()),
-            heuristic.generate("cfreturn", annotation.getSecond()));
+        new FunctionAnnotation(
+            heuristic.generate("cfargs", annotation.from()),
+            heuristic.generate("cfreturn", annotation.to()));
 
     functionAnnotations.put(getFullyQualifiedName(), annotation);
     costFreeFunctionAnnotations.put(getFullyQualifiedName(), costFreeAnnotation);
   }
 
-  public Set<Constraint> infer(AnnotatingGlobals globals, OutputStream out)
-      throws UnificationError, TypeError, ConstraintSystemUnsatisfiableException {
-    if (inferredSignature == null) {
-      throw new IllegalStateException();
-    }
-
-    /*
-    var returnedAnnotation =
-        body.inferAnnotations(
-            new AnnotatingContext(treeLikeArguments, annotation.getFirst()), globals);
-    */
-
-    final var obligation =
-        new Obligation(
-            new AnnotatingContext(treeLikeArguments(), annotation.getFirst()),
-            body,
-            annotation.getSecond(),
-            1);
-
-    /*
-    var returnedCostFreeAnnotation =
-        body.inferAnnotations(
-            new AnnotatingContext(treeLikeArguments, annotation.getFirst()), globals.costFree());
-     */
-
-    /*
-    final var costFreeObligation =
-        new Obligation(
-            new AnnotatingContext(treeLikeArguments, annotation.getFirst()),
-            body,
-            costFreeAnnotation.getSecond(),
-            0);
-     */
-
-    // constraints.eq(costFreeAnnotation.getSecond(), returnedCostFreeAnnotation);
-    // constraints.eq(annotation.getSecond(), returnedAnnotation);
-
-    // return Sets.union(
-    //    Prover.prove(obligation, globals), Prover.prove(costFreeObligation, globals.costFree()));
-    return Prover.prove(obligation, globals, out);
+  public Set<TypeVariable> runaway() {
+    return Sets.difference(
+        inferredSignature.getType().getTo().variables(),
+        inferredSignature.getType().getFrom().variables());
   }
 
-  public void printAnnotation(PrintStream out) {
+  public Obligation getTypingObligation(int cost) {
+    return new Obligation(
+        new AnnotatingContext(treeLikeArguments(), annotation.from()), body, annotation.to(), cost);
+  }
+
+  public String getAnnotationString() {
     if (annotation == null) {
       throw new IllegalStateException();
     }
 
-    out.println(
-        moduleName
-            + "."
-            + name
-            + (arguments.isEmpty() ? "" : " ")
-            + String.join(" ", arguments)
-            + " | "
-            + annotation.getFirst().toStringForParameters(treeLikeArguments(), true)
-            + " -> "
-            + annotation.getSecond().toStringForParameters(Collections.singletonList("_"), true));
+    return moduleName
+        + "."
+        + name
+        + (arguments.isEmpty() ? "" : " ")
+        + String.join(" ", arguments)
+        + " | "
+        + annotation.from()
+        + " -> "
+        + annotation.to();
   }
 
   public void printTo(PrintStream out) {
@@ -347,9 +278,7 @@ public class FunctionDefinition {
                     turn(
                         name,
                         inferredSignature.toString().replace(">", "\\>").replace("<", "\\<"),
-                        annotation.getFirst().getName()
-                            + " → "
-                            + annotation.getSecond().getName())));
+                        annotation.from().getName() + " → " + annotation.to().getName())));
     Graph result = body.toGraph(g, root);
     var viz = Graphviz.fromGraph(result);
     viz.render(Format.SVG).toOutputStream(out);
@@ -374,7 +303,11 @@ public class FunctionDefinition {
   }
 
   public void unshare() {
-    body = body.unshare(new IntIdGenerator());
+    unshare(Expression.DEFAULT_LAZY);
+  }
+
+  public void unshare(boolean lazy) {
+    body = body.unshare(IntIdGenerator.human(), lazy);
   }
 
   @Override

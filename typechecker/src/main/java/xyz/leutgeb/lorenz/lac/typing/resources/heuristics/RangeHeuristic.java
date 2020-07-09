@@ -40,7 +40,7 @@ public class RangeHeuristic implements AnnotationHeuristic {
     final List<Coefficient> rankCoefficients =
         range(0, size)
             .mapToObj(i -> fresheness + Util.generateSubscript(i))
-            .map(UnknownCoefficient::unknown)
+            .map(UnknownCoefficient::new)
             .collect(toList());
 
     final var span =
@@ -54,7 +54,7 @@ public class RangeHeuristic implements AnnotationHeuristic {
                 toMap(
                     identity(),
                     l ->
-                        UnknownCoefficient.unknown(
+                        new UnknownCoefficient(
                             // "q"
                             // +
                             currentFreshness

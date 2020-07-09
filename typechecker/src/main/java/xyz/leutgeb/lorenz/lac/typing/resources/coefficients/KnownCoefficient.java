@@ -8,11 +8,12 @@ import lombok.Value;
 import org.hipparchus.fraction.Fraction;
 
 @Value
-@EqualsAndHashCode(callSuper = false)
-public class KnownCoefficient extends Coefficient {
+@EqualsAndHashCode
+public class KnownCoefficient implements Coefficient {
   public static final KnownCoefficient ZERO = new KnownCoefficient(Fraction.ZERO);
   public static final KnownCoefficient ONE = new KnownCoefficient(Fraction.ONE);
   public static final KnownCoefficient TWO = new KnownCoefficient(Fraction.TWO);
+  public static final KnownCoefficient THREE = new KnownCoefficient(new Fraction(3));
 
   Fraction value;
 
@@ -23,6 +24,16 @@ public class KnownCoefficient extends Coefficient {
   @Override
   public Coefficient replace(Coefficient target, Coefficient replacement) {
     return this;
+  }
+
+  @Override
+  public Coefficient canonical() {
+    return this;
+  }
+
+  @Override
+  public Coefficient negate() {
+    return new KnownCoefficient(value.negate());
   }
 
   @Override

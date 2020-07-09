@@ -6,16 +6,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import xyz.leutgeb.lorenz.lac.antlr.SplayParser;
-import xyz.leutgeb.lorenz.lac.ast.BooleanExpression;
-import xyz.leutgeb.lorenz.lac.ast.CallExpression;
-import xyz.leutgeb.lorenz.lac.ast.ComparisonOperator;
-import xyz.leutgeb.lorenz.lac.ast.Expression;
-import xyz.leutgeb.lorenz.lac.ast.Identifier;
-import xyz.leutgeb.lorenz.lac.ast.IfThenElseExpression;
-import xyz.leutgeb.lorenz.lac.ast.LetExpression;
-import xyz.leutgeb.lorenz.lac.ast.MatchExpression;
+import xyz.leutgeb.lorenz.lac.ast.*;
 import xyz.leutgeb.lorenz.lac.ast.Number;
-import xyz.leutgeb.lorenz.lac.ast.Tuple;
 
 class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   public ExpressionVisitor(String moduleName, Path path) {

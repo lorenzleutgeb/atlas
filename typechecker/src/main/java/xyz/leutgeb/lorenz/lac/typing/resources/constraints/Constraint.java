@@ -1,52 +1,110 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 
+import static guru.nidi.graphviz.model.Factory.graph;
 import static guru.nidi.graphviz.model.Factory.node;
+import static xyz.leutgeb.lorenz.lac.Util.rawObjectNode;
 
 import com.google.common.collect.BiMap;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.attribute.Label;
+import guru.nidi.graphviz.attribute.Records;
+import guru.nidi.graphviz.engine.Engine;
+import guru.nidi.graphviz.engine.Format;
+import guru.nidi.graphviz.engine.Graphviz;
+import guru.nidi.graphviz.engine.GraphvizCmdLineEngine;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Link;
 import guru.nidi.graphviz.model.Node;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+import lombok.Getter;
 import lombok.Setter;
-import xyz.leutgeb.lorenz.lac.Util;
+import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 
+@Slf4j
 public abstract class Constraint {
-  private final String id;
+  private final String reason;
 
   /**
    * For debugging purposes. This flag will be set to {@code true} if this constraint is part of the
    * unsatisfiable core of the constraint system it appears in.
    */
-  @Setter protected boolean core = false;
+  @Getter @Setter protected boolean core = false;
 
-  Constraint() {
-    this.id = Util.randomHex();
+  public Constraint(String reason) {
+    this.reason = reason;
+  }
+
+  public static void plot(String name, Set<Constraint> constraints, Path path) throws IOException {
+    Graph graph =
+        graph(name)
+            .directed()
+            .graphAttr()
+            .with("ranksep", "2.5")
+            .graphAttr()
+            .with("splines", "ortho") /*.graphAttr().with(Rank.RankDir.BOTTOM_TO_TOP)*/;
+
+    var nodes = new HashMap<Coefficient, Node>();
+
+    // var clusters = new HashMap<String, Graph>();
+
+    for (var constraint : constraints) {
+      for (var it : constraint.occurringCoefficients()) {
+        var s = it.toString();
+        var label = s.startsWith("h") ? Records.of(s.substring(1).split(",")) : Label.of(s);
+        nodes.put(it, rawObjectNode(it).with(label));
+        // if (it instanceof  UnknownCoefficient) {
+        //	var name = ((UnknownCoefficient) it).getName().split(" ")[0];
+        //	var cluster = clusters.getOrDefault(name, graph(name).cluster());
+        //  var node = objectNode(it);
+        //	cluster = cluster.with(node);
+        //	clusters.put(name, cluster);
+        // }
+        // graph = graph.with(objectNode(it));
+      }
+    }
+
+    // for (var cluster : clusters.values()) {
+    //  graph = graph.with(cluster);
+    // }
+
+    for (var it : constraints) {
+      graph = it.toGraph(graph, nodes);
+    }
+    var lel = new GraphvizCmdLineEngine();
+    lel.timeout(2, TimeUnit.MINUTES);
+    Graphviz.useEngine(lel);
+    var viz = Graphviz.fromGraph(graph);
+    Path target = path.resolve(name + "-constraints.svg");
+    try (final var out = Files.newOutputStream(target)) {
+      viz.engine(Engine.DOT).render(Format.SVG).toOutputStream(out);
+      log.info("Wrote plot to {}", target);
+    }
   }
 
   Link highlight(Link link) {
-    link = link.with(Label.of(String.valueOf(id)).head());
+    link = link.with(Label.of(String.valueOf(getTracking())).head());
     if (core) {
       return link.with("arrowsize", "1.5").with("penwidth", "4.5");
     }
     return link.with("style", "dotted");
   }
 
-  public String getId() {
-    return id;
+  public String getReason() {
+    return reason;
   }
 
   public abstract BoolExpr encode(Context ctx, BiMap<Coefficient, RealExpr> coefficients);
-
-  String prefixed(String suffix) {
-    return "(" + id + ": " + suffix + ")";
-  }
 
   /**
    * Edge colors:
@@ -69,4 +127,20 @@ public abstract class Constraint {
   }
 
   public abstract Set<Coefficient> occurringCoefficients();
+
+  public String getTracking() {
+    return System.identityHashCode(this) + ": " + reason;
+    // return Util.stamp(this);
+  }
+
+  public void markCoreByTrackings(Set<String> trackings) {
+    if (trackings.contains(getTracking())) {
+      setCore(true);
+    }
+    children().forEach(x -> x.markCoreByTrackings(trackings));
+  }
+
+  public Stream<Constraint> children() {
+    return Stream.empty();
+  }
 }

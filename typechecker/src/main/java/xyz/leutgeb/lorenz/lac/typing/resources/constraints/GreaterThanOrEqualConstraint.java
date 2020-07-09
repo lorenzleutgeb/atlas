@@ -20,7 +20,14 @@ import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 @Value
 @EqualsAndHashCode(callSuper = true)
 public class GreaterThanOrEqualConstraint extends Constraint {
-  @NonNull protected final Coefficient left, right;
+  @NonNull protected Coefficient left, right;
+
+  public GreaterThanOrEqualConstraint(
+      @NonNull Coefficient left, @NonNull Coefficient right, String reason) {
+    super(reason);
+    this.left = left;
+    this.right = right;
+  }
 
   @Override
   public BoolExpr encode(Context ctx, BiMap<Coefficient, RealExpr> coefficients) {
@@ -45,12 +52,12 @@ public class GreaterThanOrEqualConstraint extends Constraint {
   @Override
   public Constraint replace(Coefficient target, Coefficient replacement) {
     return new GreaterThanOrEqualConstraint(
-        left.replace(target, replacement), right.replace(target, replacement));
+        left.replace(target, replacement), right.replace(target, replacement), getReason());
   }
 
   @Override
   public Set<Coefficient> occurringCoefficients() {
-    return Set.of(left, right);
+    return Set.of(left.canonical(), right.canonical());
   }
 
   @Override

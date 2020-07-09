@@ -9,7 +9,7 @@ import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 
 public class Substitution implements Function<Type, Type> {
-  private Map<TypeVariable, Type> raw;
+  private final Map<TypeVariable, Type> raw;
 
   private Substitution() {
     this.raw = new HashMap<>();
@@ -39,7 +39,7 @@ public class Substitution implements Function<Type, Type> {
       return;
     }
     if (variable instanceof UnificationVariable) {
-      if (target.occurs((UnificationVariable) variable)) {
+      if (target.occurs(variable)) {
         throw new IllegalArgumentException("eager occurs check failed");
       }
     }

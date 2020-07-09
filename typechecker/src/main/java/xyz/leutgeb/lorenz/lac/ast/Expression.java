@@ -1,22 +1,19 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
 import static guru.nidi.graphviz.attribute.Records.turn;
-import static xyz.leutgeb.lorenz.lac.Util.indent;
-import static xyz.leutgeb.lorenz.lac.Util.notImplemented;
-import static xyz.leutgeb.lorenz.lac.Util.rawObjectNode;
+import static xyz.leutgeb.lorenz.lac.Util.*;
 
 import guru.nidi.graphviz.attribute.Records;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
 import java.io.PrintStream;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.SizeEdge;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
@@ -27,7 +24,14 @@ import xyz.leutgeb.lorenz.lac.unification.Substitution;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
+// TODO: Maybe #canCarryPotential would be helpful? Expressions that only contain subexpressions of
+// type
+// TODO: Base/Bool and are of type Base/Bool cannot have any non-zero potential, so when
+// normalizing/renaming
+// TODO: they should be much simpler to handle.
 public abstract class Expression extends Syntax {
+  public static final boolean DEFAULT_LAZY = false;
+
   Type type;
 
   Expression(Source source) {
@@ -67,7 +71,7 @@ public abstract class Expression extends Syntax {
     return type;
   }
 
-  Expression normalize(Stack<Pair<Identifier, Expression>> context, IntIdGenerator idGenerator) {
+  Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
     if (isImmediate()) {
       return this;
     }
@@ -82,29 +86,29 @@ public abstract class Expression extends Syntax {
     return false;
   }
 
-  Expression bindAll(Stack<Pair<Identifier, Expression>> context) {
+  Expression bindAll(Stack<Normalization> context) {
     var binder = this;
     while (!context.isEmpty()) {
-      final var binding = context.pop();
+      final var normalization = context.pop();
       binder =
-          new LetExpression(Derived.anf(this), binding.getFirst(), binding.getSecond(), binder);
+          new LetExpression(
+              Derived.anf(this), normalization.identifier(), normalization.expression(), binder);
     }
     return binder;
   }
 
-  Expression forceImmediate(
-      Stack<Pair<Identifier, Expression>> context, IntIdGenerator idGenerator) {
+  Expression forceImmediate(Stack<Normalization> context, IntIdGenerator idGenerator) {
     if (isImmediate()) {
       return this;
     }
 
     var id = Identifier.getSugar(Derived.anf(this), idGenerator);
-    context.push(new Pair<>(id, normalize(context, idGenerator)));
+    context.push(new Normalization(id, normalize(context, idGenerator)));
     return id;
   }
 
   Expression normalizeAndBind(IntIdGenerator idGenerator) {
-    var context = new Stack<Pair<Identifier, Expression>>();
+    var context = new Stack<Normalization>();
     return normalize(context, idGenerator).bindAll(context);
   }
 
@@ -138,13 +142,9 @@ public abstract class Expression extends Syntax {
             (a, b) -> a);
   }
 
-  /**
-   * Computes the set of free tree-typed variables in this expression.
-   *
-   * @return
-   */
+  /** Computes the set of free tree-typed variables in this expression. */
   public Set<Identifier> freeVariables() {
-    final var result = new HashSet<Identifier>();
+    final var result = new LinkedHashSet<Identifier>();
     getChildren().forEach(e -> result.addAll(e.freeVariables()));
     return result;
   }
@@ -164,9 +164,7 @@ public abstract class Expression extends Syntax {
         .collect(Collectors.toSet());
   }
 
-  public Expression unshare(IntIdGenerator idGenerator) {
-    return this;
-  }
+  public abstract Expression unshare(IntIdGenerator idGenerator, boolean lazy);
 
   public String terminalOrBox() {
     if (isTerminal()) {

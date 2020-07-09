@@ -7,7 +7,7 @@ import static xyz.leutgeb.lorenz.lac.Util.append;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.isUnitIndex;
 
 import java.util.List;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.lac.ast.CallExpression;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
@@ -17,11 +17,16 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.OffsetConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 
-@Log4j2
+@Slf4j
 public class App {
+  private static String ruleName(int cost) {
+    return "(app" + (cost == 0 ? ":cf" : "") + ")";
+  }
+
   private static List<Constraint> increment(Annotation left, Annotation right, int cost) {
     if (cost == 0) {
-      return EqualityConstraint.eq(left, right);
+      return EqualityConstraint.eq(
+          "(app:cf) Q from signature = Q from context (equal since cost is zero)", left, right);
     }
 
     if (left.size() != right.size()) {
@@ -33,7 +38,10 @@ public class App {
                 .mapToObj(
                     i ->
                         new EqualityConstraint(
-                            left.getRankCoefficient(i), right.getRankCoefficient(i))),
+                            left.getRankCoefficient(i),
+                            right.getRankCoefficient(i),
+                            ruleName(cost)
+                                + " Q from signature = Q from context (rank coefficient stays the same)")),
             left.streamCoefficients()
                 .map(
                     leftEntry -> {
@@ -41,8 +49,21 @@ public class App {
                       var rightCoefficient = right.getCoefficientOrZero(leftEntry.getKey());
                       return isUnitIndex(leftEntry.getKey())
                           ? new OffsetConstraint(
-                              leftCoefficient, rightCoefficient, new Fraction(cost))
-                          : new EqualityConstraint(leftCoefficient, rightCoefficient);
+                              leftCoefficient,
+                              rightCoefficient,
+                              new Fraction(cost),
+                              ruleName(cost) + " Q from signature + 1 = Q from context")
+                          : new EqualityConstraint(
+                              leftCoefficient,
+                              rightCoefficient,
+                              ruleName(cost)
+                                  + " Q from signature = Q from context (index "
+                                  + leftEntry.getKey()
+                                  + " stays the same, which means "
+                                  + leftCoefficient
+                                  + " = "
+                                  + rightCoefficient
+                                  + ")");
                     }))
         .collect(toList());
   }
@@ -51,14 +72,16 @@ public class App {
     final var expression = (CallExpression) obligation.getExpression();
 
     // Look up global annotation for this function.
-    final var annotation = globals.getDependingOnCost(expression.getName().getName());
+    final var annotation =
+        globals.getDependingOnCost(expression.getName().getName(), obligation.getCost());
 
     return Rule.ApplicationResult.onlyConstraints(
         append(
             increment(
-                obligation.getContext().getAnnotation(),
-                annotation.getFirst(),
-                obligation.getCost()),
-            EqualityConstraint.eq(annotation.getSecond(), obligation.getAnnotation())));
+                obligation.getContext().getAnnotation(), annotation.from(), obligation.getCost()),
+            EqualityConstraint.eq(
+                ruleName(obligation.getCost()) + " Q'",
+                annotation.to(),
+                obligation.getAnnotation())));
   }
 }

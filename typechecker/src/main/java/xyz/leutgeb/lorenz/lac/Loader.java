@@ -1,6 +1,18 @@
 package xyz.leutgeb.lorenz.lac;
 
+import static java.util.stream.Collectors.*;
+
 import com.google.common.base.Functions;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import lombok.Getter;
 import lombok.Value;
 import org.antlr.v4.runtime.CharStreams;
@@ -16,23 +28,6 @@ import org.jgrapht.nio.dot.DOTExporter;
 import org.jgrapht.traverse.BreadthFirstIterator;
 import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.lac.ast.Program;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Spliterators;
-import java.util.Stack;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 @Value
 public class Loader {
@@ -175,8 +170,10 @@ public class Loader {
 
     return new Program(
         plainSubgraph.vertexSet().stream()
-            .collect(Collectors.toMap(Functions.identity(), functionDefinitions::get)),
-        stronglyConnectedSubgraphs.stream().map(Graph::vertexSet).collect(Collectors.toList()));
+            .collect(toMap(Functions.identity(), functionDefinitions::get)),
+        stronglyConnectedSubgraphs.stream()
+            .map(g -> g.vertexSet().stream().sorted().collect(toUnmodifiableList()))
+            .collect(toList()));
   }
 
   private Path path(String moduleName) {

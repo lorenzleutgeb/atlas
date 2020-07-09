@@ -8,58 +8,42 @@ import com.microsoft.z3.RealExpr;
 import java.util.Map;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
-import xyz.leutgeb.lorenz.lac.Util;
 
 @Value
-@EqualsAndHashCode(callSuper = true)
-public class UnknownCoefficient extends Coefficient {
-  int id;
+@EqualsAndHashCode
+public class UnknownCoefficient implements Coefficient {
   String name;
   boolean negated;
 
-  public UnknownCoefficient(int id) {
-    this(id, "");
-  }
-
-  private UnknownCoefficient(int id, String name) {
-    this.id = id;
+  public UnknownCoefficient(String name) {
+    if (name == null || name.isBlank()) {
+      throw new IllegalArgumentException("name cannot be null or blank");
+    }
     this.name = name;
     this.negated = false;
   }
 
-  private UnknownCoefficient(int id, String name, boolean negated) {
-    this.id = id;
+  private UnknownCoefficient(String name, boolean negated) {
     this.name = name;
     this.negated = negated;
   }
 
-  public UnknownCoefficient negate() {
-    return new UnknownCoefficient(id, name, !negated);
-  }
-
-  public static UnknownCoefficient unknown() {
-    return unknown(randomHex());
-  }
-
   public static UnknownCoefficient unknown(String name) {
-    if (name.isBlank()) {
-      throw new IllegalArgumentException("name cannot be blank");
-    }
-    return new UnknownCoefficient(0, name);
+    return new UnknownCoefficient(name + randomHex());
+  }
+
+  @Override
+  public UnknownCoefficient negate() {
+    return new UnknownCoefficient(name, !negated);
   }
 
   @Override
   public String toString() {
-    final var prefix = negated ? "-" : "";
-    if (name.isEmpty()) {
-      return prefix + "∂" + Util.generateSubscript(id);
-    } else {
-      return prefix + name;
-    }
+    return (negated ? "-" : "") + name;
   }
 
   public RealExpr encode(Context ctx, Map<Coefficient, RealExpr> coefficients) {
-    final var inner = coefficients.get(this);
+    final var inner = coefficients.get(this.canonical());
     return negated ? (RealExpr) ctx.mkUnaryMinus(inner) : inner;
   }
 
@@ -69,10 +53,15 @@ public class UnknownCoefficient extends Coefficient {
       throw bug("don't know how to replace negated coefficient");
     }
     if (target instanceof UnknownCoefficient) {
-      if (((UnknownCoefficient) target).id == id) {
+      if (((UnknownCoefficient) target).name.equals(name)) {
         return replacement;
       }
     }
     return this;
+  }
+
+  @Override
+  public Coefficient canonical() {
+    return negated ? negate() : this;
   }
 }

@@ -2,11 +2,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources;
 
 import static xyz.leutgeb.lorenz.lac.Util.bug;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -14,15 +10,15 @@ import java.util.stream.Stream;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Value;
-import lombok.extern.log4j.Log4j2;
-import org.hipparchus.util.Pair;
+import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.indices.Index;
 import xyz.leutgeb.lorenz.lac.typing.resources.indices.MapIndex;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 
-@Log4j2
+@Slf4j
 @Data
 public class AnnotatingContext {
   @Getter private final List<String> ids;
@@ -75,10 +71,6 @@ public class AnnotatingContext {
       throw new IllegalArgumentException("indexer does not cover context");
     }
     return getCoefficient(indexer::get, c);
-  }
-
-  public Coefficient getCoefficient(Pair<Map<String, Integer>, Integer> index) {
-    return getCoefficient(index.getFirst(), index.getSecond());
   }
 
   public Coefficient getCoefficient(Index index) {
@@ -149,9 +141,39 @@ public class AnnotatingContext {
 
   @Override
   public String toString() {
-    // return annotation.toStringForParameters(ids, true);
     final var idStr = ids.isEmpty() ? "Ø" : String.join(", ", ids);
     return idStr + " | " + this.annotation.name;
+  }
+
+  public String potentialString() {
+    return annotation.toLongString(ids, true);
+  }
+
+  public String toShortPotentialString() {
+    return ids.toString() + "|" + annotation;
+  }
+
+  public AnnotatingContext substitute(Map<Coefficient, KnownCoefficient> solution) {
+    return new AnnotatingContext(List.copyOf(ids), annotation.substitute(solution));
+  }
+
+  public AnnotatingContext reorder(String... reorderedIds) {
+    return reorder(List.of(reorderedIds));
+  }
+
+  public AnnotatingContext reorder(List<String> reorderedIds) {
+    if (reorderedIds.size() != ids.size()) {
+      throw new IllegalArgumentException();
+    }
+    if (reorderedIds.equals(ids)) {
+      return this;
+    }
+    final var reorderedIndices =
+        ids.stream().map(reorderedIds::indexOf).collect(Collectors.toUnmodifiableList());
+    if (reorderedIndices.contains(-1)) {
+      throw new IllegalArgumentException();
+    }
+    return new AnnotatingContext(reorderedIds, annotation.reorder(reorderedIndices));
   }
 
   @Value
@@ -161,6 +183,11 @@ public class AnnotatingContext {
     public Entry(Map<String, Integer> associatedIndices, Integer offsetIndex, Coefficient value) {
       super(associatedIndices, offsetIndex);
       this.value = value;
+    }
+
+    @Override
+    public String toString() {
+      return super.toString() + " = " + value;
     }
   }
 }

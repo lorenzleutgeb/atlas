@@ -1,11 +1,8 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
-import static com.google.common.collect.Sets.union;
-
 import com.google.common.collect.Sets;
 import java.io.PrintStream;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
@@ -13,7 +10,6 @@ import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.Value;
-import org.hipparchus.util.Pair;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
@@ -29,6 +25,7 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 @Value
 @EqualsAndHashCode(callSuper = true)
 public class BooleanExpression extends Expression {
+
   @NonNull Expression left;
   @NonNull ComparisonOperator operator;
   @NonNull Expression right;
@@ -86,8 +83,7 @@ public class BooleanExpression extends Expression {
   }
 
   @Override
-  public Expression normalize(
-      Stack<Pair<Identifier, Expression>> context, IntIdGenerator idGenerator) {
+  public Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
     // TODO: Only create new expression if necessary!
     return new BooleanExpression(
         Derived.anf(this),
@@ -115,6 +111,11 @@ public class BooleanExpression extends Expression {
   }
 
   @Override
+  public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
+    return this;
+  }
+
+  @Override
   public boolean isImmediate() {
     return false;
     // return left.isImmediate() && right.isImmediate();
@@ -122,6 +123,8 @@ public class BooleanExpression extends Expression {
 
   @Override
   public Expression rename(Map<String, String> renaming) {
+    // TODO: I think there's no need ever to rename something inside a boolean expression. Maybe
+    // throw here?!
     // TODO: Only create new expression if necessary.
     return new BooleanExpression(
         Derived.rename(this), left.rename(renaming), operator, right.rename(renaming), type);
@@ -130,27 +133,6 @@ public class BooleanExpression extends Expression {
   @Override
   public String toString() {
     return left + " " + operator + " " + right;
-  }
-
-  @Override
-  public Expression unshare(IntIdGenerator idGenerator) {
-    if (!(left instanceof Identifier) || !(right instanceof Identifier)) {
-      throw new IllegalStateException("must be in anf");
-    }
-    if (!left.equals(right)) {
-      return this;
-    }
-    var down = ShareExpression.clone((Identifier) left, idGenerator);
-    return new ShareExpression(
-        this,
-        (Identifier) left,
-        down,
-        new BooleanExpression(source, down.getFirst(), operator, down.getSecond(), type));
-  }
-
-  @Override
-  public Set<Identifier> freeVariables() {
-    return new HashSet<>(union(left.freeVariables(), right.freeVariables()));
   }
 
   @Override

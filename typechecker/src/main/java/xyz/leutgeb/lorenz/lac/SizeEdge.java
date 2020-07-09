@@ -37,7 +37,7 @@ public class SizeEdge extends DefaultEdge {
     return Objects.hash(kind, getSource(), getTarget());
   }
 
-  public static enum Kind {
+  public enum Kind {
     EQ,
     GT
   }

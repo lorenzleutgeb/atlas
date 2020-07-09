@@ -3,19 +3,11 @@ package xyz.leutgeb.lorenz.lac.unification;
 import static com.google.common.collect.Sets.difference;
 
 import com.google.common.collect.Iterators;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.Intro;
 import xyz.leutgeb.lorenz.lac.Util;
@@ -25,7 +17,7 @@ import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.FunctionType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 
-@Log4j2
+@Slf4j
 @Value
 public class UnificationContext {
   UnificationContext parent;

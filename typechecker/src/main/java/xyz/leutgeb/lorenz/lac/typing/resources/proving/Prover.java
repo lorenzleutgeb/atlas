@@ -1,20 +1,26 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.proving;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static xyz.leutgeb.lorenz.lac.Util.bug;
 import static xyz.leutgeb.lorenz.lac.Util.stack;
 import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF;
 
+import com.google.common.collect.Streams;
 import guru.nidi.graphviz.attribute.Label;
 import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
-import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import lombok.extern.log4j.Log4j2;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedAcyclicGraph;
 import org.jgrapht.nio.Attribute;
@@ -23,33 +29,20 @@ import org.jgrapht.nio.DefaultAttribute;
 import xyz.leutgeb.lorenz.lac.NidiAttribute;
 import xyz.leutgeb.lorenz.lac.NidiExporter;
 import xyz.leutgeb.lorenz.lac.Util;
-import xyz.leutgeb.lorenz.lac.ast.BooleanExpression;
-import xyz.leutgeb.lorenz.lac.ast.CallExpression;
-import xyz.leutgeb.lorenz.lac.ast.Expression;
-import xyz.leutgeb.lorenz.lac.ast.Identifier;
-import xyz.leutgeb.lorenz.lac.ast.IfThenElseExpression;
-import xyz.leutgeb.lorenz.lac.ast.LetExpression;
-import xyz.leutgeb.lorenz.lac.ast.MatchExpression;
-import xyz.leutgeb.lorenz.lac.ast.ShareExpression;
-import xyz.leutgeb.lorenz.lac.ast.Tuple;
+import xyz.leutgeb.lorenz.lac.ast.*;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.App;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.Cmp;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.Ite;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.Leaf;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.Let;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.Match;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.Node;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.Rule;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.Share;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.Var;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.W;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.WVar;
+import xyz.leutgeb.lorenz.lac.typing.resources.rules.*;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
+import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 
-@Log4j2
+@Slf4j
 public class Prover {
-  private static final Rule letRule = Let::apply;
+  private static final Rule letTreeCfRule = LetTreeCf::apply;
+  private static final Rule letGenRule = LetGen::apply;
+  private static final Rule letTreeRule = LetTree::apply;
   private static final Rule applicationRule = App::apply;
   private static final Rule comparisonRule = Cmp::apply;
   private static final Rule ifThenElseRule = Ite::apply;
@@ -61,128 +54,62 @@ public class Prover {
   private static final Rule weakenRule = W::apply;
   private static final Rule leafRule = Leaf::apply;
 
-  /** Translates given obligation into a set of constraints that would prove given obligation. */
-  public static Set<Constraint> prove(
-      Obligation obligation, AnnotatingGlobals globals, OutputStream out) {
-    DirectedAcyclicGraph<Obligation, DefaultEdge> proof =
-        new DirectedAcyclicGraph<>(DefaultEdge.class);
+  private static final boolean DEFAULT_WEAKEN = false;
 
-    Set<Constraint> accumulatedConstraints = new HashSet<>();
-    Stack<Obligation> obligations = new Stack<>();
-    obligations.push(obligation);
-    proof.addVertex(obligation);
+  private final String name;
+  private final Path basePath;
 
-    final var edgeAttributes = new HashMap<DefaultEdge, Map<String, Attribute>>();
-    final var vertexAttributes = new HashMap<Obligation, Map<String, Attribute>>();
-    vertexAttributes.put(obligation, obligation.attributes());
+  @Getter
+  private final DirectedAcyclicGraph<Obligation, DefaultEdge> proof =
+      new DirectedAcyclicGraph<>(DefaultEdge.class);
 
-    while (!obligations.isEmpty()) {
-      final var top = obligations.pop();
-      final var rules = chooseRules(top);
+  private final Map<DefaultEdge, Map<String, Attribute>> edgeAttributes = new HashMap<>();
+  private final Map<Obligation, Map<String, Attribute>> vertexAttributes = new HashMap<>();
 
-      var nextObligation = top;
-      Rule.ApplicationResult ruleResult = null;
+  @Getter private final Set<Constraint> accumulatedConstraints = new HashSet<>();
 
-      while (!rules.isEmpty()) {
-        final var rule = rules.pop();
-        final var currentObligation = nextObligation;
-        ruleResult = rule.apply(nextObligation, globals);
+  // TODO: Find a better way to handle globals...
+  @Getter @Setter private AnnotatingGlobals globals;
 
-        if (ruleResult == null) {
-          throw bug("typing rule implementation returned null");
-        }
+  @Getter @Setter private boolean weaken = DEFAULT_WEAKEN;
 
-        ruleResult
-            .getObligations()
-            .forEach(
-                o -> {
-                  proof.addVertex(o.getFirst());
-                  vertexAttributes.put(o.getFirst(), o.getFirst().attributes());
-                });
-        final var lele = ruleResult.getGeneralConstraints();
-        ruleResult
-            .getObligations()
-            .forEach(
-                o -> {
-                  final var edge = proof.addEdge(currentObligation, o.getFirst());
-                  final var lel =
-                      o.getSecond().stream()
-                              .map(Object::toString)
-                              .collect(Collectors.joining("<br />"))
-                          + (lele.isEmpty()
-                              ? ""
-                              : "<br /> - - - - <br />"
-                                  + lele.stream()
-                                      .map(Object::toString)
-                                      .collect(Collectors.joining("<br />")));
-                  edgeAttributes.put(
-                      edge,
-                      Map.of(
-                          "label",
-                          new NidiAttribute<>(
-                              Label.html(
-                                  Util.truncate(
-                                      "("
-                                          + rule.getClass().getSimpleName().toLowerCase()
-                                          + ") <br />"
-                                          + lel
-                                          // .replace("|", "_")
-                                          // .replace("[", "_")
-                                          // .replace("]", "_")
-                                          // .replace("=", "_")
-                                          // .replace("Σ", "_")
-                                          // .replace("≤", "_")
-                                          // .replace("≥", "_")
-                                          + " ",
-                                      16000)))));
-                  accumulatedConstraints.addAll(o.getSecond());
-                });
+  public Prover(String name, AnnotatingGlobals globals, Path basePath) {
+    this.name = name;
+    this.globals = globals;
+    this.basePath = basePath;
+  }
 
-        accumulatedConstraints.addAll(ruleResult.getGeneralConstraints());
-
-        if (!rules.isEmpty()) {
-          if (ruleResult.getObligations().size() > 1) {
-            throw bug(
-                "if there are multiple rule applications scheduled, all of them except the last must return exactly one obligation");
-          }
-
-          if (ruleResult.getObligations().isEmpty()) {
-            throw bug("multiple rule applications were scheduled but we ran out of obligations");
-          }
-
-          nextObligation = ruleResult.getObligations().get(0).getFirst();
-        } else {
-          ruleResult.getObligations().forEach(o -> obligations.add(o.getFirst()));
-        }
-      }
-    }
-
-    final NidiExporter<Obligation, DefaultEdge> exporter = new NidiExporter<>(Util::stamp);
-    exporter.setVertexAttributeProvider(vertexAttributes::get);
-    exporter.setEdgeAttributeProvider(edgeAttributes::get);
-    exporter.setGraphAttributeProvider(
-        () -> Map.of("rankdir", new DefaultAttribute<>("BT", AttributeType.STRING)));
-    final var graph = exporter.transform(proof);
-    final var viz = Graphviz.fromGraph(graph);
-    try {
-      viz.render(Format.SVG).toOutputStream(out);
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-    return accumulatedConstraints;
+  public Prover(String name, AnnotatingGlobals globals) {
+    this(name, globals, Paths.get("out"));
   }
 
   /** Chooses which rules should be applied (in order) to prove given obligation. */
-  private static Stack<Rule> chooseRules(Obligation obligation) {
+  private Stack<Rule> chooseRules(Obligation obligation) {
     if (obligation.isNothing()) {
       return stack();
     }
+
+    // TODO: Be smart about the application of (w:var) and (w). (w) should probably be applied
+    // maximizing the knowledge about identifiers in the context. This means that (w:var) should
+    // not be applied in some cases since it removes identifiers from the context that might carry
+    // otherwise useful information?!
+
     final var expression = obligation.getExpression();
     if (!WVar.redundantIds(obligation).isEmpty()) {
       return stack(weakenVariableRule);
     }
     if (expression.isTerminal()) {
-      return stack(weakenRule, chooseRule(expression));
+      if (weaken) {
+        log.info(
+            "Scheduling (w) for application to terminal expression {} because weakening is enabled!",
+            expression);
+        return stack(weakenRule, chooseRule(expression));
+      } else {
+        log.info(
+            "Not scheduling (w) for application to terminal expression {} because weakening is disabled.",
+            expression);
+        return stack(chooseRule(expression));
+      }
     } else {
       return stack(chooseRule(expression));
     }
@@ -207,12 +134,208 @@ public class Prover {
     } else if (e instanceof MatchExpression) {
       return matchRule;
     } else if (e instanceof LetExpression) {
-      return letRule;
+      if (((LetExpression) e).getValue().getType() instanceof TreeType) {
+        // TODO: When should we apply the cost-free version?
+        return letTreeRule;
+      } else {
+        return letGenRule;
+      }
     } else if (e instanceof ShareExpression) {
       return shareRule;
     } else {
       throw bug(
           "could not choose a rule for expression of type " + e.getClass().getCanonicalName());
     }
+  }
+
+  public Obligation share(Obligation obligation) {
+    while (obligation.getExpression() instanceof ShareExpression) {
+      final var result = apply(obligation, shareRule);
+      obligation = result.getObligations().get(0);
+    }
+    return obligation;
+  }
+
+  public List<Obligation> proveUntilExpressionEquals(Obligation obligation, Expression expression) {
+    return proveUntil(obligation, x -> expression.equals(x.getExpression()));
+  }
+
+  public List<Obligation> proveUntil(Obligation obligation, Predicate<Obligation> condition) {
+    if (obligation == null) {
+      return emptyList();
+    }
+
+    // If the given obligation matches, stop immediately!
+    if (condition.test(obligation)) {
+      return singletonList(obligation);
+    }
+
+    final Stack<Rule> rules = chooseRules(obligation);
+    if (rules.isEmpty()) {
+      return emptyList();
+    } else if (rules.size() == 1) {
+      final Rule rule = rules.pop();
+      final var ruleResult = apply(obligation, rule);
+      return ruleResult.getObligations().stream()
+          .flatMap(x -> proveUntil(x, condition).stream())
+          .collect(Collectors.toList());
+    }
+
+    Rule.ApplicationResult ruleResult = null;
+    while (!rules.isEmpty()) {
+      final Rule rule = rules.pop();
+      ruleResult = apply(obligation, rule);
+      if (!ruleResult.getObligations().isEmpty()) {
+        if (ruleResult.getObligations().size() > 1) {
+          throw bug(
+              "if there are multiple rule applications scheduled, all of them except the last must return exactly one obligation");
+        }
+        obligation = ruleResult.getObligations().get(0);
+      } else {
+        if (!rules.isEmpty()) {
+          throw bug("multiple rule applications were scheduled but we ran out of obligations");
+        }
+      }
+    }
+    return ruleResult.getObligations().stream()
+        .flatMap(x -> proveUntil(x, condition).stream())
+        .collect(Collectors.toList());
+    /*
+    else if (rules.size() != 1) {
+      log.info("proveOneStep will not apply a multi-rule choice to " + obligation);
+      return singletonList(obligation);
+    }
+
+    if (rule.equals(weakenRule)) {
+      log.info("proveOneStep will not apply (w) rule to " + obligation);
+      return singletonList(obligation);
+    }
+     */
+
+  }
+
+  public Rule.ApplicationResult apply(Obligation obligation, Rule rule) {
+    final var result = rule.apply(obligation, globals);
+    if (result == null) {
+      throw bug("typing rule implementation returned null");
+    }
+    ingest(obligation, result);
+    return result;
+  }
+
+  public void prove(List<Obligation> obligations) {
+    obligations.forEach(this::prove);
+  }
+
+  /** Translates given obligation into a set of constraints that would prove given obligation. */
+  public void prove(Obligation obligation) {
+    Stack<Obligation> obligations = new Stack<>();
+    obligations.push(obligation);
+    proof.addVertex(obligation);
+    vertexAttributes.put(obligation, obligation.attributes());
+
+    while (!obligations.isEmpty()) {
+      final var top = obligations.pop();
+      final var rules = chooseRules(top);
+
+      var nextObligation = top;
+      Rule.ApplicationResult ruleResult = null;
+
+      while (!rules.isEmpty()) {
+        final var rule = rules.pop();
+        ruleResult = apply(nextObligation, rule);
+
+        if (!rules.isEmpty()) {
+          if (ruleResult.getObligations().size() > 1) {
+            throw bug(
+                "if there are multiple rule applications scheduled, all of them except the last must return exactly one obligation");
+          }
+
+          if (ruleResult.getObligations().isEmpty()) {
+            throw bug("multiple rule applications were scheduled but we ran out of obligations");
+          }
+
+          nextObligation = ruleResult.getObligations().get(0);
+        } else {
+          obligations.addAll(ruleResult.getObligations());
+        }
+      }
+    }
+  }
+
+  private void ingest(Obligation previous, Rule.ApplicationResult ruleResult) {
+    if (!proof.containsVertex(previous)) {
+
+      proof.addVertex(previous);
+      vertexAttributes.put(previous, previous.attributes());
+    }
+
+    ruleResult
+        .getObligations()
+        .forEach(
+            o -> {
+              proof.addVertex(o);
+              vertexAttributes.put(o, o.attributes());
+            });
+    final var lele = ruleResult.getGeneralConstraints();
+    Streams.zip(
+            ruleResult.getObligations().stream(), ruleResult.getConstraints().stream(), Pair::of)
+        .forEach(
+            o -> {
+              final var edge = proof.addEdge(previous, o.getLeft());
+              final var lel =
+                  o.getRight().stream().map(Object::toString).collect(Collectors.joining("<br />"))
+                      + (lele.isEmpty()
+                          ? ""
+                          : "<br /> - - - - <br />"
+                              + lele.stream()
+                                  .map(Object::toString)
+                                  .collect(Collectors.joining("<br />")));
+              edgeAttributes.put(
+                  edge,
+                  Map.of(
+                      "label",
+                      new NidiAttribute<>(
+                          Label.html(
+                              Util.truncate(
+                                  "("
+                                      + "?" // rule.getClass().getSimpleName().toLowerCase()
+                                      + ") <br />"
+                                      + lel
+                                      // .replace("|", "_")
+                                      // .replace("[", "_")
+                                      // .replace("]", "_")
+                                      // .replace("=", "_")
+                                      // .replace("Σ", "_")
+                                      // .replace("≤", "_")
+                                      // .replace("≥", "_")
+                                      + " ",
+                                  16000)))));
+            });
+
+    ruleResult.collectInto(accumulatedConstraints);
+  }
+
+  public void plot() throws IOException {
+    if (basePath == null) {
+      return;
+    }
+
+    final var target = basePath.resolve(name + "-proof.svg");
+    log.info(target.toString());
+
+    final NidiExporter<Obligation, DefaultEdge> exporter = new NidiExporter<>(Util::stamp);
+    exporter.setVertexAttributeProvider(vertexAttributes::get);
+    exporter.setEdgeAttributeProvider(edgeAttributes::get);
+    exporter.setGraphAttributeProvider(
+        () -> Map.of("rankdir", new DefaultAttribute<>("BT", AttributeType.STRING)));
+
+    Graphviz.fromGraph(exporter.transform(proof))
+        .render(Format.SVG)
+        .toOutputStream(Files.newOutputStream(target));
+  }
+
+  public Optional<Map<Coefficient, KnownCoefficient>> solve() {
+    return ConstraintSystemSolver.solve(accumulatedConstraints, name);
   }
 }
