@@ -4,22 +4,30 @@ import static guru.nidi.graphviz.model.Link.to;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 
 import com.google.common.collect.BiMap;
+import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
-import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 
 @Data
 @Slf4j
@@ -40,7 +48,7 @@ public class EqualityConstraint extends Constraint {
   }
 
   public static List<Constraint> eqRanks(
-      Iterable<String> ids, AnnotatingContext left, AnnotatingContext right, String reason) {
+      Iterable<Identifier> ids, AnnotatingContext left, AnnotatingContext right, String reason) {
     return StreamSupport.stream(ids.spliterator(), false)
         .map(
             id ->
@@ -49,7 +57,7 @@ public class EqualityConstraint extends Constraint {
         .collect(Collectors.toList());
   }
 
-  public static List<Constraint> eq(String reason, Annotation left, Annotation right) {
+  public static List<Constraint> eqSoft(Annotation left, Annotation right, String reason) {
     if (left.size() != right.size()) {
       throw new IllegalArgumentException("annotations of different sizes cannot be equal");
     }
@@ -61,7 +69,35 @@ public class EqualityConstraint extends Constraint {
         continue;
       }
       result.add(
-          new EqualityConstraint(left.getRankCoefficient(x), right.getRankCoefficient(x), reason));
+          new EqualityConstraint(
+              left.getRankCoefficient(x), right.getRankCoefficient(x), reason + " rk " + x));
+    }
+
+    for (Map.Entry<List<Integer>, Coefficient> entry : left.getCoefficients()) {
+      var other = right.getCoefficientOrZero(entry.getKey());
+      if (entry.getValue().equals(other)) {
+        continue;
+      }
+      result.add(new EqualityConstraint(entry.getValue(), other, reason + " " + entry.getKey()));
+    }
+
+    return result;
+  }
+
+  public static List<Constraint> eq(Annotation left, Annotation right, String reason) {
+    if (left.size() != right.size()) {
+      throw new IllegalArgumentException("annotations of different sizes cannot be equal");
+    }
+    final var result = new ArrayList<Constraint>();
+
+    final int size = left.size();
+    for (int x = 0; x < size; x++) {
+      if (left.getRankCoefficient(x).equals(right.getRankCoefficient(x))) {
+        continue;
+      }
+      result.add(
+          new EqualityConstraint(
+              left.getRankCoefficient(x), right.getRankCoefficient(x), reason + " rk " + x));
     }
 
     final Set<List<Integer>> leftIndices = new HashSet<>();
@@ -71,19 +107,19 @@ public class EqualityConstraint extends Constraint {
       if (entry.getValue().equals(other)) {
         continue;
       }
-      result.add(new EqualityConstraint(entry.getValue(), other, reason));
+      result.add(new EqualityConstraint(entry.getValue(), other, reason + " " + entry.getKey()));
     }
 
     for (Map.Entry<List<Integer>, Coefficient> entry : right.getCoefficients()) {
       if (!leftIndices.contains(entry.getKey())) {
-        result.add(new EqualityConstraint(entry.getValue(), ZERO, reason));
+        result.add(new EqualityConstraint(entry.getValue(), ZERO, reason + " " + entry.getKey()));
       }
     }
 
     return result;
   }
 
-  public BoolExpr encode(Context ctx, BiMap<Coefficient, RealExpr> coefficients) {
+  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
     return ctx.mkEq(left.encode(ctx, coefficients), right.encode(ctx, coefficients));
   }
 
@@ -108,6 +144,16 @@ public class EqualityConstraint extends Constraint {
   @Override
   public Set<Coefficient> occurringCoefficients() {
     return Set.of(left.canonical(), right.canonical());
+  }
+
+  @Override
+  public boolean known() {
+    return (left instanceof KnownCoefficient) && (right instanceof KnownCoefficient);
+  }
+
+  @Override
+  protected boolean satisfiedInternal() {
+    return left.equals(right);
   }
 
   @Override

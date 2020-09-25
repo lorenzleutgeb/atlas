@@ -1,6 +1,8 @@
 package xyz.leutgeb.lorenz.lac;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static xyz.leutgeb.lorenz.lac.Assertions.assertContextEqualsByPrefixes;
 
 import java.io.FileOutputStream;
@@ -12,11 +14,20 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
 import org.jgrapht.graph.DirectedMultigraph;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
-import xyz.leutgeb.lorenz.lac.ast.*;
+import xyz.leutgeb.lorenz.lac.ast.Expression;
+import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
+import xyz.leutgeb.lorenz.lac.ast.IfThenElseExpression;
+import xyz.leutgeb.lorenz.lac.ast.LetExpression;
+import xyz.leutgeb.lorenz.lac.ast.MatchExpression;
+import xyz.leutgeb.lorenz.lac.ast.Program;
+import xyz.leutgeb.lorenz.lac.ast.ShareExpression;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
@@ -24,12 +35,12 @@ import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCf;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.Rule;
+import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCfSimple;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemException;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 
 /**
  * In this test case we want to check that the coefficients given in the paper are also a solution
@@ -46,6 +57,7 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationError;
  *
  * <p>The weakening from Q_2 to Q_3 is the part that we want to skip for now.
  */
+@Disabled
 public class S62Eager extends S62 {
   private static final FunctionDefinition SPLAY;
 
@@ -131,7 +143,12 @@ public class S62Eager extends S62 {
     final var globals =
         new AnnotatingGlobals(
             Map.of(FQN, new FunctionAnnotation(Q, Qp /*HEURISTIC.generate("Qpunknown", 1)*/)),
-            Map.of(FQN, new FunctionAnnotation(P, Pp)),
+            Map.of(
+                FQN,
+                Set.of(
+                    new FunctionAnnotation(P, Pp),
+                    new FunctionAnnotation(
+                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
             SIZE_ANALYSIS,
             HEURISTIC);
 
@@ -142,28 +159,26 @@ public class S62Eager extends S62 {
     // paper), and
     // a derived variable instead of bl, because we have matched on bl and reconstructed it from
     // (bll, blx, blr).
-    List<String> contextIds;
-    List<String> varsInContextForE4 =
-        new ArrayList<>(Util.setOfNames(((Expression) E4).freeVariables()));
-    varsInContextForE4.sort(String::compareToIgnoreCase);
+    List<Identifier> contextIds;
+    List<Identifier> varsInContextForE4 = new ArrayList<>(((Expression) E4).freeVariables());
+    varsInContextForE4.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
     Collections.reverse(varsInContextForE4);
     assertEquals(3, varsInContextForE4.size());
-    assertTrue(varsInContextForE4.get(1).startsWith("cr"));
-    assertTrue(varsInContextForE4.get(2).startsWith("br"));
+    assertTrue(varsInContextForE4.get(1).getName().startsWith("cr"));
+    assertTrue(varsInContextForE4.get(2).getName().startsWith("br"));
     contextIds =
         List.of(varsInContextForE4.get(1), varsInContextForE4.get(0), varsInContextForE4.get(2));
 
     final var rootObligation =
         new Obligation(
-            new AnnotatingContext(contextIds, Q3), E4, globals.getDependingOnCost(FQN, 1).to(), 1);
+            new AnnotatingContext(contextIds, Q3), E4, globals.getSignature(FQN).to(), 1);
 
     final Prover prover = new Prover("splay-above", globals, Paths.get("out"));
 
-    final Rule.ApplicationResult e4result;
-    e4result = prover.apply(rootObligation, LetTreeCf::apply);
+    final var e4result = prover.apply(rootObligation, LetTreeCfSimple.INSTANCE);
 
-    final var q4 = e4result.getObligations().get(1).getContext();
-    prover.prove(e4result.getObligations());
+    final var q4 = e4result.get(1).getContext();
+    prover.prove(e4result);
 
     prover.plot();
 
@@ -183,9 +198,15 @@ public class S62Eager extends S62 {
   public void zigzigBelow() throws ConstraintSystemException {
     final var globals =
         new AnnotatingGlobals(
-            // TODO: Maybe don't even initialize, since we do not expect to handle (app)?
+            // TODO(lorenz.leutgeb): Maybe don't even initialize, since we do not expect to handle
+            // (app)?
             Map.of(FQN, new FunctionAnnotation(Q, Qp)),
-            Map.of(FQN, new FunctionAnnotation(P, Pp)),
+            Map.of(
+                FQN,
+                Set.of(
+                    new FunctionAnnotation(P, Pp),
+                    new FunctionAnnotation(
+                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
             SIZE_ANALYSIS,
             HEURISTIC);
 
@@ -201,12 +222,12 @@ public class S62Eager extends S62 {
         expressionEqualsE2Falsy.or(expressionEqualsIfAltBFalsy).or(expressionEqualsE1Truthy);
 
     final Prover prover = new Prover("splay-below", globals, Paths.get("out"));
-    prover.setWeaken(true);
+    prover.setWeakenBeforeTerminal(true);
     final var rootObligation =
         new Obligation(
-            new AnnotatingContext(List.of("t"), globals.getDependingOnCost(FQN, 1).from()),
+            new AnnotatingContext(SPLAY.treeLikeArguments(), globals.getSignature(FQN).from()),
             SPLAY.getBody(),
-            globals.getDependingOnCost(FQN, 1).to(),
+            globals.getSignature(FQN).to(),
             1);
     final var first = prover.proveUntil(rootObligation, expressionEqualsE3.or(outOfScope));
     assertEquals(3, first.size());
@@ -243,12 +264,16 @@ public class S62Eager extends S62 {
         new AnnotatingGlobals(
             Map.of(FQN, new FunctionAnnotation(Q, Qp)),
             Map.of(
-                FQN, new FunctionAnnotation(new Annotation(1, "zero"), new Annotation(1, "zero"))),
+                FQN,
+                Set.of(
+                    new FunctionAnnotation(P, Pp),
+                    new FunctionAnnotation(
+                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
             SIZE_ANALYSIS,
             HEURISTIC);
 
     final var rootObligation =
-        new Obligation(new AnnotatingContext(List.of("t"), P), SPLAY.getBody(), Pp, 0);
+        new Obligation(new AnnotatingContext(SPLAY.treeLikeArguments(), P), SPLAY.getBody(), Pp, 0);
 
     final Prover prover = new Prover("splay-cf", globals, Paths.get("out"));
     prover.prove(rootObligation);

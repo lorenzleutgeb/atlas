@@ -2,19 +2,20 @@ package xyz.leutgeb.lorenz.lac.typing.resources.indices;
 
 import java.util.Map;
 import java.util.function.Function;
-import xyz.leutgeb.lorenz.lac.Util;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
 public class FunctionIndex implements Index {
-  Function<String, Integer> associatedIndices;
+  Function<Identifier, Integer> associatedIndices;
   Integer offsetIndex;
 
-  public FunctionIndex(Function<String, Integer> associatedIndices, Integer offsetIndex) {
+  public FunctionIndex(Function<Identifier, Integer> associatedIndices, Integer offsetIndex) {
     this.associatedIndices = associatedIndices;
     this.offsetIndex = offsetIndex;
   }
 
   @Override
-  public Integer getAssociatedIndex(String id) {
+  public Integer getAssociatedIndex(Identifier id) {
     return associatedIndices.apply(id);
   }
 
@@ -24,7 +25,7 @@ public class FunctionIndex implements Index {
   }
 
   @Override
-  public Index mask(Map<String, Integer> maskMap) {
+  public Index mask(Map<Identifier, Integer> maskMap) {
     return new FunctionIndex(Util.fallback(maskMap::get, associatedIndices), offsetIndex);
   }
 
@@ -34,7 +35,7 @@ public class FunctionIndex implements Index {
   }
 
   @Override
-  public Index mask(Function<String, Integer> maskFunction) {
+  public Index mask(Function<Identifier, Integer> maskFunction) {
     return new FunctionIndex(maskFunction, offsetIndex);
   }
 }

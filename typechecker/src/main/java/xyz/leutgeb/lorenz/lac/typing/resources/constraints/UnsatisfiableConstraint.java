@@ -1,15 +1,16 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 
 import com.google.common.collect.BiMap;
+import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
-import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 
 public class UnsatisfiableConstraint extends Constraint {
   public UnsatisfiableConstraint(String reason) {
@@ -17,7 +18,7 @@ public class UnsatisfiableConstraint extends Constraint {
   }
 
   @Override
-  public BoolExpr encode(Context ctx, BiMap<Coefficient, RealExpr> coefficients) {
+  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
     return ctx.mkFalse();
   }
 

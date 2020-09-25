@@ -1,8 +1,8 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
 import static com.google.common.collect.Sets.intersection;
-import static xyz.leutgeb.lorenz.lac.Util.indent;
-import static xyz.leutgeb.lorenz.lac.Util.pick;
+import static xyz.leutgeb.lorenz.lac.util.Util.indent;
+import static xyz.leutgeb.lorenz.lac.util.Util.pick;
 
 import com.google.common.collect.Sets;
 import java.io.PrintStream;
@@ -14,16 +14,16 @@ import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.Graph;
-import xyz.leutgeb.lorenz.lac.IntIdGenerator;
-import xyz.leutgeb.lorenz.lac.SizeEdge;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
+import xyz.leutgeb.lorenz.lac.util.Pair;
+import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -112,7 +112,7 @@ public class MatchExpression extends Expression {
 
   @Override
   public MatchExpression rename(Map<String, String> renaming) {
-    // TODO: Create new expression only if possible.
+    // TODO(lorenz.leutgeb): Create new expression only if possible.
     return new MatchExpression(
         Derived.rename(this),
         scrut.rename(renaming),
@@ -200,9 +200,7 @@ public class MatchExpression extends Expression {
     }
 
     if (lazy) {
-      log.info(
-          "Did not create sharing expression for {} because aggressive unsharing is enabled.",
-          intersection);
+      log.info("Did not create sharing expression for {} because unsharing is lazy.", intersection);
       return new MatchExpression(source, scrut, newLeaf, nodePattern, newNode, type);
     }
 

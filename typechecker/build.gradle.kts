@@ -6,7 +6,7 @@ plugins {
     application
     antlr
 
-    id("com.diffplug.gradle.spotless") version "4.4.0"
+    id("com.diffplug.spotless") version "5.2.0"
 }
 
 repositories {
@@ -31,23 +31,17 @@ dependencies {
 
     implementation("com.google.guava:guava:28.2-jre")
 
-    implementation("org.apache.commons:commons-text:1.8")
-
     // Logging
-    fun log4j(x: String): String {
-        return "org.apache.logging.log4j:log4j-$x:2.13.1"
-    }
-    implementation(log4j("api"))
-    implementation(log4j("core"))
+    // fun log4j(x: String): String {
+    //     return "org.apache.logging.log4j:log4j-$x:2.13.1"
+    // }
+    // implementation(log4j("api"))
+    // implementation(log4j("core"))
 
     // Lombok
     val lombok = "org.projectlombok:lombok:1.18.12"
     compileOnly(lombok)
     annotationProcessor(lombok)
-
-    // Maths
-    // TODO: This is a candidate for removal. Just org.hipparchus.fraction.Fraction is barely used.
-    implementation("org.hipparchus:hipparchus-core:1.6")
 
     // Graphs
     fun jgrapht(x: String): String {
@@ -84,7 +78,7 @@ application {
 }
 
 tasks.withType<JavaCompile> {
-    // TODO: Remove --enable-preview as soon as Records are stable.
+    // TODO(lorenz.leutgeb): Remove --enable-preview as soon as Records are stable.
     options.compilerArgs.addAll(arrayOf("-Xlint:unchecked", "-Xlint:deprecation", "--enable-preview"))
 }
 
@@ -106,7 +100,7 @@ tasks.test {
     testLogging {
         events("passed", "skipped", "failed")
     }
-    // TODO: Remove --enable-preview as soon as Records are stable.
+    // TODO(lorenz.leutgeb): Remove --enable-preview as soon as Records are stable.
     jvmArgs("--enable-preview")
 }
 
@@ -123,7 +117,7 @@ spotless {
         // Please do not add any custom configuration here.
         // We just bow and abide to Google's rules,
         // trading off individualism for simplicity.
-        googleJavaFormat("1.8")
+        googleJavaFormat("1.9")
         // Explicitly point gjf at src, otherwise it will also check build and find ANTLR generated code.
         target("src/**/*.java")
     }

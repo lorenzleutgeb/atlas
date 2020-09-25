@@ -2,7 +2,7 @@ package xyz.leutgeb.lorenz.lac.ast;
 
 import static com.google.common.collect.Sets.union;
 import static java.util.Collections.singleton;
-import static xyz.leutgeb.lorenz.lac.Util.notImplemented;
+import static xyz.leutgeb.lorenz.lac.util.Util.notImplemented;
 
 import com.google.common.collect.Sets;
 import java.io.PrintStream;
@@ -12,7 +12,6 @@ import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.Value;
-import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.FunctionSignature;
@@ -22,6 +21,7 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.Substitution;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
@@ -124,7 +124,7 @@ public class CallExpression extends Expression {
 
   @Override
   public Expression rename(Map<String, String> renaming) {
-    // TODO: Only create new expression if really necessary!
+    // TODO(lorenz.leutgeb): Only create new expression if really necessary!
     return new CallExpression(
         Derived.rename(this),
         name,

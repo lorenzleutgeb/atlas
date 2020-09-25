@@ -1,16 +1,23 @@
 package xyz.leutgeb.lorenz.lac;
 
-import static java.util.Collections.*;
-import static org.hipparchus.fraction.Fraction.ONE;
-import static org.junit.jupiter.api.Assertions.*;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singleton;
+import static java.util.Collections.singletonList;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
-import static xyz.leutgeb.lorenz.lac.Util.fqnToFlatFilename;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.THREE;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.eq;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.ord;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.ALPHA;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.BETA;
+import static xyz.leutgeb.lorenz.lac.util.Util.fqnToFlatFilename;
 
 import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
@@ -19,11 +26,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.hipparchus.fraction.Fraction;
 import org.jgrapht.nio.AttributeType;
 import org.jgrapht.nio.DefaultAttribute;
 import org.junit.jupiter.api.Disabled;
@@ -31,9 +42,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.ast.Program;
+import xyz.leutgeb.lorenz.lac.module.Loader;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
@@ -49,6 +62,10 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.BoolType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.Fraction;
+import xyz.leutgeb.lorenz.lac.util.NidiExporter;
+import xyz.leutgeb.lorenz.lac.util.SizeEdge;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Timeout(value = 1, unit = TimeUnit.MINUTES)
 public class Tests {
@@ -79,6 +96,10 @@ public class Tests {
         arguments(
             "SplayTree.splay", sig(Set.of(ord(ALPHA)), ALPHA, ATREE, ATREE), ExpectedResult.SAT),
         arguments(
+            "SplayTree.splay_eq",
+            sig(Set.of(ord(ALPHA), eq(ATREE)), ALPHA, ATREE, ATREE),
+            ExpectedResult.SAT),
+        arguments(
             "SplayTree.delete",
             sig(Set.of(ord(ALPHA)), ALPHA, ATREE, ATREE),
             ExpectedResult.UNKNOWN),
@@ -96,23 +117,23 @@ public class Tests {
 
   private static Stream<Arguments> constantCostDefinitions() {
     return Stream.of(
-        arguments("LeftList.cons", sig(ALPHA, ATREE, ATREE), 0),
-        arguments("RightList.cons", sig(ALPHA, ATREE, ATREE), 0),
-        arguments("Tree.singleton", sig(ALPHA, ATREE), 0),
+        arguments("LeftList.cons", sig(ALPHA, ATREE, ATREE), 2),
+        arguments("RightList.cons", sig(ALPHA, ATREE, ATREE), 2),
+        arguments("Tree.singleton", sig(ALPHA, ATREE), 3),
         arguments("Bool.neg", sig(BOOL, BOOL), 0),
         arguments("Bool.or", sig(BOOL, BOOL, BOOL), 0),
         arguments("Bool.and", sig(BOOL, BOOL, BOOL), 0),
-        arguments("RightList.tl", sig(ATREE, ATREE), 0),
-        arguments("LeftList.tl", sig(ATREE, ATREE), 0),
-        arguments("Tree.id", sig(ATREE, ATREE), 0),
-        arguments("Tree.right", sig(ATREE, ATREE), 0),
-        arguments("Tree.left", sig(ATREE, ATREE), 0),
-        arguments("Tree.flip", sig(ATREE, ATREE), 0),
+        arguments("RightList.tl", sig(ATREE, ATREE), 1),
+        arguments("LeftList.tl", sig(ATREE, ATREE), 1),
+        arguments("Tree.id", sig(ATREE, ATREE), 1),
+        arguments("Tree.right", sig(ATREE, ATREE), 1),
+        arguments("Tree.left", sig(ATREE, ATREE), 1),
+        arguments("Tree.flip", sig(ATREE, ATREE), 1),
         arguments("Tree.empty", sig(ATREE, BOOL), 0),
-        arguments("Tree.clone", sig(ALPHA, ATREE, ATREE), 0),
+        arguments("Tree.clone", sig(ALPHA, ATREE, ATREE), 1),
         arguments("PairingHeap.is_root", sig(ATREE, BOOL), 0),
-        arguments("PairingHeap.link", sig(singleton(ord(ALPHA)), ATREE, ATREE), 0),
-        arguments("PairingHeap.merge", sig(singleton(ord(ALPHA)), ATREE, ATREE, ATREE), 1),
+        arguments("PairingHeap.link", sig(singleton(ord(ALPHA)), ATREE, ATREE), 2),
+        arguments("PairingHeap.merge", sig(singleton(ord(ALPHA)), ATREE, ATREE, ATREE), 4),
         arguments("PairingHeap.insert", sig(singleton(ord(ALPHA)), ALPHA, ATREE, ATREE), 3),
         arguments("Scratch.empty_1", sig(ATREE, BOOL), 1),
         arguments("Scratch.empty_2", sig(ATREE, BOOL), 2),
@@ -168,27 +189,24 @@ public class Tests {
                             + "_"
                             + Util.stamp(identifier.getIntro().getExpression()))));
     exporter.setVertexAttributeProvider(
-        v -> {
-          return Map.of("label", new DefaultAttribute<>(v.getName(), AttributeType.STRING));
-        });
+        v -> Map.of("label", new DefaultAttribute<>(v.getName(), AttributeType.STRING)));
     exporter.setEdgeAttributeProvider(
-        e -> {
-          return Map.of(
-              // "label",
-              // new DefaultAttribute<>(e.getKind().toString(), AttributeType.STRING),
-              "color",
-              new DefaultAttribute<>(
-                  e.getKind().equals(SizeEdge.Kind.EQ) ? "blue4" : "red", AttributeType.STRING));
-        });
+        e ->
+            Map.of(
+                // "label",
+                // new DefaultAttribute<>(e.getKind().toString(), AttributeType.STRING),
+                "color",
+                new DefaultAttribute<>(
+                    e.getKind().equals(SizeEdge.Kind.EQ) ? "blue4" : "red", AttributeType.STRING)));
     return exporter;
   }
 
-  private Program loadAndNormalizeAndInferAndUnshare(String fqn)
+  public static Program loadAndNormalizeAndInferAndUnshare(String fqn)
       throws UnificationError, TypeError, IOException {
     final var result = loader().load(fqn);
     result.normalize();
     result.infer();
-    result.unshare();
+    result.unshare(true);
     return result;
   }
 
@@ -208,7 +226,7 @@ public class Tests {
 
     System.out.println("Testing " + fqn);
 
-    // TODO: Check outcome.
+    // TODO(lorenz.leutgeb): Check outcome.
     program.solve();
   }
 
@@ -225,14 +243,14 @@ public class Tests {
 
     // Taken from Example 8.
     final List<Coefficient> rankCoefficients = new ArrayList<>(1);
-    rankCoefficients.add(new KnownCoefficient(ONE));
+    rankCoefficients.add(ONE);
 
     final Map<List<Integer>, Coefficient> schoenmakers = new HashMap<>();
-    schoenmakers.put(List.of(0, 1), new KnownCoefficient(new Fraction(3, 1)));
-    schoenmakers.put(List.of(0, 2), new KnownCoefficient(ONE));
+    schoenmakers.put(List.of(0, 1), THREE);
+    schoenmakers.put(List.of(0, 2), ONE);
 
     final List<Coefficient> resultRankCoefficients = new ArrayList<>(1);
-    resultRankCoefficients.add(new KnownCoefficient(ONE));
+    resultRankCoefficients.add(ONE);
 
     final var predefinedAnnotations = new HashMap<String, FunctionAnnotation>();
     predefinedAnnotations.put(
@@ -278,14 +296,13 @@ public class Tests {
 
     // Taken from Example 8.
     final List<Coefficient> rankCoefficients = new ArrayList<>(1);
-    rankCoefficients.add(new KnownCoefficient(ONE));
+    rankCoefficients.add(ONE);
 
     final Map<List<Integer>, Coefficient> schoenmakers = new HashMap<>();
     schoenmakers.put(List.of(0, 1), new KnownCoefficient(new Fraction(3, 1)));
-    schoenmakers.put(List.of(0, 2), new KnownCoefficient(ONE));
+    schoenmakers.put(List.of(0, 2), ONE);
 
-    final List<Coefficient> resultRankCoefficients = new ArrayList<>(1);
-    resultRankCoefficients.add(new KnownCoefficient(ONE));
+    final List<Coefficient> resultRankCoefficients = singletonList(ONE);
 
     final var predefinedAnnotations = new HashMap<String, FunctionAnnotation>();
     predefinedAnnotations.put(
@@ -405,8 +422,9 @@ public class Tests {
                 new InequalityConstraint(generatorInput, generatorResult, "outside constraint"))));
   }
 
-  @Test
-  void dumps() throws Exception {
+  @ParameterizedTest
+  @CsvSource({"true,lazy", "false,eager"})
+  void dumps(boolean lazy, String suffix) throws Exception {
     final var loader = loader();
     loader.autoload();
     final var program = loader.all();
@@ -425,11 +443,13 @@ public class Tests {
                   .getAbsoluteFile()));
     }
     program.infer();
-    program.unshare();
+    program.unshare(lazy);
     for (var fd : program.getFunctionDefinitions().values()) {
       fd.printTo(
           new PrintStream(
-              new File(OUT, fqnToFlatFilename(fd.getFullyQualifiedName()) + "-unshared.ml")
+              new File(
+                      OUT,
+                      fqnToFlatFilename(fd.getFullyQualifiedName()) + "-" + suffix + "-unshared.ml")
                   .getAbsoluteFile()));
     }
 
@@ -443,7 +463,12 @@ public class Tests {
         viz.render(Format.SVG)
             .toOutputStream(
                 new PrintStream(
-                    new File(OUT, fqnToFlatFilename(fd.getFullyQualifiedName()) + "-sizes.svg")));
+                    new File(
+                        OUT,
+                        fqnToFlatFilename(fd.getFullyQualifiedName())
+                            + "-"
+                            + suffix
+                            + "-sizes.svg")));
       } catch (IOException e) {
         e.printStackTrace();
       }

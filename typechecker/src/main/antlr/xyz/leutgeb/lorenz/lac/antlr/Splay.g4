@@ -60,7 +60,7 @@ op : EQ | NE | LT | LE | GT | GE ;
 // For patterns we only admit simpler tuples:
 //  - non-recursive, i.e. it is only possible to match one level of a tree
 //  - no derived identifiers
-// TODO:
+// TODO(lorenz.leutgeb):
 //  - anonymous identifiers are allowed
 pattern : PAREN_OPEN left=IDENTIFIER COMMA middle=IDENTIFIER COMMA right=IDENTIFIER PAREN_CLOSE;
 

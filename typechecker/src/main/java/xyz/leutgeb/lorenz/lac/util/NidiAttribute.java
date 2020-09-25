@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.lac;
+package xyz.leutgeb.lorenz.lac.util;
 
 import static org.jgrapht.nio.AttributeType.UNKNOWN;
 

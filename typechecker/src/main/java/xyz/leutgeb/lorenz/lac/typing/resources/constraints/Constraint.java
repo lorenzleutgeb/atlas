@@ -2,12 +2,12 @@ package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 
 import static guru.nidi.graphviz.model.Factory.graph;
 import static guru.nidi.graphviz.model.Factory.node;
-import static xyz.leutgeb.lorenz.lac.Util.rawObjectNode;
+import static xyz.leutgeb.lorenz.lac.util.Util.rawObjectNode;
 
 import com.google.common.collect.BiMap;
+import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
-import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.attribute.Label;
 import guru.nidi.graphviz.attribute.Records;
 import guru.nidi.graphviz.engine.Engine;
@@ -30,6 +30,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 
 @Slf4j
 public abstract class Constraint {
@@ -104,7 +105,7 @@ public abstract class Constraint {
     return reason;
   }
 
-  public abstract BoolExpr encode(Context ctx, BiMap<Coefficient, RealExpr> coefficients);
+  public abstract BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients);
 
   /**
    * Edge colors:
@@ -133,6 +134,7 @@ public abstract class Constraint {
     // return Util.stamp(this);
   }
 
+  @Deprecated
   public void markCoreByTrackings(Set<String> trackings) {
     if (trackings.contains(getTracking())) {
       setCore(true);
@@ -142,5 +144,20 @@ public abstract class Constraint {
 
   public Stream<Constraint> children() {
     return Stream.empty();
+  }
+
+  public boolean known() {
+    return false;
+  }
+
+  public boolean satisfied() {
+    if (!known()) {
+      throw new IllegalStateException("unknown");
+    }
+    return satisfiedInternal();
+  }
+
+  protected boolean satisfiedInternal() {
+    return false;
   }
 }

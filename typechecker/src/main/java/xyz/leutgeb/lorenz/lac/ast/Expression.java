@@ -1,7 +1,9 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
 import static guru.nidi.graphviz.attribute.Records.turn;
-import static xyz.leutgeb.lorenz.lac.Util.*;
+import static xyz.leutgeb.lorenz.lac.util.Util.indent;
+import static xyz.leutgeb.lorenz.lac.util.Util.notImplemented;
+import static xyz.leutgeb.lorenz.lac.util.Util.rawObjectNode;
 
 import guru.nidi.graphviz.attribute.Records;
 import guru.nidi.graphviz.model.Graph;
@@ -14,8 +16,6 @@ import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import xyz.leutgeb.lorenz.lac.IntIdGenerator;
-import xyz.leutgeb.lorenz.lac.SizeEdge;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
@@ -23,12 +23,12 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.Substitution;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
+import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 
-// TODO: Maybe #canCarryPotential would be helpful? Expressions that only contain subexpressions of
-// type
-// TODO: Base/Bool and are of type Base/Bool cannot have any non-zero potential, so when
-// normalizing/renaming
-// TODO: they should be much simpler to handle.
+// TODO(lorenz.leutgeb): Maybe #canCarryPotential would be helpful? Expressions that only contain
+// subexpressions of type Base/Bool and are of type Base/Bool cannot have any non-zero
+// potential, so when normalizing/renaming they should be much simpler to handle.
 public abstract class Expression extends Syntax {
   public static final boolean DEFAULT_LAZY = false;
 
@@ -53,14 +53,14 @@ public abstract class Expression extends Syntax {
       throws UnificationError, TypeError;
 
   public Type infer(UnificationContext context) throws UnificationError, TypeError {
-    if (this.type == null) {
-      this.type = inferInternal(context);
+    if (type == null) {
+      type = inferInternal(context);
     }
-    return this.type;
+    return type;
   }
 
   public void resolveType(Substitution substitution) {
-    this.type = substitution.apply(this.type);
+    type = substitution.apply(type);
     getChildren().forEach(x -> x.resolveType(substitution));
   }
 

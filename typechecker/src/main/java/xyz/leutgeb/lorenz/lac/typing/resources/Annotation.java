@@ -1,26 +1,52 @@
 package xyz.leutgeb.lorenz.lac.typing.resources;
 
-import static java.util.Collections.unmodifiableList;
-import static java.util.Collections.unmodifiableMap;
+import static com.google.common.collect.Comparators.lexicographical;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNullElse;
-import static java.util.stream.Collectors.*;
-import static xyz.leutgeb.lorenz.lac.Util.*;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toUnmodifiableList;
+import static java.util.stream.IntStream.range;
+import static java.util.stream.Stream.concat;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.generateSubscript;
+import static xyz.leutgeb.lorenz.lac.util.Util.repeat;
 
+import com.google.common.collect.Streams;
 import com.google.common.primitives.Ints;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.java.Log;
-import org.hipparchus.fraction.Fraction;
-import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.ExclusiveDisjunctiveConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.IfThenElseConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.OffsetConstraint;
+import xyz.leutgeb.lorenz.lac.util.Fraction;
+import xyz.leutgeb.lorenz.lac.util.Pair;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Log
 public class Annotation {
+  public static final Comparator<Iterable<Integer>> INDEX_COMPARATOR =
+      lexicographical(Integer::compareTo);
+
   private final List<Coefficient> rankCoefficients;
   private final Map<List<Integer>, Coefficient> coefficients;
   String name;
@@ -30,21 +56,21 @@ public class Annotation {
       Map<List<Integer>, Coefficient> coefficients,
       String name) {
     this.name = name;
-    this.rankCoefficients = unmodifiableList(rankCoefficients);
+    this.rankCoefficients = rankCoefficients;
 
     for (var l : coefficients.keySet()) {
       if (l.size() != this.size() + 1) {
         throw new IllegalArgumentException();
       }
     }
-
-    this.coefficients = unmodifiableMap(coefficients);
+    this.coefficients =
+        coefficients.entrySet().stream()
+            .filter(entry -> !ZERO.equals(entry.getValue()))
+            .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
   }
 
   public Annotation(int size, String name) {
-    this.rankCoefficients = repeat(ZERO, size).collect(toUnmodifiableList());
-    this.coefficients = new LinkedHashMap<>();
-    this.name = name;
+    this(repeat(ZERO, size).collect(toList()), emptyMap(), name);
   }
 
   public static Annotation knownConstant(int size, String name, int potential) {
@@ -56,9 +82,8 @@ public class Annotation {
    * potential might be an unknown coefficient.
    */
   public static Annotation constant(int size, String name, Coefficient potential) {
-    final var result = new Annotation(size, name);
-    result.coefficients.put(unitIndex(size), potential);
-    return result;
+    return new Annotation(
+        repeat(ZERO, size).collect(Collectors.toList()), Map.of(unitIndex(size), potential), name);
   }
 
   /** Constructs an annotation of given size that has a constant but unknown potential. */
@@ -145,6 +170,9 @@ public class Annotation {
   }
 
   public String toString() {
+    if (size() == 0) {
+      return "∅";
+    }
     StringBuilder sb = new StringBuilder("[");
     boolean nonzero = false;
     for (int i = 0; i < size(); i++) {
@@ -153,10 +181,10 @@ public class Annotation {
         continue;
       }
       nonzero = true;
-      sb.append(i).append(" ↦ ").append(q);
+      sb.append(q).append("·p").append(generateSubscript(i));
 
       if (i < size() - 1) {
-        sb.append(", ");
+        sb.append(" + ");
       }
     }
     final var schoenmakerPart =
@@ -166,20 +194,25 @@ public class Annotation {
                 e -> {
                   final var index = e.getKey();
                   final var coefficient = e.getValue();
-                  return index.stream().map(Object::toString).collect(joining(", ", "(", ")"))
-                      + " ↦ "
-                      + coefficient;
+
+                  if (isUnitIndex(index)) {
+                    return coefficient.toString();
+                  }
+
+                  return coefficient
+                      + "·p"
+                      + index.stream().map(Util::generateSubscript).collect(joining(" ", "₍", "₎"));
                 })
-            .collect(Collectors.joining(", "));
+            .collect(Collectors.joining(" + "));
 
     if (!schoenmakerPart.equals("") && size() > 0 && nonzero) {
-      sb.append(", ");
+      sb.append(" + ");
     }
 
     sb.append(schoenmakerPart);
 
     if (sb.length() == 1) {
-      return "∅";
+      return "0";
     }
 
     return sb.append("]").toString();
@@ -188,7 +221,7 @@ public class Annotation {
   public String toLongString() {
     return toLongString(
         IntStream.rangeClosed(1, size())
-            .mapToObj(i -> "t" + Util.generateSubscript(i))
+            .mapToObj(i -> "t" + generateSubscript(i))
             .collect(toList()),
         true);
   }
@@ -292,6 +325,27 @@ public class Annotation {
     return coefficients.get(index);
   }
 
+  public Set<Constraint> setCoefficient(List<Integer> index, Coefficient value) {
+    Coefficient existingValue = coefficients.get(index);
+    if (existingValue != null) {
+      return Set.of(new EqualityConstraint(existingValue, value, "setcoefficient"));
+    }
+    coefficients.put(index, value);
+    return emptySet();
+  }
+
+  public Set<Constraint> setRankCoefficient(Integer index, Coefficient value) {
+    final var existingValue = rankCoefficients.get(index);
+    if (existingValue != null) {
+      if (existingValue.equals(value)) {
+        return emptySet();
+      }
+      return Set.of(new EqualityConstraint(existingValue, value, "setcoefficient"));
+    }
+    rankCoefficients.set(index, value);
+    return emptySet();
+  }
+
   public Coefficient getUnitCoefficientOrZero() {
     return getCoefficientOrZero(unitIndex(size()));
   }
@@ -344,5 +398,189 @@ public class Annotation {
                     },
                     Map.Entry::getValue)),
         name);
+  }
+
+  public EqualsSumConstraint sumAllCoefficients(Coefficient c) {
+    return new EqualsSumConstraint(
+        c,
+        Stream.concat(rankCoefficients.stream(), coefficients.values().stream())
+            .collect(toUnmodifiableList()),
+        "sum of annotation " + getName());
+  }
+
+  public EqualsSumConstraint sumRankCoefficients(Coefficient c) {
+    return new EqualsSumConstraint(
+        c,
+        rankCoefficients.stream().collect(toUnmodifiableList()),
+        "sum of rank coefficients of annotation " + getName());
+  }
+
+  public EqualsSumConstraint sumCoefficients(Coefficient c) {
+    return new EqualsSumConstraint(
+        c,
+        coefficients.values().stream().collect(toUnmodifiableList()),
+        "sum of rank coefficients of annotation " + getName());
+  }
+
+  public Annotation rename(String newName) {
+    return new Annotation(rankCoefficients, coefficients, newName);
+  }
+
+  public List<Constraint> diff(Annotation other, UnknownCoefficient sum) {
+    if (other.size() != this.size()) {
+      throw new IllegalArgumentException("size of annotations must be equal");
+    }
+
+    var potentialFunctions =
+        Stream.concat(streamCoefficients(), other.streamCoefficients())
+            .map(Map.Entry::getKey)
+            .distinct()
+            .sorted(INDEX_COMPARATOR)
+            .collect(toList());
+
+    final List<Constraint> constraints = new ArrayList<>();
+    final List<Coefficient> sumList = new ArrayList<>(potentialFunctions.size() + size());
+    for (var potentialFunction : potentialFunctions) {
+      final var x = UnknownCoefficient.unknown("x");
+      constraints.add(
+          new IfThenElseConstraint(
+              new ExclusiveDisjunctiveConstraint(
+                  new EqualityConstraint(
+                      this.getCoefficientOrZero(potentialFunction), ZERO, "(opt)"),
+                  new EqualityConstraint(
+                      other.getCoefficientOrZero(potentialFunction), ZERO, "(opt)"),
+                  "(opt)"),
+              ONE,
+              ZERO,
+              x,
+              "(opt)"));
+      sumList.add(x);
+    }
+
+    for (int i = 0; i < size(); i++) {
+      final var x = UnknownCoefficient.unknown("x");
+      constraints.add(
+          new IfThenElseConstraint(
+              new ExclusiveDisjunctiveConstraint(
+                  new EqualityConstraint(this.getRankCoefficient(i), ZERO, "(opt)"),
+                  new EqualityConstraint(other.getRankCoefficient(i), ZERO, "(opt)"),
+                  "(opt)"),
+              ONE,
+              ZERO,
+              x,
+              "(opt)"));
+      sumList.add(x);
+    }
+
+    constraints.add(new EqualsSumConstraint(sum, sumList, "(opt)"));
+    return constraints;
+  }
+
+  public List<Constraint> abs(UnknownCoefficient sum) {
+    final var x = UnknownCoefficient.unknown("x");
+    final var y = UnknownCoefficient.unknown("y");
+    return List.of(
+        sumRankCoefficients(x),
+        sumCoefficients(y),
+        new EqualsSumConstraint(sum, List.of(x, y), "(opt)"));
+  }
+
+  public List<Constraint> pairwiseDiff(Annotation other, UnknownCoefficient sum) {
+    if (other.size() != this.size()) {
+      throw new IllegalArgumentException("size of annotations must be equal");
+    }
+
+    var potentialFunctions =
+        Stream.concat(streamCoefficients(), other.streamCoefficients())
+            .map(Map.Entry::getKey)
+            .distinct()
+            .sorted(INDEX_COMPARATOR)
+            .collect(toList());
+
+    final List<Constraint> constraints = new ArrayList<>();
+    final List<Coefficient> sumList = new ArrayList<>(potentialFunctions.size() + size());
+    for (var potentialFunction : potentialFunctions) {
+      final var x = UnknownCoefficient.unknown("x");
+      constraints.add(
+          new EqualsSumConstraint(
+              x,
+              List.of(
+                  this.getCoefficientOrZero(potentialFunction),
+                  other.getCoefficientOrZero(potentialFunction).negate()),
+              "(opt)"));
+      sumList.add(x);
+    }
+
+    for (int i = 0; i < size(); i++) {
+      final var x = UnknownCoefficient.unknown("x");
+      constraints.add(
+          new EqualsSumConstraint(
+              x, List.of(this.getRankCoefficient(i), other.getRankCoefficient(i)), "(opt)"));
+      sumList.add(x);
+    }
+
+    constraints.add(new EqualsSumConstraint(sum, sumList, "(opt)"));
+    return constraints;
+  }
+
+  public boolean isUnknown() {
+    return Streams.concat(rankCoefficients.stream(), coefficients.values().stream())
+        .anyMatch(x -> x instanceof UnknownCoefficient);
+  }
+
+  public Stream<List<Integer>> potentialFunctions(Annotation other) {
+    return Stream.concat(streamCoefficients(), other.streamCoefficients())
+        .map(Map.Entry::getKey)
+        .distinct()
+        .sorted(INDEX_COMPARATOR);
+  }
+
+  public Stream<Map.Entry<List<Integer>, Pair<Coefficient, Coefficient>>> union(Annotation other) {
+    return Stream.concat(streamCoefficients(), other.streamCoefficients())
+        .map(Map.Entry::getKey)
+        .distinct()
+        .sorted(INDEX_COMPARATOR)
+        .map(
+            potentialFunction ->
+                new AbstractMap.SimpleEntry<>(
+                    potentialFunction,
+                    Pair.of(
+                        this.getCoefficientOrZero(potentialFunction),
+                        other.getCoefficientOrZero(potentialFunction))));
+  }
+
+  public List<Constraint> increment(Annotation other, int cost, String reason) {
+    return increment(other, new Fraction(cost), reason);
+  }
+
+  public List<Constraint> increment(Annotation other, Fraction cost, String reason) {
+    return increment(other, new KnownCoefficient(cost), reason);
+  }
+
+  public List<Constraint> increment(Annotation other, Coefficient cost, String reason) {
+    if (this.size() != other.size()) {
+      throw new IllegalArgumentException("annotations must be of same size");
+    }
+
+    if (cost instanceof KnownCoefficient known && known.getValue().getNumerator() == 0) {
+      return EqualityConstraint.eq(this, other, reason);
+    }
+
+    return concat(
+            range(0, this.size())
+                .mapToObj(
+                    i ->
+                        new EqualityConstraint(
+                            this.getRankCoefficient(i), other.getRankCoefficient(i), reason)),
+            union(other)
+                .map(
+                    entry -> {
+                      var thisCoefficient = entry.getValue().getLeft();
+                      var otherCoefficient = entry.getValue().getRight();
+                      return isUnitIndex(entry.getKey())
+                          ? new OffsetConstraint(thisCoefficient, otherCoefficient, cost, reason)
+                          : new EqualityConstraint(thisCoefficient, otherCoefficient, reason);
+                    }))
+        .collect(toList());
   }
 }

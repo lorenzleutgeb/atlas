@@ -1,8 +1,8 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
 import static com.google.common.collect.Sets.intersection;
-import static xyz.leutgeb.lorenz.lac.Util.indent;
-import static xyz.leutgeb.lorenz.lac.Util.pick;
+import static xyz.leutgeb.lorenz.lac.util.Util.indent;
+import static xyz.leutgeb.lorenz.lac.util.Util.pick;
 
 import java.io.PrintStream;
 import java.util.Map;
@@ -11,10 +11,7 @@ import java.util.Stack;
 import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.Graph;
-import xyz.leutgeb.lorenz.lac.IntIdGenerator;
-import xyz.leutgeb.lorenz.lac.SizeEdge;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
@@ -22,6 +19,9 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
+import xyz.leutgeb.lorenz.lac.util.Pair;
+import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -40,7 +40,8 @@ public class LetExpression extends Expression {
 
   public LetExpression(
       Source source, Identifier declared, Expression value, Expression body, Type type) {
-    // TODO: This constructor was made public only for testing purposes. Make it private again?
+    // TODO(lorenz.leutgeb): This constructor was made public only for testing purposes. Make it
+    // private again?
     super(source, type);
     this.declared = declared;
     this.value = value;
@@ -162,19 +163,19 @@ public class LetExpression extends Expression {
       return;
     }
 
-    if (value instanceof Tuple) {
+    if (value instanceof Tuple tuple) {
       sizeGraph.addVertex(declared);
-      sizeGraph.addVertex((Identifier) ((Tuple) value).getLeft());
-      sizeGraph.addVertex((Identifier) ((Tuple) value).getRight());
-      sizeGraph.addEdge(declared, (Identifier) ((Tuple) value).getLeft(), SizeEdge.gt());
-      sizeGraph.addEdge(declared, (Identifier) ((Tuple) value).getRight(), SizeEdge.gt());
+      sizeGraph.addVertex((Identifier) tuple.getLeft());
+      sizeGraph.addVertex((Identifier) tuple.getRight());
+      sizeGraph.addEdge(declared, (Identifier) tuple.getLeft(), SizeEdge.gt());
+      sizeGraph.addEdge(declared, (Identifier) tuple.getRight(), SizeEdge.gt());
     }
 
-    if (value instanceof Identifier) {
+    if (value instanceof Identifier identifier) {
       sizeGraph.addVertex(declared);
-      sizeGraph.addVertex((Identifier) value);
-      sizeGraph.addEdge(declared, (Identifier) value, SizeEdge.eq());
-      sizeGraph.addEdge((Identifier) value, declared, SizeEdge.eq());
+      sizeGraph.addVertex(identifier);
+      sizeGraph.addEdge(declared, identifier, SizeEdge.eq());
+      sizeGraph.addEdge(identifier, declared, SizeEdge.eq());
     }
   }
 }

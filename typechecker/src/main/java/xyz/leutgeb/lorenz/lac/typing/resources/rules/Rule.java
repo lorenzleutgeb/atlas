@@ -1,6 +1,7 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.rules;
 
-import static java.util.Collections.*;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.unmodifiableList;
 import static java.util.stream.Collectors.toList;
 
 import java.util.Collection;
@@ -8,7 +9,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 import lombok.NonNull;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
@@ -16,11 +16,13 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 
 public interface Rule extends BiFunction<Obligation, AnnotatingGlobals, Rule.ApplicationResult> {
+  String getName();
+
   @Value
   class ApplicationResult {
-    @Nonnull @NonNull List<Obligation> obligations;
-    @Nonnull @NonNull List<List<Constraint>> constraints;
-    @Nonnull @NonNull List<Constraint> generalConstraints;
+    @NonNull List<Obligation> obligations;
+    @NonNull List<List<Constraint>> constraints;
+    @NonNull List<Constraint> generalConstraints;
 
     public ApplicationResult(
         List<Obligation> obligations,
@@ -43,8 +45,7 @@ public interface Rule extends BiFunction<Obligation, AnnotatingGlobals, Rule.App
       if (constraints.isEmpty()) {
         return empty();
       }
-      return new ApplicationResult(
-          singletonList(Obligation.nothing()), singletonList(constraints), emptyList());
+      return new ApplicationResult(emptyList(), emptyList(), constraints);
     }
 
     public static ApplicationResult onlyObligations(List<Obligation> obligations) {

@@ -4,11 +4,19 @@ import static java.util.Arrays.asList;
 import static java.util.Arrays.copyOf;
 
 import com.google.common.collect.Sets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
-import xyz.leutgeb.lorenz.lac.unification.*;
+import xyz.leutgeb.lorenz.lac.unification.Equivalence;
+import xyz.leutgeb.lorenz.lac.unification.Generalizer;
+import xyz.leutgeb.lorenz.lac.unification.Substitution;
+import xyz.leutgeb.lorenz.lac.unification.TypeMismatch;
+import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 
 @Value
 @EqualsAndHashCode(callSuper = false)
@@ -39,10 +47,9 @@ public class FunctionType implements Type {
   }
 
   public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
-    if (!(b instanceof FunctionType)) {
+    if (!(b instanceof FunctionType ft)) {
       throw new TypeMismatch(this, b);
     }
-    var ft = (FunctionType) b;
     // Check lengths of "from" here, to catch errors early. Not strictly necessary, but helps.
     if (from.size() != ft.from.size()) {
       throw new TypeMismatch(from, ft.from);

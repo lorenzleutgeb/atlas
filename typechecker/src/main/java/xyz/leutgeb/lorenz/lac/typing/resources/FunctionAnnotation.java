@@ -5,4 +5,8 @@ public record FunctionAnnotation(Annotation from, Annotation to) {
   public String toString() {
     return from.toString() + " → " + to.toString();
   }
+
+  public boolean isUnknown() {
+    return from.isUnknown() || to.isUnknown();
+  }
 }

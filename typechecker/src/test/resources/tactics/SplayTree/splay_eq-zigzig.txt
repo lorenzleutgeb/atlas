@@ -1,0 +1,39 @@
+(match (* t *)
+  ?
+  (ite (* a == c *)
+    _{w}
+    (ite (* a < c *)
+      (match (* cl *)
+        ?
+        (w
+          (ite (* a == b *)
+            ?
+            (ite (* a < b *)
+              (ite (* bl == leaf *)
+                _{w}
+                (let:tree:cf
+                  _
+                  (match
+                    _
+                    (let:tree:cf
+                      _{w}
+                      _
+                      _
+                      _
+                      _
+                    )
+                  )
+                  _
+                  _
+                  _
+                )
+              )
+              ?
+            )
+          )
+        )
+      )
+      ?
+    )
+  )
+)

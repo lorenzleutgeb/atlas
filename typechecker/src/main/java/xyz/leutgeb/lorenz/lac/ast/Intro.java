@@ -1,8 +1,7 @@
-package xyz.leutgeb.lorenz.lac;
+package xyz.leutgeb.lorenz.lac.ast;
 
 import lombok.NonNull;
 import lombok.Value;
-import xyz.leutgeb.lorenz.lac.ast.Expression;
 
 @Value
 public class Intro {

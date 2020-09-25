@@ -1,0 +1,109 @@
+(match (* t *)
+  _{w}
+  Q1@(ite (* a == c *)
+    _{w}
+    (ite (* a < c *)
+      (match (* cl *)
+        _{w}
+        Q2@(w
+          Q3@(ite (* a == b *)
+            _{w,cf}
+            (ite (* a < b *)
+              (ite (* bl == leaf *)
+                _{w}
+                (let:tree:cf
+                  _ (* splay_eq a bl *)
+                  Q4@(match
+                    _ (* leaf *)
+                    Q5@(let:tree:cf
+                      _{w}
+                      _
+                      _
+                      _
+                      _
+                    )
+                  )
+                  _
+                  _
+                  _
+                )
+              )
+              (ite (* br == leaf *)
+                _{w,cf}
+                (w
+                  (let:tree:cf
+                    _ (* splay_eq a br *)
+                    (match
+                      _ (* leaf *)
+                      (let:tree:cf
+                        _
+                        _{auto}
+                        _
+                        _
+                        _
+                      )
+                    )
+                    _
+                    _
+                    _
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+      (match (* cr *)
+        _{w}
+        (ite (* a == b *)
+          _{w,cf}
+          (ite (* a < b *)
+            (ite (* bl == leaf *)
+              _{w,cf}
+              (w
+                (let:tree:cf
+                  _{w} (* splay_eq a bl *)
+                  (match
+                    _{w} (* leaf *)
+                    (let:tree:cf
+                      _
+                      (w _{auto})
+                      _
+                      _
+                      _
+                    )
+                  )
+                  _
+                  _
+                  _
+                )
+              )
+            )
+            (ite (* br == leaf *)
+              _{w,cf}
+              (w
+                (let:tree:cf
+                  _
+                  (match
+                    _ (* leaf *)
+                    (let:tree:cf
+                      _
+                      (w _{auto})
+                      _
+                      _
+                      _
+                    )
+                  )
+                  _
+                  _
+                  _
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)
+

@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.lac;
+package xyz.leutgeb.lorenz.lac.module;
 
 import static java.util.stream.Collectors.*;
 
@@ -144,7 +144,7 @@ public class Loader {
             .collect(Collectors.toSet()));
   }
 
-  private Program load(Set<String> names) throws IOException {
+  public Program load(Set<String> names) throws IOException {
     final var stack =
         names.stream()
             .filter(Predicate.not(functionDefinitions::containsKey))

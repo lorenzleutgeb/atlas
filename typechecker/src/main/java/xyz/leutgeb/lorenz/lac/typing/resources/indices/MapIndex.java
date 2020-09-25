@@ -6,14 +6,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 import lombok.Data;
-import xyz.leutgeb.lorenz.lac.Util;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Data
 public class MapIndex implements Index {
-  private final Map<String, Integer> associatedIndices;
+  private final Map<Identifier, Integer> associatedIndices;
   private final Integer offsetIndex;
 
-  public Index mask(Map<String, Integer> maskMap) {
+  public Index mask(Map<Identifier, Integer> maskMap) {
     final var copy = new HashMap<>(associatedIndices);
     copy.putAll(maskMap);
     return new MapIndex(copy, offsetIndex);
@@ -25,12 +26,12 @@ public class MapIndex implements Index {
   }
 
   @Override
-  public Index mask(Function<String, Integer> maskFunction) {
+  public Index mask(Function<Identifier, Integer> maskFunction) {
     return new FunctionIndex(Util.fallback(maskFunction, associatedIndices::get), offsetIndex);
   }
 
   @Override
-  public Integer getAssociatedIndex(String id) {
+  public Integer getAssociatedIndex(Identifier id) {
     return associatedIndices.get(id);
   }
 

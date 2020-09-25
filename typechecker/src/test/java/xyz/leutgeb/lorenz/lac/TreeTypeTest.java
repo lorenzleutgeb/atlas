@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.lac.typing;
+package xyz.leutgeb.lorenz.lac;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

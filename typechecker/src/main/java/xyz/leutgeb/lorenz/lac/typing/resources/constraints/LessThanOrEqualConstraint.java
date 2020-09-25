@@ -3,18 +3,20 @@ package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 import static guru.nidi.graphviz.model.Link.to;
 
 import com.google.common.collect.BiMap;
+import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
-import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 
 /** @see GreaterThanOrEqualConstraint */
 @Value
@@ -30,7 +32,7 @@ public class LessThanOrEqualConstraint extends Constraint {
   }
 
   @Override
-  public BoolExpr encode(Context ctx, BiMap<Coefficient, RealExpr> coefficients) {
+  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
     return ctx.mkLe(left.encode(ctx, coefficients), right.encode(ctx, coefficients));
   }
 
@@ -57,7 +59,11 @@ public class LessThanOrEqualConstraint extends Constraint {
 
   @Override
   public Set<Coefficient> occurringCoefficients() {
-    return Set.of(left.canonical(), right.canonical());
+    final var result = new HashSet<Coefficient>();
+    result.add(left.canonical());
+    result.add(right.canonical());
+    return result;
+    // return Set.of(left.canonical(), right.canonical());
   }
 
   @Override

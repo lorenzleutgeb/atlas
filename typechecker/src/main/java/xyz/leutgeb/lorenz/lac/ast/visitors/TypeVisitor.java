@@ -1,6 +1,6 @@
 package xyz.leutgeb.lorenz.lac.ast.visitors;
 
-import static xyz.leutgeb.lorenz.lac.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import java.nio.file.Path;
 import java.util.stream.Collectors;
@@ -26,7 +26,7 @@ class TypeVisitor extends SourceNameAwareVisitor<Type> {
 
   @Override
   public Type visitProductType(SplayParser.ProductTypeContext ctx) {
-    // TODO: Namings.
+    // TODO(lorenz.leutgeb): Namings.
     return new ProductType(ctx.items.stream().map(this::visit).collect(Collectors.toList()));
   }
 

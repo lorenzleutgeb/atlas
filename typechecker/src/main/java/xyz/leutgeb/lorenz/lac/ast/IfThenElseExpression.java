@@ -1,7 +1,7 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
 import static com.google.common.collect.Sets.intersection;
-import static xyz.leutgeb.lorenz.lac.Util.*;
+import static xyz.leutgeb.lorenz.lac.util.Util.*;
 
 import java.io.PrintStream;
 import java.util.Map;
@@ -11,8 +11,6 @@ import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.tuple.Pair;
-import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
@@ -20,6 +18,8 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.BoolType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
+import xyz.leutgeb.lorenz.lac.util.Pair;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -62,7 +62,8 @@ public class IfThenElseExpression extends Expression {
 
   @Override
   public Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
-    // TODO: Only create a new expression if normalization actually changes something!
+    // TODO(lorenz.leutgeb): Only create a new expression if normalization actually changes
+    // something!
     return new IfThenElseExpression(
         Derived.anf(this),
         // condition.forceImmediate(context, idGenerator),
@@ -73,7 +74,7 @@ public class IfThenElseExpression extends Expression {
 
   @Override
   public Expression rename(Map<String, String> renaming) {
-    // TODO: Only create new expression if a rename is really necessary!
+    // TODO(lorenz.leutgeb): Only create new expression if a rename is really necessary!
     return new IfThenElseExpression(
         Derived.rename(this),
         condition.rename(renaming),
@@ -126,11 +127,6 @@ public class IfThenElseExpression extends Expression {
     Set<Identifier> freeF = newF.freeVariables();
     Set<Identifier> cond = condition.freeVariables();
 
-    if (!intersection(freeT, cond).isEmpty() || !intersection(freeF, cond).isEmpty()) {
-      throw notImplemented(
-          "unsharing if-then-else across condition and branch is not supported (can only unshare between then-branch and else-branch)");
-    }
-
     var intersection = intersection(freeT, freeF);
 
     if (intersection.size() == 0) {
@@ -138,10 +134,13 @@ public class IfThenElseExpression extends Expression {
     }
 
     if (lazy) {
-      log.info(
-          "Did not create sharing expression for {} because aggressive unsharing is enabled.",
-          intersection);
+      log.info("Did not create sharing expression for {} because unsharing is lazy.", intersection);
       return new IfThenElseExpression(source, condition, newT, newF, type);
+    }
+
+    if (!intersection(freeT, cond).isEmpty() || !intersection(freeF, cond).isEmpty()) {
+      throw notImplemented(
+          "unsharing if-then-else across condition and branch is not supported (can only unshare between then-branch and else-branch)");
     }
 
     var target = pick(intersection);

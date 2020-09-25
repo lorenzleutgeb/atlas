@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.lac;
+package xyz.leutgeb.lorenz.lac.module;
 
 import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.RecognitionException;

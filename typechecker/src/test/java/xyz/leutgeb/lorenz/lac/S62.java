@@ -1,10 +1,13 @@
 package xyz.leutgeb.lorenz.lac;
 
 import static java.util.Collections.emptyMap;
-import static xyz.leutgeb.lorenz.lac.Util.ones;
-import static xyz.leutgeb.lorenz.lac.Util.zeroCoefficients;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.*;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.THREE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+import static xyz.leutgeb.lorenz.lac.util.Util.ones;
+import static xyz.leutgeb.lorenz.lac.util.Util.zeroCoefficients;
 
 import java.util.List;
 import java.util.Map;
@@ -19,6 +22,9 @@ public class S62 {
   protected static final Annotation Q =
       new Annotation(List.of(ONE), Map.of(List.of(1, 0), THREE, unitIndex(1), ONE), "Q");
 
+  protected static final Annotation Qplus1 =
+      new Annotation(List.of(ONE), Map.of(List.of(1, 0), THREE, unitIndex(1), TWO), "Q");
+
   protected static final Annotation Qp = new Annotation(List.of(ONE), emptyMap(), "Q'");
 
   protected static final Annotation Q1 =
@@ -30,6 +36,17 @@ public class S62 {
               List.of(1, 0, 0), ONE,
               unitIndex(2), ONE),
           "Q1");
+
+  // TODO
+  protected static final Annotation Q1shared =
+      new Annotation(
+          List.of(ONE, ONE),
+          Map.of(
+              List.of(0, 1, 0), ONE,
+              List.of(1, 1, 0), THREE,
+              List.of(1, 0, 0), ONE,
+              unitIndex(2), ONE),
+          "Q1shared");
 
   protected static final Annotation Q2 =
       new Annotation(
@@ -51,8 +68,6 @@ public class S62 {
               List.of(0, 1, 0, 0), THREE,
               List.of(1, 0, 0, 0), ONE,
               List.of(1, 0, 1, 0), ONE,
-              // THE FOLLOWING LINE IS NOT IN THE PAPER
-              List.of(1, 1, 0, 0), ONE,
               List.of(1, 1, 1, 0), ONE,
               unitIndex(3), TWO),
           "Q3");
@@ -60,13 +75,7 @@ public class S62 {
   protected static final Annotation Q4 =
       new Annotation(
           List.of(ONE, ONE, ONE),
-          ones(
-              List.of(0, 1, 0, 0),
-              List.of(1, 0, 0, 0),
-              // THE FOLLOWING LINE IS NOT IN THE PAPER
-              List.of(1, 0, 1, 0),
-              List.of(1, 1, 0, 0),
-              List.of(1, 1, 1, 0)),
+          ones(List.of(0, 1, 0, 0), List.of(1, 0, 0, 0), List.of(1, 1, 0, 0), List.of(1, 1, 1, 0)),
           "Q4");
 
   protected static final Annotation P =

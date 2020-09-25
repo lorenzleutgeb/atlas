@@ -1,19 +1,23 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.coefficients;
 
-import static xyz.leutgeb.lorenz.lac.Util.bug;
-import static xyz.leutgeb.lorenz.lac.Util.randomHex;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
+import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.Context;
-import com.microsoft.z3.RealExpr;
 import java.util.Map;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 
 @Value
 @EqualsAndHashCode
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class UnknownCoefficient implements Coefficient {
   String name;
   boolean negated;
+  boolean maybeNegative;
 
   public UnknownCoefficient(String name) {
     if (name == null || name.isBlank()) {
@@ -21,15 +25,21 @@ public class UnknownCoefficient implements Coefficient {
     }
     this.name = name;
     this.negated = false;
+    this.maybeNegative = false;
   }
 
   private UnknownCoefficient(String name, boolean negated) {
     this.name = name;
     this.negated = negated;
+    this.maybeNegative = false;
   }
 
-  public static UnknownCoefficient unknown(String name) {
-    return new UnknownCoefficient(name + randomHex());
+  public static UnknownCoefficient maybeNegative(String name) {
+    return new UnknownCoefficient(name, false, true);
+  }
+
+  public static UnknownCoefficient unknown(String namePrefix) {
+    return new UnknownCoefficient(namePrefix + randomHex(4));
   }
 
   @Override
@@ -42,9 +52,9 @@ public class UnknownCoefficient implements Coefficient {
     return (negated ? "-" : "") + name;
   }
 
-  public RealExpr encode(Context ctx, Map<Coefficient, RealExpr> coefficients) {
+  public ArithExpr encode(Context ctx, Map<UnknownCoefficient, ArithExpr> coefficients) {
     final var inner = coefficients.get(this.canonical());
-    return negated ? (RealExpr) ctx.mkUnaryMinus(inner) : inner;
+    return negated ? ctx.mkUnaryMinus(inner) : inner;
   }
 
   @Override
@@ -52,8 +62,8 @@ public class UnknownCoefficient implements Coefficient {
     if (negated) {
       throw bug("don't know how to replace negated coefficient");
     }
-    if (target instanceof UnknownCoefficient) {
-      if (((UnknownCoefficient) target).name.equals(name)) {
+    if (target instanceof UnknownCoefficient unknownCoefficient) {
+      if (unknownCoefficient.name.equals(name)) {
         return replacement;
       }
     }

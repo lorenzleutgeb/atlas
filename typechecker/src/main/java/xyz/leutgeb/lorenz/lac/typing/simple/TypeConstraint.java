@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.Substitution;
@@ -16,6 +17,7 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
  * This is done by specifying a substitution that parametrizes the signature class.
  */
 @Value
+@Slf4j
 public class TypeConstraint {
   TypeClass typeClass;
 
@@ -25,8 +27,8 @@ public class TypeConstraint {
     if (typeClass.getArity() != binding.size()) {
       throw new IllegalArgumentException("number of variables does not match length of binding");
     }
-    if (binding.stream().anyMatch(t -> t instanceof TreeType)) {
-      throw new IllegalArgumentException("cannot constrain the type Tree");
+    if (binding.stream().anyMatch(t -> t instanceof TreeType) && !TypeClass.EQ.equals(typeClass)) {
+      throw new IllegalArgumentException("cannot constrain the type Tree as " + typeClass);
     }
     this.constrained = binding;
     this.typeClass = typeClass;

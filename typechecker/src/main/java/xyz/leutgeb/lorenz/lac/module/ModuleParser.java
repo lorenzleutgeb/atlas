@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.lac;
+package xyz.leutgeb.lorenz.lac.module;
 
 import java.nio.file.Path;
 import java.util.List;

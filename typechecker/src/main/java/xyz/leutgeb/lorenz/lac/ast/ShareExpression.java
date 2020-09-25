@@ -1,7 +1,7 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
-import static xyz.leutgeb.lorenz.lac.Util.bug;
-import static xyz.leutgeb.lorenz.lac.Util.indent;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.indent;
 
 import java.io.PrintStream;
 import java.util.Map;
@@ -9,16 +9,16 @@ import java.util.Set;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
-import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.Graph;
-import xyz.leutgeb.lorenz.lac.IntIdGenerator;
-import xyz.leutgeb.lorenz.lac.SizeEdge;
-import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
+import xyz.leutgeb.lorenz.lac.util.Pair;
+import xyz.leutgeb.lorenz.lac.util.SizeEdge;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
@@ -35,7 +35,7 @@ public class ShareExpression extends Expression {
     super(Derived.unshare(source));
     this.up = up;
     this.down = down;
-    // TODO: Prettify...
+    // TODO(lorenz.leutgeb): Prettify...
     /*
     this.down =
         Pair.of(
@@ -60,7 +60,7 @@ public class ShareExpression extends Expression {
           "name of unshared variable is the same as one of its replacements");
     }
 
-    if (Util.setOfNames(scope.freeVariables()).contains(up.getName())) {
+    if (scope.freeVariables().contains(up)) {
       throw bug("what???");
     }
   }

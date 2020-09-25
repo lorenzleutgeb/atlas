@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.lac;
+package xyz.leutgeb.lorenz.lac.util;
 
 import java.util.Objects;
 import lombok.Value;
@@ -38,7 +38,10 @@ public class SizeEdge extends DefaultEdge {
   }
 
   public enum Kind {
+    /** Source is "equal to" target. */
     EQ,
+
+    /** Source is "greater than" target. */
     GT
   }
 }

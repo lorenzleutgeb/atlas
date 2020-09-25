@@ -1,27 +1,34 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 
 import static guru.nidi.graphviz.model.Link.to;
-import static xyz.leutgeb.lorenz.lac.Util.objectNode;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.objectNode;
 
 import com.google.common.collect.BiMap;
+import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
-import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
 import java.util.Map;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.util.Fraction;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class OffsetConstraint extends EqualityConstraint {
-  private final Fraction offset;
+  private final Coefficient offset;
 
   public OffsetConstraint(Coefficient left, Coefficient right, Fraction offset, String reason) {
+    this(left, right, new KnownCoefficient(offset), reason);
+  }
+
+  public OffsetConstraint(Coefficient left, Coefficient right, Coefficient offset, String reason) {
     super(left, right, reason);
     this.offset = offset;
   }
@@ -32,12 +39,13 @@ public class OffsetConstraint extends EqualityConstraint {
   }
 
   @Override
-  public BoolExpr encode(Context ctx, BiMap<Coefficient, RealExpr> coefficients) {
+  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
+    if (offset instanceof KnownCoefficient known && known.getValue().getDenominator() != 1) {
+      throw bug("oops");
+    }
     return ctx.mkEq(
         left.encode(ctx, coefficients),
-        ctx.mkAdd(
-            right.encode(ctx, coefficients),
-            ctx.mkReal(offset.getNumerator(), offset.getDenominator())));
+        ctx.mkAdd(right.encode(ctx, coefficients), offset.encode(ctx, coefficients)));
   }
 
   @Override

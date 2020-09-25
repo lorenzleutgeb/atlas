@@ -1,16 +1,16 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
-import static xyz.leutgeb.lorenz.lac.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import java.util.Stack;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
-import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 
 @Value
 @EqualsAndHashCode(callSuper = false)

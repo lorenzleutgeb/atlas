@@ -1,31 +1,39 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
+import static java.util.Collections.emptyMap;
 import static java.util.Optional.empty;
 import static java.util.stream.Collectors.joining;
-import static xyz.leutgeb.lorenz.lac.Util.flatten;
+import static xyz.leutgeb.lorenz.lac.util.Util.flatten;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
+import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.Equivalence;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Slf4j
 public class Program {
@@ -73,31 +81,46 @@ public class Program {
   }
 
   public Optional<Map<String, FunctionAnnotation>> solve() {
-    return solve(new HashMap<>(), new HashSet<>());
+    return solve(
+        new HashMap<>(),
+        new HashMap<>(),
+        new HashSet<>(),
+        constraints -> ConstraintSystemSolver.solve(constraints, name));
   }
 
   public Optional<Map<String, FunctionAnnotation>> solve(
       Map<String, FunctionAnnotation> functionAnnotations) {
-    return solve(functionAnnotations, new HashSet<>());
+    return solve(
+        functionAnnotations,
+        new HashMap<>(),
+        new HashSet<>(),
+        constraints -> ConstraintSystemSolver.solve(constraints, name));
   }
 
   public Optional<Map<String, FunctionAnnotation>> solve(
       Map<String, FunctionAnnotation> functionAnnotations, Set<Constraint> outsideConstraints) {
-    final var costFreeFunctionAnnotations = new HashMap<String, FunctionAnnotation>();
+    return solve(
+        functionAnnotations,
+        new HashMap<>(),
+        outsideConstraints,
+        constraints -> ConstraintSystemSolver.solve(constraints, name));
+  }
+
+  public Optional<Prover> prove(
+      Map<String, FunctionAnnotation> functionAnnotations,
+      Map<String, Set<FunctionAnnotation>> costFreeFunctionAnnotations,
+      Map<String, Path> tactics) {
     final var heuristic = SmartRangeHeuristic.DEFAULT;
     final var prover = new Prover(name, null, basePath);
 
-    // SCCs are split by ";" and function names within SCCs are split by ",".
-    // That's reasonably readable without brackes for sets/sequences.
-    final var namesAsSet =
-        order.stream()
-            .map(x -> x.stream().sorted().map(Object::toString).collect(Collectors.joining(", ")))
-            .collect(Collectors.joining("; "));
+    // For experimentation:
+    // prover.setWeaken(true);
+    // prover.setTreeCf(true);
 
     if (functionDefinitions.values().stream()
         .map(FunctionDefinition::runaway)
         .anyMatch(Predicate.not(Set::isEmpty))) {
-      log.info(namesAsSet + " | UNSAT");
+      log.info(namesAsSet() + " | UNSAT");
       return Optional.empty();
     }
 
@@ -105,6 +128,11 @@ public class Program {
 
     forEach(
         fd -> {
+          if (!functionAnnotations.get(fd.getFullyQualifiedName()).isUnknown()
+              && costFreeFunctionAnnotations.get(fd.getFullyQualifiedName()).stream()
+                  .noneMatch(FunctionAnnotation::isUnknown)) {
+            return;
+          }
           final var globals =
               new AnnotatingGlobals(
                   functionAnnotations,
@@ -112,23 +140,57 @@ public class Program {
                   fd.getSizeAnalysis(),
                   heuristic);
           prover.setGlobals(globals);
-          prover.prove(fd.getTypingObligation(1));
+          Obligation typingObligation = fd.getTypingObligation(1);
+          if (tactics.containsKey(fd.getFullyQualifiedName())) {
+            try {
+              prover.read(typingObligation, tactics.get(fd.getFullyQualifiedName()));
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          } else {
+            prover.prove(typingObligation);
+          }
+          for (var cfAnnotation : fd.getCfAnnotations()) {
+            final var cfRoot =
+                new Obligation(
+                    fd.treeLikeArguments(),
+                    cfAnnotation.from(),
+                    fd.getBody(),
+                    cfAnnotation.to(),
+                    0);
+            prover.prove(cfRoot);
+          }
         });
 
+    /*
     try {
       prover.plot();
     } catch (IOException e) {
       e.printStackTrace();
     }
+     */
 
     final var accumulatedConstraints = prover.getAccumulatedConstraints();
-    accumulatedConstraints.addAll(outsideConstraints);
+    // accumulatedConstraints.addAll(outsideConstraints);
     log.info(accumulatedConstraints.size() + " constraints accumulated");
+    return Optional.of(prover);
+  }
+
+  public Optional<Map<String, FunctionAnnotation>> solve(
+      Map<String, FunctionAnnotation> functionAnnotations,
+      Map<String, Set<FunctionAnnotation>> costFreeFunctionAnnotations,
+      Set<Constraint> outsideConstraints,
+      Function<Set<Constraint>, Optional<Map<Coefficient, KnownCoefficient>>> solving) {
+
+    final var accumulatedConstraints =
+        prove(functionAnnotations, costFreeFunctionAnnotations, emptyMap())
+            .get()
+            .getAccumulatedConstraints();
+    accumulatedConstraints.addAll(outsideConstraints);
 
     // This is the entrypoint of new-style solving. We get a bunch of constraints
     // that need to be fulfilled in order to typecheck the program.
-    Optional<Map<Coefficient, KnownCoefficient>> solution =
-        ConstraintSystemSolver.solve(accumulatedConstraints, name);
+    Optional<Map<Coefficient, KnownCoefficient>> solution = solving.apply(accumulatedConstraints);
 
     if (accumulatedConstraints.size() < 50) {
       try {
@@ -141,7 +203,7 @@ public class Program {
     if (solution.isPresent()) {
       forEach(fd -> fd.substitute(solution.get()));
       if (!(functionDefinitions.size() == 1)) {
-        log.info(namesAsSet + ":");
+        log.info(namesAsSet() + ":");
       }
       for (var group : order) {
         for (var fqn : group) {
@@ -150,7 +212,7 @@ public class Program {
       }
       return Optional.of(functionAnnotations);
     } else {
-      log.info(namesAsSet + " | UNSAT");
+      log.info(namesAsSet() + " | UNSAT");
       return empty();
     }
   }
@@ -167,7 +229,19 @@ public class Program {
     forEach(x -> x.unshare(lazy));
   }
 
+  public void analyzeSizes() {
+    forEach(FunctionDefinition::analyzeSizes);
+  }
+
   private void forEach(Consumer<FunctionDefinition> f) {
     functionDefinitions.values().forEach(f);
+  }
+
+  private String namesAsSet() {
+    // SCCs are split by ";" and function names within SCCs are split by ",".
+    // That's reasonably readable without brackets for sets/sequences.
+    return order.stream()
+        .map(x -> x.stream().sorted().map(Object::toString).collect(Collectors.joining(", ")))
+        .collect(Collectors.joining("; "));
   }
 }

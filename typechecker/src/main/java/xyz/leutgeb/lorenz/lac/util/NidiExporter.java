@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.lac;
+package xyz.leutgeb.lorenz.lac.util;
 
 import static guru.nidi.graphviz.model.Factory.to;
 
@@ -38,10 +38,9 @@ public class NidiExporter<V, E> extends BaseExporter<V, E> {
       T attributed, Optional<Map<String, Attribute>> attributes) {
     for (Map.Entry<String, Attribute> attr : attributes.orElse(Collections.emptyMap()).entrySet()) {
       String name = attr.getKey();
-      if (attr.getValue() instanceof NidiAttribute) {
+      if (attr.getValue() instanceof NidiAttribute attribute) {
         // if (name.equals("label")) {
-        attributed =
-            attributed.with((Attributes<? extends F>) ((NidiAttribute) attr.getValue()).getNidi());
+        attributed = attributed.with((Attributes<? extends F>) attribute.getNidi());
         /*} else {
           attributed = attributed.with(attr.getKey(), attr.getValue().getValue());
         }*/

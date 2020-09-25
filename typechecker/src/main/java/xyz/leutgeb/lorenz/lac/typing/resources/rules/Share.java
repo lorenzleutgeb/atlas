@@ -4,7 +4,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
-import static xyz.leutgeb.lorenz.lac.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,8 +15,10 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 
-public class Share {
-  public static Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+public class Share implements Rule {
+  public static final Share INSTANCE = new Share();
+
+  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
     // This is denoted by \/(Q) in the paper.
     final var gammazSQ = obligation.getContext();
 
@@ -24,14 +26,13 @@ public class Share {
 
     // This is a pair, the elements are called x and y in the paper.
     final var xy = expression.getDown();
-    final var x = xy.getLeft().getName();
-    final var y = xy.getRight().getName();
+    final var x = xy.getLeft();
+    final var y = xy.getRight();
 
     // This is called z in the paper.
-    final var z = expression.getUp().getName();
+    final var z = expression.getUp();
 
-    if (gammazSQ.getIds().contains(xy.getLeft().getName())
-        || gammazSQ.getIds().contains(xy.getRight().getName())) {
+    if (gammazSQ.getIds().contains(xy.getLeft()) || gammazSQ.getIds().contains(xy.getRight())) {
       throw bug("an id that is introduced here is already in the context");
     }
 
@@ -42,9 +43,10 @@ public class Share {
 
     final var gammaxyQIds = new ArrayList<>(gammazSQ.getIds());
     gammaxyQIds.remove(z);
-    gammaxyQIds.add(xy.getLeft().getName());
-    gammaxyQIds.add(xy.getRight().getName());
-    final var gammaxyQ = globals.getHeuristic().generateContext("share", gammaxyQIds);
+    gammaxyQIds.add(xy.getLeft());
+    gammaxyQIds.add(xy.getRight());
+    final var gammaxyQ =
+        globals.getHeuristic().generateContext("share " + z + " as " + xy, gammaxyQIds);
 
     return new Rule.ApplicationResult(
         singletonList(
@@ -182,5 +184,10 @@ public class Share {
                       });
             });
      */
+  }
+
+  @Override
+  public String getName() {
+    return "share";
   }
 }

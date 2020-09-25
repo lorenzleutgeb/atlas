@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
-import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
@@ -16,6 +15,7 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
@@ -31,7 +31,8 @@ public class Tuple extends Expression {
   }
 
   public Tuple(Source source, List<Expression> elements, Type type) {
-    // TODO: This constructor was made public for testing purposes only. Make it private again?
+    // TODO(lorenz.leutgeb): This constructor was made public for testing purposes only. Make it
+    // private again?
     super(source, type);
     if (elements.size() != 3) {
       throw new IllegalArgumentException("only tuples with exactly three elements are supported");
@@ -80,7 +81,7 @@ public class Tuple extends Expression {
 
   @Override
   public Expression rename(Map<String, String> renaming) {
-    // TODO: Only create new expression if renaming is necessary!
+    // TODO(lorenz.leutgeb): Only create new expression if renaming is necessary!
     return new Tuple(
         Derived.rename(this),
         elements.stream().map(e -> e.rename(renaming)).collect(Collectors.toList()),

@@ -1,9 +1,12 @@
 package xyz.leutgeb.lorenz.lac;
 
 import static java.util.Collections.emptyMap;
-import static org.junit.jupiter.api.Assertions.*;
-import static xyz.leutgeb.lorenz.lac.Assertions.*;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.zero;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static xyz.leutgeb.lorenz.lac.Assertions.assertAnnotationEquals;
+import static xyz.leutgeb.lorenz.lac.Assertions.assertContextEquals;
+import static xyz.leutgeb.lorenz.lac.Assertions.assertContextEqualsByPrefixes;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -11,20 +14,30 @@ import java.io.PrintStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.StreamSupport;
 import org.jgrapht.graph.DirectedMultigraph;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
-import xyz.leutgeb.lorenz.lac.ast.*;
+import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
+import xyz.leutgeb.lorenz.lac.ast.IfThenElseExpression;
+import xyz.leutgeb.lorenz.lac.ast.LetExpression;
+import xyz.leutgeb.lorenz.lac.ast.MatchExpression;
+import xyz.leutgeb.lorenz.lac.ast.Program;
+import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCf;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.Rule;
+import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTree;
+import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCfSimple;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 
 /**
  * In this test case we want to check that the coefficients given in the paper are also a solution
@@ -41,6 +54,7 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationError;
  *
  * <p>The weakening from Q_2 to Q_3 is the part that we want to skip for now.
  */
+@Disabled
 public class S62Lazy extends S62 {
   private static final FunctionDefinition SPLAY;
 
@@ -94,56 +108,238 @@ public class S62Lazy extends S62 {
   }
 
   @Test
-  public void zigzigAbove() throws IOException {
+  public void zigzigAbovePartial() throws IOException {
     final var globals =
         new AnnotatingGlobals(
             Map.of(FQN, new FunctionAnnotation(Q, Qp)),
-            Map.of(FQN, new FunctionAnnotation(P, Pp)),
+            Map.of(
+                FQN,
+                Set.of(
+                    new FunctionAnnotation(P, Pp),
+                    new FunctionAnnotation(
+                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
             SIZE_ANALYSIS,
             HEURISTIC);
 
     final Prover prover = new Prover("splay-above", globals);
-    prover.setWeaken(true);
+    // prover.setWeaken(true);
 
-    final var remainingObligations =
-        prover.proveUntil(
-            new Obligation(List.of("cr", "bl", "br"), Q3, E3, Qp),
-            obligation -> E4.equals(obligation.getExpression()));
-    assertEquals(1, remainingObligations.size());
-    assertEquals(E4, remainingObligations.get(0).getExpression());
+    final var q4v = AnnotatingContext.reorderByName(E4.freeVariables(), List.of("cr", "∂₆", "br"));
 
-    final Rule.ApplicationResult e4result =
-        prover.apply(remainingObligations.get(0), LetTreeCf::apply);
+    Obligation rootObligation = new Obligation(q4v, Q3, E4, Qp);
+    prover.setTreeCf(true);
+    final var e4obligation = rootObligation;
 
-    final var q4 = e4result.getObligations().get(1).getContext();
-    prover.prove(e4result.getObligations());
+    final var e4result = prover.apply(e4obligation, LetTreeCfSimple.INSTANCE);
+
+    final var q4 = e4result.get(1).getContext();
+    prover.setTreeCf(true);
+    /*
+    We do need cf at
+    via sec lnf
+    (let:tree:cf): br, cr, ∂₆ | let∂₆ΔR #12  ⊦₁  let ∂₅ ≔ SplayTree.splay a ∂₆ in □ | Q'
+    via sec splay
+
+    We do not need cf at
+    br, cr, al, ar | match ∂₅ extend [al, ar] #48  ⊦₁  let ∂₈ ≔ (br, c, cr) in □ | Q'
+
+    (let:tree:cf): ar, al, ∂₈ | letcf ∂₈ ΔR #50  ⊦₁  let ∂₇ ≔ (ar, b, ∂₈) in (al, a', ∂₇) | Q'
+
+
+    In s61 we apply tree:cf to
+    br, cr, ar | lett''ΓP #1  ⊦₁  let t''' ≔ (br, c, cr) in (ar, b, t''') | lettree t'' P' #3
+     */
+    prover.setWeakenBeforeTerminal(true);
+    var intermediate1 =
+        prover.proveUntil(e4result, o -> o.getExpression() instanceof LetExpression);
+    prover.setWeakenBeforeTerminal(false);
+    var intermediate2 = prover.apply(intermediate1.get(0), LetTree.INSTANCE);
+    prover.setTreeCf(true);
+    prover.prove(intermediate2);
     prover.plot();
 
     final var solution = prover.solve();
     assertTrue(solution.isPresent());
     assertAll(
+        () -> {
+          assertContextEquals(q4v, Q3, rootObligation.getContext().substitute(solution.get()));
+
+          System.out.println("ok1");
+        },
+        () -> {
+          assertContextEqualsByPrefixes(
+              List.of("cr", "∂" /* "bl" */, "br"),
+              Q3,
+              StreamSupport.stream(prover.getProof().spliterator(), false)
+                  .filter(
+                      obligation ->
+                          ((LetExpression) ((MatchExpression) INTERMEDIATE.getTruthy()).getNode())
+                              .getBody()
+                              .equals(obligation.getExpression()))
+                  .findFirst()
+                  .get()
+                  .getContext()
+                  .substitute(solution.get()));
+          System.out.println("ok4");
+        },
         () ->
             assertContextEqualsByPrefixes(
-                List.of("cr", "br", "∂"), Q4, q4.substitute(solution.get())),
+                List.of("cr", "∂" /* "bl" */, "br"),
+                Q3,
+                e4obligation.getContext().substitute(solution.get())),
         () ->
             assertContextEqualsByPrefixes(
-                List.of(""),
-                P1110,
-                e4result.getObligations().get(2).getContext().substitute(solution.get())),
+                List.of("cr", "br", "∂" /* "x" */), Q4, q4.substitute(solution.get())),
         () ->
             assertContextEqualsByPrefixes(
-                List.of(""),
-                P1110,
-                e4result.getObligations().get(3).getContext().substitute(solution.get())),
+                List.of(""), P1110, e4result.get(2).getContext().substitute(solution.get())),
         () ->
             assertContextEqualsByPrefixes(
-                List.of(""),
-                P1110,
-                e4result.getObligations().get(4).getContext().substitute(solution.get())));
+                List.of(""), P1110, e4result.get(3).getContext().substitute(solution.get())),
+        () ->
+            assertContextEqualsByPrefixes(
+                List.of(""), P1110, e4result.get(4).getContext().substitute(solution.get())));
   }
 
   @Test
-  public void zigzigBelow() {
+  public void zigzigAbove() throws IOException {
+    final var globals =
+        new AnnotatingGlobals(
+            Map.of(FQN, new FunctionAnnotation(Q, Qp)),
+            Map.of(
+                FQN,
+                Set.of(
+                    new FunctionAnnotation(P, Pp),
+                    new FunctionAnnotation(
+                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+            SIZE_ANALYSIS,
+            HEURISTIC);
+
+    final Prover prover = new Prover("splay-above", globals);
+    // prover.setWeaken(true);
+
+    final var q3v = AnnotatingContext.reorderByName(E3.freeVariables(), List.of("cr", "bl", "br"));
+
+    // To guide the prover to the zigzig case.
+    final Predicate<Obligation> isE4 = obligation -> E4.equals(obligation.getExpression());
+    final Predicate<Obligation> isE3Truthy =
+        obligation -> E3.getTruthy().equals(obligation.getExpression());
+    final Predicate<Obligation> isIntermediateFalsy =
+        obligation -> INTERMEDIATE.getFalsy().equals(obligation.getExpression());
+    final Predicate<Obligation> isIntermediateTruthyLeaf =
+        obligation ->
+            ((MatchExpression) INTERMEDIATE.getTruthy())
+                .getLeaf()
+                .equals(obligation.getExpression());
+
+    Obligation rootObligation = new Obligation(q3v, Q3, E3, Qp);
+    prover.setTreeCf(true);
+    final var remainingObligations =
+        prover.proveUntil(
+            rootObligation,
+            isE4.or(isE3Truthy).or(isIntermediateFalsy).or(isIntermediateTruthyLeaf));
+    prover.setTreeCf(false);
+    assertEquals(4, remainingObligations.size());
+    assertEquals(E4, remainingObligations.get(2).getExpression());
+    final var e4obligation = remainingObligations.get(2);
+
+    final var e4result = prover.apply(e4obligation, LetTreeCfSimple.INSTANCE);
+
+    final var q4 = e4result.get(1).getContext();
+    prover.setTreeCf(true);
+    /*
+    We do need cf at
+    via sec lnf
+    (let:tree:cf): br, cr, ∂₆ | let∂₆ΔR #12  ⊦₁  let ∂₅ ≔ SplayTree.splay a ∂₆ in □ | Q'
+    via sec splay
+
+    We do not need cf at
+    br, cr, al, ar | match ∂₅ extend [al, ar] #48  ⊦₁  let ∂₈ ≔ (br, c, cr) in □ | Q'
+
+    (let:tree:cf): ar, al, ∂₈ | letcf ∂₈ ΔR #50  ⊦₁  let ∂₇ ≔ (ar, b, ∂₈) in (al, a', ∂₇) | Q'
+
+
+    In s61 we apply tree:cf to
+    br, cr, ar | lett''ΓP #1  ⊦₁  let t''' ≔ (br, c, cr) in (ar, b, t''') | lettree t'' P' #3
+     */
+    prover.setWeakenBeforeTerminal(true);
+    var intermediate1 =
+        prover.proveUntil(e4result, o -> o.getExpression() instanceof LetExpression);
+    prover.setWeakenBeforeTerminal(false);
+    var intermediate2 = prover.apply(intermediate1.get(0), LetTree.INSTANCE);
+    prover.setTreeCf(true);
+    prover.prove(intermediate2);
+    prover.plot();
+
+    final var solution = prover.solve();
+    assertTrue(solution.isPresent());
+    assertAll(
+        () -> {
+          assertContextEquals(q3v, Q3, rootObligation.getContext().substitute(solution.get()));
+
+          System.out.println("ok1");
+        },
+        () -> {
+          assertContextEquals(
+              q3v,
+              Q3,
+              StreamSupport.stream(prover.getProof().spliterator(), false)
+                  .filter(obligation -> E3.getFalsy().equals(obligation.getExpression()))
+                  .findFirst()
+                  .get()
+                  .getContext()
+                  .substitute(solution.get()));
+          System.out.println("ok2");
+        },
+        () -> {
+          assertContextEquals(
+              q3v,
+              Q3,
+              StreamSupport.stream(prover.getProof().spliterator(), false)
+                  .filter(obligation -> INTERMEDIATE.getTruthy().equals(obligation.getExpression()))
+                  .findFirst()
+                  .get()
+                  .getContext()
+                  .substitute(solution.get()));
+          System.out.println("ok3");
+        },
+        () -> {
+          assertContextEqualsByPrefixes(
+              List.of("cr", "∂" /* "bl" */, "br"),
+              Q3,
+              StreamSupport.stream(prover.getProof().spliterator(), false)
+                  .filter(
+                      obligation ->
+                          ((LetExpression) ((MatchExpression) INTERMEDIATE.getTruthy()).getNode())
+                              .getBody()
+                              .equals(obligation.getExpression()))
+                  .findFirst()
+                  .get()
+                  .getContext()
+                  .substitute(solution.get()));
+          System.out.println("ok4");
+        },
+        () ->
+            assertContextEqualsByPrefixes(
+                List.of("cr", "∂" /* "bl" */, "br"),
+                Q3,
+                e4obligation.getContext().substitute(solution.get())),
+        () ->
+            assertContextEqualsByPrefixes(
+                List.of("cr", "br", "∂" /* "x" */), Q4, q4.substitute(solution.get())),
+        () ->
+            assertContextEqualsByPrefixes(
+                List.of(""), P1110, e4result.get(2).getContext().substitute(solution.get())),
+        () ->
+            assertContextEqualsByPrefixes(
+                List.of(""), P1110, e4result.get(3).getContext().substitute(solution.get())),
+        () ->
+            assertContextEqualsByPrefixes(
+                List.of(""), P1110, e4result.get(4).getContext().substitute(solution.get())));
+  }
+
+  @Test
+  public void zigzigBelow() throws IOException {
     final var globals =
         new AnnotatingGlobals(
             // We can use empty maps here, since we will never apply (app).
@@ -155,16 +351,18 @@ public class S62Lazy extends S62 {
 
     // Instantiate prover and enable weakening.
     final Prover prover = new Prover("splay-below", globals);
-    prover.setWeaken(true);
+    prover.setWeakenBeforeTerminal(true);
 
     // Partial proof up to the boundary.
     final var remainingObligations =
-        prover.proveUntil(new Obligation(List.of("t"), Q, SPLAY.getBody(), Qp, 1), boundary);
+        prover.proveUntil(
+            new Obligation(SPLAY.treeLikeArguments(), Q, SPLAY.getBody(), Qp, 1), boundary);
     assertEquals(2, remainingObligations.size());
     assertEquals(E3, remainingObligations.get(0).getExpression());
     assertEquals(E3symm, remainingObligations.get(1).getExpression());
 
     // Solve, and assert that there is a solution.
+    prover.plot();
     final var solution = prover.solve();
     assertTrue(solution.isPresent());
 
@@ -177,13 +375,17 @@ public class S62Lazy extends S62 {
                     return (Executable)
                         () ->
                             assertContextEquals(
-                                List.of("cl", "cr"), Q1, o.getContext().substitute(solution.get()));
+                                AnnotatingContext.reorderByName(
+                                    o.getExpression().freeVariables(), List.of("cl", "cr")),
+                                Q1,
+                                o.getContext().substitute(solution.get()));
                   }
                   if (o.getExpression().equals(E3)) {
                     return (Executable)
                         () ->
                             assertContextEquals(
-                                List.of("cr", "bl", "br"),
+                                AnnotatingContext.reorderByName(
+                                    o.getExpression().freeVariables(), List.of("cr", "bl", "br")),
                                 Q2,
                                 o.getContext().substitute(solution.get()));
                   }
@@ -197,13 +399,101 @@ public class S62Lazy extends S62 {
     final var globals =
         new AnnotatingGlobals(
             Map.of(FQN, new FunctionAnnotation(Q, Qp)),
-            Map.of(FQN, new FunctionAnnotation(zero(1), zero(1))),
+            Map.of(
+                FQN,
+                Set.of(
+                    new FunctionAnnotation(P, Pp),
+                    new FunctionAnnotation(
+                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
             SIZE_ANALYSIS,
             HEURISTIC);
 
     final Prover prover = new Prover("splay-cf", globals);
     prover.prove(
-        new Obligation(List.of("t"), P, SPLAY.getBody(), HEURISTIC.generate("unknown P'", 1), 0));
+        new Obligation(
+            SPLAY.treeLikeArguments(), P, SPLAY.getBody(), HEURISTIC.generate("unknown P'", 1), 0));
+
+    final var solution = prover.solve();
+    assertTrue(solution.isPresent());
+
+    assertAll(
+        StreamSupport.stream(prover.getProof().spliterator(), false)
+            .filter(o -> Objects.nonNull(o.getExpression()))
+            .map(
+                o -> {
+                  if (o.getExpression().equals(SPLAY.getBody())) {
+                    return (Executable)
+                        () -> {
+                          assertContextEqualsByPrefixes(
+                              List.of("t"), P, o.getContext().substitute(solution.get()));
+                          assertAnnotationEquals(Pp, o.getAnnotation().substitute(solution.get()));
+                        };
+                  }
+                  if (o.getExpression().equals(E1)) {
+                    return (Executable)
+                        () ->
+                            assertContextEqualsByPrefixes(
+                                List.of("cl", "cr"), P1, o.getContext().substitute(solution.get()));
+                  }
+                  if (o.getExpression().equals(E3)) {
+                    return (Executable)
+                        () ->
+                            assertContextEqualsByPrefixes(
+                                List.of("cr", "bl", "br"),
+                                P2,
+                                o.getContext().substitute(solution.get()));
+                  }
+                  if (o.getExpression().equals(E4)) {
+                    return (Executable)
+                        () ->
+                            assertContextEqualsByPrefixes(
+                                List.of("cr", "∂", "br"),
+                                P2,
+                                o.getContext().substitute(solution.get()));
+                  }
+                  if (o.getExpression().equals(E5)) {
+                    return (Executable)
+                        () ->
+                            assertContextEqualsByPrefixes(
+                                List.of("cr", "br", "∂"),
+                                P3,
+                                o.getContext().substitute(solution.get()));
+                  }
+                  if (o.getExpression().equals(Tp)) {
+                    return (Executable)
+                        () ->
+                            assertContextEqualsByPrefixes(
+                                List.of("cr", "br", "al", "ar"),
+                                P4,
+                                o.getContext().substitute(solution.get()));
+                  }
+                  return null;
+                })
+            .filter(Objects::nonNull));
+  }
+
+  @Test
+  public void zigzigCostFreeAbovePartial() throws IOException {
+    final var globals =
+        new AnnotatingGlobals(
+            Map.of(FQN, new FunctionAnnotation(Q, Qp)),
+            Map.of(
+                FQN,
+                Set.of(
+                    new FunctionAnnotation(P, Pp),
+                    new FunctionAnnotation(
+                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+            SIZE_ANALYSIS,
+            HEURISTIC);
+
+    final Prover prover = new Prover("splay-above", globals);
+    // prover.setWeaken(true);
+
+    final var q4v = AnnotatingContext.reorderByName(E4.freeVariables(), List.of("cr", "∂₆", "br"));
+
+    Obligation rootObligation = new Obligation(q4v, P2, E4, Pp);
+    prover.prove(rootObligation);
+    prover.plot();
 
     final var solution = prover.solve();
     assertTrue(solution.isPresent());

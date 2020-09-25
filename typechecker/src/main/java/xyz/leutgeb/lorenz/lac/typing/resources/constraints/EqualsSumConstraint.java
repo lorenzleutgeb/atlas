@@ -3,14 +3,15 @@ package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 import static com.google.common.collect.Sets.union;
 import static guru.nidi.graphviz.model.Link.to;
 import static java.util.Collections.singleton;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toSet;
-import static xyz.leutgeb.lorenz.lac.Util.objectNode;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+import static xyz.leutgeb.lorenz.lac.util.Util.objectNode;
 
 import com.google.common.collect.BiMap;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
-import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Link;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
@@ -34,14 +36,10 @@ public class EqualsSumConstraint extends Constraint {
   public EqualsSumConstraint(Coefficient left, Collection<Coefficient> sum, String reason) {
     super(reason);
     if (sum.isEmpty()) {
-      throw new IllegalArgumentException("cannot sum nothing");
+      sum = singletonList(ZERO);
     }
     this.left = left;
     this.sum = sum;
-  }
-
-  public EqualsSumConstraint(Coefficient left, Collection<Coefficient> sum) {
-    this(left, sum, "?");
   }
 
   @Override
@@ -50,7 +48,7 @@ public class EqualsSumConstraint extends Constraint {
   }
 
   @Override
-  public BoolExpr encode(Context ctx, BiMap<Coefficient, RealExpr> coefficients) {
+  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
     final ArithExpr[] encodedSum =
         sum.stream().map(c -> c.encode(ctx, coefficients)).toArray(ArithExpr[]::new);
 
@@ -82,7 +80,9 @@ public class EqualsSumConstraint extends Constraint {
   @Override
   public Constraint replace(Coefficient target, Coefficient replacement) {
     return new EqualsSumConstraint(
-        left, sum.stream().map(c -> c.replace(target, replacement)).collect(Collectors.toList()));
+        left,
+        sum.stream().map(c -> c.replace(target, replacement)).collect(Collectors.toList()),
+        getReason());
   }
 
   @Override

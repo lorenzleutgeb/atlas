@@ -24,11 +24,10 @@ public class TreeType implements Type {
 
   @Override
   public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
-    if (!(b instanceof TreeType)) {
+    if (!(b instanceof TreeType tree)) {
       throw new TypeMismatch(this, b);
     }
 
-    var tree = (TreeType) b;
     if (!elementType.equals(tree.elementType)) {
       return Collections.singletonList(new Equivalence(elementType, tree.elementType));
     }
@@ -38,9 +37,8 @@ public class TreeType implements Type {
   @Override
   public Type substitute(TypeVariable v, Type t) {
     var substitute = elementType.substitute(v, t);
-    if (substitute instanceof TypeVariable) {
-      // TODO: Remove cast once we're on Java 14?
-      return new TreeType((TypeVariable) substitute);
+    if (substitute instanceof TypeVariable typeVariable) {
+      return new TreeType(typeVariable);
     }
     throw new RuntimeException("this type of tree cannot be constructed");
   }

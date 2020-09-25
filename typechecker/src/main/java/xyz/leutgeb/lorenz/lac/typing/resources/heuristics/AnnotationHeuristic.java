@@ -2,11 +2,12 @@ package xyz.leutgeb.lorenz.lac.typing.resources.heuristics;
 
 import java.util.Collection;
 import java.util.List;
-import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.ast.Expression;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
 public interface AnnotationHeuristic {
   Annotation generate(String namePrefix, int size);
@@ -19,11 +20,16 @@ public interface AnnotationHeuristic {
     return generate(namePrefix, collection.size());
   }
 
-  default AnnotatingContext generateContext(String namePrefix, List<String> ids) {
+  default AnnotatingContext generateContext(String namePrefix, List<Identifier> ids) {
     return new AnnotatingContext(ids, generate(namePrefix, ids));
   }
 
+  default Annotation generate(String namePrefix, Expression expression) {
+    return generate(namePrefix, expression.getType() instanceof TreeType ? 1 : 0);
+  }
+
+  @Deprecated
   default Annotation generate(Expression expression) {
-    return generate("_" + Util.randomHex(), expression.getType() instanceof TreeType ? 1 : 0);
+    return generate("_" + Util.randomHex(), expression);
   }
 }

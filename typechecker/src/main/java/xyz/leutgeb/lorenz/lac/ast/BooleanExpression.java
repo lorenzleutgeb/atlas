@@ -10,7 +10,6 @@ import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.Value;
-import xyz.leutgeb.lorenz.lac.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.FunctionSignature;
@@ -21,6 +20,7 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.BoolType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
@@ -84,7 +84,7 @@ public class BooleanExpression extends Expression {
 
   @Override
   public Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
-    // TODO: Only create new expression if necessary!
+    // TODO(lorenz.leutgeb): Only create new expression if necessary!
     return new BooleanExpression(
         Derived.anf(this),
         left.normalize(context, idGenerator),
@@ -123,9 +123,10 @@ public class BooleanExpression extends Expression {
 
   @Override
   public Expression rename(Map<String, String> renaming) {
-    // TODO: I think there's no need ever to rename something inside a boolean expression. Maybe
+    // TODO(lorenz.leutgeb): I think there's no need ever to rename something inside a boolean
+    // expression. Maybe
     // throw here?!
-    // TODO: Only create new expression if necessary.
+    // TODO(lorenz.leutgeb): Only create new expression if necessary.
     return new BooleanExpression(
         Derived.rename(this), left.rename(renaming), operator, right.rename(renaming), type);
   }

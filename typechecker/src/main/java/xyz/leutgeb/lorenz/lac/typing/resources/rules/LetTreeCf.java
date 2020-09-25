@@ -4,83 +4,101 @@ import static com.google.common.collect.Sets.intersection;
 import static java.util.Collections.singleton;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
-import static xyz.leutgeb.lorenz.lac.Util.bug;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import com.google.common.collect.Sets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.lang3.tuple.Pair;
-import xyz.leutgeb.lorenz.lac.Util;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.ast.LetExpression;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.*;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.ConjunctiveConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.DisjunctiveConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
+import xyz.leutgeb.lorenz.lac.util.Pair;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
-public class LetTreeCf {
-  public static Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+public class LetTreeCf implements Rule {
+  public static final LetTreeCf INSTANCE = new LetTreeCf();
+
+  public ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
     final var expression = (LetExpression) obligation.getExpression();
-    final var declared = expression.getDeclared();
+    final var x = expression.getDeclared();
     final var value = expression.getValue();
     final var gammaDeltaQ = obligation.getContext();
     final var body = expression.getBody();
-    final var x = declared.getName();
-    final var qp = obligation.getAnnotation();
     final List<Constraint> crossConstraints = new ArrayList<>();
+
+    if (!(value.getType() instanceof TreeType)) {
+      throw bug("cannot apply (let:tree:cf) to a variable that is not a tree");
+    }
+
+    final Set<Coefficient> occurred = new HashSet<>();
 
     // Γ is used as context for e1, so from the combined context,
     // take Γ to be exactly the variables that occur in e1.
-    final var varsForGamma = Util.setOfNames(value.freeVariables());
-
-    final var bodyFreeVarsAsStrings = Util.setOfNames(body.freeVariables());
+    final var varsForGammaAsSet = value.freeVariables();
 
     // Δ on the other hand is "everything that's not in Γ".
-    final var varsForDelta =
+    final var varsForDeltaAsSet =
         gammaDeltaQ.getIds().stream()
-            .filter(not(varsForGamma::contains))
+            .filter(not(varsForGammaAsSet::contains))
             .collect(Collectors.toSet());
 
     // Now, one sanity check: There must not be free variables in the body which
     // are not in Δ.
-    if (!Sets.difference(Sets.difference(bodyFreeVarsAsStrings, singleton(x)), varsForDelta)
+    if (!Sets.difference(Sets.difference(body.freeVariables(), singleton(x)), varsForDeltaAsSet)
         .isEmpty()) {
       throw bug("there are free variables in the body of a let binding which do not occur in Δ");
     }
 
-    if (!intersection(varsForGamma, varsForDelta).isEmpty()) {
+    if (!intersection(varsForGammaAsSet, varsForDeltaAsSet).isEmpty()) {
       throw bug("shared variables in let expression when attempting to generate constraints");
     }
 
-    final var gamma = new ArrayList<>(varsForGamma);
-    final var delta = new ArrayList<>(varsForDelta);
+    final var varsForGammaAsList =
+        obligation.getContext().getIds().stream()
+            .filter(varsForGammaAsSet::contains)
+            .collect(Collectors.toUnmodifiableList());
 
-    final var isTree = value.getType() instanceof TreeType;
+    final var varsForDeltaAsList =
+        obligation.getContext().getIds().stream()
+            .filter(varsForDeltaAsSet::contains)
+            .collect(Collectors.toUnmodifiableList());
 
-    if (!isTree) {
-      throw bug("cannot apply (let:tree:cf) to a variable that is not a tree");
-    }
-
-    final var deltax = new ArrayList<>(delta);
+    final var deltax = new ArrayList<>(varsForDeltaAsList);
     deltax.add(x);
 
-    final var gammaP = globals.getHeuristic().generateContext("letcf" + x + "ΓP", gamma);
-    final var deltaxr = globals.getHeuristic().generateContext("letcf" + x + "ΔR", deltax);
+    final var gammaP =
+        globals.getHeuristic().generateContext("letcf " + x + " ΓP", varsForGammaAsList);
+    final var deltaxr = globals.getHeuristic().generateContext("letcf " + x + " ΔR", deltax);
 
     // This is the "standard" obligation that we have to fulfill. It talks about e2
     // which is the body of the let-expression.
-    // Δ, x : Tree | R ⊢ e_2 : β | Q'
+    // Δ, x : Tree | R ⊢ e2 : β | Q'
     final Pair<Obligation, List<Constraint>> r =
-        Pair.of(obligation.keepCost(deltaxr, body, qp), new ArrayList<>());
+        Pair.of(obligation.keepAnnotationAndCost(deltaxr, body), new ArrayList<>());
 
     // Γ | P ⊢ e1 : T | P'
-    final var e1pp = globals.getHeuristic().generate(value);
+    final var pp = globals.getHeuristic().generate("letcf " + x + "P'", value);
     final Pair<Obligation, List<Constraint>> p =
-        Pair.of(obligation.keepCost(gammaP, value, e1pp), new ArrayList<>());
+        Pair.of(obligation.keepCost(gammaP, value, pp), new ArrayList<>());
 
     // First, all constraints that are generated for all types of e1. Ordered from l-to-r and
     // t-to-b.
@@ -90,14 +108,16 @@ public class LetTreeCf {
     // Ensures that the potential through rank coefficients we get to evaluate this.value is the
     // same as we have available for this. Note that Γ ∩ Δ = ∅.
     p.getRight()
-        .addAll(EqualityConstraint.eqRanks(gamma, gammaP, gammaDeltaQ, "(let:tree:cf) p_i = q_i"));
+        .addAll(
+            EqualityConstraint.eqRanks(
+                varsForGammaAsList, gammaP, gammaDeltaQ, "(let:tree:cf) p_i = q_i"));
 
     // Ensures that the potential through rank coefficients we get to evaluate this.body is the same
     // as we have available for this. Note that Γ ∩ Δ = ∅.
     r.getRight()
         .addAll(
             EqualityConstraint.eqRanks(
-                delta, deltaxr, gammaDeltaQ, "(let:tree:cf) r_j = q_{m + j}"));
+                varsForDeltaAsList, deltaxr, gammaDeltaQ, "(let:tree:cf) r_j = q_{m + j}"));
 
     // Ensures that we transfer potential for Γ under Q to P (which
     // covers Γ exclusively).
@@ -115,51 +135,53 @@ public class LetTreeCf {
 
     // Then, all constraints that are generated for e1 : T.
     // Γ | P ⊢ e1 : T | P'
-    // Preserving the potential of evaluation of this.value of only makes sense if it is of type
-    // tree.
     crossConstraints.add(
         // Since the result of evaluating this.value is effectively the same as the newly
-        // introduced
-        // variable, equate those coefficients.
+        // introduced variable, equate those coefficients.
         new EqualityConstraint(
             deltaxr.getRankCoefficient(x),
-            e1pp.getRankCoefficient(),
+            pp.getRankCoefficient(),
             "(let:tree:cf) r_{k + 1} = p'_{*}"));
 
     crossConstraints.addAll(
         // Again, restore the potential we have got after evaluating this.value to align
-        // with the new
-        // variable
-        // in the context for this.body.
-        e1pp.streamCoefficients()
+        // with the variable in the context for this.body.
+        pp.streamCoefficients()
             .map(
                 e -> {
                   final var index = e.getKey();
+                  final var rCoefficient =
+                      deltaxr.getCoefficient(id -> id.equals(x) ? index.get(0) : 0, index.get(1));
+                  occurred.add(rCoefficient);
                   return new EqualityConstraint(
-                      deltaxr.getCoefficient(id -> id.equals(x) ? index.get(0) : 0, index.get(1)),
+                      rCoefficient,
                       e.getValue(),
                       "(let:tree:cf) r_{(\\vec{0}, a, c)} = p'_{(a, c)}");
                 })
             .collect(toList()));
 
-    final Map<Map<String, Integer>, Obligation> bs = new HashMap<>();
+    final Map<Map<Identifier, Integer>, Obligation> bs = new HashMap<>();
 
-    final Function<? super Map<String, Integer>, Obligation> pbProducer =
+    final Function<? super Map<Identifier, Integer>, Obligation> pbProducer =
         (key) ->
             new Obligation(
-                globals.getHeuristic().generateContext("cf" + key, gamma),
+                globals
+                    .getHeuristic()
+                    .generateContext("letcf " + x + " b is " + key, varsForGammaAsList),
                 value,
-                globals.getHeuristic().generate(value),
+                globals.getHeuristic().generate("letcf' " + x + " b is " + key, value),
                 0);
 
     gammaDeltaQ.stream()
-        .filter(index -> delta.stream().anyMatch(id -> index.getAssociatedIndex(id) != 0))
-        .filter(index -> gamma.stream().anyMatch(id -> index.getAssociatedIndex(id) != 0))
+        .filter(
+            index -> varsForDeltaAsList.stream().anyMatch(id -> index.getAssociatedIndex(id) != 0))
+        .filter(
+            index -> varsForGammaAsList.stream().anyMatch(id -> index.getAssociatedIndex(id) != 0))
         .forEach(
             index -> {
               // Check if the index for all variables from delta are zero.
-              final var b = new HashMap<String, Integer>();
-              delta.forEach(id -> b.put(id, index.getAssociatedIndex(id)));
+              final var b = new HashMap<Identifier, Integer>();
+              varsForDeltaAsList.forEach(id -> b.put(id, index.getAssociatedIndex(id)));
 
               final var bObligation = bs.computeIfAbsent(b, pbProducer);
 
@@ -168,10 +190,31 @@ public class LetTreeCf {
                   new EqualityConstraint(
                       bObligation.getContext().getCoefficient(index),
                       index.getValue(),
-                      "(let:tree:cf) p^{(\\vec{b})}_{(\\vec{a},c)} = q_{(\\vec{a}, \\vec{b}, c)}"));
+                      "(let:tree:cf) p^{(\\vec{b})="
+                          + b
+                          + "}_{(\\vec{a},c)="
+                          + index
+                          + "} = q_{(\\vec{a}, \\vec{b}, c)="
+                          + index
+                          + "}"));
+
+              // forall b != 0. exactly one of the coefficients p'^vec(b)_a,c = 1 and all other
+              // p'^vec(b)_e,d = 0 (i.e., a != e or c != d) or all p'^vec(b)_a,c = 0
+              final var pbcoeffs =
+                  bObligation
+                      .getAnnotation()
+                      .streamCoefficients()
+                      // .filter(entry -> entry.getKey().get(0) != 0)
+                      .map(Map.Entry::getValue)
+                      .collect(toList());
+
+              crossConstraints.add(
+                  new DisjunctiveConstraint(
+                      List.of(exactlyOneIsOne(pbcoeffs), allZero(pbcoeffs)),
+                      "(let:tree:cf) none or one"));
 
               // Ensure that exactly one of p'^{(\vec{b})}_{(a, c)} with a != 0 is one.
-              conclusion.addAll(
+              conclusion.add(
                   exactlyOneIsOne(
                       bObligation
                           .getAnnotation()
@@ -190,7 +233,9 @@ public class LetTreeCf {
                       .map(
                           coefficient ->
                               new EqualityConstraint(
-                                  coefficient, ZERO, "(let:tree:cf) p'^{(\\vec{b})}_{(0,c)} = 0"))
+                                  coefficient,
+                                  ZERO,
+                                  "(let:tree:cf) p'^{(\\vec{b})=" + b + "}_{(0,c)} = 0"))
                       .collect(toList()));
 
               crossConstraints.add(
@@ -198,17 +243,20 @@ public class LetTreeCf {
                       List.of(
                           new EqualityConstraint(
                               index.getValue(), ZERO, "(let:tree:cf) antecedent q? = 0"),
-                          new ConjunctiveConstraint(conclusion, "?")),
-                      "(let:tree:cf) q_{(\\vec{a},\\vec{b},c)} != 0 -> (p^{(\\vec{b})}_{(\\vec{a},c)} = q_({\\vec{a},\\vec{b},c) /\\ ...)"));
+                          new ConjunctiveConstraint(conclusion, "conjunction in let:tree:cf")),
+                      "(let:tree:cf) q_{(\\vec{a},\\vec{b},c)} != 0 -> (p^{(\\vec{b})="
+                          + b
+                          + "}_{(\\vec{a},c)} = q_({\\vec{a},\\vec{b},c) /\\ ...)"));
             });
 
     deltaxr.stream()
-        .filter(index -> delta.stream().anyMatch(id -> index.getAssociatedIndex(id) != 0))
+        .filter(
+            index -> varsForDeltaAsList.stream().anyMatch(id -> index.getAssociatedIndex(id) != 0))
         .forEach(
             index -> {
               // Check if the index for all variables from delta are zero.
-              final var b = new HashMap<String, Integer>();
-              delta.forEach(id -> b.put(id, index.getAssociatedIndex(id)));
+              final var b = new HashMap<Identifier, Integer>();
+              varsForDeltaAsList.forEach(id -> b.put(id, index.getAssociatedIndex(id)));
 
               final var a = index.getAssociatedIndex(x);
 
@@ -218,6 +266,7 @@ public class LetTreeCf {
                 throw bug("oops");
               }
 
+              occurred.add(index.getValue());
               crossConstraints.add(
                   new EqualityConstraint(
                       index.getValue(),
@@ -230,30 +279,51 @@ public class LetTreeCf {
                           + (a == 0 ? "q_{(\\vec{0},b,c)}" : "p'^{(\\vec{b})}_{(a, c)}")));
             });
 
-    var oldschool =
+    var old =
         Util.append(
             List.of(p, r),
             bs.values().stream()
                 .map(o -> Pair.of(o, Collections.<Constraint>emptyList()))
                 .collect(toList()));
 
-    return new Rule.ApplicationResult(
-        oldschool.stream().map(Pair::getLeft).collect(Collectors.toUnmodifiableList()),
-        oldschool.stream().map(Pair::getRight).collect(Collectors.toUnmodifiableList()),
+    /*
+    deltaxr.stream()
+        .map(AnnotatingContext.Entry::getValue)
+        .filter(not(occurred::contains))
+        .map(
+            coefficient ->
+                new EqualityConstraint(ZERO, coefficient, "(let:tree:cf) setToZero " + coefficient))
+        .forEach(crossConstraints::add);
+     */
+
+    return new ApplicationResult(
+        old.stream().map(Pair::getLeft).collect(Collectors.toUnmodifiableList()),
+        old.stream().map(Pair::getRight).collect(Collectors.toUnmodifiableList()),
         crossConstraints);
   }
 
-  public static List<Constraint> exactlyOneIsOne(Collection<Coefficient> coefficients) {
-    return Stream.concat(
-            Stream.of(new EqualsSumConstraint(ONE, coefficients, "∃!")),
-            coefficients.stream()
-                .map(
-                    coefficient ->
-                        new DisjunctiveConstraint(
-                            List.of(
-                                new EqualityConstraint(coefficient, ONE, "∃!"),
-                                new EqualityConstraint(coefficient, ZERO, "∃!")),
-                            "∃!")))
-        .collect(toList());
+  public static Constraint exactlyOneIsOne(Collection<Coefficient> coefficients) {
+    return new ConjunctiveConstraint(
+        Stream.concat(
+                Stream.of(new EqualsSumConstraint(ONE, coefficients, "∃!")),
+                coefficients.stream()
+                    .map(
+                        coefficient ->
+                            new DisjunctiveConstraint(
+                                List.of(
+                                    new EqualityConstraint(coefficient, ONE, "∃!"),
+                                    new EqualityConstraint(coefficient, ZERO, "∃!")),
+                                "∃!")))
+            .collect(toList()),
+        "∃!");
+  }
+
+  public static Constraint allZero(Collection<Coefficient> coefficients) {
+    return new EqualsSumConstraint(ZERO, coefficients, "allzero");
+  }
+
+  @Override
+  public String getName() {
+    return "let:tree:cf";
   }
 }

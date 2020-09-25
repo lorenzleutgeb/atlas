@@ -8,14 +8,14 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.lac.IntIdGenerator;
-import xyz.leutgeb.lorenz.lac.Intro;
-import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.ast.Expression;
+import xyz.leutgeb.lorenz.lac.ast.Intro;
 import xyz.leutgeb.lorenz.lac.typing.simple.FunctionSignature;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.FunctionType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
+import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Slf4j
 @Value
@@ -236,7 +236,7 @@ public class UnificationContext {
     signatures.put(fullyQualifiedName, functionSignature);
   }
 
-  // TODO: Find out why exactly we need this method.
+  // TODO(lorenz.leutgeb): Find out why exactly we need this method.
   public boolean hasSignature(String fqn) {
     return signatures.containsKey(fqn);
   }

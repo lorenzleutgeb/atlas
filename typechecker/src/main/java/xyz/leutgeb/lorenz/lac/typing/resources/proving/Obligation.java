@@ -1,6 +1,6 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.proving;
 
-import static xyz.leutgeb.lorenz.lac.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import guru.nidi.graphviz.attribute.Label;
 import java.util.List;
@@ -9,27 +9,22 @@ import lombok.Value;
 import org.jgrapht.nio.Attribute;
 import org.jgrapht.nio.AttributeType;
 import org.jgrapht.nio.DefaultAttribute;
-import xyz.leutgeb.lorenz.lac.NidiAttribute;
-import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.ast.Expression;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.util.NidiAttribute;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
-// TODO: Maybe we need to navigate around obligations in a DAG/proof tree?
+// TODO(lorenz.leutgeb): Maybe we need to navigate around obligations in a DAG/proof tree?
 @Value
 public class Obligation {
-  // public static Obligation NOTHING = new Obligation();
   AnnotatingContext context;
   Expression expression;
   Annotation annotation;
   int cost;
-
-  private Obligation() {
-    context = null;
-    expression = null;
-    annotation = null;
-    cost = -1;
-  }
 
   public Obligation(
       AnnotatingContext context, Expression expression, Annotation annotation, int cost) {
@@ -49,7 +44,7 @@ public class Obligation {
   }
 
   public Obligation(
-      List<String> contextIds,
+      List<Identifier> contextIds,
       Annotation contextAnnotation,
       Expression expression,
       Annotation annotation) {
@@ -57,7 +52,7 @@ public class Obligation {
   }
 
   public Obligation(
-      List<String> contextIds,
+      List<Identifier> contextIds,
       Annotation contextAnnotation,
       Expression expression,
       Annotation annotation,
@@ -65,12 +60,8 @@ public class Obligation {
     this(new AnnotatingContext(contextIds, contextAnnotation), expression, annotation, cost);
   }
 
-  public static Obligation nothing() {
-    return new Obligation();
-  }
-
-  public boolean isNothing() {
-    return context == null;
+  public Obligation keepAnnotationAndCost(AnnotatingContext context, Expression expression) {
+    return new Obligation(context, expression, annotation, cost);
   }
 
   public Obligation keepCost(
@@ -78,22 +69,16 @@ public class Obligation {
     return new Obligation(context, expression, annotation, cost);
   }
 
-  public Obligation keepCostAndContext(Expression expression, Annotation annotation) {
+  public Obligation keepContextAndAnnotationAndCost(Expression expression) {
     return new Obligation(context, expression, annotation, cost);
   }
 
-  public Obligation keepCostAndContextAndAnnotation(Expression expression) {
-    return new Obligation(context, expression, annotation, cost);
+  public Obligation substitute(Map<Coefficient, KnownCoefficient> solution) {
+    return new Obligation(
+        context.substitute(solution), expression, annotation.substitute(solution), cost);
   }
 
   public Map<String, Attribute> attributes() {
-    if (this.isNothing()) {
-      return Map.of(
-          "shape",
-          new DefaultAttribute<>("none", AttributeType.STRING),
-          "label",
-          new DefaultAttribute<>("nothing", AttributeType.HTML));
-    }
     return Map.of(
         "shape",
         new DefaultAttribute<>("none", AttributeType.STRING),
@@ -103,13 +88,10 @@ public class Obligation {
 
   @Override
   public String toString() {
-    if (this.isNothing()) {
-      return "nothing";
-    }
     return context
-        + " ⊦"
+        + "  ⊦"
         + Util.generateSubscript(cost)
-        + " "
+        + "  "
         + expression
         + " | "
         + annotation.getName();

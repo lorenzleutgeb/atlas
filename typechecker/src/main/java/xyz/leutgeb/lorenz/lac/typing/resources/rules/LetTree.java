@@ -4,37 +4,44 @@ import static com.google.common.collect.Sets.intersection;
 import static java.util.Collections.singleton;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
-import static xyz.leutgeb.lorenz.lac.Util.bug;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.tuple.Pair;
-import xyz.leutgeb.lorenz.lac.Util;
 import xyz.leutgeb.lorenz.lac.ast.LetExpression;
+import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
+import xyz.leutgeb.lorenz.lac.util.Pair;
 
-public class LetTree {
-  public static Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+public class LetTree implements Rule {
+  public static final LetTree INSTANCE = new LetTree();
+
+  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
     final var expression = (LetExpression) obligation.getExpression();
     final var declared = expression.getDeclared();
     final var value = expression.getValue();
     final var gammaDeltaQ = obligation.getContext();
     final var body = expression.getBody();
-    final var x = declared.getName();
+    final var x = declared;
     final var qp = obligation.getAnnotation();
     final List<Constraint> crossConstraints = new ArrayList<>();
 
+    final var occurred = new HashSet<Coefficient>();
+
     // Γ is used as context for e1, so from the combined context,
     // take Γ to be exactly the variables that occur in e1.
-    final var varsForGamma = Util.setOfNames(value.freeVariables());
+    final var varsForGamma = value.freeVariables();
 
-    final var bodyFreeVarsAsStrings = Util.setOfNames(body.freeVariables());
+    final var bodyFreeVarsAsStrings = body.freeVariables();
 
     // Δ on the other hand is "everything that's not in Γ".
     final var varsForDelta =
@@ -75,7 +82,7 @@ public class LetTree {
         Pair.of(obligation.keepCost(deltaxr, body, qp), new ArrayList<>());
 
     // Γ | P ⊢ e1 : T | P'
-    final var e1pp = globals.getHeuristic().generate(value);
+    final var e1pp = globals.getHeuristic().generate("lettree " + x + " P'", value);
     final Pair<Obligation, List<Constraint>> p =
         Pair.of(obligation.keepCost(gammaP, value, e1pp), new ArrayList<>());
 
@@ -102,7 +109,7 @@ public class LetTree {
                         new EqualityConstraint(
                             pEntry.getValue(),
                             gammaDeltaQ.getCoefficientOrZero(pEntry.padWithZero()),
-                            "(let:tree) p_{(\\vec{a}, c)} = q_{(\\vec{a}, \\vec{0}, c)}"))
+                            "(let:tree) p_{(\\vec{a},c)} = q_{(\\vec{a},\\vec{0},c)}"))
                 .collect(Collectors.toSet()));
 
     // Preserving the potential of evaluation of this.value of only makes sense if it is of type
@@ -113,7 +120,9 @@ public class LetTree {
         new EqualityConstraint(
             deltaxr.getRankCoefficient(x),
             e1pp.getRankCoefficient(),
-            "(let:tree) r_{k + 1} = p'_{*}"));
+            "(let:tree) r_{k + 1} = p'_{*} (for `" + x + "` on the left)"));
+
+    occurred.add(deltaxr.getRankCoefficient(x));
 
     crossConstraints.addAll(
         // Again, restore the potential we have got after evaluating this.value to align
@@ -122,10 +131,13 @@ public class LetTree {
             .map(
                 e -> {
                   final var index = e.getKey();
+                  Coefficient rCoefficient =
+                      deltaxr.getCoefficient(id -> id.equals(x) ? index.get(0) : 0, index.get(1));
+                  occurred.add(rCoefficient);
                   return new EqualityConstraint(
-                      deltaxr.getCoefficient(id -> id.equals(x) ? index.get(0) : 0, index.get(1)),
+                      rCoefficient,
                       e.getValue(),
-                      "(let:tree) r_{(\\vec{0}, a, c)} = p'_{(a, c)}");
+                      "(let:tree) r_{(\\vec{0}, a, c)} = p'_{(a, c)} with (a, c) = " + index);
                 })
             .collect(toList()));
 
@@ -136,6 +148,7 @@ public class LetTree {
                     && rEntry.getAssociatedIndex(x) == 0)
         .forEach(
             rEntry -> {
+              occurred.add(rEntry.getValue());
               r.getRight()
                   .add(
                       new EqualityConstraint(
@@ -146,10 +159,27 @@ public class LetTree {
                                       varsForGamma.contains(id)
                                           ? 0
                                           : rEntry.getAssociatedIndices().get(id))),
-                          "(let:tree) ∀ \\vec{b} ≠ \\vec{0} . r_{(\\vec{b}, 0, c)} = q_{(\\vec{0}, \\vec{b}, c)}"));
+                          "(let:tree) ∀ \\vec{b} ≠ \\vec{0} . r_{(\\vec{b}, 0, c)} = q_{(\\vec{0}, \\vec{b}, c)} with (\\vec{b}, 0, c) = "
+                              + rEntry));
             });
 
+    final List<Constraint> setToZeroR =
+        deltaxr.stream()
+            .map(AnnotatingContext.Entry::getValue)
+            .filter(not(occurred::contains))
+            .map(
+                coefficient ->
+                    new EqualityConstraint(
+                        coefficient, ZERO, "(let:tree) setToZero r " + coefficient))
+            .collect(Collectors.toUnmodifiableList());
+
+    crossConstraints.addAll(setToZeroR);
     return new Rule.ApplicationResult(
         List.of(p.getLeft(), r.getLeft()), List.of(p.getRight(), r.getRight()), crossConstraints);
+  }
+
+  @Override
+  public String getName() {
+    return "let:tree";
   }
 }

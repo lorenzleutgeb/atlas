@@ -1,6 +1,6 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.rules;
 
-import static xyz.leutgeb.lorenz.lac.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
@@ -8,8 +8,10 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 
-public class Var {
-  public static Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+public class Var implements Rule {
+  public static final Var INSTANCE = new Var();
+
+  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
     final var context = obligation.getContext();
 
     if (!(obligation.getExpression() instanceof Identifier)) {
@@ -29,6 +31,11 @@ public class Var {
     }
 
     return Rule.ApplicationResult.onlyConstraints(
-        EqualityConstraint.eq("(var)", obligation.getAnnotation(), context.getAnnotation()));
+        EqualityConstraint.eq(obligation.getAnnotation(), context.getAnnotation(), "(var)"));
+  }
+
+  @Override
+  public String getName() {
+    return "var";
   }
 }

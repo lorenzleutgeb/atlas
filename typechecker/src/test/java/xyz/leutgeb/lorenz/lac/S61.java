@@ -1,7 +1,10 @@
 package xyz.leutgeb.lorenz.lac;
 
 import static java.util.Collections.emptyMap;
-import static org.junit.jupiter.api.Assertions.*;
+import static java.util.Collections.singletonList;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static xyz.leutgeb.lorenz.lac.Assertions.assertAnnotationEquals;
 import static xyz.leutgeb.lorenz.lac.Assertions.assertContextEquals;
 import static xyz.leutgeb.lorenz.lac.Tests.ATREE;
@@ -16,6 +19,7 @@ import java.util.Optional;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.Test;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
+import xyz.leutgeb.lorenz.lac.ast.Intro;
 import xyz.leutgeb.lorenz.lac.ast.LetExpression;
 import xyz.leutgeb.lorenz.lac.ast.Tuple;
 import xyz.leutgeb.lorenz.lac.ast.sources.Predefined;
@@ -23,14 +27,17 @@ import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.AnnotationHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTree;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCf;
+import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCfSimple;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Node;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
+import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 
 public class S61 {
   private static final String NAME = "lnf";
@@ -128,40 +135,55 @@ public class S61 {
 
     final var constraints = new HashSet<Constraint>();
 
-    final var qv = List.of(br.getName(), cr.getName(), ar.getName(), al.getName());
-    final var rootObligation = new Obligation(qv, Q, e, HEURISTIC.generate(e));
+    final var Qvar = SmartRangeHeuristic.DEFAULT.generate("Q", 4);
+    final var Qpvar = SmartRangeHeuristic.DEFAULT.generate("Qp", 1);
 
-    final var eResult = LetTree.apply(rootObligation, globals);
+    final Coefficient Qvarsum = new UnknownCoefficient("Qsum");
+    final Coefficient Q3varsum = new UnknownCoefficient("Q3sum");
+    final Coefficient Qpvarsum = new UnknownCoefficient("Qpsum");
+
+    final var sumConstraints = new HashSet<Constraint>();
+    sumConstraints.add(Qvar.sumAllCoefficients(Qvarsum));
+    sumConstraints.add(Qpvar.sumAllCoefficients(Qpvarsum));
+
+    final var target = new UnknownCoefficient("target");
+    sumConstraints.add(
+        new EqualsSumConstraint(target, List.of(Qvarsum, Qpvarsum, Q3varsum), "sum target"));
+
+    final var qv = List.of(br, cr, ar, al);
+    final var rootObligation = new Obligation(qv, Qvar, e, Qpvar);
+
+    final var eResult = LetTree.INSTANCE.apply(rootObligation, globals);
     assertEquals(2, eResult.getObligations().size());
     assertEquals(ePrime, eResult.getObligations().get(0).getExpression());
     assertEquals(nodeAlATPrimePrime, eResult.getObligations().get(1).getExpression());
     eResult.collectInto(constraints);
 
-    final var nodeAlATPrimePrimeResult = Node.apply(eResult.getObligations().get(1), globals);
-    assertEquals(1, nodeAlATPrimePrimeResult.getObligations().size());
-    assertTrue(nodeAlATPrimePrimeResult.getObligations().get(0).isNothing());
+    final var nodeAlATPrimePrimeResult =
+        Node.INSTANCE.apply(eResult.getObligations().get(1), globals);
+    assertEquals(0, nodeAlATPrimePrimeResult.getObligations().size());
     nodeAlATPrimePrimeResult.collectInto(constraints);
 
-    final var ePrimeResult = LetTreeCf.apply(eResult.getObligations().get(0), globals);
+    final var ePrimeResult =
+        LetTreeCfSimple.INSTANCE.apply(eResult.getObligations().get(0), globals);
     assertEquals(3, ePrimeResult.getObligations().size());
     assertEquals(nodeBrCCr, ePrimeResult.getObligations().get(0).getExpression());
     assertEquals(nodeArBTPrimePrimePrime, ePrimeResult.getObligations().get(1).getExpression());
     assertEquals(nodeBrCCr, ePrimeResult.getObligations().get(2).getExpression());
     ePrimeResult.collectInto(constraints);
 
-    final var nodeBrCCrResult = Node.apply(ePrimeResult.getObligations().get(0), globals);
-    assertEquals(1, nodeBrCCrResult.getObligations().size());
-    assertTrue(nodeBrCCrResult.getObligations().get(0).isNothing());
+    final var nodeBrCCrResult = Node.INSTANCE.apply(ePrimeResult.getObligations().get(0), globals);
+    assertEquals(0, nodeBrCCrResult.getObligations().size());
     nodeBrCCrResult.collectInto(constraints);
 
     final var nodeArBTPrimePrimePrimeResult =
-        Node.apply(ePrimeResult.getObligations().get(1), globals);
-    assertEquals(1, nodeArBTPrimePrimePrimeResult.getObligations().size());
-    assertTrue(nodeArBTPrimePrimePrimeResult.getObligations().get(0).isNothing());
+        Node.INSTANCE.apply(ePrimeResult.getObligations().get(1), globals);
+    assertEquals(0, nodeArBTPrimePrimePrimeResult.getObligations().size());
     nodeArBTPrimePrimePrimeResult.collectInto(constraints);
 
+    constraints.addAll(sumConstraints);
     Optional<Map<Coefficient, KnownCoefficient>> optionalSolution =
-        ConstraintSystemSolver.solve(constraints, NAME);
+        ConstraintSystemSolver.solve(constraints, NAME, singletonList(target));
 
     assertTrue(optionalSolution.isPresent());
 
@@ -180,18 +202,18 @@ public class S61 {
     final var p110 = ePrimeResult.getObligations().get(2).getContext().substitute(solution);
     final var p110p = ePrimeResult.getObligations().get(2).getAnnotation().substitute(solution);
 
-    final var brAndCr = List.of(br.getName(), cr.getName());
+    final var brAndCr = List.of(br, cr);
 
     assertAll(
         () -> assertAnnotationEquals(Q, q.getAnnotation()),
         () -> assertAnnotationEquals(Qp, qp),
-        () -> assertContextEquals(List.of(br.getName(), cr.getName(), ar.getName()), Q1, q1),
+        () -> assertContextEquals(List.of(br, cr, ar), Q1, q1),
         () -> assertAnnotationEquals(Q1p, q1p),
-        () -> assertContextEquals(List.of(al.getName(), tpp.getName()), Q2, q2),
+        () -> assertContextEquals(List.of(al, tpp), Q2, q2),
         () -> assertAnnotationEquals(Qp, q2p),
         () -> assertAnnotationEquals(Q3p, q3p),
         () -> assertContextEquals(brAndCr, Q3, q3),
-        () -> assertContextEquals(List.of(ar.getName(), tppp.getName()), Q4, q4),
+        () -> assertContextEquals(List.of(ar, tppp), Q4, q4),
         () -> assertAnnotationEquals(Q1p, q4p),
         () -> assertContextEquals(brAndCr, P110, p110),
         () -> assertAnnotationEquals(P110p, p110p));

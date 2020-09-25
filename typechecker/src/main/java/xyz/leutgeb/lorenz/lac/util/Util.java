@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.lac;
+package xyz.leutgeb.lorenz.lac.util;
 
 import static guru.nidi.graphviz.model.Factory.node;
 import static java.util.stream.Collectors.toList;
@@ -9,22 +9,27 @@ import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoeffici
 import com.microsoft.z3.RatNum;
 import guru.nidi.graphviz.model.Node;
 import java.io.PrintStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Random;
+import java.util.Set;
+import java.util.Stack;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.text.similarity.JaroWinklerDistance;
-import org.apache.commons.text.similarity.SimilarityScore;
-import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 
 @Slf4j
 public class Util {
-  private static final SimilarityScore<Double> SIMILARITY = new JaroWinklerDistance();
   private static final Random RANDOM = new Random();
 
   public static String generateSubscript(int i) {
@@ -82,7 +87,7 @@ public class Util {
 
   public static List<String> similar(
       String key, Iterator<String> candidates, double threshold, int limit) {
-    ToDoubleFunction<String> similarity = x -> SIMILARITY.apply(key, x);
+    ToDoubleFunction<String> similarity = x -> JaroWinklerDistance.apply(key, x);
     Comparator<String> comparator = Comparator.comparingDouble(similarity).reversed();
     var similar = new PriorityQueue<>(comparator);
     while (candidates.hasNext()) {
@@ -158,7 +163,7 @@ public class Util {
     return new RuntimeException("bug: " + message);
   }
 
-  private static String randomHex(int length) {
+  public static String randomHex(int length) {
     StringBuilder sb = new StringBuilder();
     while (sb.length() < length) {
       sb.append(String.format("%08x", RANDOM.nextInt()));

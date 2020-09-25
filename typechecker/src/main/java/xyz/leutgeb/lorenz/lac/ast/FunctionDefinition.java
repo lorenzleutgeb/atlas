@@ -8,6 +8,7 @@ import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.toList;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.minimize;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import com.google.common.collect.Sets;
 import guru.nidi.graphviz.attribute.Records;
@@ -28,10 +29,9 @@ import java.util.stream.Stream;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jgrapht.graph.DirectedMultigraph;
-import xyz.leutgeb.lorenz.lac.IntIdGenerator;
-import xyz.leutgeb.lorenz.lac.Loader;
-import xyz.leutgeb.lorenz.lac.SizeEdge;
+import xyz.leutgeb.lorenz.lac.module.Loader;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
@@ -48,6 +48,8 @@ import xyz.leutgeb.lorenz.lac.unification.Generalizer;
 import xyz.leutgeb.lorenz.lac.unification.Substitution;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
+import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 
 @Data
 @Slf4j
@@ -59,6 +61,7 @@ public class FunctionDefinition {
   private FunctionSignature inferredSignature;
   private FunctionSignature annotatedSignature;
   private FunctionAnnotation annotation;
+  private Set<FunctionAnnotation> cfAnnotations;
   private org.jgrapht.Graph<Identifier, SizeEdge> sizeAnalysis = null;
 
   public FunctionDefinition(
@@ -96,7 +99,7 @@ public class FunctionDefinition {
           arguments.get(i), inferredSignature.getType().getFrom().getElements().get(i), null);
     }
 
-    // TODO: Maybe do this in stub?
+    // TODO(lorenz.leutgeb): Maybe do this in stub?
     if (annotatedSignature != null) {
       if (annotatedSignature.getType().getFrom().getElements().size() != arguments.size()) {
         throw new TypeError();
@@ -142,20 +145,32 @@ public class FunctionDefinition {
             annotation.from().substitute(solution), annotation.to().substitute(solution));
   }
 
-  private List<String> treeLikeArguments() {
+  public List<Identifier> treeLikeArguments() {
     if (inferredSignature == null) {
       throw new IllegalStateException();
     }
+    final var bodyFreeVariables = body.freeVariables();
+
+    final var bodyFreeVariablesOrdered = new ArrayList<Identifier>(bodyFreeVariables.size());
+
     var types = inferredSignature.getType().getFrom().getElements();
-    final var ids = new ArrayList<String>(types.size());
+
     for (int i = 0; i < arguments.size(); i++) {
       if (types.get(i) instanceof TreeType) {
-        ids.add(arguments.get(i));
+        for (var freeVar : bodyFreeVariables) {
+          if (freeVar.getName().equals(arguments.get(i))) {
+            bodyFreeVariablesOrdered.add(freeVar);
+            break;
+          }
+        }
       } else if (types.get(i) != BoolType.INSTANCE && !(types.get(i) instanceof TypeVariable)) {
         throw new RuntimeException("unknown type");
       }
     }
-    return ids;
+    if (bodyFreeVariablesOrdered.size() != bodyFreeVariables.size()) {
+      throw bug("hmm");
+    }
+    return bodyFreeVariablesOrdered;
   }
 
   public void analyzeSizes() {
@@ -168,7 +183,7 @@ public class FunctionDefinition {
 
   public void stubAnnotations(
       Map<String, FunctionAnnotation> functionAnnotations,
-      Map<String, FunctionAnnotation> costFreeFunctionAnnotations,
+      Map<String, Set<FunctionAnnotation>> costFreeFunctionAnnotations,
       AnnotationHeuristic heuristic) {
 
     analyzeSizes();
@@ -194,7 +209,6 @@ public class FunctionDefinition {
                 + predefined.from().size());
       }
       if (returnsTree ? predefined.to().size() != 1 : predefined.to().size() != 0) {
-
         throw new IllegalArgumentException(
             "the predefined annotation for the result of "
                 + getFullyQualifiedName()
@@ -211,8 +225,14 @@ public class FunctionDefinition {
             heuristic.generate("cfargs", annotation.from()),
             heuristic.generate("cfreturn", annotation.to()));
 
+    var zeroAnnotation =
+        new FunctionAnnotation(
+            Annotation.zero(annotation.from().size(), "cfargszero"),
+            Annotation.zero(annotation.to().size(), "cfreturnzero"));
+
     functionAnnotations.put(getFullyQualifiedName(), annotation);
-    costFreeFunctionAnnotations.put(getFullyQualifiedName(), costFreeAnnotation);
+    this.cfAnnotations = Set.of(costFreeAnnotation, zeroAnnotation);
+    costFreeFunctionAnnotations.put(getFullyQualifiedName(), cfAnnotations);
   }
 
   public Set<TypeVariable> runaway() {
