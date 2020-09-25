@@ -1,3 +1,8 @@
+nix:
+  enable: true
+  packages: []
+  # TODO: Make this work in pure mode (JAVA_HOME).
+  pure: false
 packages:
 - .
 resolver: ghc-8.8.1
