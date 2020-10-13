@@ -9,7 +9,7 @@ JDK_URL="https://download.java.net/java/GA/jdk14.0.2/205943a0976c4ed48cb16f1043c
 PROJECT=typechecker
 
 # Build the project and generate a "distribution" of it with Gradle.
-./gradlew distTar
+gradle distTar
 
 # Create folders needed below.
 mkdir -p $DIST/tacas/artifact/{z3,java,resources}

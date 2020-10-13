@@ -3,6 +3,7 @@ interpreter/generated-src/*.hs
 typechecker/*.svg
 typechecker/*.smt
 typechecker/*.hs
+typechecker/gradle.properties
 
 # Binaries
 *.jar

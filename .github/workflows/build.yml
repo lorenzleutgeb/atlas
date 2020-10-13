@@ -16,19 +16,13 @@ jobs:
           ${{ runner.os }}-gradle-
     - uses: actions/cache@preview
       with:
-        path: ~/.stack/programs
-        key: ${{ runner.os }}-stack-programs-${{ hashFiles('**/stack.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-stack-programs-
-    - uses: actions/cache@preview
-      with:
         path: interpreter/.stack-work
         key: ${{ runner.os }}-stack-work-${{ hashFiles('**/stack.yaml') }}
         restore-keys: |
           ${{ runner.os }}-stack-work-
     - uses: cachix/install-nix-action@v11
       with:
-        install_url: https://releases.nixos.org/nix/nix-2.3.7/install
+        install_url: https://github.com/numtide/nix-flakes-installer/releases/download/nix-3.0pre20201007_5257a25/install
         nix_path: nixpkgs=channel:nixos-20.09
         extra_nix_config: |
           experimental-features = nix-command flakes
@@ -36,13 +30,14 @@ jobs:
       with:
         name: lorenzleutgeb-public
         signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
-    - uses: actions/setup-java@v1
-      with:
-        java-version: 14
-    - run: stack upgrade
+    - run: nix flake check
+    - run: "eval \"$(nix print-dev-env)\""
+    - run: javac -version
+    - run: stack --version
+    - run: gradle -version
     - run: wget https://lorenz.leutgeb.xyz/lac/com.microsoft.z3.jar --directory-prefix typechecker/lib/
     - run: wget https://lorenz.leutgeb.xyz/lac/libz3java.so --directory-prefix typechecker/lib/
-    - run: ./gradlew build -x test
+    - run: gradle build -x test
       working-directory: typechecker
     - run: stack build
       working-directory: interpreter
