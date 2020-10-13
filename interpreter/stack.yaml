@@ -5,4 +5,4 @@ nix:
   pure: false
 packages:
 - .
-resolver: ghc-8.8.1
+resolver: ghc-8.8.4
