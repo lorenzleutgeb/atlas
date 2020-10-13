@@ -1,7 +1,7 @@
 {
   description = "lac";
 
-  inputs.nixpkgs = { url = "nixpkgs/nixos-unstable"; };
+  inputs.nixpkgs = { url = "nixpkgs/nixos-20.09"; };
 
   outputs = { self, nixpkgs }:
     let
