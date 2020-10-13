@@ -29,16 +29,16 @@ library:
   - FlexibleContexts
   - DeriveFunctor
 
-#executables:
-#  interpreter:
-#    main:                Main.hs
-#    source-dirs:         app
-#    ghc-options:
-#    - -threaded
-#    - -rtsopts
-#    - -with-rtsopts=-N
-#    dependencies:
-#    - interpreter
+executables:
+  interpreter:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - interpreter
 
 tests:
   interpreter-test:
