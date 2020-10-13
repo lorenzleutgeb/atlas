@@ -29,9 +29,13 @@ jobs:
     - uses: cachix/install-nix-action@v11
       with:
         install_url: https://releases.nixos.org/nix/nix-2.3.7/install
-        nix_path: nixpkgs=channel:nixos-unstable
+        nix_path: nixpkgs=channel:nixos-20.09
         extra_nix_config: |
           experimental-features = nix-command flakes
+    - uses: cachix/cachix-action@v6
+      with:
+        name: lorenzleutgeb-public
+        signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
     - uses: actions/setup-java@v1
       with:
         java-version: 14
