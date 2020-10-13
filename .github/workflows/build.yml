@@ -4,7 +4,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
     - uses: actions/cache@preview
       with:
         path: ~/.gradle/caches
@@ -27,8 +29,15 @@ jobs:
       with:
         java-version: 14
     - run: stack upgrade
-    - run: wget https://lorenz.leutgeb.xyz/lac/com.microsoft.z3.jar --directory-prefix typechecker/libs/
+    - run: wget https://lorenz.leutgeb.xyz/lac/com.microsoft.z3.jar --directory-prefix typechecker/lib/
+    - run: wget https://lorenz.leutgeb.xyz/lac/libz3java.so --directory-prefix typechecker/lib/
     - run: ./gradlew build -x test
       working-directory: typechecker
     - run: stack build
       working-directory: interpreter
+    - run: ./tacas.sh
+      working-directory: typechecker
+    - uses: actions/upload-artifact@v2
+      with:
+        name: tacas
+        path: typechecker/build/distributions/tacas.zip

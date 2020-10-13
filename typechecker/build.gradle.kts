@@ -7,6 +7,7 @@ plugins {
     antlr
 
     id("com.diffplug.spotless") version "5.2.0"
+    id("com.github.jk1.dependency-license-report") version "1.13"
 }
 
 repositories {
@@ -62,7 +63,7 @@ dependencies {
 
     // The Z3 Theorem Prover
     // See https://github.com/Z3Prover/z3#java
-    implementation(files("libs/com.microsoft.z3.jar"))
+    implementation(files("lib/com.microsoft.z3.jar"))
 
     // Graph output
     implementation("guru.nidi:graphviz-java:0.15.0")

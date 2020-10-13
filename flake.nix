@@ -12,13 +12,14 @@
         with pkgs;
         mkShell {
           buildInputs = [
+            dot2tex
             gradle
             jdk14
             stack
             z3
           ];
           shellHook = ''
-            export LD_LIBRARY_PATH=$PWD/typechecker/libs:$LD_LIBRARY_PATH
+            export LD_LIBRARY_PATH=$PWD/typechecker/lib:$LD_LIBRARY_PATH
           '';
       };
   };
