@@ -197,7 +197,7 @@ public class S62Eager extends S62 {
     }
 
     assertTrue(solution.isPresent());
-    assertContextEqualsByPrefixes(List.of("cr", "br", "∂"), Q4, q4.substitute(solution.get()));
+    assertContextEqualsByPrefixes(List.of("cr", "br", "z"), Q4, q4.substitute(solution.get()));
   }
 
   @Test
@@ -329,7 +329,7 @@ public class S62Eager extends S62 {
         assertions.add(
             () ->
                 assertContextEqualsByPrefixes(
-                    List.of("cr", "∂", "br"), P2, o.getContext().substitute(solution.get())));
+                    List.of("cr", "z", "br"), P2, o.getContext().substitute(solution.get())));
       } else if (o.getExpression().equals(Tp)) {
         assertions.add(
             () ->

@@ -79,7 +79,7 @@ public class CallExpression extends Expression {
 
   public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
     FunctionSignature signature =
-        context.getSignature(functionName.getName()).wiggle(new Substitution(), context);
+        context.getSignature(getFullyQualifiedName()).wiggle(new Substitution(), context);
 
     final var fTy = signature.getType();
 
@@ -92,9 +92,9 @@ public class CallExpression extends Expression {
       xTy.add(parameter.infer(context));
     }
 
-    functionName.infer(context);
+    // functionName.infer(context);
 
-    if (!functionName.getName().equals(context.getFunctionInScope())
+    if (!getFullyQualifiedName().equals(context.getFunctionInScope())
         && !context.getSignatures().isEmpty()) {
       FunctionSignature functionSignature =
           context.getSignatures().get(context.getFunctionInScope());
@@ -162,12 +162,18 @@ public class CallExpression extends Expression {
   }
 
   @Override
-  public void printHaskellTo(PrintStream out, int indentation) {
-    functionName.printHaskellTo(out, indentation);
+  public void printHaskellTo(PrintStream out, int indentation, String currentFunction) {
+    if (getFullyQualifiedName().equals(currentFunction)) {
+      out.print(functionName);
+    } else if (currentFunction.startsWith(moduleName)) {
+      out.print(functionName);
+    } else {
+      out.print(moduleName + "." + functionName);
+    }
     out.print(" ");
 
     for (int i = 0; i < parameters.size(); i++) {
-      parameters.get(i).printHaskellTo(out, indentation);
+      parameters.get(i).printHaskellTo(out, indentation, currentFunction);
       if (i < parameters.size() - 1) {
         out.print(" ");
       }
@@ -228,5 +234,9 @@ public class CallExpression extends Expression {
   @Override
   public boolean isTerminal() {
     return true;
+  }
+
+  public String getFullyQualifiedName() {
+    return moduleName + "." + functionName.getName();
   }
 }

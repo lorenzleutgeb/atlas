@@ -144,20 +144,20 @@ public class MatchExpression extends Expression {
   }
 
   @Override
-  public void printHaskellTo(PrintStream out, int indentation) {
+  public void printHaskellTo(PrintStream out, int indentation, String currentFunction) {
     out.print("case ");
     scrut.printTo(out, indentation);
     out.println(" of");
 
     indent(out, indentation);
-    out.print("| Leaf -> ");
-    leaf.printTo(out, indentation + 1);
+    out.print("  Leaf -> ");
+    leaf.printHaskellTo(out, indentation + 1, currentFunction);
     out.println();
     indent(out, indentation);
-    out.print("| ");
-    nodePattern.printHaskellTo(out, indentation + 1);
+    out.print("  ");
+    nodePattern.printHaskellTo(out, indentation + 1, currentFunction);
     out.print(" -> ");
-    node.printHaskellTo(out, indentation + 1);
+    node.printHaskellTo(out, indentation + 1, currentFunction);
   }
 
   @Override

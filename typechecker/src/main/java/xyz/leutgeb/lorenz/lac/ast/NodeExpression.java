@@ -102,15 +102,14 @@ public class NodeExpression extends Expression {
   }
 
   @Override
-  public void printHaskellTo(PrintStream out, int indentation) {
-    out.print("(Node ");
+  public void printHaskellTo(PrintStream out, int indentation, String currentFunction) {
+    out.print("Node ");
     for (int i = 0; i < elements.size(); i++) {
-      elements.get(i).printHaskellTo(out, indentation);
+      elements.get(i).printHaskellTo(out, indentation, currentFunction);
       if (i < elements.size() - 1) {
         out.print(" ");
       }
     }
-    out.print(")");
   }
 
   @Override

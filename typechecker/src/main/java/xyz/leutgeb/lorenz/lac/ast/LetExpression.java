@@ -102,18 +102,19 @@ public class LetExpression extends Expression {
   }
 
   @Override
-  public void printHaskellTo(PrintStream out, int indentation) {
+  public void printHaskellTo(PrintStream out, int indentation, String currentFunction) {
     out.print("let ");
-    declared.printHaskellTo(out, indentation);
-    out.print(" = ");
-    value.printHaskellTo(out, indentation + 1);
+    declared.printHaskellTo(out, indentation, currentFunction);
+    out.print(" = (");
+    // indent(out, indentation + 1);
+    value.printHaskellTo(out, indentation + 1, currentFunction);
+    out.print(")");
+    // indent(out, indentation + 1);
+    out.print(" in (");
+    // indent(out, indentation + 1);
+    body.printHaskellTo(out, indentation + 1, currentFunction);
     // out.println();
     // indent(out, indentation);
-    out.println(" in (");
-    indent(out, indentation);
-    body.printHaskellTo(out, indentation + 1);
-    out.println();
-    indent(out, indentation);
     out.print(")");
   }
 

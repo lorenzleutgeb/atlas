@@ -12,7 +12,7 @@ import qualified SkewHeap
 import qualified Scratch
 
 show_inorder :: Show a => Tree a -> String
-show_inorder Nil = " _ "
+show_inorder Leaf = " _ "
 show_inorder (Node l x r) = (show_inorder l) ++ (show x) ++ (show_inorder r)
 
 check :: Eq a => a -> a -> String
@@ -48,12 +48,12 @@ main = mapM_ putStrLn [
   show (reverse to5),
   check ((reverse to5) ++ to5)
   (read_left (LeftList.rev_append to5l to5l)),
-  check [1, 2, 3] (read_left (LeftList.preorder example_t1 Nil)),
+  check [1, 2, 3] (read_left (LeftList.preorder example_t1 Leaf)),
   check [1, 2, 3, 4, 5] (read_left (LeftList.preorder example_t1 example_t2)),
-  check [1, 2, 4, 5, 3] (read_left (LeftList.preorder example_t3 Nil)),
-  check [4, 5, 2, 3, 1] (read_left (LeftList.postorder example_t3 Nil)),
-  check [4, 2, 5, 1, 3] (read_left (LeftList.inorder example_t3 Nil)),
-  check Nil (LeftList.tl (LeftList.cons 1 Nil)),
+  check [1, 2, 4, 5, 3] (read_left (LeftList.preorder example_t3 Leaf)),
+  check [4, 5, 2, 3, 1] (read_left (LeftList.postorder example_t3 Leaf)),
+  check [4, 2, 5, 1, 3] (read_left (LeftList.inorder example_t3 Leaf)),
+  check Leaf (LeftList.tl (LeftList.cons 1 Leaf)),
   show (rank example_t3),
   show (rank to5l),
   show (rank to5r)]

@@ -41,13 +41,13 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   @Override
   public Expression visitCallExpression(SplayParser.CallExpressionContext ctx) {
     var fqn = ctx.name.getText();
-    if (!fqn.contains(".")) {
-      fqn = getModuleName() + "." + fqn;
-    }
+    final int lastDot = fqn.lastIndexOf(".");
+    final var moduleName = lastDot > -1 ? fqn.substring(0, lastDot) : getModuleName();
+    final var name = lastDot > -1 ? fqn.substring(lastDot + 1) : fqn;
     return new CallExpression(
         getSource(ctx),
-        getModuleName(),
-        Identifier.get(fqn, getSource(ctx)),
+        moduleName,
+        Identifier.get(name, getSource(ctx)),
         ctx.params.stream().map(this::visit).collect(toList()));
   }
 

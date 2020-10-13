@@ -2,6 +2,7 @@ interpreter/generated-src/*.hs
 
 typechecker/*.svg
 typechecker/*.smt
+typechecker/*.hs
 
 # Binaries
 *.jar

@@ -39,7 +39,7 @@ public class Identifier extends Expression {
   }
 
   public static Identifier getSugar(Source source, IntIdGenerator idGenerator) {
-    return get("∂" + Util.generateSubscript(idGenerator.next()), source);
+    return get("z" + /*Util.generateSubscript*/ (idGenerator.next()), source);
   }
 
   public static Identifier get(String name, Source source) {
@@ -136,9 +136,9 @@ public class Identifier extends Expression {
   }
 
   @Override
-  public void printHaskellTo(PrintStream out, int indentation) {
+  public void printHaskellTo(PrintStream out, int indentation, String currentFunction) {
     if (name.equals((LEAF.name))) {
-      out.print("Nil");
+      out.print("Leaf");
     } else if (BOOLEAN_NAMES.contains(name)) {
       out.print(Util.capitalizeFirstLetter(name));
     } else {

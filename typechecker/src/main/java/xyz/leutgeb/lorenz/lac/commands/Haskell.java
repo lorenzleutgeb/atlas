@@ -56,6 +56,7 @@ public class Haskell implements Runnable {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+    program.normalize();
     try {
       program.infer();
     } catch (UnificationError | TypeError unificationError) {
@@ -79,7 +80,7 @@ public class Haskell implements Runnable {
         stream.println("-- This file was generated automatically.");
         stream.println();
         stream.println("module " + lastModulePart + " where");
-        stream.println("import InterpreterPrelude (Tree(Node, Nil))");
+        stream.println("import InterpreterPrelude (Tree(Node, Leaf))");
         stream.println();
         for (String imp : imports.get(e)) {
           stream.println("import qualified " + imp);

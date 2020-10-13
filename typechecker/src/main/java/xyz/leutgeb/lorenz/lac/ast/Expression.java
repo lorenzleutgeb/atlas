@@ -153,7 +153,7 @@ public abstract class Expression extends Syntax {
     throw notImplemented("renaming of a concrete expression type");
   }
 
-  public void printHaskellTo(PrintStream out, int indentation) {
+  public void printHaskellTo(PrintStream out, int indentation, String currentFunction) {
     indent(out, indentation);
     out.println(toString());
   }

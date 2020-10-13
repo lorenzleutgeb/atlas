@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jgrapht.nio.AttributeType;
@@ -524,7 +525,15 @@ public class Tests {
   }
 
   @Test
-  void fiddle() throws Exception {}
+  void fiddle() throws Exception {
+    final var loader = loader();
+    loader.autoload();
+    Program program = loader.loadMatching(Pattern.compile(".*"));
+    program.normalize();
+    program.infer();
+    // System.out.println(program.getFunctionDefinitions().keySet());
+    program.getFunctionDefinitions().values().forEach(x -> x.printHaskellTo(System.out));
+  }
 
   private enum ExpectedResult {
     SAT,

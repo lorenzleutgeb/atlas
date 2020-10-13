@@ -52,7 +52,7 @@ public class App implements Rule {
     final var expression = (CallExpression) obligation.getExpression();
 
     // Look up global annotation for this function.
-    final var annotation = globals.getSignature(expression.getFunctionName().getName());
+    final var annotation = globals.getSignature(expression.getFullyQualifiedName());
 
     return Rule.ApplicationResult.onlyConstraints(
         obligation.getCost() == 1

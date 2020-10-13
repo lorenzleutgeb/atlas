@@ -78,8 +78,13 @@ application {
     mainClassName = "$rootPackage.Main"
 }
 
+tasks.withType<JavaExec> {
+    // TODO(lorenz.leutgeb): Remove --enable-preview as soon as used features are stable.
+    jvmArgs("--enable-preview")
+}
+
 tasks.withType<JavaCompile> {
-    // TODO(lorenz.leutgeb): Remove --enable-preview as soon as Records are stable.
+    // TODO(lorenz.leutgeb): Remove --enable-preview as soon as used features are stable.
     options.compilerArgs.addAll(arrayOf("-Xlint:unchecked", "-Xlint:deprecation", "--enable-preview"))
 }
 
@@ -101,7 +106,7 @@ tasks.test {
     testLogging {
         events("passed", "skipped", "failed")
     }
-    // TODO(lorenz.leutgeb): Remove --enable-preview as soon as Records are stable.
+    // TODO(lorenz.leutgeb): Remove --enable-preview as soon as used features are stable.
     jvmArgs("--enable-preview")
 }
 

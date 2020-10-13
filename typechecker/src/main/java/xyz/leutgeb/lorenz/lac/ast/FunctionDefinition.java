@@ -305,7 +305,7 @@ public class FunctionDefinition {
     out.print(" ");
     out.print(String.join(" ", arguments));
     out.print(" = ");
-    body.printHaskellTo(out, 1);
+    body.printHaskellTo(out, 1, getFullyQualifiedName());
     out.println();
     out.println();
   }

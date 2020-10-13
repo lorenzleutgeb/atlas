@@ -98,17 +98,17 @@ public class IfThenElseExpression extends Expression {
   }
 
   @Override
-  public void printHaskellTo(PrintStream out, int indentation) {
+  public void printHaskellTo(PrintStream out, int indentation, String currentFunction) {
     out.print("if ");
-    condition.printHaskellTo(out, indentation);
+    condition.printHaskellTo(out, indentation, currentFunction);
     out.println();
     indent(out, indentation);
     out.print("then ");
-    truthy.printHaskellTo(out, indentation + 1);
+    truthy.printHaskellTo(out, indentation + 1, currentFunction);
     out.println();
     indent(out, indentation);
     out.print("else ");
-    falsy.printHaskellTo(out, indentation + 1);
+    falsy.printHaskellTo(out, indentation + 1, currentFunction);
   }
 
   @Override

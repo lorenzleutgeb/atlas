@@ -20,6 +20,7 @@
           ];
           shellHook = ''
             export LD_LIBRARY_PATH=$PWD/typechecker/lib:$LD_LIBRARY_PATH
+            export JAVA_OPTS="--enable-preview"
           '';
       };
   };

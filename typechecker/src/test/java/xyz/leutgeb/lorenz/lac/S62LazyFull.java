@@ -198,7 +198,7 @@ public class S62LazyFull extends S62 {
     assertAll(
         () ->
             assertContextEqualsByPrefixes(
-                List.of("cr", "br", "∂"), Q4, q4.substitute(solution.get())),
+                List.of("cr", "br", "z"), Q4, q4.substitute(solution.get())),
         () ->
             assertContextEqualsByPrefixes(
                 List.of(""), P1110, e4result.get(2).getContext().substitute(solution.get())),
@@ -265,7 +265,7 @@ public class S62LazyFull extends S62 {
                     return (Executable)
                         () ->
                             assertContextEqualsByPrefixes(
-                                List.of("cr", "∂", "br"),
+                                List.of("cr", "z", "br"),
                                 P2,
                                 o.getContext().substitute(solution.get()));
                   }
@@ -273,7 +273,7 @@ public class S62LazyFull extends S62 {
                     return (Executable)
                         () ->
                             assertContextEqualsByPrefixes(
-                                List.of("cr", "br", "∂"),
+                                List.of("cr", "br", "z"),
                                 P3,
                                 o.getContext().substitute(solution.get()));
                   }

@@ -36,6 +36,10 @@ public enum ComparisonOperator {
     out.print(tokens.get(0));
   }
 
+  public void printHaskellTo(PrintStream out) {
+    out.print(tokens.get(1));
+  }
+
   @Override
   public String toString() {
     return tokens.get(0);

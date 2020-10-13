@@ -102,12 +102,12 @@ public class BooleanExpression extends Expression {
   }
 
   @Override
-  public void printHaskellTo(PrintStream out, int indentation) {
-    left.printHaskellTo(out, indentation);
+  public void printHaskellTo(PrintStream out, int indentation, String currentFunction) {
+    left.printHaskellTo(out, indentation, currentFunction);
     out.print(" ");
-    operator.printTo(out);
+    operator.printHaskellTo(out);
     out.print(" ");
-    right.printHaskellTo(out, indentation);
+    right.printHaskellTo(out, indentation, currentFunction);
   }
 
   @Override

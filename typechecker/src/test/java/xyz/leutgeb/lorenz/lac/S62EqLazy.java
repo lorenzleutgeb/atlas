@@ -200,7 +200,7 @@ public class S62EqLazy extends S62 {
 
     List<Constraint> fixQ4 =
         eq(
-            e4result.get(1).getContext().reorderByName(List.of("cr", "br", "∂₅")).getAnnotation(),
+            e4result.get(1).getContext().reorderByName(List.of("cr", "br", "z₅")).getAnnotation(),
             Q4,
             "fix Q4");
 
@@ -251,7 +251,7 @@ public class S62EqLazy extends S62 {
                 e4obligation.getContext().substitute(solution.get())),
         () ->
             assertContextEqualsByPrefixes(
-                List.of("cr", "br", "∂"),
+                List.of("cr", "br", "z"),
                 Q4,
                 e4result.get(1).getContext().substitute(solution.get())),
         () ->
@@ -438,7 +438,7 @@ public class S62EqLazy extends S62 {
                     return (Executable)
                         () ->
                             assertContextEqualsByPrefixes(
-                                List.of("cr", "br", "∂"),
+                                List.of("cr", "br", "z"),
                                 P3,
                                 o.getContext().substitute(solution.get()));
                   }
@@ -521,7 +521,7 @@ public class S62EqLazy extends S62 {
                     return (Executable)
                         () ->
                             assertContextEqualsByPrefixes(
-                                List.of("cr", "br", "∂"),
+                                List.of("cr", "br", "z"),
                                 P3,
                                 o.getContext().substitute(solution.get()));
                   }
@@ -664,7 +664,7 @@ public class S62EqLazy extends S62 {
     final var e4result = prover.apply(e4obligation, LetTreeCfSimple.INSTANCE);
     assertEquals(5, e4result.size());
 
-    final var q4 = e4result.get(1).getContext().reorderByName("cr", "∂₅", "br");
+    final var q4 = e4result.get(1).getContext().reorderByName("cr", "z₅", "br");
 
     prover.prove(e4result.get(0));
     prover.prove(e4result.subList(2, e4result.size()));
@@ -714,7 +714,7 @@ public class S62EqLazy extends S62 {
     Set<Constraint> fixQ4 =
         Set.copyOf(
             eq(
-                e4result.get(1).getContext().reorderByName("cr", "br", "∂₅").getAnnotation(),
+                e4result.get(1).getContext().reorderByName("cr", "br", "z₅").getAnnotation(),
                 Q4,
                 "fix Q4"));
 
@@ -822,7 +822,7 @@ public class S62EqLazy extends S62 {
                         e4obligation.getContext().substitute(solution.get())),
                 () ->
                     assertContextEqualsByPrefixes(
-                        List.of("cr", "br", "∂"),
+                        List.of("cr", "br", "z"),
                         Q4,
                         e4result.get(1).getContext().substitute(solution.get())),
                 () ->
@@ -1028,7 +1028,7 @@ public class S62EqLazy extends S62 {
     Set<Constraint> fixQ4 =
         Set.copyOf(
             eq(
-                e4result.get(1).getContext().reorderByName("cr", "br", "∂₅").getAnnotation(),
+                e4result.get(1).getContext().reorderByName("cr", "br", "z₅").getAnnotation(),
                 Q4,
                 "fix Q4"));
 
@@ -1113,7 +1113,7 @@ public class S62EqLazy extends S62 {
                         e4obligation.getContext().substitute(solution.get())),
                 () ->
                     assertContextEqualsByPrefixes(
-                        List.of("cr", "br", "∂"),
+                        List.of("cr", "br", "z"),
                         Q4,
                         e4result.get(1).getContext().substitute(solution.get())),
                 () ->

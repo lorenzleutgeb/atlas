@@ -127,7 +127,7 @@ public class S62Lazy extends S62 {
     final Prover prover = new Prover("splay-above", globals);
     // prover.setWeaken(true);
 
-    final var q4v = AnnotatingContext.reorderByName(E4.freeVariables(), List.of("cr", "∂₆", "br"));
+    final var q4v = AnnotatingContext.reorderByName(E4.freeVariables(), List.of("cr", "z₆", "br"));
 
     Obligation rootObligation = new Obligation(q4v, Q3, E4, Qp);
     prover.setTreeCf(true);
@@ -140,13 +140,13 @@ public class S62Lazy extends S62 {
     /*
     We do need cf at
     via sec lnf
-    (let:tree:cf): br, cr, ∂₆ | let∂₆ΔR #12  ⊦₁  let ∂₅ ≔ SplayTree.splay a ∂₆ in □ | Q'
+    (let:tree:cf): br, cr, z₆ | letz₆ΔR #12  ⊦₁  let z₅ ≔ SplayTree.splay a z₆ in □ | Q'
     via sec splay
 
     We do not need cf at
-    br, cr, al, ar | match ∂₅ extend [al, ar] #48  ⊦₁  let ∂₈ ≔ (br, c, cr) in □ | Q'
+    br, cr, al, ar | match z₅ extend [al, ar] #48  ⊦₁  let z₈ ≔ (br, c, cr) in □ | Q'
 
-    (let:tree:cf): ar, al, ∂₈ | letcf ∂₈ ΔR #50  ⊦₁  let ∂₇ ≔ (ar, b, ∂₈) in (al, a', ∂₇) | Q'
+    (let:tree:cf): ar, al, z₈ | letcf z₈ ΔR #50  ⊦₁  let z₇ ≔ (ar, b, z₈) in (al, a', z₇) | Q'
 
 
     In s61 we apply tree:cf to
@@ -171,7 +171,7 @@ public class S62Lazy extends S62 {
         },
         () -> {
           assertContextEqualsByPrefixes(
-              List.of("cr", "∂" /* "bl" */, "br"),
+              List.of("cr", "z" /* "bl" */, "br"),
               Q3,
               StreamSupport.stream(prover.getProof().spliterator(), false)
                   .filter(
@@ -187,12 +187,12 @@ public class S62Lazy extends S62 {
         },
         () ->
             assertContextEqualsByPrefixes(
-                List.of("cr", "∂" /* "bl" */, "br"),
+                List.of("cr", "z" /* "bl" */, "br"),
                 Q3,
                 e4obligation.getContext().substitute(solution.get())),
         () ->
             assertContextEqualsByPrefixes(
-                List.of("cr", "br", "∂" /* "x" */), Q4, q4.substitute(solution.get())),
+                List.of("cr", "br", "z" /* "x" */), Q4, q4.substitute(solution.get())),
         () ->
             assertContextEqualsByPrefixes(
                 List.of(""), P1110, e4result.get(2).getContext().substitute(solution.get())),
@@ -255,13 +255,13 @@ public class S62Lazy extends S62 {
     /*
     We do need cf at
     via sec lnf
-    (let:tree:cf): br, cr, ∂₆ | let∂₆ΔR #12  ⊦₁  let ∂₅ ≔ SplayTree.splay a ∂₆ in □ | Q'
+    (let:tree:cf): br, cr, z₆ | letz₆ΔR #12  ⊦₁  let z₅ ≔ SplayTree.splay a z₆ in □ | Q'
     via sec splay
 
     We do not need cf at
-    br, cr, al, ar | match ∂₅ extend [al, ar] #48  ⊦₁  let ∂₈ ≔ (br, c, cr) in □ | Q'
+    br, cr, al, ar | match z₅ extend [al, ar] #48  ⊦₁  let z₈ ≔ (br, c, cr) in □ | Q'
 
-    (let:tree:cf): ar, al, ∂₈ | letcf ∂₈ ΔR #50  ⊦₁  let ∂₇ ≔ (ar, b, ∂₈) in (al, a', ∂₇) | Q'
+    (let:tree:cf): ar, al, z₈ | letcf z₈ ΔR #50  ⊦₁  let z₇ ≔ (ar, b, z₈) in (al, a', z₇) | Q'
 
 
     In s61 we apply tree:cf to
@@ -310,7 +310,7 @@ public class S62Lazy extends S62 {
         },
         () -> {
           assertContextEqualsByPrefixes(
-              List.of("cr", "∂" /* "bl" */, "br"),
+              List.of("cr", "z" /* "bl" */, "br"),
               Q3,
               StreamSupport.stream(prover.getProof().spliterator(), false)
                   .filter(
@@ -326,12 +326,12 @@ public class S62Lazy extends S62 {
         },
         () ->
             assertContextEqualsByPrefixes(
-                List.of("cr", "∂" /* "bl" */, "br"),
+                List.of("cr", "z" /* "bl" */, "br"),
                 Q3,
                 e4obligation.getContext().substitute(solution.get())),
         () ->
             assertContextEqualsByPrefixes(
-                List.of("cr", "br", "∂" /* "x" */), Q4, q4.substitute(solution.get())),
+                List.of("cr", "br", "z" /* "x" */), Q4, q4.substitute(solution.get())),
         () ->
             assertContextEqualsByPrefixes(
                 List.of(""), P1110, e4result.get(2).getContext().substitute(solution.get())),
@@ -454,7 +454,7 @@ public class S62Lazy extends S62 {
                     return (Executable)
                         () ->
                             assertContextEqualsByPrefixes(
-                                List.of("cr", "∂", "br"),
+                                List.of("cr", "z", "br"),
                                 P2,
                                 o.getContext().substitute(solution.get()));
                   }
@@ -462,7 +462,7 @@ public class S62Lazy extends S62 {
                     return (Executable)
                         () ->
                             assertContextEqualsByPrefixes(
-                                List.of("cr", "br", "∂"),
+                                List.of("cr", "br", "z"),
                                 P3,
                                 o.getContext().substitute(solution.get()));
                   }
@@ -498,7 +498,7 @@ public class S62Lazy extends S62 {
     final Prover prover = new Prover("splay-above", globals);
     // prover.setWeaken(true);
 
-    final var q4v = AnnotatingContext.reorderByName(E4.freeVariables(), List.of("cr", "∂₆", "br"));
+    final var q4v = AnnotatingContext.reorderByName(E4.freeVariables(), List.of("cr", "z₆", "br"));
 
     Obligation rootObligation = new Obligation(q4v, P2, E4, Pp);
     prover.prove(rootObligation);
@@ -538,7 +538,7 @@ public class S62Lazy extends S62 {
                     return (Executable)
                         () ->
                             assertContextEqualsByPrefixes(
-                                List.of("cr", "∂", "br"),
+                                List.of("cr", "z", "br"),
                                 P2,
                                 o.getContext().substitute(solution.get()));
                   }
@@ -546,7 +546,7 @@ public class S62Lazy extends S62 {
                     return (Executable)
                         () ->
                             assertContextEqualsByPrefixes(
-                                List.of("cr", "br", "∂"),
+                                List.of("cr", "br", "z"),
                                 P3,
                                 o.getContext().substitute(solution.get()));
                   }
