@@ -9,11 +9,12 @@
           Q3@(ite (* a == b *)
             (let:tree:cf node (w node))
             (ite (* a < b *)
-              (ite (* bl == leaf, zig zig *)
+              ? (* zig zig *)
+              (ite (* br == leaf, zig zag *)
                 (let:tree:cf leaf (let:tree:cf node (w node)))
                 (w
                   (let:tree:cf
-                    (w app) (* splay_eq a bl *)
+                    (w app) (* splay_eq a br *)
                     Q4@(match
                       (w leaf)
                       Q5@(let:tree:cf
@@ -27,7 +28,6 @@
                   )
                 )
               )
-              ? (* zig zag *)
             )
           )
         )

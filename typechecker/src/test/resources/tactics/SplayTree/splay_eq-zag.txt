@@ -3,52 +3,7 @@
   Q1@(ite (* a == c *)
     (w node)
     (ite (* a < c *)
-      (match (* cl, zig *)
-        (let:tree:cf leaf (w node))
-        Q2zig@(w
-          Q3zig@(ite (* a == b *)
-            (let:tree:cf node (w node))
-            (ite (* a < b *)
-              (ite (* bl == leaf, zig zig *)
-                (let:tree:cf leaf (let:tree:cf node (w node)))
-                (w
-                  (let:tree:cf
-                    (w app) (* splay_eq a bl *)
-                    Q4zigzig@(match
-                      (w leaf)
-                      Q5zigzig@(let:tree:cf
-                        node
-                        (let:tree:cf
-                          node
-                          (w node)
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-              (ite (* br == leaf, zig zag *)
-                (let:tree:cf leaf (let:tree:cf node (w node)))
-                (w
-                  (let:tree:cf
-                    (w app) (* splay_eq a br *)
-                    Q4zigzag@(match
-                      (w leaf)
-                      Q5zigzag@(let:tree:cf
-                        node
-                        (let:tree:cf
-                          node
-                          (w node)
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
-        )
-      )
+      ? (* zig *)
       (match (* cr, zag *)
         (let:tree:cf leaf (w node))
         Q2zag@(w

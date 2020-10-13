@@ -1,0 +1,136 @@
+(match (* t *)
+  _{w}
+  Q1@(ite (* a == c *)
+    _{w}
+    (ite (* a < c *)
+      (match (* cl *)
+        _{w}
+        Q2@(w
+          Q3@(ite (* a == b *)
+            _{w}
+            (ite (* a < b *)
+              ? (* ite (* bl == leaf *)
+                _
+                (w
+                  (let:tree:cf
+                    _{w} (* splay_eq a bl *)
+                    Q4@(match
+                      _ (* leaf *)
+                      (w
+                        Q5@(let:tree:cf
+                          _
+                          (w
+                            (let:tree:cf
+                              _
+                              _{w}
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              *)
+              (ite (* br == leaf *)
+                (w
+                  (let:tree:cf
+                    _
+                    _{w}
+                  )
+                )
+                (w
+                  (let:tree:cf
+                    _ (* splay_eq a br *)
+                    (match
+                      _ (* leaf *)
+                      (w
+                        (let:tree:cf
+                          _
+                          (w
+                            (let:tree:cf
+                              _
+                              _{w}
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+      ? (* match (* cr *)
+        _{w}
+        (ite (* a == b *)
+          (w
+            (let:tree:cf
+              _
+              _{w}
+            )
+          )
+          (ite (* a < b *)
+            (ite (* bl == leaf *)
+              (w
+                (let:tree:cf
+                  _{w}
+                  _{w}
+                )
+              )
+              (w
+                (let:tree:cf
+                  _ (* splay_eq a bl *)
+                  (w
+                    (match
+                      _{w} (* leaf *)
+                      (w
+                        (let:tree:cf
+                          _{w}
+                          (w
+                            (let:tree:cf
+                              _{w}
+                              _{w}
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+            (ite (* br == leaf *)
+              (w
+                (let:tree:cf
+                  _{w}
+                  _{w}
+                )
+              )
+              (w
+                (let:tree:cf
+                  _{w}
+                  (match
+                    (w leaf) (* leaf *)
+                    (w
+                      (let:tree:cf
+                         _{w}
+                        (w
+                          (let:tree:cf
+                            _{w}
+                            _{w}
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      *)
+    )
+  )
+)

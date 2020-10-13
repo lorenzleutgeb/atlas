@@ -14,9 +14,9 @@
                 (w
                   (let:tree:cf
                     (w app) (* splay_eq a bl *)
-                    Q4@(match
+                    Q4zig@(match
                       (w leaf)
-                      Q5@(let:tree:cf
+                      Q5zig@(let:tree:cf
                         node
                         (let:tree:cf
                           node
@@ -27,7 +27,24 @@
                   )
                 )
               )
-              ? (* zig zag *)
+              (ite (* br == leaf, zig zag *)
+                (let:tree:cf leaf (let:tree:cf node (w node)))
+                (w
+                  (let:tree:cf
+                    (w app) (* splay_eq a br *)
+                    Q4zag@(match
+                      (w leaf)
+                      Q5zag@(let:tree:cf
+                        node
+                        (let:tree:cf
+                          node
+                          (w node)
+                        )
+                      )
+                    )
+                  )
+                )
+              )
             )
           )
         )

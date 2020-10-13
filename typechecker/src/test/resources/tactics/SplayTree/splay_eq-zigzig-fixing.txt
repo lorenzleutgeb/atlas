@@ -1,0 +1,59 @@
+Q@(!{[0 ↦ 1, (1 0) ↦ 3] -> [0 ↦ 1]}
+(match (* t *)
+  ?
+  Q1@(!{[0 ↦ 1, 1 ↦ 1, (1 1 0) ↦ 3, (1 0 0) ↦ 1, (0 1 0) ↦ 1] -> [0 ↦ 1]}
+  (ite (* a == c *)
+    ?
+    (ite (* a < c *)
+      (match (* cl, zig *)
+        ?
+        (* When fixing Q2 here, be careful about the ordering of identifiers in the context.
+         * In the paper we used
+         *
+         *     cr bl br
+         *
+         * but the implementation will (for simplicity always) use lexicographical ordering, i.e.
+         *
+         *     bl br cr
+         *
+         *)
+        Q2@(!{[0 ↦ 1, 1 ↦ 1, 2 ↦ 1, (0 0 1 0) ↦ 1, (0 1 0 0) ↦ 1, (1 0 0 0) ↦ 1, (1 1 0 0) ↦ 1, (1 1 1 0) ↦ 3] -> [0 ↦ 1]}
+          (w
+            (* Again, the same care about identifier ordering. *)
+            Q3@(!{[0 ↦ 1, 1 ↦ 1, 2 ↦ 1, (0 1 0 0) ↦ 1 , (1 0 0 0) ↦ 3, (0 0 1 0) ↦ 1 , (0 1 1 0) ↦ 1 , (1 1 1 0) ↦ 1, (0 0 0 2) ↦ 1] -> [0 ↦ 1]}
+              (ite (* a == b *)
+                ?
+                (ite (* a < b *)
+                  (ite (* bl == leaf, zig zig *)
+                    ?
+                    (let:tree:cf
+                      (w app) (* splay_eq a bl *)
+                      (* In the paper we have cr, br, x while in the implementation we have br, cr, x *)
+                      Q4@(!{[0 ↦ 1, 1 ↦ 1, 2 ↦ 1, (1 0 0 0) ↦ 1, (0 1 0 0) ↦ 1, (1 1 0 0) ↦ 1, (1 1 1 0) ↦ 1] -> [0 ↦ 1]}
+                        ?
+                        (*match
+                          (w leaf) (* leaf *)
+                          Q5@(let:tree:cf
+                            node
+                            (w
+                              (let:tree:cf
+                                node
+                                (w node)
+                              )
+                            )
+                          )
+                        *)
+                      )
+                    )
+                  )
+                  ? (* zig zag *)
+                )
+              )
+            )
+          )
+        )
+      )
+      ? (* zag *)
+    )
+  ))
+))
