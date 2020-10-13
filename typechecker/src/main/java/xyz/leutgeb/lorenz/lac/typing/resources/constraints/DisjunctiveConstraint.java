@@ -10,6 +10,7 @@ import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -25,11 +26,15 @@ public class DisjunctiveConstraint extends Constraint {
 
   public DisjunctiveConstraint(List<Constraint> elements, String reason) {
     super(reason);
+    Objects.requireNonNull(elements);
     this.elements = elements;
   }
 
   @Override
   public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
+    if (elements.isEmpty()) {
+      return ctx.mkFalse();
+    }
     return ctx.mkOr(
         elements.stream()
             .map(element -> element.encode(ctx, coefficients))

@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 
 import static guru.nidi.graphviz.model.Factory.graph;
 import static guru.nidi.graphviz.model.Factory.node;
+import static xyz.leutgeb.lorenz.lac.util.Util.append;
 import static xyz.leutgeb.lorenz.lac.util.Util.rawObjectNode;
 
 import com.google.common.collect.BiMap;
@@ -20,7 +21,9 @@ import guru.nidi.graphviz.model.Node;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -130,7 +133,7 @@ public abstract class Constraint {
   public abstract Set<Coefficient> occurringCoefficients();
 
   public String getTracking() {
-    return System.identityHashCode(this) + ": " + reason;
+    return String.format("%010d", System.identityHashCode(this)) + ": " + reason;
     // return Util.stamp(this);
   }
 
@@ -159,5 +162,18 @@ public abstract class Constraint {
 
   protected boolean satisfiedInternal() {
     return false;
+  }
+
+  public static Constraint implication(
+      String reason, Constraint precondition, Constraint... consequences) {
+    return new DisjunctiveConstraint(
+        append(
+            Collections.singletonList(new NegationConstraint(precondition, reason)),
+            List.of(consequences)),
+        reason);
+  }
+
+  public String toStringWithReason() {
+    return toString() + " because " + reason;
   }
 }

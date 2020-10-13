@@ -5,8 +5,10 @@ import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.common.collect.Streams;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -17,6 +19,8 @@ import tech.tablesaw.api.Table;
 import tech.tablesaw.columns.Column;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
 
@@ -41,7 +45,7 @@ public class TestUtil {
 
     var potentialFunctions =
         Stream.concat(ac.stream().map(AnnotatingContext::getAnnotation), a.stream())
-            .flatMap(Annotation::streamCoefficients)
+            .flatMap(Annotation::streamNonRankCoefficients)
             .map(Map.Entry::getKey)
             .sorted(Annotation.INDEX_COMPARATOR)
             .distinct()
@@ -60,7 +64,7 @@ public class TestUtil {
             Streams.zip(
                 Stream.concat(a.stream(), ac.stream().map(AnnotatingContext::getAnnotation)),
                 Stream.concat(
-                    a.stream().map(Annotation::getName),
+                    a.stream().map(Annotation::getNameAndId),
                     ac.stream().map(AnnotatingContext::toString)),
                 (annotation, name) ->
                     StringColumn.create(
@@ -82,5 +86,22 @@ public class TestUtil {
                                             : "·")))));
 
     return Table.create("Overview", columns).print(Integer.MAX_VALUE / 2);
+  }
+
+  public static String printTable(
+      Prover prover, Optional<Map<Coefficient, KnownCoefficient>> solution) {
+    if (!solution.isPresent()) {
+      return "UNSAT";
+    }
+
+    var acs = new ArrayList<AnnotatingContext>(prover.getNamed().size());
+    var as = new ArrayList<Annotation>(prover.getNamed().size());
+    for (var entry : prover.getNamed().entrySet()) {
+      acs.add(entry.getValue().getContext().substitute(solution.get()).rename(entry.getKey()));
+      as.add(
+          entry.getValue().getAnnotation().substitute(solution.get()).rename(entry.getKey() + "'"));
+    }
+
+    return printTable(acs, as);
   }
 }

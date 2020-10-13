@@ -7,9 +7,11 @@ import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.INDEX_COMPARATOR;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.nonRankIndices;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.MINUS_TWO;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
 import static xyz.leutgeb.lorenz.lac.util.Util.append;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
 import com.google.common.collect.Streams;
@@ -20,6 +22,7 @@ import com.microsoft.z3.Expr;
 import com.microsoft.z3.IntNum;
 import com.microsoft.z3.Status;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -55,27 +58,42 @@ import xyz.leutgeb.lorenz.lac.util.Util;
 public class W implements Rule {
   public static final W INSTANCE = new W();
 
+  private static final Map<List<List<Integer>>, List<Order<List<Integer>>>> MONO_CACHE =
+      new HashMap<>();
+
   private static List<Constraint> compareCoefficientsGreaterOrEqual(
       Annotation left, Annotation right) {
     return compareCoefficients(
-        left, right, (x, y) -> new GreaterThanOrEqualConstraint(x, y, "(w) geq " + x + " >= " + y));
+        left,
+        right,
+        (x, y) -> new GreaterThanOrEqualConstraint(x, y, "(w) geqSimple " + x + " >= " + y));
   }
 
   public static List<Constraint> compareCoefficientsLessOrEqual(Annotation left, Annotation right) {
     return compareCoefficients(
-        left, right, (x, y) -> new LessThanOrEqualConstraint(x, y, "(w) leq " + x + " <= " + y));
+        left,
+        right,
+        (x, y) -> new LessThanOrEqualConstraint(x, y, "(w) leqSimple " + x + " <= " + y));
   }
 
   private static List<Constraint> compareCoefficients(
       Annotation left,
       Annotation right,
       BiFunction<Coefficient, Coefficient, Constraint> comparator) {
+    if (left.size() != right.size()) {
+      throw bug("cannot compare annotations of different size");
+    }
     return concat(
-            left.streamCoefficients()
-                .map(e -> comparator.apply(e.getValue(), right.getCoefficientOrZero(e.getKey()))),
+            nonRankIndices(left, right)
+                .map(
+                    i ->
+                        comparator.apply(
+                            left.getCoefficientOrZero(i), right.getCoefficientOrZero(i))),
             IntStream.range(0, left.size())
                 .mapToObj(
-                    i -> comparator.apply(left.getRankCoefficient(i), right.getRankCoefficient(i))))
+                    i ->
+                        comparator.apply(
+                            left.getRankCoefficientOrZero(i), right.getRankCoefficientOrZero(i))))
         .collect(toList());
   }
 
@@ -95,8 +113,8 @@ public class W implements Rule {
         path ->
             path.getEdgeList().stream().allMatch(edge -> SizeEdge.Kind.EQ.equals(edge.getKind()));
 
-    Set<List<Integer>> knowGt = new HashSet<>();
-    Set<List<Integer>> knowEq = new HashSet<>();
+    Set<Order<Integer>> knowGt = new HashSet<>();
+    Set<Order<Integer>> knowEq = new HashSet<>();
     cartesianProduct(identifiers, identifiers).stream()
         .filter(pair -> !pair.get(0).equals(pair.get(1)))
         .filter(pair -> sizeAnalysis.containsVertex(pair.get(0)))
@@ -110,7 +128,7 @@ public class W implements Rule {
               final var pathGt = paths.stream().filter(isGt).findFirst();
               if (pathGt.isPresent()) {
                 knowGt.add(
-                    List.of(
+                    new Order<>(
                         identifiers.indexOf(pathGt.get().getStartVertex()),
                         identifiers.indexOf(pathGt.get().getEndVertex())));
                 return;
@@ -118,11 +136,15 @@ public class W implements Rule {
               final var pathEq = paths.stream().filter(isEq).findFirst();
               if (pathEq.isPresent()) {
                 knowEq.add(
-                    List.of(
+                    new Order<>(
                         identifiers.indexOf(pathEq.get().getStartVertex()),
                         identifiers.indexOf(pathEq.get().getEndVertex())));
               }
             });
+
+    if (!knowGt.isEmpty() || !knowEq.isEmpty()) {
+      log.info("Size analysis useful ({})!", identifiers);
+    }
 
     final List<Constraint> constraints = new ArrayList<>();
     // TODO(lorenz.leutgeb): What about rank coefficients?
@@ -130,16 +152,12 @@ public class W implements Rule {
         .mapToObj(
             i ->
                 new LessThanOrEqualConstraint(
-                    left.getRankCoefficient(i), right.getRankCoefficient(i), "(w) rank"))
+                    left.getRankCoefficientOrZero(i),
+                    right.getRankCoefficientOrZero(i),
+                    "(w) rk(" + identifiers.get(i) + ") (at index " + i + ")"))
         .forEach(constraints::add);
 
-    final var potentialFunctions =
-        Stream.concat(left.streamCoefficients(), right.streamCoefficients())
-            .map(Map.Entry::getKey)
-            // .filter(not(Util::isConstant))
-            .distinct()
-            .sorted(INDEX_COMPARATOR)
-            .collect(toList());
+    final var potentialFunctions = Annotation.nonRankIndices(left, right).collect(toList());
 
     final var n = potentialFunctions.size();
 
@@ -148,12 +166,17 @@ public class W implements Rule {
     // then filter out most pairs. It would be much better to only generate matching
     // pairs in the first place.
     // final var monoStamp = DateTime.now();
-    final List<List<List<Integer>>> monoKnowledge =
+    // final List<Order<List<Integer>>> monoKnowledge = emptyList();
+    final List<Order<List<Integer>>> monoKnowledge =
         knowGt.isEmpty()
-            ? cartesianProduct(potentialFunctions, potentialFunctions).stream()
-                .filter(pair -> lessThanOrEqual(pair.get(0), pair.get(1), knowGt))
-                .filter(pair -> !pair.get(0).equals(pair.get(1)))
-                .collect(toList())
+            ? MONO_CACHE.computeIfAbsent(
+                potentialFunctions,
+                (key) ->
+                    cartesianProduct(potentialFunctions, potentialFunctions).stream()
+                        .filter(pair -> lessThanOrEqual(pair.get(0), pair.get(1), knowGt))
+                        .filter(pair -> !pair.get(0).equals(pair.get(1)))
+                        .map(pair -> new Order<>(pair.get(0), pair.get(1)))
+                        .collect(toList()))
             : lessThanOrEqual(potentialFunctions, emptySet());
 
     final var lemmaKnowledge = lemma17(potentialFunctions);
@@ -172,9 +195,6 @@ public class W implements Rule {
 
     final var p = potentialFunctions.stream().map(left::getCoefficientOrZero).collect(toList());
     final var q = potentialFunctions.stream().map(right::getCoefficientOrZero).collect(toList());
-
-    // final var cp = left.getUnitCoefficientOrZero();
-    // final var cq = right.getUnitCoefficientOrZero();
 
     // Note: We do not add constraints saying f ≥ 0. This is generated for all unknown coefficients!
     final var f =
@@ -197,9 +217,9 @@ public class W implements Rule {
         final List<Coefficient> sum = sumByColumn.get(column);
         for (int row = 0; row < monoKnowledge.size(); row++) {
           final var knowledgeRow = monoKnowledge.get(row);
-          if (potentialFunction.equals(knowledgeRow.get(0))) {
+          if (potentialFunction.equals(knowledgeRow.smaller())) {
             sum.add(f.get(row));
-          } else if (potentialFunction.equals(knowledgeRow.get(1))) {
+          } else if (potentialFunction.equals(knowledgeRow.larger())) {
             sum.add(f.get(row).negate());
           }
         }
@@ -260,20 +280,20 @@ public class W implements Rule {
       constraints.add(
           new LessThanOrEqualConstraint(fbcp, cq, "(w:l17) " + fbcp + " ≤ " + wid + ".c_q"));
       */
-    } else {
     }
 
     // fb + c_p ≤ c_q (Note: fb is computed using dot product. Since b is all zeros, we simplify
     //                       to c_p ≤ c_q.)
-    // constraints.add(new LessThanOrEqualConstraint(cp, cq, "(w:farkas) c_p <= c_q"));
+    // constraints.add(new LessThanOrEqualConstraint(cp, cq, "(w) c_p <= c_q (farkas)"));
 
     for (int i = 0; i < n; i++) {
       UnknownCoefficient x = UnknownCoefficient.maybeNegative(wid + ".sum[" + i + "]");
       constraints.add(
           new EqualsSumConstraint(
-              x, sumByColumn.get(i), "(w:farkas) " + x + " = Σ... + q[" + i + "]"));
+              x, sumByColumn.get(i), "(w) " + x + " = Σ... + q[" + i + "] (farkas)"));
       constraints.add(
-          new LessThanOrEqualConstraint(p.get(i), x, "(w:farkas) " + wid + ".p[" + i + "] ≤ " + x));
+          new LessThanOrEqualConstraint(
+              p.get(i), x, "(w) " + wid + ".p[" + i + "] ≤ " + x + " (farkas)"));
     }
 
     return constraints;
@@ -317,10 +337,7 @@ public class W implements Rule {
                     qp.size() > 0
                         ? singletonList(
                             new Identifier(
-                                Predefined.INSTANCE,
-                                "idonotexistresult",
-                                new TreeType(TypeVariable.ALPHA),
-                                null))
+                                Predefined.INSTANCE, "_", new TreeType(TypeVariable.ALPHA), null))
                         : emptyList(),
                     qp,
                     pp,
@@ -330,8 +347,14 @@ public class W implements Rule {
         emptyList());
   }
 
-  public static List<List<List<Integer>>> lessThanOrEqual(
-      List<List<Integer>> potentialFunctions, Set<List<Integer>> expertGt) {
+  public record Order<T>(T smaller, T larger) {}
+
+  public static List<Order<List<Integer>>> lessThanOrEqual(
+      List<List<Integer>> potentialFunctions, Set<Order<Integer>> expertGt) {
+    if (potentialFunctions.isEmpty()) {
+      return emptyList();
+    }
+
     final var ctx = new Context(Map.of("unsat_core", "true"));
     final ArithExpr zero = ctx.mkInt(0);
     final ArithExpr one = ctx.mkInt(1);
@@ -369,7 +392,7 @@ public class W implements Rule {
             Stream.concat(
                     xs.stream().map(x -> ctx.mkLe(zero, x)),
                     expertGt.stream()
-                        .map(pair -> ctx.mkGt(xs.get(pair.get(0)), xs.get(pair.get(1)))))
+                        .map(pair -> ctx.mkGt(xs.get(pair.smaller()), xs.get(pair.larger()))))
                 .toArray(BoolExpr[]::new));
     final var main =
         ctx.mkLe(
@@ -394,7 +417,7 @@ public class W implements Rule {
             null,
             null));
 
-    final List<List<List<Integer>>> result = new ArrayList<>();
+    final List<Order<List<Integer>>> result = new ArrayList<>();
     while (solver.check().equals(Status.SATISFIABLE)) {
       final var model = solver.getModel();
       final List<Integer> leftSolution =
@@ -411,7 +434,7 @@ public class W implements Rule {
               .map(IntNum::getInt)
               .collect(Collectors.toUnmodifiableList());
 
-      result.add(List.of(leftSolution, rightSolution));
+      result.add(new Order<>(leftSolution, rightSolution));
 
       solver.add(
           ctx.mkNot(
@@ -445,7 +468,7 @@ public class W implements Rule {
   }
 
   public static boolean lessThanOrEqual(
-      List<Integer> o1, List<Integer> o2, Set<List<Integer>> expertGt) {
+      List<Integer> o1, List<Integer> o2, Set<Order<Integer>> expertGt) {
     // o1 and o2 represent linear combinations:
     //
     //     o1:  o1.1 * x1 + o1.2 * x2 + o1.3 * x3 + ... + o1.n * xn
@@ -481,7 +504,7 @@ public class W implements Rule {
       solver.add(ctx.mkLe(zero, x));
     }
     for (var pair : expertGt) {
-      solver.add(ctx.mkGt(vars.get(pair.get(0)), vars.get(pair.get(1))));
+      solver.add(ctx.mkGt(vars.get(pair.smaller()), vars.get(pair.larger())));
     }
     solver.add(
         ctx.mkGt(

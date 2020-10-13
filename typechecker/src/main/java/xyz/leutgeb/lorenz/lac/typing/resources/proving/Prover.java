@@ -3,9 +3,13 @@ package xyz.leutgeb.lorenz.lac.typing.resources.proving;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toUnmodifiableMap;
 import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import static xyz.leutgeb.lorenz.lac.util.Util.stack;
+import static xyz.leutgeb.lorenz.lac.util.Util.supply;
+import static xyz.leutgeb.lorenz.lac.util.Util.undefinedText;
 
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
@@ -16,6 +20,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -26,6 +31,7 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -45,12 +51,13 @@ import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.ast.IfThenElseExpression;
 import xyz.leutgeb.lorenz.lac.ast.LetExpression;
 import xyz.leutgeb.lorenz.lac.ast.MatchExpression;
+import xyz.leutgeb.lorenz.lac.ast.NodeExpression;
 import xyz.leutgeb.lorenz.lac.ast.ShareExpression;
-import xyz.leutgeb.lorenz.lac.ast.Tuple;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.TacticVisitorImpl;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.App;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Cmp;
@@ -58,7 +65,8 @@ import xyz.leutgeb.lorenz.lac.typing.resources.rules.Ite;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Leaf;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetGen;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTree;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCfSimple;
+import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCf;
+import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCfFlorian;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Match;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Node;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Rule;
@@ -75,7 +83,8 @@ import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Slf4j
 public class Prover {
-  private static final Rule letTreeCfRule = LetTreeCfSimple.INSTANCE;
+  private static final Rule letTreeCfPaperRule = LetTreeCf.INSTANCE;
+  private static final Rule letTreeCfFlorianRule = LetTreeCfFlorian.INSTANCE;
   private static final Rule letGenRule = LetGen.INSTANCE;
   private static final Rule letTreeRule = LetTree.INSTANCE;
   private static final Rule applicationRule = App.INSTANCE;
@@ -88,29 +97,25 @@ public class Prover {
   private static final Rule weakenVariableRule = WVar.INSTANCE;
   private static final Rule weakenRule = W.INSTANCE;
   private static final Rule leafRule = Leaf.INSTANCE;
+  private static final Rule chooseCf = letTreeCfPaperRule;
 
   private static final Map<String, Rule> RULES_BY_NAME =
-      Map.<String, Rule>of(
-          "let:tree:cf",
-          letTreeCfRule,
-          letGenRule.getName(),
-          letGenRule,
-          letTreeRule.getName(),
-          letTreeRule,
-          applicationRule.getName(),
-          applicationRule,
-          comparisonRule.getName(),
-          comparisonRule,
-          ifThenElseRule.getName(),
-          ifThenElseRule,
-          matchRule.getName(),
-          matchRule,
-          nodeRule.getName(),
-          nodeRule,
-          shareRule.getName(),
-          shareRule,
-          weakenRule.getName(),
-          weakenRule);
+      Stream.of(
+              letTreeCfPaperRule,
+              letTreeCfFlorianRule,
+              letGenRule,
+              letTreeRule,
+              applicationRule,
+              comparisonRule,
+              ifThenElseRule,
+              matchRule,
+              nodeRule,
+              shareRule,
+              variableRule,
+              weakenVariableRule,
+              weakenRule,
+              leafRule)
+          .collect(toUnmodifiableMap(Rule::getName, identity()));
 
   private static final boolean DEFAULT_WEAKEN = false;
   private static final boolean DEFAULT_TREECF = false;
@@ -124,7 +129,6 @@ public class Prover {
       new DirectedAcyclicGraph<>(DefaultEdge.class);
 
   private final Map<DefaultEdge, Map<String, Attribute>> edgeAttributes = new HashMap<>();
-  private final Map<Obligation, Map<String, Attribute>> vertexAttributes = new HashMap<>();
 
   @Getter private final Set<Constraint> accumulatedConstraints = new HashSet<>();
 
@@ -138,6 +142,14 @@ public class Prover {
   @Getter @Setter private boolean treeCf = DEFAULT_TREECF;
 
   @Getter private final Map<String, Obligation> named = new LinkedHashMap<String, Obligation>();
+
+  private final Map<Obligation, RuleApplication> results = new LinkedHashMap<>();
+
+  @Getter @Setter private boolean logApplications = false;
+
+  private final Set<Constraint> externalConstraints = new HashSet<>();
+
+  private record RuleApplication(Rule rule, Rule.ApplicationResult result) {}
 
   public Prover(String name, AnnotatingGlobals globals, Path basePath) {
     this.name = name;
@@ -171,7 +183,7 @@ public class Prover {
         log.info(
             "Scheduling (w) for application to terminal expression {} because weakening is enabled!",
             expression);
-         */
+        */
         return stack(weakenRule, chooseRule(expression));
       } else {
         /*
@@ -194,7 +206,7 @@ public class Prover {
   private Rule chooseRule(Expression e) {
     if (e instanceof BooleanExpression) {
       return comparisonRule;
-    } else if (e instanceof Tuple) {
+    } else if (e instanceof NodeExpression) {
       return nodeRule;
     } else if (e instanceof CallExpression) {
       return applicationRule;
@@ -211,8 +223,8 @@ public class Prover {
     } else if (e instanceof LetExpression) {
       if (((LetExpression) e).getValue().getType() instanceof TreeType) {
         // TODO(lorenz.leutgeb): When should we apply the cost-free version?
-        if (treeCf || auto) {
-          return letTreeCfRule;
+        if (treeCf || auto || true) {
+          return chooseCf;
         } else {
           return letTreeRule;
         }
@@ -301,7 +313,9 @@ public class Prover {
   }
 
   private Rule.ApplicationResult applyInternal(Obligation obligation, Rule rule) {
-    log.debug("{}: {}", String.format("%-12s", rule.getName()), obligation);
+    if (logApplications) {
+      log.info("{}: {}", String.format("%-12s", rule.getName()), obligation);
+    }
     final var result = rule.apply(obligation, globals);
     if (result == null) {
       throw bug("typing rule implementation returned null");
@@ -323,7 +337,6 @@ public class Prover {
     Stack<Obligation> obligations = new Stack<>();
     obligations.push(obligation);
     proof.addVertex(obligation);
-    vertexAttributes.put(obligation, obligation.attributes());
 
     while (!obligations.isEmpty()) {
       final var top = obligations.pop();
@@ -355,34 +368,26 @@ public class Prover {
   }
 
   private void ingest(Obligation previous, Rule rule, Rule.ApplicationResult ruleResult) {
+    results.put(previous, new RuleApplication(rule, ruleResult));
+
     if (!proof.containsVertex(previous)) {
       proof.addVertex(previous);
-      vertexAttributes.put(previous, previous.attributes());
     }
 
     ruleResult
         .getObligations()
         .forEach(
             o -> {
-              proof.addVertex(o);
-              vertexAttributes.put(o, o.attributes());
+              if (!proof.containsVertex(o)) {
+                proof.addVertex(o);
+              }
             });
-
-    final var generalConstraints = ruleResult.getGeneralConstraints();
 
     Streams.zip(
             ruleResult.getObligations().stream(), ruleResult.getConstraints().stream(), Pair::of)
         .forEach(
             o -> {
               final var edge = proof.addEdge(previous, o.getLeft());
-              final var lel =
-                  o.getRight().stream().map(Object::toString).collect(Collectors.joining("<br />"))
-                      + (generalConstraints.isEmpty()
-                          ? ""
-                          : "<br /> - - - - <br />"
-                              + generalConstraints.stream()
-                                  .map(Object::toString)
-                                  .collect(Collectors.joining("<br />")));
               edgeAttributes.put(
                   edge,
                   Map.of(
@@ -390,9 +395,17 @@ public class Prover {
                       new NidiAttribute<>(
                           Label.html(
                               Util.truncate(
-                                  rule.getName()
+                                  "("
+                                      + rule.getName()
+                                      + ")"
                                       + "<br />"
-                                      + lel
+                                      + (!rule.equals(weakenRule)
+                                          ? (o.getRight().isEmpty()
+                                              ? "No constraints."
+                                              : (o.getRight().stream()
+                                                  .map(Constraint::toStringWithReason)
+                                                  .collect(Collectors.joining("<br />"))))
+                                          : "Constraints omitted.")
                                       // .replace("|", "_")
                                       // .replace("[", "_")
                                       // .replace("]", "_")
@@ -409,23 +422,59 @@ public class Prover {
 
   public void plot() throws IOException {
     if (basePath == null) {
+      log.warn("Cannot plot without base path.");
       return;
     }
 
+    final NidiExporter<Obligation, DefaultEdge> exporter = new NidiExporter<>(Util::stamp);
+    exporter.setVertexAttributeProvider(
+        obligation -> {
+          var result = results.get(obligation);
+          final List<Constraint> generalConstraints =
+              result != null ? result.result().getGeneralConstraints() : emptyList();
+          return obligation.attributes(generalConstraints);
+        });
+    exporter.setEdgeAttributeProvider(edgeAttributes::get);
+    exporter.setGraphAttributeProvider(
+        supply(Map.of("rankdir", new DefaultAttribute<>("BT", AttributeType.STRING))));
+
+    Graphviz transformed = Graphviz.fromGraph(exporter.transform(proof));
+
     final var target = basePath.resolve(name + "-proof.svg");
-    log.info(target.toString());
+    transformed.render(Format.SVG).toOutputStream(Files.newOutputStream(target));
+    log.info("Proof plotted to {}", target);
+
+    final var dotTarget = basePath.resolve(name + "-proof.dot");
+    transformed.render(Format.DOT).toOutputStream(Files.newOutputStream(dotTarget));
+    log.info("Proof exported to {}", dotTarget);
+  }
+
+  public void plotWithSolution(Map<Coefficient, KnownCoefficient> solution) throws IOException {
+    if (basePath == null) {
+      return;
+    }
 
     final NidiExporter<Obligation, DefaultEdge> exporter = new NidiExporter<>(Util::stamp);
-    exporter.setVertexAttributeProvider(vertexAttributes::get);
+    exporter.setVertexAttributeProvider(
+        obligation -> {
+          var result = results.get(obligation);
+          final List<Constraint> generalConstraints =
+              result != null ? result.result().getGeneralConstraints() : emptyList();
+          return (obligation.substitute(solution)).attributes(generalConstraints);
+        });
     exporter.setEdgeAttributeProvider(edgeAttributes::get);
     exporter.setGraphAttributeProvider(
         () -> Map.of("rankdir", new DefaultAttribute<>("BT", AttributeType.STRING)));
 
-    Graphviz.fromGraph(exporter.transform(proof))
-        .render(Format.SVG)
-        .toOutputStream(Files.newOutputStream(target));
+    Graphviz transformed = Graphviz.fromGraph(exporter.transform(proof));
 
+    final var target = basePath.resolve(name + "-proof.svg");
+    transformed.render(Format.SVG).toOutputStream(Files.newOutputStream(target));
     log.info("Proof plotted to {}", target);
+
+    final var dotTarget = basePath.resolve(name + "-proof.xdot");
+    transformed.render(Format.XDOT).toOutputStream(Files.newOutputStream(dotTarget));
+    log.info("Proof exported to {}", dotTarget);
   }
 
   public Optional<Map<Coefficient, KnownCoefficient>> solve() {
@@ -437,17 +486,31 @@ public class Prover {
   }
 
   public Optional<Map<Coefficient, KnownCoefficient>> solve(
-      Set<Constraint> outsideConstraints, List<Coefficient> target) {
+      Set<Constraint> outsideConstraints, List<UnknownCoefficient> target) {
     return ConstraintSystemSolver.solve(
-        Sets.union(outsideConstraints, accumulatedConstraints), name, target);
+        Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
+        name,
+        target);
+  }
+
+  public Optional<Map<Coefficient, KnownCoefficient>> solve(
+      Set<Constraint> outsideConstraints, List<UnknownCoefficient> target, String suffix) {
+    return ConstraintSystemSolver.solve(
+        Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
+        name + suffix,
+        target);
   }
 
   public Optional<Map<Coefficient, KnownCoefficient>> solve(
       Set<Constraint> outsideConstraints,
-      List<Coefficient> target,
+      List<UnknownCoefficient> target,
+      String suffix,
       ConstraintSystemSolver.Domain domain) {
     return ConstraintSystemSolver.solve(
-        Sets.union(outsideConstraints, accumulatedConstraints), name, target, domain);
+        Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
+        name + suffix,
+        target,
+        domain);
   }
 
   public Obligation weaken(Obligation obligation) {
@@ -459,7 +522,17 @@ public class Prover {
   }
 
   public List<Obligation> applyByName(String ruleName, Obligation obligation) {
-    return apply(obligation, RULES_BY_NAME.get(ruleName));
+    // TODO
+    if ("let:tree:cf".equals(ruleName) && chooseCf == letTreeCfFlorianRule) {
+      ruleName = "let:tree:cf:florian";
+    }
+
+    Rule rule = RULES_BY_NAME.get(ruleName);
+    if (rule == null) {
+      throw new IllegalArgumentException(
+          "Rule name " + undefinedText(ruleName, RULES_BY_NAME.keySet()));
+    }
+    return apply(obligation, rule);
   }
 
   public void record(String name, Obligation obligation) {
@@ -481,5 +554,9 @@ public class Prover {
     visitor.visitTactic(
         new TacticParser(new CommonTokenStream(new TacticLexer(CharStreams.fromPath(path))))
             .tactic());
+  }
+
+  public void addExternalConstraints(Collection<Constraint> external) {
+    this.externalConstraints.addAll(external);
   }
 }

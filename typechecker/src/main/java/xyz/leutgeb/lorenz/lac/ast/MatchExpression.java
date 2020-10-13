@@ -32,10 +32,14 @@ public class MatchExpression extends Expression {
   private final Expression scrut;
   private final Expression leaf;
   private final Expression node;
-  private final Tuple nodePattern;
+  private final NodeExpression nodePattern;
 
   public MatchExpression(
-      Source source, Expression scrut, Expression leaf, Tuple nodePattern, Expression node) {
+      Source source,
+      Expression scrut,
+      Expression leaf,
+      NodeExpression nodePattern,
+      Expression node) {
     super(source);
     this.scrut = scrut;
     this.leaf = leaf;
@@ -47,7 +51,7 @@ public class MatchExpression extends Expression {
       Source source,
       Expression scrut,
       Expression leaf,
-      Tuple nodePattern,
+      NodeExpression nodePattern,
       Expression node,
       Type type) {
     super(source, type);
@@ -117,7 +121,7 @@ public class MatchExpression extends Expression {
         Derived.rename(this),
         scrut.rename(renaming),
         leaf,
-        (Tuple) nodePattern.rename(renaming),
+        (NodeExpression) nodePattern.rename(renaming),
         node.rename(renaming),
         type);
   }

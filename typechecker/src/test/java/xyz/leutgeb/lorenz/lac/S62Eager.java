@@ -31,6 +31,7 @@ import xyz.leutgeb.lorenz.lac.ast.ShareExpression;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
@@ -142,13 +143,15 @@ public class S62Eager extends S62 {
   public void zigzigAbove() throws IOException, ConstraintSystemException {
     final var globals =
         new AnnotatingGlobals(
-            Map.of(FQN, new FunctionAnnotation(Q, Qp /*HEURISTIC.generate("Qpunknown", 1)*/)),
             Map.of(
                 FQN,
-                Set.of(
-                    new FunctionAnnotation(P, Pp),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Q, Qp /*HEURISTIC.generate("Qpunknown", 1)*/),
+                    Set.of(
+                        new FunctionAnnotation(P, Pp),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             SIZE_ANALYSIS,
             HEURISTIC);
 
@@ -171,7 +174,10 @@ public class S62Eager extends S62 {
 
     final var rootObligation =
         new Obligation(
-            new AnnotatingContext(contextIds, Q3), E4, globals.getSignature(FQN).to(), 1);
+            new AnnotatingContext(contextIds, Q3),
+            E4,
+            globals.getSignature(FQN).withCost().to(),
+            1);
 
     final Prover prover = new Prover("splay-above", globals, Paths.get("out"));
 
@@ -200,13 +206,15 @@ public class S62Eager extends S62 {
         new AnnotatingGlobals(
             // TODO(lorenz.leutgeb): Maybe don't even initialize, since we do not expect to handle
             // (app)?
-            Map.of(FQN, new FunctionAnnotation(Q, Qp)),
             Map.of(
                 FQN,
-                Set.of(
-                    new FunctionAnnotation(P, Pp),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Q, Qp),
+                    Set.of(
+                        new FunctionAnnotation(P, Pp),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             SIZE_ANALYSIS,
             HEURISTIC);
 
@@ -225,9 +233,10 @@ public class S62Eager extends S62 {
     prover.setWeakenBeforeTerminal(true);
     final var rootObligation =
         new Obligation(
-            new AnnotatingContext(SPLAY.treeLikeArguments(), globals.getSignature(FQN).from()),
+            new AnnotatingContext(
+                SPLAY.treeLikeArguments(), globals.getSignature(FQN).withCost().from()),
             SPLAY.getBody(),
-            globals.getSignature(FQN).to(),
+            globals.getSignature(FQN).withCost().to(),
             1);
     final var first = prover.proveUntil(rootObligation, expressionEqualsE3.or(outOfScope));
     assertEquals(3, first.size());
@@ -262,13 +271,15 @@ public class S62Eager extends S62 {
   public void costFree() throws IOException, ConstraintSystemException {
     final var globals =
         new AnnotatingGlobals(
-            Map.of(FQN, new FunctionAnnotation(Q, Qp)),
             Map.of(
                 FQN,
-                Set.of(
-                    new FunctionAnnotation(P, Pp),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Q, Qp),
+                    Set.of(
+                        new FunctionAnnotation(P, Pp),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             SIZE_ANALYSIS,
             HEURISTIC);
 

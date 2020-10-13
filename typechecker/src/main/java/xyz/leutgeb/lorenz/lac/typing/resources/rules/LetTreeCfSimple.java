@@ -34,6 +34,7 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.util.Pair;
 import xyz.leutgeb.lorenz.lac.util.Util;
 
+@Deprecated
 public class LetTreeCfSimple implements Rule {
   public static final LetTreeCfSimple INSTANCE = new LetTreeCfSimple();
 
@@ -123,13 +124,14 @@ public class LetTreeCfSimple implements Rule {
     // covers Γ exclusively).
     p.getRight()
         .addAll(
-            gammaP.stream()
+            gammaP
+                .streamNonRank()
                 .map(
                     pEntry ->
                         new EqualityConstraint(
                             pEntry.getValue(),
                             gammaDeltaQ.getCoefficientOrZero(pEntry.padWithZero()),
-                            "(let:tree:cf) p_{(\\vec{a}, c)} = q_{(\\vec{a}, \\vec{0}, c)} with [\\vec{a}, c] = "
+                            "(let:tree:cf) p_{(a⃗⃗, c)} = q_{(a⃗⃗, 0⃗, c)} with [a⃗⃗, c] = "
                                 + pEntry.toString()))
                 .collect(Collectors.toSet()));
 
@@ -146,7 +148,7 @@ public class LetTreeCfSimple implements Rule {
     crossConstraints.addAll(
         // Again, restore the potential we have got after evaluating this.value to align
         // with the variable in the context for this.body.
-        pp.streamCoefficients()
+        pp.streamNonRankCoefficients()
             .map(
                 e -> {
                   final var index = e.getKey();
@@ -154,9 +156,7 @@ public class LetTreeCfSimple implements Rule {
                       deltaxr.getCoefficient(id -> id.equals(x) ? index.get(0) : 0, index.get(1));
                   occurred.add(rCoefficient);
                   return new EqualityConstraint(
-                      rCoefficient,
-                      e.getValue(),
-                      "(let:tree:cf) r_{(\\vec{0}, a, c)} = p'_{(a, c)}");
+                      rCoefficient, e.getValue(), "(let:tree:cf) r_{(0⃗, a, c)} = p'_{(a, c)}");
                 })
             .collect(toList()));
 
@@ -172,7 +172,8 @@ public class LetTreeCfSimple implements Rule {
                 globals.getHeuristic().generate("letcf' " + x + " b is " + key, value),
                 0);
 
-    gammaDeltaQ.stream()
+    gammaDeltaQ
+        .streamNonRank()
         .filter(
             index -> varsForDeltaAsList.stream().anyMatch(id -> index.getAssociatedIndex(id) != 0))
         .filter(
@@ -190,11 +191,11 @@ public class LetTreeCfSimple implements Rule {
                   new EqualityConstraint(
                       bObligation.getContext().getCoefficient(index),
                       index.getValue(),
-                      "(let:tree:cf) p^{(\\vec{b})="
+                      "(let:tree:cf) p^{(b⃗)="
                           + b
-                          + "}_{(\\vec{a},c)="
+                          + "}_{(a⃗⃗,c)="
                           + index
-                          + "} = q_{(\\vec{a}, \\vec{b}, c)="
+                          + "} = q_{(a⃗⃗, b⃗, c)="
                           + index
                           + "}"));
 
@@ -203,7 +204,7 @@ public class LetTreeCfSimple implements Rule {
               final var pbcoeffs =
                   bObligation
                       .getAnnotation()
-                      .streamCoefficients()
+                      .streamNonRankCoefficients()
                       // .filter(entry -> entry.getKey().get(0) != 0)
                       .map(Map.Entry::getValue)
                       .collect(toList());
@@ -218,7 +219,7 @@ public class LetTreeCfSimple implements Rule {
                   exactlyOneIsOne(
                       bObligation
                           .getAnnotation()
-                          .streamCoefficients()
+                          .streamNonRankCoefficients()
                           .filter(entry -> entry.getKey().get(0) != 0)
                           .map(Map.Entry::getValue)
                           .collect(toList())));
@@ -227,7 +228,7 @@ public class LetTreeCfSimple implements Rule {
               conclusion.addAll(
                   bObligation
                       .getAnnotation()
-                      .streamCoefficients()
+                      .streamNonRankCoefficients()
                       .filter(entry -> entry.getKey().get(0) == 0)
                       .map(Map.Entry::getValue)
                       .map(
@@ -235,7 +236,7 @@ public class LetTreeCfSimple implements Rule {
                               new EqualityConstraint(
                                   coefficient,
                                   ZERO,
-                                  "(let:tree:cf) p'^{(\\vec{b})=" + b + "}_{(0,c)} = 0"))
+                                  "(let:tree:cf) p'^{(b⃗)=" + b + "}_{(0,c)} = 0"))
                       .collect(toList()));
 
               crossConstraints.add(
@@ -244,12 +245,13 @@ public class LetTreeCfSimple implements Rule {
                           new EqualityConstraint(
                               index.getValue(), ZERO, "(let:tree:cf) antecedent q? = 0"),
                           new ConjunctiveConstraint(conclusion, "conjunction in let:tree:cf")),
-                      "(let:tree:cf) q_{(\\vec{a},\\vec{b},c)} != 0 -> (p^{(\\vec{b})="
+                      "(let:tree:cf) q_{(a⃗⃗,b⃗,c)} != 0 -> (p^{(b⃗)="
                           + b
-                          + "}_{(\\vec{a},c)} = q_({\\vec{a},\\vec{b},c) /\\ ...)"));
+                          + "}_{(a⃗⃗,c)} = q_({a⃗⃗,b⃗,c) /\\ ...)"));
             });
 
-    deltaxr.stream()
+    deltaxr
+        .streamNonRank()
         .filter(
             index -> varsForDeltaAsList.stream().anyMatch(id -> index.getAssociatedIndex(id) != 0))
         .forEach(
@@ -275,8 +277,8 @@ public class LetTreeCfSimple implements Rule {
                           : bObligation
                               .getAnnotation()
                               .getCoefficientOrZero(a, index.getOffsetIndex()),
-                      "(let:tree:cf) r_{(\\vec{b},a,c)} = "
-                          + (a == 0 ? "q_{(\\vec{0},b,c)}" : "p'^{(\\vec{b})}_{(a, c)}")));
+                      "(let:tree:cf) r_{(b⃗,a,c)} = "
+                          + (a == 0 ? "q_{(0⃗,b,c)}" : "p'^{(b⃗)}_{(a, c)}")));
             });
 
     var old =

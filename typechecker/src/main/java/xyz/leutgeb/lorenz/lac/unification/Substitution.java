@@ -5,15 +5,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 
+@Value
 public class Substitution implements Function<Type, Type> {
-  private final Map<TypeVariable, Type> raw;
-
-  private Substitution() {
-    this.raw = new HashMap<>();
-  }
+  Map<TypeVariable, Type> raw;
 
   public Substitution(Type... literal) {
     if (literal.length % 2 != 0) {
@@ -30,10 +28,6 @@ public class Substitution implements Function<Type, Type> {
     this.raw = new HashMap<>(raw);
   }
 
-  public static Substitution identity() {
-    return new Substitution();
-  }
-
   private void put(TypeVariable variable, Type target) {
     if (variable == target) {
       return;
@@ -44,10 +38,6 @@ public class Substitution implements Function<Type, Type> {
       }
     }
     this.raw.put(variable, target);
-  }
-
-  public boolean isIdentity() {
-    return raw.isEmpty();
   }
 
   @Override
@@ -62,7 +52,10 @@ public class Substitution implements Function<Type, Type> {
         + "}";
   }
 
-  /** Idempotent, pure composition. */
+  /**
+   * Idempotent, pure composition. Only reads from {@code this} and {@code other} and writes to
+   * separate resulting instance.
+   */
   public Substitution compose(Substitution other) {
     var result = new Substitution(other.raw);
     for (var e : raw.entrySet()) {
@@ -76,11 +69,7 @@ public class Substitution implements Function<Type, Type> {
     return result;
   }
 
-  public Substitution compose(TypeVariable variable, Type type) {
-    return compose(new Substitution(variable, type));
-  }
-
-  /** NOTE: This mutates the state of the substitution. */
+  /** This mutates the state of the substitution. */
   public void substitute(TypeVariable variable, Type target) {
     raw.replaceAll((k, v) -> v.substitute(variable, target));
     put(variable, target);
@@ -91,7 +80,6 @@ public class Substitution implements Function<Type, Type> {
     if (target == null) {
       return null;
     }
-    // Objects.requireNonNull(target);
     Type t = target;
     for (TypeVariable var : this.raw.keySet()) {
       t = t.substitute(var, this.raw.get(var));

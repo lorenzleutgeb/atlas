@@ -14,6 +14,7 @@ import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 
 @Value
 @EqualsAndHashCode(callSuper = false)
+@Deprecated
 public class Number extends Expression {
   int value;
 

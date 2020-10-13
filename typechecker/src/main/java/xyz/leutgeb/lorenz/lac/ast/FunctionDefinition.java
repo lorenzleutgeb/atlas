@@ -32,6 +32,7 @@ import org.jgrapht.graph.DirectedMultigraph;
 import xyz.leutgeb.lorenz.lac.module.Loader;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
@@ -182,9 +183,14 @@ public class FunctionDefinition {
   }
 
   public void stubAnnotations(
-      Map<String, FunctionAnnotation> functionAnnotations,
-      Map<String, Set<FunctionAnnotation>> costFreeFunctionAnnotations,
-      AnnotationHeuristic heuristic) {
+      Map<String, CombinedFunctionAnnotation> functionAnnotations, AnnotationHeuristic heuristic) {
+    stubAnnotations(functionAnnotations, heuristic, true);
+  }
+
+  public void stubAnnotations(
+      Map<String, CombinedFunctionAnnotation> functionAnnotations,
+      AnnotationHeuristic heuristic,
+      boolean cf) {
 
     analyzeSizes();
 
@@ -198,41 +204,48 @@ public class FunctionDefinition {
           new FunctionAnnotation(
               heuristic.generate("args", treeLikeArguments.size()),
               heuristic.generate("return", returnsTree ? 1 : 0));
+
+      var costFreeAnnotation =
+          new FunctionAnnotation(
+              heuristic.generate("cfargs", annotation.from()),
+              heuristic.generate("cfreturn", annotation.to()));
+
+      var zeroAnnotation =
+          new FunctionAnnotation(
+              Annotation.zero(annotation.from().size(), "cfargszero"),
+              Annotation.zero(annotation.to().size(), "cfreturnzero"));
+
+      if (cf) {
+        this.cfAnnotations = Set.of(costFreeAnnotation, zeroAnnotation);
+      } else {
+        this.cfAnnotations = emptySet();
+      }
+      functionAnnotations.put(
+          getFullyQualifiedName(), new CombinedFunctionAnnotation(annotation, cfAnnotations));
     } else {
-      if (predefined.from().size() != treeLikeArguments.size()) {
+      if (predefined.withCost().from().size() != treeLikeArguments.size()) {
         throw new IllegalArgumentException(
             "the predefined annotation for parameters of "
                 + getFullyQualifiedName()
                 + " is expected to be of size "
                 + treeLikeArguments.size()
                 + " but it is only of size "
-                + predefined.from().size());
+                + predefined.withCost().from().size());
       }
-      if (returnsTree ? predefined.to().size() != 1 : predefined.to().size() != 0) {
+      if (returnsTree
+          ? predefined.withCost().to().size() != 1
+          : predefined.withCost().to().size() != 0) {
         throw new IllegalArgumentException(
             "the predefined annotation for the result of "
                 + getFullyQualifiedName()
                 + " is expected to be of size "
                 + treeLikeArguments.size()
                 + " but it is only of size "
-                + predefined.to().size());
+                + predefined.withCost().to().size());
       }
-      annotation = predefined;
+      annotation = predefined.withCost();
+      cfAnnotations = predefined.withoutCost();
     }
-
-    var costFreeAnnotation =
-        new FunctionAnnotation(
-            heuristic.generate("cfargs", annotation.from()),
-            heuristic.generate("cfreturn", annotation.to()));
-
-    var zeroAnnotation =
-        new FunctionAnnotation(
-            Annotation.zero(annotation.from().size(), "cfargszero"),
-            Annotation.zero(annotation.to().size(), "cfreturnzero"));
-
-    functionAnnotations.put(getFullyQualifiedName(), annotation);
-    this.cfAnnotations = Set.of(costFreeAnnotation, zeroAnnotation);
-    costFreeFunctionAnnotations.put(getFullyQualifiedName(), cfAnnotations);
   }
 
   public Set<TypeVariable> runaway() {
@@ -260,6 +273,16 @@ public class FunctionDefinition {
         + annotation.from()
         + " -> "
         + annotation.to();
+  }
+
+  public String getMockedAnnotationString(CombinedFunctionAnnotation annotation) {
+    return moduleName
+        + "."
+        + name
+        + (arguments.isEmpty() ? "" : " ")
+        + String.join(" ", arguments)
+        + " | "
+        + annotation;
   }
 
   public void printTo(PrintStream out) {
@@ -298,7 +321,9 @@ public class FunctionDefinition {
                     turn(
                         name,
                         inferredSignature.toString().replace(">", "\\>").replace("<", "\\<"),
-                        annotation.from().getName() + " → " + annotation.to().getName())));
+                        annotation.from().getNameAndId()
+                            + " → "
+                            + annotation.to().getNameAndId())));
     Graph result = body.toGraph(g, root);
     var viz = Graphviz.fromGraph(result);
     viz.render(Format.SVG).toOutputStream(out);

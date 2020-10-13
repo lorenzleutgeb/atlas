@@ -1,10 +1,12 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.proving;
 
+import static java.util.stream.Collectors.joining;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import guru.nidi.graphviz.attribute.Label;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.Value;
 import org.jgrapht.nio.Attribute;
 import org.jgrapht.nio.AttributeType;
@@ -15,6 +17,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.util.NidiAttribute;
 import xyz.leutgeb.lorenz.lac.util.Util;
 
@@ -78,22 +81,48 @@ public class Obligation {
         context.substitute(solution), expression, annotation.substitute(solution), cost);
   }
 
-  public Map<String, Attribute> attributes() {
+  public Map<String, Attribute> attributes(List<Constraint> generalConstraints) {
+    final var generalConstraintsString =
+        generalConstraints.isEmpty()
+            ? ""
+            : generalConstraints.stream()
+                .map(Constraint::toStringWithReason)
+                .collect(Collectors.joining("<br />"));
     return Map.of(
         "shape",
         new DefaultAttribute<>("none", AttributeType.STRING),
         "label",
-        new NidiAttribute<>(Label.of(toString())));
+        new NidiAttribute<>(
+            Label.html(
+                toString()
+                    + (generalConstraints.isEmpty() ? "" : "<br />- - -<br />")
+                    + generalConstraintsString)));
   }
 
   @Override
   public String toString() {
-    return context
+    final var idStr =
+        context.getIds().isEmpty()
+            ? "Ø"
+            : context.getIds().stream().map(Object::toString).collect(joining(", "));
+    ;
+    final var contextStr =
+        idStr
+            + " | "
+            + context.getAnnotation()
+            + " <i style=\"fill:blue;\">"
+            + context.getAnnotation().getNameAndId()
+            + "</i>";
+
+    return contextStr
         + "  ⊦"
         + Util.generateSubscript(cost)
         + "  "
         + expression
         + " | "
-        + annotation.getName();
+        + annotation
+        + " <i style=\"fill:blue;\">"
+        + annotation.getNameAndId()
+        + "</i>";
   }
 }

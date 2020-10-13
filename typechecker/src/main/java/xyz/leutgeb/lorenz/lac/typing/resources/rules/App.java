@@ -42,9 +42,7 @@ public class App implements Rule {
                                     obligation.getContext().getAnnotation(),
                                     "(app:cf) Q"),
                                 EqualityConstraint.eq(
-                                    candidate.to(),
-                                    obligation.getContext().getAnnotation(),
-                                    "(app:cf) Q'")),
+                                    candidate.to(), obligation.getAnnotation(), "(app:cf) Q'")),
                             "(app:cf)"))
                 .collect(Collectors.toUnmodifiableList()),
             "(app:cf)"));
@@ -54,7 +52,7 @@ public class App implements Rule {
     final var expression = (CallExpression) obligation.getExpression();
 
     // Look up global annotation for this function.
-    final var annotation = globals.getSignature(expression.getName().getName());
+    final var annotation = globals.getSignature(expression.getFunctionName().getName());
 
     return Rule.ApplicationResult.onlyConstraints(
         obligation.getCost() == 1
@@ -63,14 +61,14 @@ public class App implements Rule {
                     .getContext()
                     .getAnnotation()
                     .increment(
-                        annotation.from(),
+                        annotation.withCost().from(),
                         obligation.getCost(),
                         ruleName(obligation.getCost()) + " Q from signature + 1 = Q from context"),
                 EqualityConstraint.eq(
-                    annotation.to(),
+                    annotation.withCost().to(),
                     obligation.getAnnotation(),
                     ruleName(obligation.getCost()) + " Q'"))
-            : costFree(obligation, globals.getCostFreeSignatures(expression.getName().getName())));
+            : costFree(obligation, annotation.withoutCost()));
   }
 
   @Override

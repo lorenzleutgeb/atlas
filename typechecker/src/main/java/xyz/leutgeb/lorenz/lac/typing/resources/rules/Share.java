@@ -81,7 +81,8 @@ public class Share implements Rule {
                                             + "`")),
 
                     // Version 1:
-                    gammaxyQ.stream()
+                    gammaxyQ
+                        .streamNonRank()
                         .map(
                             qEntry -> {
                               final var index = qEntry.getAssociatedIndices();

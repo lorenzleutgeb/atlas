@@ -48,6 +48,7 @@ import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.ast.Program;
 import xyz.leutgeb.lorenz.lac.module.Loader;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
@@ -117,23 +118,23 @@ public class Tests {
 
   private static Stream<Arguments> constantCostDefinitions() {
     return Stream.of(
-        arguments("LeftList.cons", sig(ALPHA, ATREE, ATREE), 2),
-        arguments("RightList.cons", sig(ALPHA, ATREE, ATREE), 2),
-        arguments("Tree.singleton", sig(ALPHA, ATREE), 3),
+        arguments("LeftList.cons", sig(ALPHA, ATREE, ATREE), 0),
+        arguments("RightList.cons", sig(ALPHA, ATREE, ATREE), 0),
+        arguments("Tree.singleton", sig(ALPHA, ATREE), 0),
         arguments("Bool.neg", sig(BOOL, BOOL), 0),
         arguments("Bool.or", sig(BOOL, BOOL, BOOL), 0),
         arguments("Bool.and", sig(BOOL, BOOL, BOOL), 0),
-        arguments("RightList.tl", sig(ATREE, ATREE), 1),
-        arguments("LeftList.tl", sig(ATREE, ATREE), 1),
-        arguments("Tree.id", sig(ATREE, ATREE), 1),
-        arguments("Tree.right", sig(ATREE, ATREE), 1),
-        arguments("Tree.left", sig(ATREE, ATREE), 1),
-        arguments("Tree.flip", sig(ATREE, ATREE), 1),
+        arguments("RightList.tl", sig(ATREE, ATREE), 0),
+        arguments("LeftList.tl", sig(ATREE, ATREE), 0),
+        arguments("Tree.id", sig(ATREE, ATREE), 0),
+        arguments("Tree.right", sig(ATREE, ATREE), 0),
+        arguments("Tree.left", sig(ATREE, ATREE), 0),
+        arguments("Tree.flip", sig(ATREE, ATREE), 0),
         arguments("Tree.empty", sig(ATREE, BOOL), 0),
-        arguments("Tree.clone", sig(ALPHA, ATREE, ATREE), 1),
+        arguments("Tree.clone", sig(ALPHA, ATREE, ATREE), 0),
         arguments("PairingHeap.is_root", sig(ATREE, BOOL), 0),
-        arguments("PairingHeap.link", sig(singleton(ord(ALPHA)), ATREE, ATREE), 2),
-        arguments("PairingHeap.merge", sig(singleton(ord(ALPHA)), ATREE, ATREE, ATREE), 4),
+        arguments("PairingHeap.link", sig(singleton(ord(ALPHA)), ATREE, ATREE), 0),
+        arguments("PairingHeap.merge", sig(singleton(ord(ALPHA)), ATREE, ATREE, ATREE), 1),
         arguments("PairingHeap.insert", sig(singleton(ord(ALPHA)), ALPHA, ATREE, ATREE), 3),
         arguments("Scratch.empty_1", sig(ATREE, BOOL), 1),
         arguments("Scratch.empty_2", sig(ATREE, BOOL), 2),
@@ -141,7 +142,6 @@ public class Tests {
         arguments("Scratch.left", sig(ALPHA, BETA, ALPHA), 0),
         arguments("Scratch.right", sig(ALPHA, BETA, BETA), 0),
         arguments("Scratch.empty_3", sig(ATREE, BOOL), 1),
-        arguments("Scratch.empty_4", sig(ATREE, BTREE, BOOL), 3),
         arguments("Scratch.first_nonempty_and_second_empty", sig(ATREE, BTREE, BOOL), 1));
   }
 
@@ -231,7 +231,7 @@ public class Tests {
   }
 
   @Test
-  @Disabled("too complex, see separate test classes")
+  @Disabled("too complex, see separate test cases")
   void splay() throws Exception {
     final String fqn = "SplayTree.splay";
     final var expectedSignature = sig(singleton(ord(ALPHA)), ALPHA, ATREE, ATREE);
@@ -252,12 +252,14 @@ public class Tests {
     final List<Coefficient> resultRankCoefficients = new ArrayList<>(1);
     resultRankCoefficients.add(ONE);
 
-    final var predefinedAnnotations = new HashMap<String, FunctionAnnotation>();
+    final var predefinedAnnotations = new HashMap<String, CombinedFunctionAnnotation>();
     predefinedAnnotations.put(
         fqn,
-        new FunctionAnnotation(
-            new Annotation(rankCoefficients, schoenmakers, "predefined"),
-            new Annotation(resultRankCoefficients, emptyMap(), "predefined")));
+        new CombinedFunctionAnnotation(
+            new FunctionAnnotation(
+                new Annotation(rankCoefficients, schoenmakers, "predefined"),
+                new Annotation(resultRankCoefficients, emptyMap(), "predefined")),
+            emptySet()));
 
     assertTrue(program.solve(predefinedAnnotations).isPresent());
   }
@@ -281,11 +283,13 @@ public class Tests {
     System.out.println("Testing " + fqn);
     assertEquals(expectedSignature, definition.getInferredSignature());
 
-    assertEquals(Optional.empty(), program.solve());
+    final var solution = program.solve();
+    program.ingest(solution);
+    assertTrue(solution.isEmpty());
   }
 
   @Test
-  @Disabled("too complex, see separate test classes")
+  @Disabled("too complex, see separate test cases")
   void splayZigZig() throws Exception {
     final var fqn = "SplayTree.splay_zigzig";
     final var expectedSignature = sig(ALPHA, ATREE, ATREE);
@@ -304,12 +308,14 @@ public class Tests {
 
     final List<Coefficient> resultRankCoefficients = singletonList(ONE);
 
-    final var predefinedAnnotations = new HashMap<String, FunctionAnnotation>();
+    final var predefinedAnnotations = new HashMap<String, CombinedFunctionAnnotation>();
     predefinedAnnotations.put(
         fqn,
-        new FunctionAnnotation(
-            new Annotation(rankCoefficients, schoenmakers, "predefined"),
-            new Annotation(resultRankCoefficients, emptyMap(), "predefined")));
+        new CombinedFunctionAnnotation(
+            new FunctionAnnotation(
+                new Annotation(rankCoefficients, schoenmakers, "predefined"),
+                new Annotation(resultRankCoefficients, emptyMap(), "predefined")),
+            emptySet()));
 
     assertTrue(program.solve(predefinedAnnotations).isPresent());
   }
@@ -331,22 +337,52 @@ public class Tests {
         Stream.generate(() -> ZERO)
             .limit(expectedSignature.getType().getFrom().treeSize())
             .collect(Collectors.toList());
+    int argCount = (int) expectedSignature.getType().getFrom().treeSize();
+    final var inferredInput = new UnknownCoefficient("inferredInput");
+    final var inferredResult = new UnknownCoefficient("inferredResult");
+    final var inferred = new HashMap<String, CombinedFunctionAnnotation>();
+    inferred.put(
+        fqn,
+        new CombinedFunctionAnnotation(
+            new FunctionAnnotation(
+                /*
+                  argCount == 0
+                      ? Annotation.zero(0, "zeroArgs")
+                      : SmartRangeHeuristic.DEFAULT.generate("inferredArgs", argCount),
+                */
+                Annotation.constant(
+                    (int) expectedSignature.getType().getFrom().treeSize(),
+                    "inferredArgs",
+                    inferredInput),
+                new Annotation(
+                    returnsTree ? singletonList(ZERO) : emptyList(),
+                    returnsTree ? Map.of(unitIndex(1), inferredResult) : emptyMap(),
+                    "inferredReturn")),
+            emptySet()));
+
+    Optional<Map<Coefficient, KnownCoefficient>> inferredSolution = program.solve(inferred);
+    program.mockIngest(inferredSolution);
+    assertTrue(inferredSolution.isPresent());
 
     // We show that it is possible to type the function in such a way that the difference between
     // the potential of the arguments and the potential of the result is exactly the cost that we
     // expect.
     final var tightInput = new UnknownCoefficient("tightInput");
     final var tightResult = new UnknownCoefficient("tightResult");
-    final var tight = new HashMap<String, FunctionAnnotation>();
+    final var tight = new HashMap<String, CombinedFunctionAnnotation>();
     tight.put(
         fqn,
-        new FunctionAnnotation(
-            Annotation.constant(
-                (int) expectedSignature.getType().getFrom().treeSize(), "expectedArgs", tightInput),
-            new Annotation(
-                returnsTree ? singletonList(ZERO) : emptyList(),
-                returnsTree ? Map.of(unitIndex(1), tightResult) : emptyMap(),
-                "expectedReturn")));
+        new CombinedFunctionAnnotation(
+            new FunctionAnnotation(
+                Annotation.constant(
+                    (int) expectedSignature.getType().getFrom().treeSize(),
+                    "expectedArgs",
+                    tightInput),
+                new Annotation(
+                    returnsTree ? singletonList(ZERO) : emptyList(),
+                    returnsTree ? Map.of(unitIndex(1), tightResult) : emptyMap(),
+                    "expectedReturn")),
+            emptySet()));
 
     assertTrue(
         program
@@ -361,21 +397,23 @@ public class Tests {
       // We show that it is impossible to type the function in such a way that the the potential of
       // the arguments is less than we expect.
       final var tooSmallInput = new UnknownCoefficient("tightInput");
-      final var tooSmall = new HashMap<String, FunctionAnnotation>();
+      final var tooSmall = new HashMap<String, CombinedFunctionAnnotation>();
       final var costKnownCoefficient = new KnownCoefficient(new Fraction(constantCost - 1));
       tooSmall.put(
           fqn,
-          new FunctionAnnotation(
-              new Annotation(
-                  args,
-                  Map.of(
-                      unitIndex((int) expectedSignature.getType().getFrom().treeSize()),
-                      tooSmallInput),
-                  "expectedArgs"),
-              new Annotation(
-                  returnsTree ? singletonList(ZERO) : emptyList(),
-                  returnsTree ? Map.of(unitIndex(1), ZERO) : emptyMap(),
-                  "expectedReturn")));
+          new CombinedFunctionAnnotation(
+              new FunctionAnnotation(
+                  new Annotation(
+                      args,
+                      Map.of(
+                          unitIndex((int) expectedSignature.getType().getFrom().treeSize()),
+                          tooSmallInput),
+                      "expectedArgs"),
+                  new Annotation(
+                      returnsTree ? singletonList(ZERO) : emptyList(),
+                      returnsTree ? Map.of(unitIndex(1), ZERO) : emptyMap(),
+                      "expectedReturn")),
+              emptySet()));
 
       assertTrue(
           program
@@ -397,29 +435,35 @@ public class Tests {
     // the arguments is less than the potential of the result.
     final var generatorInput = new UnknownCoefficient("generatorInput");
     final var generatorResult = new UnknownCoefficient("generatorResult");
-    final var symbolicGenerator = new HashMap<String, FunctionAnnotation>();
+    final var symbolicGenerator = new HashMap<String, CombinedFunctionAnnotation>();
     symbolicGenerator.put(
         fqn,
-        new FunctionAnnotation(
-            new Annotation(
-                args,
-                Map.of(
-                    unitIndex((int) expectedSignature.getType().getFrom().treeSize()),
-                    generatorInput),
-                "expectedGeneratorArgs"),
-            new Annotation(
-                singletonList(ZERO),
-                Map.of(unitIndex(1), generatorResult),
-                "expectedGeneratorReturn")));
+        new CombinedFunctionAnnotation(
+            new FunctionAnnotation(
+                new Annotation(
+                    args,
+                    Map.of(
+                        unitIndex((int) expectedSignature.getType().getFrom().treeSize()),
+                        generatorInput),
+                    "expectedGeneratorArgs"),
+                new Annotation(
+                    singletonList(ZERO),
+                    Map.of(unitIndex(1), generatorResult),
+                    "expectedGeneratorReturn")),
+            emptySet()));
 
-    assertEquals(
-        Optional.empty(),
+    final var perpetuumMobile =
         program.solve(
             symbolicGenerator,
             Set.of(
                 new LessThanOrEqualConstraint(
                     generatorInput, generatorResult, "outside constraint"),
-                new InequalityConstraint(generatorInput, generatorResult, "outside constraint"))));
+                new InequalityConstraint(generatorInput, generatorResult, "outside constraint")));
+
+    if (perpetuumMobile.isPresent()) {
+      program.mockIngest(perpetuumMobile);
+    }
+    assertTrue(perpetuumMobile.isEmpty(), "Perpetuum mobile!");
   }
 
   @ParameterizedTest

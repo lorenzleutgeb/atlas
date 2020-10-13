@@ -2,11 +2,16 @@ package xyz.leutgeb.lorenz.lac.ast;
 
 import static com.google.common.collect.Sets.union;
 import static java.util.Collections.singleton;
+import static xyz.leutgeb.lorenz.lac.util.Util.mapToString;
 import static xyz.leutgeb.lorenz.lac.util.Util.notImplemented;
 
 import com.google.common.collect.Sets;
 import java.io.PrintStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
@@ -28,30 +33,29 @@ import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 public class CallExpression extends Expression {
   @NonNull String moduleName;
 
-  @NonNull Identifier name;
+  @NonNull Identifier functionName;
 
-  // after normalization, this is effectively a List<Identifier>
   @NonNull List<Expression> parameters;
 
   public CallExpression(
       Source source,
       String moduleName,
-      @NonNull Identifier name,
+      @NonNull Identifier functionName,
       @NonNull List<Expression> parameters) {
     super(source);
-    this.moduleName = moduleName;
-    this.name = name;
+    this.functionName = functionName;
     this.parameters = parameters;
+    this.moduleName = moduleName;
   }
 
   private CallExpression(
       Source source,
-      @NonNull Identifier name,
+      @NonNull Identifier functionName,
       @NonNull List<Expression> parameters,
       Type type,
       String moduleName) {
     super(source, type);
-    this.name = name;
+    this.functionName = functionName;
     this.parameters = parameters;
     this.moduleName = moduleName;
   }
@@ -59,13 +63,13 @@ public class CallExpression extends Expression {
   @Override
   public Set<Identifier> freeVariables() {
     final var result = super.freeVariables();
-    result.remove(name);
+    result.remove(functionName);
     return result;
   }
 
   @Override
   public Stream<? extends Expression> getChildren() {
-    return Stream.concat(Stream.of(name), follow());
+    return Stream.concat(Stream.of(functionName), follow());
   }
 
   @Override
@@ -75,7 +79,7 @@ public class CallExpression extends Expression {
 
   public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
     FunctionSignature signature =
-        context.getSignature(name.getName()).wiggle(new Substitution(), context);
+        context.getSignature(functionName.getName()).wiggle(new Substitution(), context);
 
     final var fTy = signature.getType();
 
@@ -88,9 +92,9 @@ public class CallExpression extends Expression {
       xTy.add(parameter.infer(context));
     }
 
-    name.infer(context);
+    functionName.infer(context);
 
-    if (!name.getName().equals(context.getFunctionInScope())
+    if (!functionName.getName().equals(context.getFunctionInScope())
         && !context.getSignatures().isEmpty()) {
       FunctionSignature functionSignature =
           context.getSignatures().get(context.getFunctionInScope());
@@ -116,7 +120,7 @@ public class CallExpression extends Expression {
     return new CallExpression(
         source,
         moduleName,
-        name,
+        functionName,
         parameters.stream()
             .map(x -> x.forceImmediate(context, idGenerator))
             .collect(Collectors.toList()));
@@ -124,25 +128,29 @@ public class CallExpression extends Expression {
 
   @Override
   public Expression rename(Map<String, String> renaming) {
-    // TODO(lorenz.leutgeb): Only create new expression if really necessary!
-    return new CallExpression(
-        Derived.rename(this),
-        name,
-        parameters.stream().map(x -> x.rename(renaming)).collect(Collectors.toList()),
-        type,
-        moduleName);
+    if (parameters.stream()
+        .anyMatch(
+            x -> !(x instanceof Identifier) || renaming.containsKey(((Identifier) x).getName()))) {
+      return new CallExpression(
+          Derived.rename(this),
+          functionName,
+          parameters.stream().map(x -> x.rename(renaming)).collect(Collectors.toList()),
+          type,
+          moduleName);
+    }
+    return this;
   }
 
   @Override
   public String toString() {
-    return name.getName()
+    return functionName.getName()
         + " "
-        + parameters.stream().map(Object::toString).collect(Collectors.joining(" "));
+        + mapToString(parameters.stream()).collect(Collectors.joining(" "));
   }
 
   @Override
   public void printTo(PrintStream out, int indentation) {
-    name.printTo(out, indentation);
+    functionName.printTo(out, indentation);
     out.print(" ");
 
     for (int i = 0; i < parameters.size(); i++) {
@@ -155,7 +163,7 @@ public class CallExpression extends Expression {
 
   @Override
   public void printHaskellTo(PrintStream out, int indentation) {
-    name.printHaskellTo(out, indentation);
+    functionName.printHaskellTo(out, indentation);
     out.print(" ");
 
     for (int i = 0; i < parameters.size(); i++) {
@@ -168,7 +176,7 @@ public class CallExpression extends Expression {
 
   @Override
   public Set<String> getOccurringFunctions() {
-    var fqn = name.getName();
+    var fqn = functionName.getName();
     if (!fqn.contains(".")) {
       fqn = moduleName + "." + fqn;
     }
@@ -214,7 +222,7 @@ public class CallExpression extends Expression {
         this,
         (Identifier) parameters.get(a),
         down,
-        new CallExpression(source, name, newParameters, type, moduleName));
+        new CallExpression(source, functionName, newParameters, type, moduleName));
   }
 
   @Override

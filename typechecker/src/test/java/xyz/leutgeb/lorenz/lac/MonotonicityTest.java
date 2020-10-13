@@ -21,7 +21,7 @@ class MonotonicityTest {
     final var digits = List.of(0, 1, 2);
     final var numbers = Lists.cartesianProduct(List.of(digits, digits, singletonList(0)));
     final var pairs = Lists.cartesianProduct(numbers, numbers);
-    final var knowledge = Set.of(List.of(0, 1));
+    final var knowledge = Set.of(new W.Order<>(0, 1));
 
     final var resultZ3With = W.lessThanOrEqual(numbers, knowledge);
     final var resultWith =

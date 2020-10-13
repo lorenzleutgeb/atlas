@@ -24,6 +24,10 @@ public interface Rule extends BiFunction<Obligation, AnnotatingGlobals, Rule.App
     @NonNull List<List<Constraint>> constraints;
     @NonNull List<Constraint> generalConstraints;
 
+    public ApplicationResult(List<Obligation> obligations, List<List<Constraint>> constraints) {
+      this(obligations, constraints, emptyList());
+    }
+
     public ApplicationResult(
         List<Obligation> obligations,
         List<List<Constraint>> constraints,

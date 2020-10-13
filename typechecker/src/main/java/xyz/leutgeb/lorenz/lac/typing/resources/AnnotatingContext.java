@@ -33,6 +33,12 @@ public class AnnotatingContext {
 
   private Annotation annotation;
 
+  public AnnotatingContext(List<Identifier> ids, String name) {
+    this.ids = ids;
+    checkIds();
+    this.annotation = new Annotation(ids.size(), name);
+  }
+
   public AnnotatingContext(List<Identifier> ids, Annotation annotation) {
     if (ids.size() != annotation.size()) {
       throw new IllegalArgumentException("sizes must match");
@@ -76,13 +82,29 @@ public class AnnotatingContext {
     return annotation.setCoefficient(index, value);
   }
 
-  public Coefficient getCoefficientOrZero(Function<Identifier, Integer> indexer, Integer c) {
+  public List<Integer> toListIndex(Function<Identifier, Integer> indexer, Integer c) {
     final var index = new ArrayList<Integer>(size() + 1);
     for (var id : ids) {
-      index.add(indexer.apply(id));
+      Integer mapped = indexer.apply(id);
+      if (mapped == null) {
+        throw bug("indexer missed on '" + id + "'");
+      }
+      index.add(mapped);
     }
     index.add(c);
-    return annotation.getCoefficientOrZero(index);
+    return index;
+  }
+
+  public List<Integer> toListIndex(Index index) {
+    return toListIndex(index::getAssociatedIndex, index.getOffsetIndex());
+  }
+
+  public Coefficient getCoefficientOrDefine(Function<Identifier, Integer> indexer, Integer c) {
+    return annotation.getCoefficientOrDefine(toListIndex(indexer, c));
+  }
+
+  public Coefficient getCoefficientOrZero(Function<Identifier, Integer> indexer, Integer c) {
+    return annotation.getCoefficientOrZero(toListIndex(indexer, c));
   }
 
   public Coefficient getCoefficient(Map<Identifier, Integer> indexer, Integer c) {
@@ -104,10 +126,10 @@ public class AnnotatingContext {
     return getCoefficientOrZero(index::getAssociatedIndex, index.getOffsetIndex());
   }
 
-  public Stream<Entry> stream() {
+  public Stream<Entry> streamNonRank() {
     checkIds();
     return annotation
-        .streamCoefficients()
+        .streamNonRankCoefficients()
         .map(
             entry -> {
               final var index =
@@ -183,7 +205,7 @@ public class AnnotatingContext {
     final var idStr =
         ids.isEmpty() ? "Ø" : ids.stream().map(Object::toString).collect(joining(", "));
     ;
-    return idStr + " | " + /*this.annotation + " named " +*/ this.annotation.name;
+    return idStr + " | " + /*this.annotation + " named " +*/ this.annotation.getNameAndId();
   }
 
   public String potentialString() {
@@ -244,8 +266,12 @@ public class AnnotatingContext {
     if (reorderedIds.equals(idStrings)) {
       return this;
     }
+    /*
     final var reorderedIndices =
         idStrings.stream().map(reorderedIds::indexOf).collect(toUnmodifiableList());
+     */
+    final var reorderedIndices =
+        reorderedIds.stream().map(idStrings::indexOf).collect(toUnmodifiableList());
     if (reorderedIndices.contains(-1)) {
       throw new IllegalArgumentException();
     }
@@ -261,6 +287,23 @@ public class AnnotatingContext {
         annotation.reorder(reorderedIndices));
   }
 
+  public AnnotatingContext reorderLexicographically() {
+    return reorderByName(
+        ids.stream().map(Identifier::getName).sorted().collect(toUnmodifiableList()));
+  }
+
+  public Coefficient getCoefficientOrDefine(Index index) {
+    return annotation.getCoefficientOrDefine(toListIndex(index));
+  }
+
+  public Coefficient getRankCoefficientOrDefine(Identifier id) {
+    return annotation.getRankCoefficientOrDefine(indexOf(id));
+  }
+
+  public Coefficient getRankCoefficientOrZero(Identifier id) {
+    return annotation.getRankCoefficientOrZero(indexOf(id));
+  }
+
   @Value
   public static class Entry extends MapIndex {
     Coefficient value;
@@ -274,6 +317,10 @@ public class AnnotatingContext {
     @Override
     public String toString() {
       return super.toString() + " = " + value;
+    }
+
+    public String toIndexString() {
+      return super.toString();
     }
   }
 

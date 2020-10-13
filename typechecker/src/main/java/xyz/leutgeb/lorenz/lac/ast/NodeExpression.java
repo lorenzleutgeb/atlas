@@ -1,6 +1,7 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
 import static com.google.common.collect.Sets.union;
+import static xyz.leutgeb.lorenz.lac.util.Util.mapToString;
 
 import java.io.PrintStream;
 import java.util.*;
@@ -19,10 +20,10 @@ import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
-public class Tuple extends Expression {
+public class NodeExpression extends Expression {
   List<Expression> elements;
 
-  public Tuple(Source source, List<Expression> elements) {
+  public NodeExpression(Source source, List<Expression> elements) {
     super(source);
     if (elements.size() != 3) {
       throw new IllegalArgumentException("only tuples with exactly three elements are supported");
@@ -30,7 +31,7 @@ public class Tuple extends Expression {
     this.elements = elements;
   }
 
-  public Tuple(Source source, List<Expression> elements, Type type) {
+  public NodeExpression(Source source, List<Expression> elements, Type type) {
     // TODO(lorenz.leutgeb): This constructor was made public for testing purposes only. Make it
     // private again?
     super(source, type);
@@ -72,7 +73,7 @@ public class Tuple extends Expression {
     if (elements.stream().allMatch(Expression::isImmediate)) {
       return this;
     }
-    return new Tuple(
+    return new NodeExpression(
         Derived.anf(this),
         elements.stream()
             .map(e -> e.forceImmediate(context, idGenerator))
@@ -82,7 +83,7 @@ public class Tuple extends Expression {
   @Override
   public Expression rename(Map<String, String> renaming) {
     // TODO(lorenz.leutgeb): Only create new expression if renaming is necessary!
-    return new Tuple(
+    return new NodeExpression(
         Derived.rename(this),
         elements.stream().map(e -> e.rename(renaming)).collect(Collectors.toList()),
         type);
@@ -114,7 +115,7 @@ public class Tuple extends Expression {
 
   @Override
   public String toString() {
-    return "(" + elements.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
+    return "(" + mapToString(elements.stream()).collect(Collectors.joining(", ")) + ")";
   }
 
   @Override
@@ -132,7 +133,7 @@ public class Tuple extends Expression {
         this,
         (Identifier) getLeft(),
         down,
-        new Tuple(source, List.of(down.getLeft(), getMiddle(), down.getRight()), type));
+        new NodeExpression(source, List.of(down.getLeft(), getMiddle(), down.getRight()), type));
   }
 
   @Override

@@ -13,4 +13,7 @@
     </annotationProcessing>
     <bytecodeTargetLevel target="14" />
   </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_STRING" value="-Xlint:preview" />
+  </component>
 </project>

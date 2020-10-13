@@ -13,16 +13,16 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.ast.LetExpression;
+import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.ConjunctiveConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
@@ -35,6 +35,11 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.util.Pair;
 import xyz.leutgeb.lorenz.lac.util.Util;
 
+/*
+1 forall b⃗ != 0: p^{b⃗}_{(a⃗⃗,c)} <= q_{(a⃗⃗,b⃗,c)}
+2 forall b != 0. exactly one of the coefficients p'^{b⃗}_{(a,c)} = 1 and all other p'^{b⃗}_{(e,d)} = 0 (i.e., a != e or c != d) or all p'^{b⃗_{(a,c)} = 0
+3 forall b != 0. r_{(b⃗,a,c)} = p'^{b⃗_{(a,c)}
+ */
 @Deprecated
 public class LetTreeCfFlorian implements Rule {
   public static final LetTreeCfFlorian INSTANCE = new LetTreeCfFlorian();
@@ -48,10 +53,8 @@ public class LetTreeCfFlorian implements Rule {
     final List<Constraint> crossConstraints = new ArrayList<>();
 
     if (!(value.getType() instanceof TreeType)) {
-      throw bug("cannot apply (let:tree:cf) to a variable that is not a tree");
+      throw bug("cannot apply (let:tree:cf:florian) to a variable that is not a tree");
     }
-
-    final Set<Coefficient> occurred = new HashSet<>();
 
     // Γ is used as context for e1, so from the combined context,
     // take Γ to be exactly the variables that occur in e1.
@@ -87,9 +90,12 @@ public class LetTreeCfFlorian implements Rule {
     final var deltax = new ArrayList<>(varsForDeltaAsList);
     deltax.add(x);
 
-    final var gammaP =
-        globals.getHeuristic().generateContext("letcf " + x + " ΓP", varsForGammaAsList);
-    final var deltaxr = globals.getHeuristic().generateContext("letcf " + x + " ΔR", deltax);
+    // final var gammaP =
+    //    globals.getHeuristic().generateContext("letcf " + x + " ΓP", varsForGammaAsList);
+    final var gammaP = new AnnotatingContext(varsForGammaAsList, "P(" + x + ")");
+
+    // final var deltaxr = globals.getHeuristic().generateContext("letcf " + x + " ΔR", deltax);
+    final var deltaxr = new AnnotatingContext(deltax, "R(" + x + ")");
 
     // This is the "standard" obligation that we have to fulfill. It talks about e2
     // which is the body of the let-expression.
@@ -98,7 +104,9 @@ public class LetTreeCfFlorian implements Rule {
         Pair.of(obligation.keepAnnotationAndCost(deltaxr, body), new ArrayList<>());
 
     // Γ | P ⊢ e1 : T | P'
-    final var pp = globals.getHeuristic().generate("letcf " + x + "P'", value);
+    final var pp = globals.getHeuristic().generate("P'(" + x + ")", value);
+    // TODO: Heuristic generation would check whether x is a tree. Do we need to do that here, too?
+    // final var pp = new Annotation(1, "letcf " + x + "Pprime");
     final Pair<Obligation, List<Constraint>> p =
         Pair.of(obligation.keepCost(gammaP, value, pp), new ArrayList<>());
 
@@ -109,30 +117,44 @@ public class LetTreeCfFlorian implements Rule {
 
     // Ensures that the potential through rank coefficients we get to evaluate this.value is the
     // same as we have available for this. Note that Γ ∩ Δ = ∅.
-    p.getRight()
-        .addAll(
-            EqualityConstraint.eqRanks(
-                varsForGammaAsList, gammaP, gammaDeltaQ, "(let:tree:cf) p_i = q_i"));
+    varsForGammaAsList.stream()
+        .map(
+            id ->
+                new EqualityConstraint(
+                    gammaDeltaQ.getRankCoefficient(id),
+                    gammaP.getRankCoefficientOrDefine(id),
+                    "(let:tree:cf:florian) q_i = p_i"))
+        .forEach(constraint -> p.getRight().add(constraint));
 
     // Ensures that the potential through rank coefficients we get to evaluate this.body is the same
     // as we have available for this. Note that Γ ∩ Δ = ∅.
-    r.getRight()
-        .addAll(
-            EqualityConstraint.eqRanks(
-                varsForDeltaAsList, deltaxr, gammaDeltaQ, "(let:tree:cf) r_j = q_{m + j}"));
+    varsForDeltaAsList.stream()
+        .map(
+            id ->
+                new EqualityConstraint(
+                    gammaDeltaQ.getRankCoefficient(id),
+                    deltaxr.getRankCoefficientOrDefine(id),
+                    "(let:tree:cf:florian on " + x + ") q_{m+j} = r_j"))
+        .forEach(constraint -> r.getRight().add(constraint));
 
     // Ensures that we transfer potential for Γ under Q to P (which
     // covers Γ exclusively).
     p.getRight()
         .addAll(
-            gammaP.stream()
+            gammaDeltaQ
+                .streamNonRank()
+                .filter(
+                    entry ->
+                        varsForDeltaAsSet.isEmpty() || entry.zeroAndNonEmptyOn(varsForDeltaAsSet))
                 .map(
-                    pEntry ->
+                    entry ->
                         new EqualityConstraint(
-                            pEntry.getValue(),
-                            gammaDeltaQ.getCoefficientOrZero(pEntry.padWithZero()),
-                            "(let:tree:cf) p_{(\\vec{a}, c)} = q_{(\\vec{a}, \\vec{0}, c)} with [\\vec{a}, c] = "
-                                + pEntry.toString()))
+                            entry.getValue(),
+                            gammaP.getCoefficientOrDefine(entry),
+                            "(let:tree:cf:florian"
+                                + x
+                                + ") p_{(a⃗⃗,c)} = q_{(a⃗⃗,0⃗,c)} with [a⃗⃗, c] = "
+                                + entry.toString()))
                 .collect(Collectors.toSet()));
 
     // Then, all constraints that are generated for e1 : T.
@@ -141,24 +163,24 @@ public class LetTreeCfFlorian implements Rule {
         // Since the result of evaluating this.value is effectively the same as the newly
         // introduced variable, equate those coefficients.
         new EqualityConstraint(
-            deltaxr.getRankCoefficient(x),
-            pp.getRankCoefficient(),
-            "(let:tree:cf) r_{k + 1} = p'_{*}"));
+            deltaxr.getRankCoefficientOrDefine(x),
+            pp.getRankCoefficientOrDefine(),
+            "(let:tree:cf:florian on " + x + ") r_{k + 1} = p'_{*}"));
 
     crossConstraints.addAll(
         // Again, restore the potential we have got after evaluating this.value to align
         // with the variable in the context for this.body.
-        pp.streamCoefficients()
+        pp.streamNonRankCoefficients()
             .map(
                 e -> {
                   final var index = e.getKey();
                   final var rCoefficient =
-                      deltaxr.getCoefficient(id -> id.equals(x) ? index.get(0) : 0, index.get(1));
-                  occurred.add(rCoefficient);
+                      deltaxr.getCoefficientOrDefine(
+                          id -> id.equals(x) ? index.get(0) : 0, index.get(1));
                   return new EqualityConstraint(
                       rCoefficient,
                       e.getValue(),
-                      "(let:tree:cf) r_{(\\vec{0}, a, c)} = p'_{(a, c)}");
+                      "(let:tree:cf:florian on " + x + ") r_{(0⃗,a,c)} = p'_{(a, c)}");
                 })
             .collect(toList()));
 
@@ -167,71 +189,64 @@ public class LetTreeCfFlorian implements Rule {
     final Function<? super Map<Identifier, Integer>, Obligation> pbProducer =
         (key) ->
             new Obligation(
+                /*
                 globals
                     .getHeuristic()
-                    .generateContext("letcf " + x + " b is " + key, varsForGammaAsList),
+                    .generateContext("P(" + x + ")(" + key + ")", varsForGammaAsList),
+
+                     */
+                new AnnotatingContext(varsForGammaAsList, "P(" + x + ")(" + key + ")"),
                 value,
-                globals.getHeuristic().generate("letcf' " + x + " b is " + key, value),
+                // globals.getHeuristic().generate("P'(" + x + ")(" + key + ")", value),
+                new Annotation(1, "P'(" + x + ")(" + key + ")"),
                 0);
 
-    gammaDeltaQ.stream()
-        .filter(
-            index -> varsForDeltaAsList.stream().anyMatch(id -> index.getAssociatedIndex(id) != 0))
-        // disabled for modification by Florian
-        // .filter(
-        //    index -> varsForGammaAsList.stream().anyMatch(id -> index.getAssociatedIndex(id) !=
-        // 0))
+    gammaDeltaQ
+        .streamNonRank()
+        .filter(index -> index.nonZeroOrEmptyOn(varsForDeltaAsSet))
         .forEach(
-            index -> {
+            qEntry -> {
               // Check if the index for all variables from delta are zero.
               final var b = new HashMap<Identifier, Integer>();
-              varsForDeltaAsList.forEach(id -> b.put(id, index.getAssociatedIndex(id)));
+              varsForDeltaAsList.forEach(id -> b.put(id, qEntry.getAssociatedIndex(id)));
 
               final var bObligation = bs.computeIfAbsent(b, pbProducer);
 
               for (final var id : bObligation.getContext().getIds()) {
                 crossConstraints.add(
                     new EqualityConstraint(
-                        bObligation.getContext().getRankCoefficient(id),
+                        bObligation.getContext().getRankCoefficientOrDefine(id),
                         ZERO,
-                        "(let:tree:cf) no rank"));
+                        "(let:tree:cf:florian on " + x + ") no rank"));
               }
 
-              // forall vec(b) != 0: p^vec(b)_vec(a),c <= q_vec(a),vec(b),c
-              Coefficient coefficientOrZero = bObligation.getContext().getCoefficientOrZero(index);
-              crossConstraints.add(
-                  new LessThanOrEqualConstraint(
-                      coefficientOrZero,
-                      index.getValue(),
-                      "(let:tree:cf) p^{(\\vec{b})="
-                          + b
-                          + "}_{(\\vec{a},c)="
-                          + coefficientOrZero
-                          + "} <= q_{(\\vec{a}, \\vec{b}, c)="
-                          + index
-                          + "}"));
+              // 1: forall vec(b) != 0: p^vec(b)_vec(a),c <= q_vec(a),vec(b),c
+              if ((!(qEntry.allAssociatedIndicesMatch(varsForGammaAsList, a -> a == 0))
+                          || qEntry.getOffsetIndex() > 0)
+                      && !(qEntry.getOffsetIndex() == 0)
+                  || !varsForGammaAsList.isEmpty()
+                      && !qEntry.allAssociatedIndicesMatch(varsForGammaAsList, a -> a == 0)) {
 
-              /* disabled for modification by Florian
-              final var conclusion = new ArrayList<Constraint>();
-              conclusion.add(
-                  new EqualityConstraint(
-                      bObligation.getContext().getCoefficient(index),
-                      index.getValue(),
-                      "(let:tree:cf) p^{(\\vec{b})="
-                          + b
-                          + "}_{(\\vec{a},c)="
-                          + index
-                          + "} = q_{(\\vec{a}, \\vec{b}, c)="
-                          + index
-                          + "}"));
-                          */
+                Coefficient coefficientOrZero =
+                    bObligation.getContext().getCoefficientOrDefine(qEntry);
+                crossConstraints.add(
+                    new LessThanOrEqualConstraint(
+                        coefficientOrZero,
+                        qEntry.getValue(),
+                        "(let:tree:cf:florian on "
+                            + x
+                            + ") p^{(b⃗)}_{(a⃗⃗,c)} ≤ q_{(a⃗⃗, b⃗, c)="
+                            + qEntry.toIndexString()
+                            + "}"));
+              }
 
+              // 2
               // forall b != 0. exactly one of the coefficients p'^vec(b)_a,c = 1 and all other
               // p'^vec(b)_e,d = 0 (i.e., a != e or c != d) or all p'^vec(b)_a,c = 0
               final var pbcoeffs =
                   bObligation
                       .getAnnotation()
-                      .streamCoefficients()
+                      .streamNonRankCoefficients()
                       // .filter(entry -> entry.getKey().get(0) != 0)
                       .map(Map.Entry::getValue)
                       .collect(toList());
@@ -239,78 +254,26 @@ public class LetTreeCfFlorian implements Rule {
               crossConstraints.add(
                   new DisjunctiveConstraint(
                       List.of(exactlyOneIsOne(pbcoeffs), allZero(pbcoeffs)),
-                      "(let:tree:cf) none or one"));
-
-              // Ensure that exactly one of p'^{(\vec{b})}_{(a, c)} with a != 0 is one.
-              /* disabled for modification by Florian
-              conclusion.addAll(
-                  exactlyOneIsOne(
-                      bObligation
-                          .getAnnotation()
-                          .streamCoefficients()
-                          .filter(entry -> entry.getKey().get(0) != 0)
-                          .map(Map.Entry::getValue)
-                          .collect(toList())));
-                          */
-
-              // Ensure that all p'^{(\vec{b})}_{(a, c)} with a == 0 are zero.
-              /* disabled for modification by Florian
-              conclusion.addAll(
-                  bObligation
-                      .getAnnotation()
-                      .streamCoefficients()
-                      .filter(entry -> entry.getKey().get(0) == 0)
-                      .map(Map.Entry::getValue)
-                      .map(
-                          coefficient ->
-                              new EqualityConstraint(
-                                  coefficient,
-                                  ZERO,
-                                  "(let:tree:cf) p'^{(\\vec{b})=" + b + "}_{(0,c)} = 0"))
-                      .collect(toList()));
-
-              crossConstraints.add(
-                  new DisjunctiveConstraint(
-                      List.of(
-                          new EqualityConstraint(
-                              index.getValue(), ZERO, "(let:tree:cf) antecedent q? = 0"),
-                          new ConjunctiveConstraint(conclusion, "conjunction in let:tree:cf")),
-                      "(let:tree:cf) q_{(\\vec{a},\\vec{b},c)} != 0 -> (p^{(\\vec{b})="
-                          + b
-                          + "}_{(\\vec{a},c)} = q_({\\vec{a},\\vec{b},c) /\\ ...)"));
-               */
+                      "(let:tree:cf:florian) none or one"));
             });
 
-    deltaxr.stream()
-        .filter(
-            index -> varsForDeltaAsList.stream().anyMatch(id -> index.getAssociatedIndex(id) != 0))
+    // 3 forall b != 0. r_{(b⃗,a,c)} = p'^{b⃗_{(a,c)}
+    deltaxr
+        .streamNonRank()
+        .filter(index -> index.nonZeroOrEmptyOn(varsForDeltaAsSet))
         .forEach(
             index -> {
-              // Check if the index for all variables from delta are zero.
               final var b = new HashMap<Identifier, Integer>();
               varsForDeltaAsList.forEach(id -> b.put(id, index.getAssociatedIndex(id)));
-
-              final var a = index.getAssociatedIndex(x);
-
               final var bObligation = bs.computeIfAbsent(b, pbProducer);
-
-              if (bObligation == null) {
-                throw bug("oops");
-              }
-
-              occurred.add(index.getValue());
               crossConstraints.add(
                   new EqualityConstraint(
                       index.getValue(),
-                      a == 0
-                          ? gammaDeltaQ.getCoefficientOrZero(index.padWithZero())
-                          : bObligation
-                              .getAnnotation()
-                              .getCoefficientOrZero(a, index.getOffsetIndex()),
-                      "(let:tree:cf) r_{(\\vec{b},a,c)} = "
-                          + (a == 0 && false /* modification by Florian */
-                              ? "q_{(\\vec{0},b,c)}"
-                              : "p'^{(\\vec{b})}_{(a, c)}")));
+                      bObligation
+                          .getAnnotation()
+                          .getCoefficientOrDefine(
+                              index.getAssociatedIndex(x), index.getOffsetIndex()),
+                      "(let:tree:cf:florian) r_{(b⃗,a,c)} = p'^{(b⃗)}_{(a, c)}"));
             });
 
     var old =
@@ -319,16 +282,6 @@ public class LetTreeCfFlorian implements Rule {
             bs.values().stream()
                 .map(o -> Pair.of(o, Collections.<Constraint>emptyList()))
                 .collect(toList()));
-
-    /*
-    deltaxr.stream()
-        .map(AnnotatingContext.Entry::getValue)
-        .filter(not(occurred::contains))
-        .map(
-            coefficient ->
-                new EqualityConstraint(ZERO, coefficient, "(let:tree:cf) setToZero " + coefficient))
-        .forEach(crossConstraints::add);
-     */
 
     return new ApplicationResult(
         old.stream().map(Pair::getLeft).collect(Collectors.toUnmodifiableList()),

@@ -76,12 +76,24 @@ public class NidiExporter<V, E> extends BaseExporter<V, E> {
     }
 
     for (V v : g.vertexSet()) {
+      boolean skipEdges = false;
+
+      /*
+      if (v instanceof Obligation obligation) {
+        if (obligation.getCost() == 0) {
+          skipEdges = true;
+        }
+      }
+       */
+
       Node node = renderAttributes(Factory.node(getVertexId(v)), getVertexAttributes(v));
 
-      for (E e : g.outgoingEdgesOf(v)) {
-        var target = getVertexId(g.getEdgeTarget(e));
+      if (!skipEdges) {
+        for (E e : g.outgoingEdgesOf(v)) {
+          var target = getVertexId(g.getEdgeTarget(e));
 
-        node = node.link(renderAttributes(to(Factory.node(target)), getEdgeAttributes(e)));
+          node = node.link(renderAttributes(to(Factory.node(target)), getEdgeAttributes(e)));
+        }
       }
 
       result = result.with(node);

@@ -1,6 +1,7 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 
 import static guru.nidi.graphviz.model.Link.to;
+import static java.util.Collections.singleton;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 
 import com.google.common.collect.BiMap;
@@ -40,11 +41,22 @@ public class EqualityConstraint extends Constraint {
     Objects.requireNonNull(left);
     Objects.requireNonNull(right);
     if (left.equals(right)) {
-      throw new IllegalArgumentException(
-          "cannot create equality constraint for equal coefficients");
+      log.warn("Creating an equality constraint for equal coefficients.");
     }
     this.left = left;
     this.right = right;
+  }
+
+  public static List<Constraint> eqRanksDefineFromLeft(
+      Iterable<Identifier> ids, AnnotatingContext left, AnnotatingContext right, String reason) {
+    return StreamSupport.stream(ids.spliterator(), false)
+        .map(
+            id ->
+                new EqualityConstraint(
+                    left.getRankCoefficientOrZero(id),
+                    right.getRankCoefficientOrDefine(id),
+                    reason))
+        .collect(Collectors.toList());
   }
 
   public static List<Constraint> eqRanks(
@@ -92,12 +104,14 @@ public class EqualityConstraint extends Constraint {
 
     final int size = left.size();
     for (int x = 0; x < size; x++) {
-      if (left.getRankCoefficient(x).equals(right.getRankCoefficient(x))) {
+      if (left.getRankCoefficientOrZero(x).equals(right.getRankCoefficientOrZero(x))) {
         continue;
       }
       result.add(
           new EqualityConstraint(
-              left.getRankCoefficient(x), right.getRankCoefficient(x), reason + " rk " + x));
+              left.getRankCoefficientOrZero(x),
+              right.getRankCoefficientOrZero(x),
+              reason + " rk " + x));
     }
 
     final Set<List<Integer>> leftIndices = new HashSet<>();
@@ -143,6 +157,13 @@ public class EqualityConstraint extends Constraint {
 
   @Override
   public Set<Coefficient> occurringCoefficients() {
+    final var leftCanonical = left.canonical();
+    final var rightCanonical = right.canonical();
+
+    if (leftCanonical.equals(rightCanonical)) {
+      return singleton(leftCanonical);
+    }
+
     return Set.of(left.canonical(), right.canonical());
   }
 

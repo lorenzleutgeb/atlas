@@ -65,12 +65,12 @@ public class ConstraintSystemSolver {
   }
 
   public static Optional<Map<Coefficient, KnownCoefficient>> solve(
-      Set<Constraint> constraints, String name, List<Coefficient> target) {
+      Set<Constraint> constraints, String name, List<UnknownCoefficient> target) {
     return solve(constraints, name, target, Domain.INTEGER);
   }
 
   public static Optional<Map<Coefficient, KnownCoefficient>> solve(
-      Set<Constraint> constraints, String name, List<Coefficient> target, Domain domain) {
+      Set<Constraint> constraints, String name, List<UnknownCoefficient> target, Domain domain) {
     final var unsatCore = target.isEmpty();
 
     final var ctx = new Context(z3Config(unsatCore));
@@ -103,9 +103,9 @@ public class ConstraintSystemSolver {
           if (optimize) {
             opt.Add(positive);
           } else {
-            if (unsatCore) {
+            if (unsatCore && false) {
               solver.assertAndTrack(
-                  positive, ctx.mkBoolConst(unknownCoefficient + " must not be negative"));
+                  positive, ctx.mkBoolConst("non negative " + unknownCoefficient));
             } else {
               solver.add(positive);
             }
@@ -116,7 +116,14 @@ public class ConstraintSystemSolver {
     }
 
     if (optimize) {
-      target.forEach(x -> opt.MkMinimize(generatedCoefficients.inverse().get(x)));
+      target.forEach(
+          x -> {
+            if (!generatedCoefficients.inverse().containsKey(x)) {
+              log.warn("Could not find generated coefficient for optimization target '{}'", x);
+            } else {
+              opt.MkMinimize(generatedCoefficients.inverse().get(x));
+            }
+          });
     }
 
     for (Constraint c : constraints) {
@@ -135,7 +142,7 @@ public class ConstraintSystemSolver {
     log.info("lac Coefficients: " + generatedCoefficients.keySet().size());
     log.info("lac Constraints:  " + constraints.size());
     log.info("Z3  Scopes:       " + (optimize ? "?" : solver.getNumScopes()));
-    log.info("Z3  Assertions:   " + (optimize ? "?" : solver.getAssertions()));
+    log.info("Z3  Assertions:   " + (optimize ? "?" : solver.getAssertions().length));
 
     // TODO(lorenz.leutgeb): Parameterize location.
     File smtFile = new File("out", name + ".smt");
@@ -219,9 +226,12 @@ public class ConstraintSystemSolver {
     final var stop = Instant.now();
     log.debug("Solving time: " + (Duration.between(start, stop)));
     if (SATISFIABLE.equals(status)) {
+      /*
+      TODO: Write this to a file?!
       for (var entry : statistics.get().getEntries()) {
         log.info("{}={}", entry.Key, entry.getValueString());
       }
+       */
 
       return Optional.of(getModel.get());
     } else if (UNKNOWN.equals(status)) {
@@ -230,6 +240,7 @@ public class ConstraintSystemSolver {
     }
     log.error("Constraint system is unsatisfiable!");
     if (!unsatCore) {
+      log.error("Got no unsat core");
       return Optional.empty();
     }
     Set<String> coreSet =

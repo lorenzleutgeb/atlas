@@ -3,7 +3,15 @@ package xyz.leutgeb.lorenz.lac.unification;
 import static com.google.common.collect.Sets.difference;
 
 import com.google.common.collect.Iterators;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
@@ -127,14 +135,8 @@ public class UnificationContext {
     Type t = getTypeRecursive(id);
     if (t != null) {
       return t;
-    } else {
-      var similar = Util.similar(id, iterateIdentifiers(), 0.5, 4);
-      var message = "'" + id + "' is not defined.";
-      if (similar.isEmpty()) {
-        message += " (Did you mean " + similar + "?)";
-      }
-      throw new TypeError(message);
     }
+    throw new TypeError(Util.undefinedText(id, iterateIdentifiers()));
   }
 
   public Intro getIntro(final String id) {
@@ -145,14 +147,9 @@ public class UnificationContext {
     FunctionSignature t = signatures.get(fqn);
     if (t != null) {
       return t;
-    } else {
-      var similar = Util.similar(fqn, signatures.keySet().iterator(), 0.5, 4);
-      var message = "'" + fqn + "' is not defined.";
-      if (similar.isEmpty()) {
-        message += " (Did you mean " + similar + "?)";
-      }
-      throw new TypeError(message);
     }
+
+    throw new TypeError(Util.undefinedText(fqn, iterateIdentifiers()));
   }
 
   private Type getTypeInternal(final String key) {

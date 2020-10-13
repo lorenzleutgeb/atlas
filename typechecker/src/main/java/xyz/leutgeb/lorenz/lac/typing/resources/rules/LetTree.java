@@ -31,7 +31,6 @@ public class LetTree implements Rule {
     final var value = expression.getValue();
     final var gammaDeltaQ = obligation.getContext();
     final var body = expression.getBody();
-    final var x = declared;
     final var qp = obligation.getAnnotation();
     final List<Constraint> crossConstraints = new ArrayList<>();
 
@@ -51,7 +50,7 @@ public class LetTree implements Rule {
 
     // Now, one sanity check: There must not be free variables in the body which
     // are not in Δ.
-    if (!Sets.difference(Sets.difference(bodyFreeVarsAsStrings, singleton(x)), varsForDelta)
+    if (!Sets.difference(Sets.difference(bodyFreeVarsAsStrings, singleton(declared)), varsForDelta)
         .isEmpty()) {
       throw bug("there are free variables in the body of a let binding which do not occur in Δ");
     }
@@ -70,10 +69,10 @@ public class LetTree implements Rule {
     }
 
     final var deltax = new ArrayList<>(delta);
-    deltax.add(x);
+    deltax.add(declared);
 
-    final var gammaP = globals.getHeuristic().generateContext("let" + x + "ΓP", gamma);
-    final var deltaxr = globals.getHeuristic().generateContext("let" + x + "ΔR", deltax);
+    final var gammaP = globals.getHeuristic().generateContext("let" + declared + "ΓP", gamma);
+    final var deltaxr = globals.getHeuristic().generateContext("let" + declared + "ΔR", deltax);
 
     // This is the "standard" obligation that we have to fulfill. It talks about e2
     // which is the body of the let-expression.
@@ -82,7 +81,7 @@ public class LetTree implements Rule {
         Pair.of(obligation.keepCost(deltaxr, body, qp), new ArrayList<>());
 
     // Γ | P ⊢ e1 : T | P'
-    final var e1pp = globals.getHeuristic().generate("lettree " + x + " P'", value);
+    final var e1pp = globals.getHeuristic().generate("lettree " + declared + " P'", value);
     final Pair<Obligation, List<Constraint>> p =
         Pair.of(obligation.keepCost(gammaP, value, e1pp), new ArrayList<>());
 
@@ -103,13 +102,14 @@ public class LetTree implements Rule {
     // covers Γ exclusively).
     p.getRight()
         .addAll(
-            gammaP.stream()
+            gammaP
+                .streamNonRank()
                 .map(
                     pEntry ->
                         new EqualityConstraint(
                             pEntry.getValue(),
                             gammaDeltaQ.getCoefficientOrZero(pEntry.padWithZero()),
-                            "(let:tree) p_{(\\vec{a},c)} = q_{(\\vec{a},\\vec{0},c)}"))
+                            "(let:tree) p_{(a⃗⃗,c)} = q_{(a⃗⃗,0⃗,c)}"))
                 .collect(Collectors.toSet()));
 
     // Preserving the potential of evaluation of this.value of only makes sense if it is of type
@@ -118,34 +118,36 @@ public class LetTree implements Rule {
         // Since the result of evaluating this.value is effectively the same as the newly
         // introduced variable, equate those coefficients.
         new EqualityConstraint(
-            deltaxr.getRankCoefficient(x),
+            deltaxr.getRankCoefficient(declared),
             e1pp.getRankCoefficient(),
-            "(let:tree) r_{k + 1} = p'_{*} (for `" + x + "` on the left)"));
+            "(let:tree) r_{k + 1} = p'_{*} (for `" + declared + "` on the left)"));
 
-    occurred.add(deltaxr.getRankCoefficient(x));
+    occurred.add(deltaxr.getRankCoefficient(declared));
 
     crossConstraints.addAll(
         // Again, restore the potential we have got after evaluating this.value to align
         // with the new variable in the context for this.body.
-        e1pp.streamCoefficients()
+        e1pp.streamNonRankCoefficients()
             .map(
                 e -> {
                   final var index = e.getKey();
                   Coefficient rCoefficient =
-                      deltaxr.getCoefficient(id -> id.equals(x) ? index.get(0) : 0, index.get(1));
+                      deltaxr.getCoefficient(
+                          id -> id.equals(declared) ? index.get(0) : 0, index.get(1));
                   occurred.add(rCoefficient);
                   return new EqualityConstraint(
                       rCoefficient,
                       e.getValue(),
-                      "(let:tree) r_{(\\vec{0}, a, c)} = p'_{(a, c)} with (a, c) = " + index);
+                      "(let:tree) r_{(0⃗, a, c)} = p'_{(a, c)} with (a, c) = " + index);
                 })
             .collect(toList()));
 
-    deltaxr.stream()
+    deltaxr
+        .streamNonRank()
         .filter(
             rEntry ->
                 delta.stream().anyMatch(id -> rEntry.getAssociatedIndices().get(id) != 0)
-                    && rEntry.getAssociatedIndex(x) == 0)
+                    && rEntry.getAssociatedIndex(declared) == 0)
         .forEach(
             rEntry -> {
               occurred.add(rEntry.getValue());
@@ -159,18 +161,26 @@ public class LetTree implements Rule {
                                       varsForGamma.contains(id)
                                           ? 0
                                           : rEntry.getAssociatedIndices().get(id))),
-                          "(let:tree) ∀ \\vec{b} ≠ \\vec{0} . r_{(\\vec{b}, 0, c)} = q_{(\\vec{0}, \\vec{b}, c)} with (\\vec{b}, 0, c) = "
+                          "(let:tree) ∀ b⃗ ≠ 0⃗ . r_{(b⃗, 0, c)} = q_{(0⃗, b⃗, c)} with (b⃗, 0, c) = "
                               + rEntry));
             });
 
     final List<Constraint> setToZeroR =
-        deltaxr.stream()
+        deltaxr
+            .streamNonRank()
             .map(AnnotatingContext.Entry::getValue)
             .filter(not(occurred::contains))
             .map(
                 coefficient ->
                     new EqualityConstraint(
-                        coefficient, ZERO, "(let:tree) setToZero r " + coefficient))
+                        coefficient,
+                        ZERO,
+                        "(let:tree) setToZero r "
+                            + coefficient
+                            + " when binding "
+                            + declared
+                            + " to "
+                            + value.terminalOrBox()))
             .collect(Collectors.toUnmodifiableList());
 
     crossConstraints.addAll(setToZeroR);

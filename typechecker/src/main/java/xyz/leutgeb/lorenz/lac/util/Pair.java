@@ -1,6 +1,8 @@
 package xyz.leutgeb.lorenz.lac.util;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -34,6 +36,25 @@ public abstract class Pair<L, R> implements Map.Entry<L, R>, Serializable {
    */
   public static <L, R> Pair<L, R> of(final L left, final R right) {
     return new ImmutablePair<>(left, right);
+  }
+
+  public static <E> Pair<E, E> of(final List<E> list) {
+    if (list.size() != 2) {
+      throw new IllegalArgumentException("can only convert list with exactly two elements to pair");
+    }
+    return Pair.of(list.get(0), list.get(1));
+  }
+
+  public static <E> List<Pair<E, E>> pairs(final List<E> list) {
+    if (list.size() % 2 != 0) {
+      throw new IllegalArgumentException(
+          "can only convert list with even number of elements to pairs");
+    }
+    final List<Pair<E, E>> result = new ArrayList<Pair<E, E>>(list.size() / 2);
+    for (int i = 0; i < list.size() - 1; i += 2) {
+      result.add(Pair.of(list.get(i), list.get(i + 1)));
+    }
+    return result;
   }
 
   // -----------------------------------------------------------------------

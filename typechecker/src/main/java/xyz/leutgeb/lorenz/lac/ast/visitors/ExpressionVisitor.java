@@ -66,17 +66,17 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   }
 
   @Override
-  public Tuple visitNode(SplayParser.NodeContext ctx) {
+  public NodeExpression visitNode(SplayParser.NodeContext ctx) {
     var elements = new ArrayList<Expression>(3);
     elements.add(visit(ctx.left));
     elements.add(visit(ctx.middle));
     elements.add(visit(ctx.right));
-    return new Tuple(getSource(ctx), elements);
+    return new NodeExpression(getSource(ctx), elements);
   }
 
   @Override
-  public Tuple visitPattern(SplayParser.PatternContext ctx) {
-    return new Tuple(
+  public NodeExpression visitPattern(SplayParser.PatternContext ctx) {
+    return new NodeExpression(
         getSource(ctx),
         List.of(
             Identifier.get(ctx.left.getText(), getSource(ctx)),

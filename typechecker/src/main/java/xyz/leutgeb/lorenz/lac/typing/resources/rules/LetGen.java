@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import xyz.leutgeb.lorenz.lac.ast.LetExpression;
+import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
@@ -65,8 +66,10 @@ public class LetGen implements Rule {
     // NOTE: Delta and x actually is delta here, because x is not a tree.
     final var deltax = new ArrayList<>(delta);
 
-    final var gammaP = globals.getHeuristic().generateContext("let" + x + "ΓP", gamma);
-    final var deltaxr = globals.getHeuristic().generateContext("let" + x + "ΔR", deltax);
+    // final var gammaP = globals.getHeuristic().generateContext("let" + x + "ΓP", gamma);
+    final var gammaP = new AnnotatingContext(gamma, "P(" + x + ")");
+    // final var deltaxr = globals.getHeuristic().generateContext("let" + x + "ΔR", deltax);
+    final var deltaxr = new AnnotatingContext(deltax, "R(" + x + ")");
 
     // This is the "standard" obligation that we have to fulfill. It talks about e2
     // which is the body of the let-expression.
@@ -75,7 +78,7 @@ public class LetGen implements Rule {
         Pair.of(obligation.keepCost(deltaxr, body, qp), new ArrayList<>());
 
     // Γ | P ⊢ e1 : α | ∅
-    final var e1pp = globals.getHeuristic().generate("letgen " + x + "P'", value);
+    final var e1pp = globals.getHeuristic().generate("P'(" + x + ")", value);
     final Pair<Obligation, List<Constraint>> p =
         Pair.of(obligation.keepCost(gammaP, value, e1pp), new ArrayList<>());
 
@@ -84,45 +87,45 @@ public class LetGen implements Rule {
     // Ensures that the potential through rank coefficients we get to evaluate this.value is the
     // same as we have available for this. Note that Γ ∩ Δ = ∅.
     p.getRight()
-        .addAll(EqualityConstraint.eqRanks(gamma, gammaP, gammaDeltaQ, "(let:gen) p_i = q_i"));
+        .addAll(
+            EqualityConstraint.eqRanksDefineFromLeft(
+                gamma, gammaDeltaQ, gammaP, "(let:gen) q_i = p_i"));
 
     // Ensures that the potential through rank coefficients we get to evaluate this.body is the same
     // as we have available for this. Note that Γ ∩ Δ = ∅.
     r.getRight()
         .addAll(
-            EqualityConstraint.eqRanks(delta, deltaxr, gammaDeltaQ, "(let:gen) r_j = q_{m + j}"));
+            EqualityConstraint.eqRanksDefineFromLeft(
+                delta, gammaDeltaQ, deltaxr, "(let:gen) q_{m + j} = r_j"));
 
     // Ensures that we transfer potential for Γ under Q to P (which
     // covers Γ exclusively).
     p.getRight()
         .addAll(
-            gammaP.stream()
+            gammaDeltaQ
+                .streamNonRank()
+                .filter(entry -> varsForDelta.isEmpty() || entry.zeroAndNonEmptyOn(varsForDelta))
                 .map(
-                    pEntry ->
+                    qEntry ->
                         new EqualityConstraint(
-                            pEntry.getValue(),
-                            gammaDeltaQ.getCoefficientOrZero(pEntry.padWithZero()),
-                            "(let:gen) p_{(\\vec{a}, c)} = q_{(\\vec{a}, \\vec{0}, c)}"))
+                            qEntry.getValue(),
+                            gammaP.getCoefficientOrDefine(qEntry),
+                            "(let:gen) p_{(a⃗⃗,c)} = q_{(a⃗⃗,0⃗,c)}"))
                 .collect(Collectors.toSet()));
 
-    // Then, all constraints that are generated for e1 : T.
-    // Then, all constraints that are generated for e1 : A with A != T.
-    deltaxr.stream()
-        .filter(rEntry -> delta.stream().anyMatch(id -> rEntry.getAssociatedIndices().get(id) != 0))
-        .forEach(
-            rEntry -> {
-              r.getRight()
-                  .add(
-                      new EqualityConstraint(
-                          rEntry.getValue(),
-                          gammaDeltaQ.getCoefficientOrZero(
-                              id ->
-                                  varsForGamma.contains(id)
-                                      ? 0
-                                      : rEntry.getAssociatedIndices().get(id),
-                              rEntry.getOffsetIndex()),
-                          "(let:gen) ∀ \\vec{b} ≠ \\vec{0} . r_{(\\vec{b}, c)} = q_{(\\vec{0}, \\vec{b}, c)}"));
-            });
+    r.getRight()
+        .addAll(
+            gammaDeltaQ
+                .streamNonRank()
+                .filter(entry -> varsForGamma.isEmpty() || entry.zeroAndNonEmptyOn(varsForGamma))
+                .filter(entry -> varsForDelta.isEmpty() || entry.nonZeroOrEmptyOn(varsForDelta))
+                .map(
+                    qEntry ->
+                        new EqualityConstraint(
+                            deltaxr.getCoefficientOrDefine(qEntry),
+                            qEntry.getValue(),
+                            "(let:gen) ∀ b⃗ ≠ 0⃗ . r_{(b⃗,c)} = q_{(0⃗,b⃗,c)}"))
+                .collect(Collectors.toUnmodifiableList()));
 
     return new Rule.ApplicationResult(
         List.of(p.getLeft(), r.getLeft()), List.of(p.getRight(), r.getRight()), crossConstraints);

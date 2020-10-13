@@ -16,10 +16,6 @@ public enum ComparisonOperator {
 
   private final List<String> tokens;
 
-  ComparisonOperator(String token) {
-    this(Collections.singletonList(token));
-  }
-
   ComparisonOperator(List<String> tokens) {
     if (tokens.isEmpty()) {
       throw new IllegalArgumentException();

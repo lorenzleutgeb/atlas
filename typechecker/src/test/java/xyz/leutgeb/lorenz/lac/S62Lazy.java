@@ -30,6 +30,7 @@ import xyz.leutgeb.lorenz.lac.ast.Program;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
@@ -111,13 +112,15 @@ public class S62Lazy extends S62 {
   public void zigzigAbovePartial() throws IOException {
     final var globals =
         new AnnotatingGlobals(
-            Map.of(FQN, new FunctionAnnotation(Q, Qp)),
             Map.of(
                 FQN,
-                Set.of(
-                    new FunctionAnnotation(P, Pp),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Q, Qp),
+                    Set.of(
+                        new FunctionAnnotation(P, Pp),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             SIZE_ANALYSIS,
             HEURISTIC);
 
@@ -205,13 +208,15 @@ public class S62Lazy extends S62 {
   public void zigzigAbove() throws IOException {
     final var globals =
         new AnnotatingGlobals(
-            Map.of(FQN, new FunctionAnnotation(Q, Qp)),
             Map.of(
                 FQN,
-                Set.of(
-                    new FunctionAnnotation(P, Pp),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Q, Qp),
+                    Set.of(
+                        new FunctionAnnotation(P, Pp),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             SIZE_ANALYSIS,
             HEURISTIC);
 
@@ -343,7 +348,7 @@ public class S62Lazy extends S62 {
     final var globals =
         new AnnotatingGlobals(
             // We can use empty maps here, since we will never apply (app).
-            emptyMap(), emptyMap(), SIZE_ANALYSIS, HEURISTIC);
+            emptyMap(), SIZE_ANALYSIS, HEURISTIC);
 
     final Predicate<Obligation> isE3 = x -> E3.equals(x.getExpression());
     final Predicate<Obligation> isE3symm = x -> E3symm.equals(x.getExpression());
@@ -398,13 +403,15 @@ public class S62Lazy extends S62 {
   public void costFree() {
     final var globals =
         new AnnotatingGlobals(
-            Map.of(FQN, new FunctionAnnotation(Q, Qp)),
             Map.of(
                 FQN,
-                Set.of(
-                    new FunctionAnnotation(P, Pp),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Q, Qp),
+                    Set.of(
+                        new FunctionAnnotation(P, Pp),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             SIZE_ANALYSIS,
             HEURISTIC);
 
@@ -476,13 +483,15 @@ public class S62Lazy extends S62 {
   public void zigzigCostFreeAbovePartial() throws IOException {
     final var globals =
         new AnnotatingGlobals(
-            Map.of(FQN, new FunctionAnnotation(Q, Qp)),
             Map.of(
                 FQN,
-                Set.of(
-                    new FunctionAnnotation(P, Pp),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Q, Qp),
+                    Set.of(
+                        new FunctionAnnotation(P, Pp),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             SIZE_ANALYSIS,
             HEURISTIC);
 

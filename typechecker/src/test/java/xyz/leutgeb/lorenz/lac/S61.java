@@ -1,7 +1,6 @@
 package xyz.leutgeb.lorenz.lac;
 
 import static java.util.Collections.emptyMap;
-import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -21,7 +20,7 @@ import org.junit.jupiter.api.Test;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.ast.Intro;
 import xyz.leutgeb.lorenz.lac.ast.LetExpression;
-import xyz.leutgeb.lorenz.lac.ast.Tuple;
+import xyz.leutgeb.lorenz.lac.ast.NodeExpression;
 import xyz.leutgeb.lorenz.lac.ast.sources.Predefined;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
@@ -33,9 +32,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.AnnotationHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTree;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCfSimple;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.Node;
+import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCfFlorian;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 
@@ -109,6 +106,8 @@ public class S61 {
 
   @Test
   public void lnf() {
+    final var letTreeCf = LetTreeCfFlorian.INSTANCE;
+
     final var surroundingIntro = new Intro("Test." + NAME, null);
 
     final var tpp = new Identifier(Predefined.INSTANCE, "t''", ATREE, surroundingIntro);
@@ -121,22 +120,22 @@ public class S61 {
     final var b = new Identifier(Predefined.INSTANCE, "b", ALPHA, surroundingIntro);
     final var a = new Identifier(Predefined.INSTANCE, "a", ALPHA, surroundingIntro);
 
-    final var nodeBrCCr = new Tuple(Predefined.INSTANCE, List.of(br, c, cr), ATREE);
-    final var nodeArBTPrimePrimePrime = new Tuple(Predefined.INSTANCE, List.of(ar, b, tppp), ATREE);
-    final var nodeAlATPrimePrime = new Tuple(Predefined.INSTANCE, List.of(al, a, tpp));
+    final var nodeBrCCr = new NodeExpression(Predefined.INSTANCE, List.of(br, c, cr), ATREE);
+    final var nodeArBTPrimePrimePrime =
+        new NodeExpression(Predefined.INSTANCE, List.of(ar, b, tppp), ATREE);
+    final var nodeAlATPrimePrime = new NodeExpression(Predefined.INSTANCE, List.of(al, a, tpp));
 
     // Then the surrounding let expressions.
     final var ePrime =
         new LetExpression(Predefined.INSTANCE, tppp, nodeBrCCr, nodeArBTPrimePrimePrime, ATREE);
     final var e = new LetExpression(Predefined.INSTANCE, tpp, ePrime, nodeAlATPrimePrime, ATREE);
 
-    final var globals =
-        new AnnotatingGlobals(emptyMap(), emptyMap(), new DirectedMultigraph<>(SizeEdge.class));
+    final var globals = new AnnotatingGlobals(emptyMap(), new DirectedMultigraph<>(SizeEdge.class));
 
     final var constraints = new HashSet<Constraint>();
 
-    final var Qvar = SmartRangeHeuristic.DEFAULT.generate("Q", 4);
-    final var Qpvar = SmartRangeHeuristic.DEFAULT.generate("Qp", 1);
+    final var Qvar = Q; // SmartRangeHeuristic.DEFAULT.generate("Q", 4);
+    final var Qpvar = Qp; // SmartRangeHeuristic.DEFAULT.generate("Qp", 1);
 
     final Coefficient Qvarsum = new UnknownCoefficient("Qsum");
     final Coefficient Q3varsum = new UnknownCoefficient("Q3sum");
@@ -153,37 +152,40 @@ public class S61 {
     final var qv = List.of(br, cr, ar, al);
     final var rootObligation = new Obligation(qv, Qvar, e, Qpvar);
 
-    final var eResult = LetTree.INSTANCE.apply(rootObligation, globals);
-    assertEquals(2, eResult.getObligations().size());
+    final var eResult = letTreeCf.apply(rootObligation, globals);
+    assertEquals(3, eResult.getObligations().size());
     assertEquals(ePrime, eResult.getObligations().get(0).getExpression());
     assertEquals(nodeAlATPrimePrime, eResult.getObligations().get(1).getExpression());
     eResult.collectInto(constraints);
 
     final var nodeAlATPrimePrimeResult =
-        Node.INSTANCE.apply(eResult.getObligations().get(1), globals);
+        xyz.leutgeb.lorenz.lac.typing.resources.rules.Node.INSTANCE.apply(
+            eResult.getObligations().get(1), globals);
     assertEquals(0, nodeAlATPrimePrimeResult.getObligations().size());
     nodeAlATPrimePrimeResult.collectInto(constraints);
 
-    final var ePrimeResult =
-        LetTreeCfSimple.INSTANCE.apply(eResult.getObligations().get(0), globals);
+    final var ePrimeResult = letTreeCf.apply(eResult.getObligations().get(0), globals);
     assertEquals(3, ePrimeResult.getObligations().size());
     assertEquals(nodeBrCCr, ePrimeResult.getObligations().get(0).getExpression());
     assertEquals(nodeArBTPrimePrimePrime, ePrimeResult.getObligations().get(1).getExpression());
     assertEquals(nodeBrCCr, ePrimeResult.getObligations().get(2).getExpression());
     ePrimeResult.collectInto(constraints);
 
-    final var nodeBrCCrResult = Node.INSTANCE.apply(ePrimeResult.getObligations().get(0), globals);
+    final var nodeBrCCrResult =
+        xyz.leutgeb.lorenz.lac.typing.resources.rules.Node.INSTANCE.apply(
+            ePrimeResult.getObligations().get(0), globals);
     assertEquals(0, nodeBrCCrResult.getObligations().size());
     nodeBrCCrResult.collectInto(constraints);
 
     final var nodeArBTPrimePrimePrimeResult =
-        Node.INSTANCE.apply(ePrimeResult.getObligations().get(1), globals);
+        xyz.leutgeb.lorenz.lac.typing.resources.rules.Node.INSTANCE.apply(
+            ePrimeResult.getObligations().get(1), globals);
     assertEquals(0, nodeArBTPrimePrimePrimeResult.getObligations().size());
     nodeArBTPrimePrimePrimeResult.collectInto(constraints);
 
     constraints.addAll(sumConstraints);
     Optional<Map<Coefficient, KnownCoefficient>> optionalSolution =
-        ConstraintSystemSolver.solve(constraints, NAME, singletonList(target));
+        ConstraintSystemSolver.solve(constraints, NAME /*, singletonList(target)*/);
 
     assertTrue(optionalSolution.isPresent());
 

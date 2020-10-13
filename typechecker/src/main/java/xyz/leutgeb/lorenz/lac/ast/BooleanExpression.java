@@ -118,17 +118,15 @@ public class BooleanExpression extends Expression {
   @Override
   public boolean isImmediate() {
     return false;
-    // return left.isImmediate() && right.isImmediate();
   }
 
   @Override
   public Expression rename(Map<String, String> renaming) {
-    // TODO(lorenz.leutgeb): I think there's no need ever to rename something inside a boolean
-    // expression. Maybe
-    // throw here?!
-    // TODO(lorenz.leutgeb): Only create new expression if necessary.
-    return new BooleanExpression(
-        Derived.rename(this), left.rename(renaming), operator, right.rename(renaming), type);
+    if (freeVariables().stream().map(Identifier::getName).anyMatch(renaming::containsKey)) {
+      return new BooleanExpression(
+          Derived.rename(this), left.rename(renaming), operator, right.rename(renaming), type);
+    }
+    return this;
   }
 
   @Override

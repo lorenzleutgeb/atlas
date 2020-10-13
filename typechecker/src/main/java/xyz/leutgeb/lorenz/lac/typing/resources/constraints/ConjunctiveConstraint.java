@@ -26,14 +26,14 @@ public class ConjunctiveConstraint extends Constraint {
   public ConjunctiveConstraint(List<Constraint> elements, String reason) {
     super(reason);
     Objects.requireNonNull(elements);
-    if (elements.isEmpty()) {
-      throw new IllegalArgumentException("elements cannot be empty");
-    }
     this.elements = elements;
   }
 
   @Override
   public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
+    if (elements.isEmpty()) {
+      return ctx.mkTrue();
+    }
     return ctx.mkAnd(
         elements.stream()
             .map(element -> element.encode(ctx, coefficients))

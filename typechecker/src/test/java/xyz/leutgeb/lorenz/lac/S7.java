@@ -26,7 +26,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.ast.Intro;
 import xyz.leutgeb.lorenz.lac.ast.LetExpression;
-import xyz.leutgeb.lorenz.lac.ast.Tuple;
+import xyz.leutgeb.lorenz.lac.ast.NodeExpression;
 import xyz.leutgeb.lorenz.lac.ast.sources.Predefined;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
@@ -60,6 +60,7 @@ public class S7 {
     "1,0,0,1,false", // log(|t|)  <= log(|cr|)
     "0,1,1,0,true", // log(|cr|) <= log(|t|)
     "1,1,0,1,true", // log(|cr|) <= log(|cr| + |t|)
+    "0,1,1,1,false", // log(|cr| + |t|) <= log(|cr|)
     "0,0,0,0,true", // log(0)    <= log(0)
     "0,1,0,1,true", // log(|t|)  <= log(|t|)
     "0,2,0,2,true", // log(2|t|) <= log(2|t|)
@@ -69,31 +70,33 @@ public class S7 {
     String NAME = "Test.weakenDirect" + a1 + a2 + b1 + b2;
     final var surroundingIntro = new Intro(NAME, null);
 
-    final var t = new Identifier(Predefined.INSTANCE, "t", ATREE, surroundingIntro);
-    final var cr = new Identifier(Predefined.INSTANCE, "cr", ATREE, surroundingIntro);
+    final var bigger = new Identifier(Predefined.INSTANCE, "bigger", ATREE, surroundingIntro);
+    final var smaller = new Identifier(Predefined.INSTANCE, "smaller", ATREE, surroundingIntro);
 
     final var sizeAnalysis = new DirectedMultigraph<Identifier, SizeEdge>(SizeEdge.class);
-    sizeAnalysis.addVertex(t);
-    sizeAnalysis.addVertex(cr);
-    sizeAnalysis.addEdge(t, cr, SizeEdge.gt());
+    sizeAnalysis.addVertex(bigger);
+    sizeAnalysis.addVertex(smaller);
+    sizeAnalysis.addEdge(bigger, smaller, SizeEdge.gt());
 
-    final var v = List.of(t, cr);
+    final var v = List.of(bigger, smaller);
 
+    // bigger
     final Annotation Q =
         new Annotation(
             List.of(ZERO, ZERO),
             Map.of(
-                List.of(0, 1, 0), new KnownCoefficient(a1), // cr
-                List.of(1, 0, 0), new KnownCoefficient(a2) // t
+                List.of(0, 1, 0), new KnownCoefficient(a1), // smaller
+                List.of(1, 0, 0), new KnownCoefficient(a2) // bigger
                 ),
             "Q");
 
+    // smaller
     final Annotation P =
         new Annotation(
             List.of(ZERO, ZERO),
             Map.of(
-                List.of(0, 1, 0), new KnownCoefficient(b1), // cr
-                List.of(1, 0, 0), new KnownCoefficient(b2) // t
+                List.of(0, 1, 0), new KnownCoefficient(b1), // smaller
+                List.of(1, 0, 0), new KnownCoefficient(b2) // bigger
                 ),
             "P");
 
@@ -119,8 +122,8 @@ public class S7 {
     final var cl = new Identifier(Predefined.INSTANCE, "cl", ATREE, surroundingIntro);
 
     // final var crDupl = new Tuple(Predefined.INSTANCE, List.of(cr, a, cr), ATREE);
-    final var nodeClACr = new Tuple(Predefined.INSTANCE, List.of(cl, a, cr), ATREE);
-    final var nodeTACr = new Tuple(Predefined.INSTANCE, List.of(t, a, cr), ATREE);
+    final var nodeClACr = new NodeExpression(Predefined.INSTANCE, List.of(cl, a, cr), ATREE);
+    final var nodeTACr = new NodeExpression(Predefined.INSTANCE, List.of(t, a, cr), ATREE);
     // final var nodeTACrDupl = new Tuple(Predefined.INSTANCE, List.of(t, a, crDupl), ATREE);
 
     // Then the surrounding let expressions.
@@ -138,7 +141,7 @@ public class S7 {
     final var viz = Graphviz.fromGraph(exp);
     viz.render(Format.SVG).toOutputStream(new PrintStream(new File(OUT, "weaken-sizes.svg")));
 
-    final var globals = new AnnotatingGlobals(emptyMap(), emptyMap(), sizeAnalysis);
+    final var globals = new AnnotatingGlobals(emptyMap(), sizeAnalysis);
 
     final var qv = List.of(cr, cl);
 
@@ -158,10 +161,10 @@ public class S7 {
           if (obligationExpression == null) {
             return false;
           }
-          if (!(obligationExpression instanceof Tuple)) {
+          if (!(obligationExpression instanceof NodeExpression)) {
             return false;
           }
-          return ((Tuple) obligationExpression).getLeft().equals(t);
+          return ((NodeExpression) obligationExpression).getLeft().equals(t);
         };
 
     final var root =
@@ -234,6 +237,34 @@ public class S7 {
         new Annotation(
             List.of(ZERO, ZERO),
             Map.of(List.of(1, 0, 0), ONE, List.of(0, 1, 0), ONE, unitIndex(2), TWO),
+            "P");
+    final Annotation Q = new Annotation(List.of(ZERO, ZERO), Map.of(List.of(1, 1, 0), TWO), "Q");
+
+    final var solution =
+        ConstraintSystemSolver.solve(
+            new HashSet<>(W.compareCoefficientsLessOrEqualUsingFarkas(v, P, Q, sizeAnalysis)),
+            NAME);
+
+    assertTrue(solution.isPresent());
+    System.out.println(solution.get());
+  }
+
+  @Test
+  void bug() {
+    String NAME = "Test.bug";
+    final var surroundingIntro = new Intro(NAME, null);
+
+    final var x = new Identifier(Predefined.INSTANCE, "x", ATREE, surroundingIntro);
+
+    final var sizeAnalysis = new DirectedMultigraph<Identifier, SizeEdge>(SizeEdge.class);
+
+    final var v = List.of(x);
+
+    // P <= Q
+    final Annotation P =
+        new Annotation(
+            List.of(ZERO),
+            Map.of(List.of(1, 2), TWO, List.of(0, 1, 0), ONE, unitIndex(2), TWO),
             "P");
     final Annotation Q = new Annotation(List.of(ZERO, ZERO), Map.of(List.of(1, 1, 0), TWO), "Q");
 

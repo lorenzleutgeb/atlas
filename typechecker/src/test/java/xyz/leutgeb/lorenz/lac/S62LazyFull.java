@@ -29,6 +29,7 @@ import xyz.leutgeb.lorenz.lac.ast.Program;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
@@ -111,13 +112,15 @@ public class S62LazyFull extends S62 {
     final var globals =
         new AnnotatingGlobals(
             // We need to populate the signature, since we'll apply (app), like in the "above" test.
-            Map.of(FQN, new FunctionAnnotation(Q, Qp)),
             Map.of(
                 FQN,
-                Set.of(
-                    new FunctionAnnotation(P, Pp),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Q, Qp),
+                    Set.of(
+                        new FunctionAnnotation(P, Pp),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             SIZE_ANALYSIS,
             HEURISTIC);
 
@@ -211,13 +214,15 @@ public class S62LazyFull extends S62 {
   public void costFree() {
     final var globals =
         new AnnotatingGlobals(
-            Map.of(FQN, new FunctionAnnotation(Q, Qp)),
             Map.of(
                 FQN,
-                Set.of(
-                    new FunctionAnnotation(P, Pp),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Q, Qp),
+                    Set.of(
+                        new FunctionAnnotation(P, Pp),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             SIZE_ANALYSIS,
             HEURISTIC);
 

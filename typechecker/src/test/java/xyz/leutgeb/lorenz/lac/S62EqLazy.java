@@ -43,6 +43,7 @@ import xyz.leutgeb.lorenz.lac.ast.Program;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.TacticVisitorImpl;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
@@ -151,13 +152,15 @@ public class S62EqLazy extends S62 {
 
     final var globals =
         new AnnotatingGlobals(
-            Map.of(SPLAY_FQN, new FunctionAnnotation(Qvar, Qpvar)),
             Map.of(
                 SPLAY_FQN,
-                Set.of(
-                    new FunctionAnnotation(P, Pp),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Qvar, Qpvar),
+                    Set.of(
+                        new FunctionAnnotation(P, Pp),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             fd.getSizeAnalysis(),
             HEURISTIC);
 
@@ -272,7 +275,6 @@ public class S62EqLazy extends S62 {
         new AnnotatingGlobals(
             // We can use empty maps here, since we will never apply (app).
             emptyMap(),
-            emptyMap(),
             PROGRAM.getFunctionDefinitions().get(SPLAY_FQN).getSizeAnalysis(),
             HEURISTIC);
 
@@ -378,13 +380,15 @@ public class S62EqLazy extends S62 {
 
     final var globals =
         new AnnotatingGlobals(
-            Map.of(SPLAY_FQN, new FunctionAnnotation(Q, Qp)),
             Map.of(
                 SPLAY_FQN,
-                Set.of(
-                    new FunctionAnnotation(Pvar, Ppvar),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Q, Qp),
+                    Set.of(
+                        new FunctionAnnotation(Pvar, Ppvar),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             fd.getSizeAnalysis(),
             HEURISTIC);
 
@@ -455,13 +459,15 @@ public class S62EqLazy extends S62 {
   public void zigzigCostFreeAbove() throws IOException {
     final var globals =
         new AnnotatingGlobals(
-            Map.of(SPLAY_FQN, new FunctionAnnotation(Q, Qp)),
             Map.of(
                 SPLAY_FQN,
-                Set.of(
-                    new FunctionAnnotation(P, Pp),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Q, Qp),
+                    Set.of(
+                        new FunctionAnnotation(P, Pp),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             PROGRAM.getFunctionDefinitions().get(SPLAY_FQN).getSizeAnalysis(),
             HEURISTIC);
 
@@ -578,13 +584,15 @@ public class S62EqLazy extends S62 {
     final var fd = PROGRAM.getFunctionDefinitions().get(SPLAY_FQN);
     final var globals =
         new AnnotatingGlobals(
-            Map.of(SPLAY_FQN, new FunctionAnnotation(Qvar, Qpvar)),
             Map.of(
                 SPLAY_FQN,
-                Set.of(
-                    new FunctionAnnotation(Pvar, Ppvar),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Qvar, Qpvar),
+                    Set.of(
+                        new FunctionAnnotation(Pvar, Ppvar),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             fd.getSizeAnalysis(),
             HEURISTIC);
 
@@ -724,7 +732,7 @@ public class S62EqLazy extends S62 {
         .forEach(
             o -> {
               if (o.getExpression().equals(E3)
-                  && !o.getContext().getAnnotation().getName().startsWith("weaken")) {
+                  && !o.getContext().getAnnotation().getNameAndId().startsWith("weaken")) {
                 fixQ2.addAll(
                     eqSoft(
                         Q2,
@@ -737,7 +745,7 @@ public class S62EqLazy extends S62 {
     final var fixing = Collections.<Constraint>emptySet();
     // final var fixing = Sets.union(fixQ2, fixQ3);
     final var minimization = union(fixing, sumConstraints);
-    final var minimizationTargets = List.<Coefficient>of(rankCoefficientSum, coefficientSum);
+    final var minimizationTargets = List.of(rankCoefficientSum, coefficientSum);
 
     final var solution = prover.solve(fixing);
     assertTrue(solution.isPresent());
@@ -846,7 +854,7 @@ public class S62EqLazy extends S62 {
                                     o.getContext().substitute(solution.get()));
                       }
                       if (o.getExpression().equals(E3)
-                          && !o.getContext().getAnnotation().getName().startsWith("weaken")) {
+                          && !o.getContext().getAnnotation().getNameAndId().startsWith("weaken")) {
                         return (Executable)
                             () ->
                                 assertContextEquals(
@@ -882,13 +890,15 @@ public class S62EqLazy extends S62 {
 
     final var cfGlobals =
         new AnnotatingGlobals(
-            Map.of(SPLAY_FQN, new FunctionAnnotation(Qvar, Qpvar)),
             Map.of(
                 SPLAY_FQN,
-                Set.of(
-                    new FunctionAnnotation(P, Pp),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Qvar, Qpvar),
+                    Set.of(
+                        new FunctionAnnotation(P, Pp),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             fd.getSizeAnalysis(),
             HEURISTIC);
 
@@ -923,13 +933,15 @@ public class S62EqLazy extends S62 {
 
     final var globals =
         new AnnotatingGlobals(
-            Map.of(SPLAY_FQN, new FunctionAnnotation(Qvar, Qpvar)),
             Map.of(
                 SPLAY_FQN,
-                Set.of(
-                    new FunctionAnnotation(Pvar, Ppvar),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Qvar, Qpvar),
+                    Set.of(
+                        new FunctionAnnotation(Pvar, Ppvar),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             fd.getSizeAnalysis(),
             HEURISTIC);
 
@@ -1133,7 +1145,7 @@ public class S62EqLazy extends S62 {
                                     o.getContext().substitute(solution.get()));
                       }
                       if (o.getExpression().equals(E3)
-                          && !o.getContext().getAnnotation().getName().startsWith("weaken")) {
+                          && !o.getContext().getAnnotation().getNameAndId().startsWith("weaken")) {
                         return (Executable)
                             () ->
                                 assertContextEquals(
@@ -1196,13 +1208,15 @@ public class S62EqLazy extends S62 {
 
     final var globals =
         new AnnotatingGlobals(
-            Map.of(SPLAY_FQN, new FunctionAnnotation(Qvar, Qpvar)),
             Map.of(
                 SPLAY_FQN,
-                Set.of(
-                    new FunctionAnnotation(Pvar, Ppvar),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "cfargszero"), Annotation.zero(1, "cfreturnzero")))),
+                new CombinedFunctionAnnotation(
+                    new FunctionAnnotation(Qvar, Qpvar),
+                    Set.of(
+                        new FunctionAnnotation(Pvar, Ppvar),
+                        new FunctionAnnotation(
+                            Annotation.zero(1, "cfargszero"),
+                            Annotation.zero(1, "cfreturnzero"))))),
             fd.getSizeAnalysis(),
             HEURISTIC);
 
@@ -1225,7 +1239,7 @@ public class S62EqLazy extends S62 {
     final var fixing = Collections.<Constraint>emptySet();
     // final var fixing = Sets.union(fixQ2, fixQ3);
     final var minimization = union(fixing, sumConstraints);
-    final var minimizationTargets = List.<Coefficient>of(rankCoefficientSum, coefficientSum);
+    final var minimizationTargets = List.of(rankCoefficientSum, coefficientSum);
 
     final var solution = prover.solve(fixing);
     assertTrue(solution.isPresent());
@@ -1326,21 +1340,22 @@ public class S62EqLazy extends S62 {
     final var globals =
         new AnnotatingGlobals(
             Map.of(
-                SPLAY_FQN, new FunctionAnnotation(Qvar, Qpvar),
-                INSERT_FQN, new FunctionAnnotation(Rvar, Rpvar)),
-            Map.of(
                 SPLAY_FQN,
-                Set.of(
-                    new FunctionAnnotation(Pvar, Ppvar),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "splaycfargszero"),
-                        Annotation.zero(1, "splaycfreturnzero"))),
+                    new CombinedFunctionAnnotation(
+                        new FunctionAnnotation(Qvar, Qpvar),
+                        Set.of(
+                            new FunctionAnnotation(Pvar, Ppvar),
+                            new FunctionAnnotation(
+                                Annotation.zero(1, "splaycfargszero"),
+                                Annotation.zero(1, "splaycfreturnzero")))),
                 INSERT_FQN,
-                Set.of(
-                    new FunctionAnnotation(Rcfvar, Rpcfvar),
-                    new FunctionAnnotation(
-                        Annotation.zero(1, "insertcfargszero"),
-                        Annotation.zero(1, "insertcfreturnzero")))),
+                    new CombinedFunctionAnnotation(
+                        new FunctionAnnotation(Rvar, Rpvar),
+                        Set.of(
+                            new FunctionAnnotation(Rcfvar, Rpcfvar),
+                            new FunctionAnnotation(
+                                Annotation.zero(1, "insertcfargszero"),
+                                Annotation.zero(1, "insertcfreturnzero"))))),
             insertFd.getSizeAnalysis(),
             HEURISTIC);
 
@@ -1367,7 +1382,7 @@ public class S62EqLazy extends S62 {
     final var fixing = Collections.<Constraint>emptySet();
     // final var fixing = Sets.union(fixQ2, fixQ3);
     final var minimization = union(fixing, sumConstraints);
-    final var minimizationTargets = List.<Coefficient>of(rankCoefficientSum, coefficientSum);
+    final var minimizationTargets = List.of(rankCoefficientSum, coefficientSum);
 
     final var solution = prover.solve(fixing);
     assertTrue(solution.isPresent());

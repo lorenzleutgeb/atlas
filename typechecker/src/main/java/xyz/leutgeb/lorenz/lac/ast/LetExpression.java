@@ -163,12 +163,12 @@ public class LetExpression extends Expression {
       return;
     }
 
-    if (value instanceof Tuple tuple) {
+    if (value instanceof NodeExpression node) {
       sizeGraph.addVertex(declared);
-      sizeGraph.addVertex((Identifier) tuple.getLeft());
-      sizeGraph.addVertex((Identifier) tuple.getRight());
-      sizeGraph.addEdge(declared, (Identifier) tuple.getLeft(), SizeEdge.gt());
-      sizeGraph.addEdge(declared, (Identifier) tuple.getRight(), SizeEdge.gt());
+      sizeGraph.addVertex((Identifier) node.getLeft());
+      sizeGraph.addVertex((Identifier) node.getRight());
+      sizeGraph.addEdge(declared, (Identifier) node.getLeft(), SizeEdge.gt());
+      sizeGraph.addEdge(declared, (Identifier) node.getRight(), SizeEdge.gt());
     }
 
     if (value instanceof Identifier identifier) {

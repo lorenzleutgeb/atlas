@@ -5,8 +5,14 @@ import static java.util.Collections.singleton;
 import java.util.Collection;
 import java.util.Set;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
-import xyz.leutgeb.lorenz.lac.unification.*;
+import xyz.leutgeb.lorenz.lac.unification.Equivalence;
+import xyz.leutgeb.lorenz.lac.unification.Generalizer;
+import xyz.leutgeb.lorenz.lac.unification.Substitution;
+import xyz.leutgeb.lorenz.lac.unification.TypeMismatch;
+import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
+import xyz.leutgeb.lorenz.lac.unification.UnificationVariable;
 
+// NOTE: Do not use @Value here, since have other classes inherit from TypeVariable.
 public class TypeVariable implements Type {
   public static final TypeVariable ALPHA = new TypeVariable("α");
   public static final TypeVariable BETA = new TypeVariable("β");
@@ -55,7 +61,7 @@ public class TypeVariable implements Type {
 
   @Override
   public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
-    throw new UnsupportedOperationException("cannot decompose type variable");
+    throw new TypeMismatch(this, b);
   }
 
   @Override

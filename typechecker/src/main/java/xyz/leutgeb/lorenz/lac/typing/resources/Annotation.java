@@ -3,7 +3,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources;
 import static com.google.common.collect.Comparators.lexicographical;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
-import static java.util.Objects.requireNonNullElse;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -14,6 +14,8 @@ import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoeffici
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import static xyz.leutgeb.lorenz.lac.util.Util.generateSubscript;
+import static xyz.leutgeb.lorenz.lac.util.Util.generateSubscriptIndex;
+import static xyz.leutgeb.lorenz.lac.util.Util.isZero;
 import static xyz.leutgeb.lorenz.lac.util.Util.repeat;
 
 import com.google.common.collect.Streams;
@@ -21,14 +23,14 @@ import com.google.common.primitives.Ints;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
@@ -42,7 +44,7 @@ import xyz.leutgeb.lorenz.lac.util.Fraction;
 import xyz.leutgeb.lorenz.lac.util.Pair;
 import xyz.leutgeb.lorenz.lac.util.Util;
 
-@Log
+@Slf4j
 public class Annotation {
   public static final Comparator<Iterable<Integer>> INDEX_COMPARATOR =
       lexicographical(Integer::compareTo);
@@ -51,12 +53,53 @@ public class Annotation {
   private final Map<List<Integer>, Coefficient> coefficients;
   String name;
 
+  private static int count = 0;
+
+  private final int id;
+
+  public Annotation(int size, String name) {
+    this.name = name;
+    this.id = count;
+    rankCoefficients = new ArrayList<>(size);
+    for (int i = 0; i < size; i++) {
+      rankCoefficients.add(null);
+    }
+    coefficients = new HashMap<>();
+
+    count = count + 1;
+  }
+
+  public Annotation(
+      int size,
+      List<Integer> rankCoefficients,
+      List<List<Integer>> nonRankCoefficients,
+      String name) {
+    this(size, name);
+    for (var i : rankCoefficients) {
+      if (i >= size) {
+        throw new IllegalArgumentException();
+      }
+    }
+    for (var l : nonRankCoefficients) {
+      if (l.size() != this.size() + 1) {
+        throw new IllegalArgumentException();
+      }
+    }
+    for (var l : nonRankCoefficients) {
+      this.getCoefficientOrDefine(l);
+    }
+    for (int i : rankCoefficients) {
+      this.getRankCoefficientOrDefine(i);
+    }
+  }
+
   public Annotation(
       List<Coefficient> rankCoefficients,
       Map<List<Integer>, Coefficient> coefficients,
       String name) {
     this.name = name;
-    this.rankCoefficients = rankCoefficients;
+    this.id = count;
+    this.rankCoefficients = new ArrayList<>(rankCoefficients);
 
     for (var l : coefficients.keySet()) {
       if (l.size() != this.size() + 1) {
@@ -67,10 +110,8 @@ public class Annotation {
         coefficients.entrySet().stream()
             .filter(entry -> !ZERO.equals(entry.getValue()))
             .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
-  }
 
-  public Annotation(int size, String name) {
-    this(repeat(ZERO, size).collect(toList()), emptyMap(), name);
+    count = count + 1;
   }
 
   public static Annotation knownConstant(int size, String name, int potential) {
@@ -93,7 +134,7 @@ public class Annotation {
 
   /** Constructs an annotation of given size that has zero potential. */
   public static Annotation zero(int size, String name) {
-    return new Annotation(size, name);
+    return new Annotation(repeat(ZERO, size).collect(toList()), emptyMap(), name);
   }
 
   public static Annotation zero(int size) {
@@ -103,6 +144,18 @@ public class Annotation {
   /** Constructs an annotation of zero size that has zero potential. */
   public static Annotation empty() {
     return zero(0);
+  }
+
+  public Annotation copyShape(String name) {
+    return new Annotation(
+        IntStream.range(0, size()).mapToObj(i -> unknown(generateSubscript(i))).collect(toList()),
+        coefficients.keySet().stream()
+            .collect(Collectors.toMap(identity(), index -> unknown(generateSubscriptIndex(index)))),
+        name);
+  }
+
+  private UnknownCoefficient unknown(String suffix) {
+    return new UnknownCoefficient(id + suffix);
   }
 
   public static boolean isUnitIndex(List<Integer> index) {
@@ -134,6 +187,19 @@ public class Annotation {
             .allMatch(entry -> entry.getValue().equals(a.getOrDefault(entry.getKey(), ZERO)));
   }
 
+  private static Coefficient nullToZero(Coefficient coefficient) {
+    return coefficient == null ? ZERO : coefficient;
+  }
+
+  private static boolean coefficientsEqualUnderZeroClosure(
+      List<Coefficient> a, List<Coefficient> b) {
+    return Streams.zip(
+            a.stream().map(Annotation::nullToZero),
+            b.stream().map(Annotation::nullToZero),
+            Object::equals)
+        .allMatch(x -> x);
+  }
+
   public List<Integer> getUnitIndex() {
     return unitIndex(size());
   }
@@ -143,7 +209,7 @@ public class Annotation {
         this.rankCoefficients.stream()
             .map(
                 coefficient ->
-                    coefficient instanceof KnownCoefficient
+                    coefficient == null || coefficient instanceof KnownCoefficient
                         ? coefficient
                         : solution.getOrDefault(coefficient, ZERO))
             .collect(toList()),
@@ -158,26 +224,51 @@ public class Annotation {
         this.name);
   }
 
+  public Coefficient getCoefficientOrDefine(List<Integer> index) {
+    if (index.size() != size() + 1) {
+      throw new IllegalArgumentException();
+    }
+    if (isZero(index)) {
+      throw bug("attempting to create zero index");
+    }
+    return coefficients.computeIfAbsent(index, key -> unknown(generateSubscriptIndex(key)));
+  }
+
+  public Coefficient getCoefficientOrDefine(int... index) {
+    return getCoefficientOrDefine(Ints.asList(index));
+  }
+
   public Coefficient getCoefficientOrZero(int... index) {
-    return requireNonNullElse(getCoefficient(index), ZERO);
+    return getCoefficientOrZero(Ints.asList(index));
+    // return requireNonNullElse(getCoefficient(index), ZERO);
   }
 
   public Coefficient getCoefficientOrZero(List<Integer> index) {
     if (index.size() != size() + 1) {
       throw new IllegalArgumentException();
     }
-    return coefficients.getOrDefault(index, ZERO);
+    if (isZero(index)) {
+      throw bug("attempting to create zero index");
+    }
+    final var elem = coefficients.get(index);
+    if (elem == null) {
+      log.info("{}{} = 0", id, generateSubscriptIndex(index));
+      return ZERO;
+    }
+    return elem;
   }
 
   public String toString() {
+    /*
     if (size() == 0) {
       return "∅";
     }
+     */
     StringBuilder sb = new StringBuilder("[");
     boolean nonzero = false;
     for (int i = 0; i < size(); i++) {
       final var q = rankCoefficients.get(i);
-      if (q == ZERO) {
+      if (q == null || q == ZERO) {
         continue;
       }
       nonzero = true;
@@ -234,7 +325,10 @@ public class Annotation {
     StringBuilder sb = new StringBuilder();
     boolean nonzero = false;
     for (int i = 0; i < size(); i++) {
-      final var q = rankCoefficients.get(i);
+      var q = rankCoefficients.get(i);
+      if (q == null) {
+        q = ZERO;
+      }
       if (q == ZERO && simplify) {
         continue;
       }
@@ -305,7 +399,11 @@ public class Annotation {
   }
 
   public Coefficient getRankCoefficient(int index) {
-    return this.rankCoefficients.get(index);
+    final var result = rankCoefficients.get(index);
+    if (result == null) {
+      throw bug("missed");
+    }
+    return result;
   }
 
   public Coefficient getRankCoefficient() {
@@ -315,9 +413,30 @@ public class Annotation {
     return getRankCoefficient(0);
   }
 
+  public Coefficient getRankCoefficientOrZero(int i) {
+    return nullToZero(rankCoefficients.get(i));
+  }
+
+  public Coefficient getRankCoefficientOrZero() {
+    if (size() != 1) {
+      throw new IllegalStateException("must be of size exactly 1");
+    }
+    return getRankCoefficientOrZero(0);
+  }
+
+  public Coefficient getRankCoefficientOrDefine() {
+    if (size() != 1) {
+      throw new IllegalStateException("must be of size exactly 1");
+    }
+    return getRankCoefficientOrDefine(0);
+  }
+
   public Coefficient getCoefficient(List<Integer> index) {
     if (index.size() != size() + 1) {
       throw new IllegalArgumentException();
+    }
+    if (isZero(index)) {
+      throw bug("attempting to access zero index");
     }
     if (!coefficients.containsKey(index)) {
       throw bug("missed");
@@ -325,6 +444,7 @@ public class Annotation {
     return coefficients.get(index);
   }
 
+  @Deprecated
   public Set<Constraint> setCoefficient(List<Integer> index, Coefficient value) {
     Coefficient existingValue = coefficients.get(index);
     if (existingValue != null) {
@@ -334,6 +454,7 @@ public class Annotation {
     return emptySet();
   }
 
+  @Deprecated
   public Set<Constraint> setRankCoefficient(Integer index, Coefficient value) {
     final var existingValue = rankCoefficients.get(index);
     if (existingValue != null) {
@@ -362,7 +483,7 @@ public class Annotation {
     return coefficients.entrySet();
   }
 
-  public Stream<Map.Entry<List<Integer>, Coefficient>> streamCoefficients() {
+  public Stream<Map.Entry<List<Integer>, Coefficient>> streamNonRankCoefficients() {
     return coefficients.entrySet().stream();
   }
 
@@ -370,16 +491,12 @@ public class Annotation {
     return rankCoefficients.size();
   }
 
-  public String getName() {
-    return this.name;
-  }
-
-  public void setName(String name) {
-    this.name = name;
+  public String getNameAndId() {
+    return this.name + "#" + id;
   }
 
   public boolean coefficientsEqual(Annotation other) {
-    return Objects.equals(rankCoefficients, other.rankCoefficients)
+    return coefficientsEqualUnderZeroClosure(rankCoefficients, other.rankCoefficients)
         && coefficientsEqualUnderZeroClosure(coefficients, other.coefficients);
     // && Objects.equals(coefficients, other.coefficients);
   }
@@ -400,26 +517,30 @@ public class Annotation {
         name);
   }
 
+  public Set<List<Integer>> coefficientIndices() {
+    return coefficients.keySet();
+  }
+
   public EqualsSumConstraint sumAllCoefficients(Coefficient c) {
     return new EqualsSumConstraint(
         c,
         Stream.concat(rankCoefficients.stream(), coefficients.values().stream())
             .collect(toUnmodifiableList()),
-        "sum of annotation " + getName());
+        "sum of annotation " + getNameAndId());
   }
 
   public EqualsSumConstraint sumRankCoefficients(Coefficient c) {
     return new EqualsSumConstraint(
         c,
         rankCoefficients.stream().collect(toUnmodifiableList()),
-        "sum of rank coefficients of annotation " + getName());
+        "sum of rank coefficients of annotation " + getNameAndId());
   }
 
   public EqualsSumConstraint sumCoefficients(Coefficient c) {
     return new EqualsSumConstraint(
         c,
         coefficients.values().stream().collect(toUnmodifiableList()),
-        "sum of rank coefficients of annotation " + getName());
+        "sum of rank coefficients of annotation " + getNameAndId());
   }
 
   public Annotation rename(String newName) {
@@ -432,7 +553,7 @@ public class Annotation {
     }
 
     var potentialFunctions =
-        Stream.concat(streamCoefficients(), other.streamCoefficients())
+        Stream.concat(streamNonRankCoefficients(), other.streamNonRankCoefficients())
             .map(Map.Entry::getKey)
             .distinct()
             .sorted(INDEX_COMPARATOR)
@@ -491,7 +612,7 @@ public class Annotation {
     }
 
     var potentialFunctions =
-        Stream.concat(streamCoefficients(), other.streamCoefficients())
+        Stream.concat(streamNonRankCoefficients(), other.streamNonRankCoefficients())
             .map(Map.Entry::getKey)
             .distinct()
             .sorted(INDEX_COMPARATOR)
@@ -529,14 +650,14 @@ public class Annotation {
   }
 
   public Stream<List<Integer>> potentialFunctions(Annotation other) {
-    return Stream.concat(streamCoefficients(), other.streamCoefficients())
+    return Stream.concat(streamNonRankCoefficients(), other.streamNonRankCoefficients())
         .map(Map.Entry::getKey)
         .distinct()
         .sorted(INDEX_COMPARATOR);
   }
 
   public Stream<Map.Entry<List<Integer>, Pair<Coefficient, Coefficient>>> union(Annotation other) {
-    return Stream.concat(streamCoefficients(), other.streamCoefficients())
+    return Stream.concat(streamNonRankCoefficients(), other.streamNonRankCoefficients())
         .map(Map.Entry::getKey)
         .distinct()
         .sorted(INDEX_COMPARATOR)
@@ -571,7 +692,9 @@ public class Annotation {
                 .mapToObj(
                     i ->
                         new EqualityConstraint(
-                            this.getRankCoefficient(i), other.getRankCoefficient(i), reason)),
+                            this.getRankCoefficientOrZero(i),
+                            other.getRankCoefficientOrZero(i),
+                            reason)),
             union(other)
                 .map(
                     entry -> {
@@ -582,5 +705,26 @@ public class Annotation {
                           : new EqualityConstraint(thisCoefficient, otherCoefficient, reason);
                     }))
         .collect(toList());
+  }
+
+  public Coefficient getRankCoefficientOrDefine(int i) {
+    if (rankCoefficients.get(i) == null) {
+      rankCoefficients.set(i, unknown(generateSubscript(i)));
+    }
+    return rankCoefficients.get(i);
+  }
+
+  public static Stream<List<Integer>> nonRankIndices(Annotation a, Annotation b) {
+    return Stream.concat(a.streamNonRankCoefficients(), b.streamNonRankCoefficients())
+        .map(Map.Entry::getKey)
+        .distinct()
+        .sorted(INDEX_COMPARATOR);
+  }
+
+  private static String shortNameForGenerated(String name) {
+    if (name.matches(".*#\\d+")) {
+      return name.substring(name.lastIndexOf("#") + 1);
+    }
+    return name;
   }
 }

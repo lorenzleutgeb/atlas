@@ -1,53 +1,46 @@
 package xyz.leutgeb.lorenz.lac;
 
-import static com.google.common.collect.Sets.union;
 import static java.util.Collections.emptyMap;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static xyz.leutgeb.lorenz.lac.TestUtil.printTable;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.THREE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
-import static xyz.leutgeb.lorenz.lac.util.Util.fqnToFlatFilename;
 import static xyz.leutgeb.lorenz.lac.util.Util.zeroCoefficients;
 
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
-import xyz.leutgeb.lorenz.lac.ast.IfThenElseExpression;
-import xyz.leutgeb.lorenz.lac.ast.LetExpression;
-import xyz.leutgeb.lorenz.lac.ast.MatchExpression;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import xyz.leutgeb.lorenz.lac.ast.Program;
-import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
-import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.AnnotationHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
-import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
-import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
-import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
+import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
 public class Tactics {
-  protected static final AnnotationHeuristic HEURISTIC = SmartRangeHeuristic.DEFAULT;
-
   protected static final Annotation Q =
       new Annotation(List.of(ONE), Map.of(List.of(1, 0), THREE, unitIndex(1), ONE), "Q");
+
+  protected static final Annotation Qnew =
+      new Annotation(List.of(ONE), Map.of(List.of(1, 0), TWO), "Q");
 
   protected static final Annotation P =
       new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "P");
@@ -56,6 +49,9 @@ public class Tactics {
       new Annotation(zeroCoefficients(1), Map.of(List.of(1, 0), ONE), "P'");
 
   protected static final Annotation Qp = new Annotation(List.of(ONE), emptyMap(), "Q'");
+
+  protected static final Annotation Qpnew = new Annotation(List.of(ONE), emptyMap(), "Q'");
+
   private static final String SPLAY_FQN = "SplayTree.splay_eq";
   private static final String INSERT_FQN = "SplayTree.insert_eq";
   private static final String MAX_FQN = "SplayTree.splay_max_eq";
@@ -63,243 +59,262 @@ public class Tactics {
   private static final String LINK_FQN = "PairingHeap.link";
   private static final String MERGE_FQN = "PairingHeap.merge";
 
-  private static final FunctionDefinition SPLAY;
+  private static <K, V> Map<K, V> mutable(Map<K, V> immutable) {
+    return new HashMap<>(immutable);
+  }
 
-  private static final IfThenElseExpression E1;
-  private static final IfThenElseExpression E2;
-  private static final IfThenElseExpression E3;
-  private static final IfThenElseExpression INTERMEDIATE;
-  private static final LetExpression E4;
-  private static final LetExpression E4symm;
-  private static final MatchExpression E5;
-  private static final LetExpression Tp;
+  private static final CombinedFunctionAnnotation SPLAY_EXPECTED_OLD =
+      CombinedFunctionAnnotation.of(
+          Q,
+          Qp,
+          SmartRangeHeuristic.DEFAULT.generate("cf", 1), // P
+          SmartRangeHeuristic.DEFAULT.generate("cf'", 1), // Pp
+          Annotation.zero(1),
+          Annotation.zero(1));
 
-  private static final Program PROGRAM;
+  private static final CombinedFunctionAnnotation SPLAY_EXPECTED_TACAS =
+      CombinedFunctionAnnotation.of(
+          new Annotation(List.of(ONE), Map.of(List.of(1, 0), THREE), "Q"),
+          Qp,
+          SmartRangeHeuristic.DEFAULT.generate("cf", 1), // P
+          SmartRangeHeuristic.DEFAULT.generate("cf'", 1), // Pp
+          Annotation.zero(1),
+          Annotation.zero(1));
 
-  static {
-    final var loader = Tests.loader();
-    try {
-      PROGRAM =
-          loader.load(Set.of(SPLAY_FQN, INSERT_FQN, MAX_FQN, CONTAINS_FQN, LINK_FQN, MERGE_FQN));
-    } catch (IOException e) {
-      throw new RuntimeException(e);
+  private static final CombinedFunctionAnnotation SPLAY_EXPECTED_NEW =
+      CombinedFunctionAnnotation.of(
+          Qnew,
+          Qpnew,
+          Annotation.constant(1, "cf", ONE),
+          Annotation.constant(1, "cf'", ONE),
+          Annotation.zero(1),
+          Annotation.zero(1));
+
+  private record Config(Optional<String> tactic, Optional<CombinedFunctionAnnotation> annotation) {
+    public static Config of(String tactic) {
+      return new Config(Optional.ofNullable(tactic), Optional.empty());
     }
-    PROGRAM.normalize();
-    try {
-      PROGRAM.infer();
-    } catch (UnificationError | TypeError e) {
-      throw new RuntimeException(e);
+
+    public static Config of(String tactic, CombinedFunctionAnnotation annotation) {
+      return new Config(Optional.ofNullable(tactic), Optional.ofNullable(annotation));
     }
-    PROGRAM.unshare(true);
-    PROGRAM.analyzeSizes();
 
-    SPLAY = PROGRAM.getFunctionDefinitions().get(SPLAY_FQN);
+    public static Config of(CombinedFunctionAnnotation annotation) {
+      return new Config(Optional.empty(), Optional.ofNullable(annotation));
+    }
 
-    E1 = (IfThenElseExpression) ((((MatchExpression) SPLAY.getBody()).getNode()));
-    E2 = (IfThenElseExpression) E1.getFalsy();
-    E3 = ((IfThenElseExpression) ((MatchExpression) E2.getTruthy()).getNode());
-    INTERMEDIATE = (IfThenElseExpression) E3.getFalsy();
-    E4 = (LetExpression) ((IfThenElseExpression) INTERMEDIATE.getTruthy()).getFalsy();
-    E4symm = (LetExpression) ((IfThenElseExpression) INTERMEDIATE.getFalsy()).getFalsy();
-    E5 = (MatchExpression) E4.getBody();
-    Tp = (LetExpression) E5.getNode();
+    @Override
+    public String toString() {
+      var result = "";
+      if (tactic.isPresent()) {
+        result += tactic.get();
+      }
+      if (tactic.isPresent() && annotation.isPresent()) {
+        result += " ";
+      }
+      if (annotation.isPresent()) {
+        result += annotation.get();
+      }
+      return result;
+    }
+  }
+
+  private static Stream<Arguments> allTactics() {
+    return Stream.of(
+        Arguments.of(
+            Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-light", SPLAY_EXPECTED_TACAS))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-light", SPLAY_EXPECTED_OLD))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-light"))),
+        Arguments.of(
+            Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig-light", SPLAY_EXPECTED_TACAS))),
+        Arguments.of(
+            Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig-light", SPLAY_EXPECTED_OLD))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig-light"))),
+        Arguments.of(
+            Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig-fixing", SPLAY_EXPECTED_TACAS))),
+        Arguments.of(
+            Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig-fixing", SPLAY_EXPECTED_OLD))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig-fixing"))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq", SPLAY_EXPECTED_TACAS))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq", SPLAY_EXPECTED_OLD))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq"))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zig", SPLAY_EXPECTED_TACAS))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zig", SPLAY_EXPECTED_OLD))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zig"))),
+        Arguments.of(
+            Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig", SPLAY_EXPECTED_TACAS))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig", SPLAY_EXPECTED_OLD))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig"))),
+        Arguments.of(
+            Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzag", SPLAY_EXPECTED_TACAS))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzag", SPLAY_EXPECTED_OLD))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzag"))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zag", SPLAY_EXPECTED_TACAS))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zag", SPLAY_EXPECTED_OLD))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zag"))),
+        Arguments.of(
+            Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zagzig", SPLAY_EXPECTED_TACAS))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zagzig", SPLAY_EXPECTED_OLD))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zagzig"))),
+        Arguments.of(
+            Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zagzag", SPLAY_EXPECTED_TACAS))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zagzag", SPLAY_EXPECTED_OLD))),
+        Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zagzag"))),
+        Arguments.of(Map.of("SplayTree.splay_max_eq", Config.of("SplayTree/splay_max_eq"))),
+        Arguments.of(Map.of("SplayTree.splay_max_eq", Config.of("auto"))),
+        Arguments.of(
+            Map.of(
+                "SplayTree.contains_eq",
+                Config.of("SplayTree/contains_eq"),
+                SPLAY_FQN,
+                Config.of(SPLAY_EXPECTED_TACAS))),
+        Arguments.of(
+            Map.of(
+                "SplayTree.contains_eq",
+                Config.of("SplayTree/contains_eq"),
+                SPLAY_FQN,
+                Config.of("SplayTree/splay_eq"))),
+        Arguments.of(
+            Map.of(
+                "SplayTree.insert_eq",
+                Config.of("SplayTree/insert_eq"),
+                SPLAY_FQN,
+                Config.of("SplayTree/splay_eq"))),
+        Arguments.of(
+            Map.of(
+                "SplayTree.insert_eq",
+                Config.of("auto"),
+                SPLAY_FQN,
+                Config.of("SplayTree/splay_eq"))),
+        Arguments.of(Map.of("PairingHeap.link", Config.of("PairingHeap/link"))),
+        Arguments.of(
+            Map.of(
+                "PairingHeap.merge",
+                Config.of("PairingHeap/merge"),
+                "PairingHeap.link",
+                Config.of("PairingHeap/link"))));
   }
 
   @ParameterizedTest
-  @CsvSource({
-    "PairingHeap.link,PairingHeap/link",
-    "SplayTree.splay_eq,SplayTree/splay_eq",
-    // "SplayTree.splay_eq,SplayTree/splay_eq-auto",
-    "SplayTree.splay_eq,SplayTree/splay_eq-zigzig",
-    "SplayTree.insert_eq,SplayTree/insert_eq",
-    "SplayTree.splay_max_eq,SplayTree/splay_max_eq",
-    "SplayTree.contains_eq,SplayTree/contains_eq",
-  })
-  public void all(String fqn, String proofFileName) throws IOException {
-    final var fd = PROGRAM.getFunctionDefinitions().get(fqn);
+  @MethodSource("allTactics")
+  public void all(Map<String, Config> immutableAnnotations) throws IOException {
+    final var loader = Tests.loader();
 
-    final Map<String, FunctionAnnotation> annotations = new HashMap<>();
-    final Map<String, Set<FunctionAnnotation>> cfAnnotations = new HashMap<>();
-    fd.stubAnnotations(annotations, cfAnnotations, HEURISTIC);
+    Program program = null;
+    try {
+      program = loader.load(immutableAnnotations.keySet());
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    program.normalize();
+    try {
+      program.infer();
+    } catch (UnificationError | TypeError e) {
+      throw new RuntimeException(e);
+    }
+    program.unshare(true);
+    program.analyzeSizes();
 
-    boolean splayVar = true;
+    //noinspection OptionalGetWithoutIsPresent
+    final var annotations =
+        immutableAnnotations.entrySet().stream()
+            .filter(entry -> entry.getValue().annotation().isPresent())
+            .collect(
+                Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().annotation().get()));
 
-    // final var Qvar I= splayVar ?
+    //noinspection OptionalGetWithoutIsPresent
+    final var tactics =
+        immutableAnnotations.entrySet().stream()
+            .filter(entry -> entry.getValue().tactic().isPresent())
+            .collect(
+                Collectors.toMap(
+                    Map.Entry::getKey,
+                    entry ->
+                        Paths.get(
+                            ".",
+                            "src",
+                            "test",
+                            "resources",
+                            "tactics",
+                            entry.getValue().tactic().get() + ".txt")));
 
-    if (!fqn.equals(SPLAY_FQN) && fd.getOcurringFunctions().contains(SPLAY_FQN)) {
-      annotations.put(SPLAY_FQN, new FunctionAnnotation(Q, Qp));
+    final var optionalProver = program.proveWithTactics(annotations, tactics);
+    assertTrue(optionalProver.isPresent());
 
-      cfAnnotations.put(
-          SPLAY_FQN,
-          Set.of(
-              new FunctionAnnotation(P, Pp),
-              new FunctionAnnotation(
-                  Annotation.zero(1, SPLAY_FQN + ":cfz"),
-                  Annotation.zero(1, SPLAY_FQN + ":cfz'"))));
+    final var prover = optionalProver.get();
+
+    final List<UnknownCoefficient> sumCoefficients = new ArrayList<>();
+    final List<UnknownCoefficient> setCountingCoefficients = new ArrayList<>();
+    final List<UnknownCoefficient> pairwiseDiffCoefficients = new ArrayList<>();
+
+    final Set<Constraint> sumConstraints = new HashSet<>();
+    final Set<Constraint> setCountingConstraints = new HashSet<>();
+    final Set<Constraint> pairwiseDiffConstraints = new HashSet<>();
+
+    for (final var fqn : immutableAnnotations.keySet()) {
+      if (!program.getFunctionDefinitions().containsKey(fqn)) {
+        fail("Could not find function definition for '" + fqn + "'.");
+      }
+
+      final var fd = program.getFunctionDefinitions().get(fqn);
+
+      final var sum = Optimization.sum(fd.getAnnotation());
+      sumCoefficients.add(sum.coefficient());
+      sumConstraints.addAll(sum.constraints());
+
+      final var setCounting = Optimization.setCounting(fd.getAnnotation());
+      setCountingCoefficients.add(setCounting.coefficient());
+      setCountingConstraints.addAll(setCounting.constraints());
+
+      final var pairwiseDiff = Optimization.pairwiseDiff(fd.getAnnotation());
+      pairwiseDiffCoefficients.add(pairwiseDiff.coefficient());
+      pairwiseDiffConstraints.addAll(pairwiseDiff.constraints());
+
+      /*
+      if (fd.getFullyQualifiedName().equals(SPLAY_FQN) && tactics.getOrDefault(SPLAY_FQN, Path.of("/")).toString().contains("zigzig-light")) {
+        pairwiseDiffConstraints.add(new EqualityConstraint(fd.getAnnotation().from().getRankCoefficient(0), fd.getAnnotation().to().getRankCoefficient(0), "fix rk"));
+      }
+       */
     }
 
-    final var globals =
-        new AnnotatingGlobals(annotations, cfAnnotations, fd.getSizeAnalysis(), HEURISTIC);
-
-    final var from = fd.getAnnotation().from();
-    final var to = fd.getAnnotation().to();
-
-    final var qRankCoefficientSum = new UnknownCoefficient("Qranksum");
-    final var qpRankCoefficientSum = new UnknownCoefficient("Qpranksum");
-    final var qCoefficientSum = new UnknownCoefficient("Qothersum");
-    final var qpCoefficientSum = new UnknownCoefficient("Qpothersum");
-    final var rankCoefficientSum = new UnknownCoefficient("rankCoefficientSum");
-    final var coefficientSum = new UnknownCoefficient("coefficientSum");
-    final var setDiffSum = new UnknownCoefficient("setDiffSum");
-    final var pairwiseDiffSum = new UnknownCoefficient("pairwiseDiffSum");
-
-    final var sumConstraints =
-        Set.<Constraint>of(
-            from.sumRankCoefficients(qRankCoefficientSum),
-            to.sumRankCoefficients(qpRankCoefficientSum),
-            from.sumCoefficients(qCoefficientSum),
-            to.sumCoefficients(qpCoefficientSum),
-            new EqualsSumConstraint(
-                rankCoefficientSum,
-                List.of(qRankCoefficientSum, qpRankCoefficientSum),
-                "(opt) rank coefficient sum"),
-            new EqualsSumConstraint(
-                coefficientSum,
-                List.of(qCoefficientSum, qpCoefficientSum),
-                "(opt) coefficient sum"));
-
-    final var setCountingConstraints =
-        from.size() == to.size()
-            ? Set.copyOf(from.diff(to, setDiffSum))
-            : Collections.<Constraint>emptySet();
-    final var pairwiseDiffConstraints =
-        from.size() == to.size()
-            ? Set.copyOf(from.pairwiseDiff(to, pairwiseDiffSum))
-            : Collections.<Constraint>emptySet();
-
-    if (!PROGRAM.getFunctionDefinitions().containsKey(fqn)) {
-      fail("Could not find function definition for '" + fqn + "'.");
-    }
-
-    final Prover prover = new Prover(fqnToFlatFilename(fqn), globals);
-
-    for (var cfAnnotation : fd.getCfAnnotations()) {
-      final var cfRoot =
-          new Obligation(
-              fd.treeLikeArguments(), cfAnnotation.from(), fd.getBody(), cfAnnotation.to(), 0);
-      prover.prove(cfRoot);
-    }
-
-    final var root = new Obligation(fd.treeLikeArguments(), from, fd.getBody(), to, 1);
-    prover.read(
-        root, Paths.get(".", "src", "test", "resources", "tactics", proofFileName + ".txt"));
-
-    /*
+    prover.plot();
     final var solution = prover.solve();
     assertTrue(solution.isPresent());
-     */
-
-    final var minimizationTargets = List.<Coefficient>of(rankCoefficientSum, coefficientSum);
-    final var minSolution = prover.solve(sumConstraints, minimizationTargets);
-
-    final var minimizationWithSets =
-        union(sumConstraints, union(setCountingConstraints, pairwiseDiffConstraints));
-    final var minimizationTargetsWithSets =
-        from.size() == to.size()
-            ? List.<Coefficient>of(setDiffSum, pairwiseDiffSum, rankCoefficientSum, coefficientSum)
-            : List.<Coefficient>of(rankCoefficientSum, coefficientSum);
-    final var minSetSolution = prover.solve(minimizationWithSets, minimizationTargetsWithSets);
-
-    final var minSetSolutionRat =
-        prover.solve(
-            minimizationWithSets,
-            minimizationTargetsWithSets,
-            ConstraintSystemSolver.Domain.RATIONAL);
+    System.out.println(printTable(prover, solution));
+    program.mockIngest(solution);
+    prover.plotWithSolution(solution.get());
 
     /*
-    System.out.println(
-        fqn
-            + "         : "
-            + from.substitute(solution.get())
-            + " -> "
-            + to.substitute(solution.get()));
-     */
-    System.out.println(
-        fqn
-            + "    min1 : "
-            + (minSolution
-                .map(sol -> from.substitute(sol) + " -> " + to.substitute(sol))
-                .orElse("UNSAT")));
-    System.out.println(
-        fqn
-            + ":cf min1 : "
-            + fd.getCfAnnotations().stream()
-                .map(
-                    annotation ->
-                        (minSolution
-                            .map(
-                                sol ->
-                                    annotation.from().substitute(sol)
-                                        + " -> "
-                                        + annotation.to().substitute(sol))
-                            .orElse("UNSAT")))
-                .collect(Collectors.joining(", ", "{", "}")));
-    System.out.println(
-        fqn
-            + "    min2 : "
-            + (minSetSolution
-                .map(sol -> from.substitute(sol) + " -> " + to.substitute(sol))
-                .orElse("UNSAT")));
-    System.out.println(
-        fqn
-            + ":cf min2 : "
-            + fd.getCfAnnotations().stream()
-                .map(
-                    annotation ->
-                        (minSetSolution
-                            .map(
-                                sol ->
-                                    annotation.from().substitute(sol)
-                                        + " -> "
-                                        + annotation.to().substitute(sol))
-                            .orElse("UNSAT")))
-                .collect(Collectors.joining(", ", "{", "}")));
+    if (immutableAnnotations.values().stream().anyMatch(config -> config.annotation().isEmpty())) {
+      final var minimizationTargets = sumCoefficients;
+      final var minSolution = prover.solve(sumConstraints, minimizationTargets, "min1");
 
-    final var acs = new ArrayList<AnnotatingContext>(prover.getNamed().size());
-    final var as = new ArrayList<Annotation>(prover.getNamed().size() + 2);
-    as.add(to);
-    as.add(from);
-    for (var entry : prover.getNamed().entrySet()) {
-      acs.add(
-          entry.getValue().getContext().substitute(minSetSolution.get()).rename(entry.getKey()));
-      as.add(
-          entry
-              .getValue()
-              .getAnnotation()
-              .substitute(minSetSolution.get())
-              .rename(entry.getKey() + "'"));
+      final var minimizationWithSets =
+          union(sumConstraints, union(setCountingConstraints, pairwiseDiffConstraints));
+      final var minimizationTargetsWithSets =
+          append(append(setCountingCoefficients, pairwiseDiffCoefficients), sumCoefficients);
+      final var minSetSolution = prover.solve(minimizationWithSets, minimizationTargetsWithSets, "min2");
+
+      final var minSetSolutionRat =
+          prover.solve(
+              minimizationWithSets,
+              minimizationTargetsWithSets,
+              "min2r",
+              ConstraintSystemSolver.Domain.RATIONAL);
+
+      System.out.println(printTable(prover, minSolution));
+      program.mockIngest(minSolution);
+
+      System.out.println(printTable(prover, minSetSolution));
+      program.mockIngest(minSetSolution);
+
+      System.out.println(printTable(prover, minSetSolutionRat));
+      program.mockIngest(minSetSolutionRat);
+
+      // prover.plotWithSolution(minSetSolutionRat.get());
+    } else {
+      prover.plotWithSolution(solution.get());
     }
-
-    System.out.println(printTable(acs, as));
-    System.out.println(
-        fqn
-            + "    min2r: "
-            + (minSetSolutionRat
-                .map(sol -> from.substitute(sol) + " -> " + to.substitute(sol))
-                .orElse("UNSAT")));
-    System.out.println(
-        fqn
-            + ":cf min2r: "
-            + fd.getCfAnnotations().stream()
-                .map(
-                    annotation ->
-                        (minSetSolutionRat
-                            .map(
-                                sol ->
-                                    annotation.from().substitute(sol)
-                                        + " -> "
-                                        + annotation.to().substitute(sol))
-                            .orElse("UNSAT")))
-                .collect(Collectors.joining(", ", "{", "}")));
+     */
   }
 }

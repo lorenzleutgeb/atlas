@@ -1,6 +1,7 @@
 package xyz.leutgeb.lorenz.lac.util;
 
 import static guru.nidi.graphviz.model.Factory.node;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.generate;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
@@ -15,12 +16,14 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
 import java.util.Stack;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -31,6 +34,10 @@ import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 @Slf4j
 public class Util {
   private static final Random RANDOM = new Random();
+
+  public static String generateSubscriptIndex(List<Integer> index) {
+    return index.stream().map(Util::generateSubscript).collect(joining(" ", "₍", "₎"));
+  }
 
   public static String generateSubscript(int i) {
     StringBuilder sb = new StringBuilder();
@@ -106,6 +113,18 @@ public class Util {
     return result;
   }
 
+  public static String undefinedText(String undefined, Iterable<String> defined) {
+    return undefinedText(undefined, defined.iterator());
+  }
+
+  public static String undefinedText(String undefined, Iterator<String> defined) {
+    return "'"
+        + undefined
+        + "' is not defined. (Did you mean "
+        + Util.similar(undefined, defined, 0.5, 4)
+        + "?)";
+  }
+
   public static void ensureLibrary(String name) {
     try {
       System.loadLibrary(name);
@@ -121,6 +140,7 @@ public class Util {
           e);
       System.exit(1);
     }
+    log.info("Library '{}' loaded successfully.", name);
   }
 
   public static Fraction toFraction(RatNum x) {
@@ -285,5 +305,17 @@ public class Util {
   @SafeVarargs
   public static <K> Map<List<K>, Coefficient> ones(List<K>... indices) {
     return Stream.of(indices).collect(Collectors.toMap(Function.identity(), x -> ONE));
+  }
+
+  public static <T> Supplier<T> supply(T value) {
+    return () -> value;
+  }
+
+  public static String toVectorString(List<Integer> vector) {
+    return mapToString(vector.stream()).collect(Collectors.joining(",", "(", ")"));
+  }
+
+  public static <T> Stream<String> mapToString(Stream<T> stream) {
+    return stream.map(Objects::toString);
   }
 }

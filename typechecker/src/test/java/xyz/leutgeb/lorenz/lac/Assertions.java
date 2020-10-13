@@ -25,8 +25,8 @@ public class Assertions {
     var actualColumn = new ArrayList<String>();
 
     Stream.concat(
-            expected.streamCoefficients().map(Map.Entry::getKey),
-            actual.streamCoefficients().map(Map.Entry::getKey))
+            expected.streamNonRankCoefficients().map(Map.Entry::getKey),
+            actual.streamNonRankCoefficients().map(Map.Entry::getKey))
         .sorted(Annotation.INDEX_COMPARATOR)
         .distinct()
         .forEach(
@@ -44,14 +44,14 @@ public class Assertions {
         Table.create(
             name,
             StringColumn.create("Index", indexColumn),
-            StringColumn.create("Expected (" + expected.getName() + ")", expectedColumn),
-            StringColumn.create("Actual (" + actual.getName() + ")", actualColumn));
+            StringColumn.create("Expected (" + expected.getNameAndId() + ")", expectedColumn),
+            StringColumn.create("Actual (" + actual.getNameAndId() + ")", actualColumn));
 
     throw new AssertionFailedError(table.toString(), expected, actual);
   }
 
   public static <V> V assertAnnotationEquals(Annotation expected, Annotation actual) {
-    return assertAnnotationEquals(expected, actual, expected.getName());
+    return assertAnnotationEquals(expected, actual, expected.getNameAndId());
   }
 
   public static <V> V assertContextEquals(AnnotatingContext expected, AnnotatingContext actual) {

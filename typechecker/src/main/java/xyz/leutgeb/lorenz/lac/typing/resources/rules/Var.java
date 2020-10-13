@@ -13,12 +13,13 @@ public class Var implements Rule {
 
   public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
     final var context = obligation.getContext();
+    final var expression = obligation.getExpression();
 
-    if (!(obligation.getExpression() instanceof Identifier)) {
+    if (!(expression instanceof Identifier)) {
       throw bug("cannot apply (var) to expression that is not an identifier");
     }
 
-    if (!(obligation.getExpression().getType() instanceof TreeType)) {
+    if (!(expression.getType() instanceof TreeType)) {
       if (!context.isEmpty()) {
         throw bug(
             "cannot apply (var) to identifier that is not of type tree with nonempty context");
@@ -31,7 +32,7 @@ public class Var implements Rule {
     }
 
     return Rule.ApplicationResult.onlyConstraints(
-        EqualityConstraint.eq(obligation.getAnnotation(), context.getAnnotation(), "(var)"));
+        EqualityConstraint.eq(context.getAnnotation(), obligation.getAnnotation(), "(var)"));
   }
 
   @Override

@@ -1,11 +1,14 @@
 package xyz.leutgeb.lorenz.lac.typing.resources;
 
+import static java.util.Collections.emptyMap;
+
 import java.util.Map;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Value;
 import org.jgrapht.Graph;
+import org.jgrapht.graph.DirectedAcyclicGraph;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.AnnotationHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
@@ -14,35 +17,29 @@ import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 @Value
 public class AnnotatingGlobals {
   @Getter(value = AccessLevel.NONE)
-  Map<String, FunctionAnnotation> functionAnnotations;
-
-  @Getter(value = AccessLevel.NONE)
-  Map<String, Set<FunctionAnnotation>> costFreeFunctionAnnotations;
+  Map<String, CombinedFunctionAnnotation> functionAnnotations;
 
   AnnotationHeuristic heuristic;
 
   Graph<Identifier, SizeEdge> sizeAnalysis;
 
   public AnnotatingGlobals(
-      Map<String, FunctionAnnotation> functionAnnotations,
-      Map<String, Set<FunctionAnnotation>> costFreeFunctionAnnotations,
+      Map<String, CombinedFunctionAnnotation> functionAnnotations,
       Graph<Identifier, SizeEdge> sizeAnalysis,
       AnnotationHeuristic heuristic) {
-    this.costFreeFunctionAnnotations = costFreeFunctionAnnotations;
     this.functionAnnotations = functionAnnotations;
     this.sizeAnalysis = sizeAnalysis;
     this.heuristic = heuristic;
   }
 
   public AnnotatingGlobals(
-      Map<String, FunctionAnnotation> functionAnnotations,
-      Map<String, Set<FunctionAnnotation>> costFreeFunctionAnnotations,
+      Map<String, CombinedFunctionAnnotation> functionAnnotations,
       Graph<Identifier, SizeEdge> sizeAnalysis) {
-    this(
-        functionAnnotations,
-        costFreeFunctionAnnotations,
-        sizeAnalysis,
-        SmartRangeHeuristic.DEFAULT);
+    this(functionAnnotations, sizeAnalysis, SmartRangeHeuristic.DEFAULT);
+  }
+
+  public static AnnotatingGlobals empty() {
+    return new AnnotatingGlobals(emptyMap(), new DirectedAcyclicGraph<>(SizeEdge.class));
   }
 
   public void addFunctionAnnotation(
@@ -67,15 +64,10 @@ public class AnnotatingGlobals {
             })) {
       throw new IllegalArgumentException();
     }
-    functionAnnotations.put(name, withCost);
-    costFreeFunctionAnnotations.put(name, costFrees);
+    functionAnnotations.put(name, new CombinedFunctionAnnotation(withCost, costFrees));
   }
 
-  public FunctionAnnotation getSignature(String name) {
+  public CombinedFunctionAnnotation getSignature(String name) {
     return functionAnnotations.get(name);
-  }
-
-  public Set<FunctionAnnotation> getCostFreeSignatures(String name) {
-    return costFreeFunctionAnnotations.get(name);
   }
 }

@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources.coefficients;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.Context;
 import java.util.Map;
+import java.util.function.Predicate;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.util.Fraction;
@@ -52,4 +53,6 @@ public class KnownCoefficient implements Coefficient {
   public String toString() {
     return value.toString();
   }
+
+  public static final Predicate<Coefficient> IS = x -> x instanceof KnownCoefficient;
 }

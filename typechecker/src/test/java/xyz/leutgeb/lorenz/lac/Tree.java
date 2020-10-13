@@ -9,10 +9,9 @@ import static xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstr
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.ConjunctiveConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.NegationConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
@@ -28,9 +27,8 @@ public class Tree {
     final var program = loadAndNormalizeAndInferAndUnshare(fqn);
     final var definition = program.getFunctionDefinitions().get(fqn);
     assertNotNull(definition);
-    Map<String, FunctionAnnotation> signature = new HashMap<>();
-    Map<String, Set<FunctionAnnotation>> cfSignature = new HashMap<>();
-    definition.stubAnnotations(signature, cfSignature, SmartRangeHeuristic.DEFAULT);
+    Map<String, CombinedFunctionAnnotation> signature = new HashMap<>();
+    definition.stubAnnotations(signature, SmartRangeHeuristic.DEFAULT);
     final var functionSignature = signature.get(fqn);
 
     // NOTE: We show unsatisfiability of the constraint system together
@@ -48,7 +46,11 @@ public class Tree {
                 singleton(
                     new NegationConstraint(
                         new ConjunctiveConstraint(
-                            eq(functionSignature.from(), functionSignature.to(), EXT), EXT),
+                            eq(
+                                functionSignature.withCost().from(),
+                                functionSignature.withCost().to(),
+                                EXT),
+                            EXT),
                         EXT)))
             .isPresent());
   }
