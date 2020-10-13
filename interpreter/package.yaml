@@ -1,15 +1,15 @@
-name:                interpreter
-version:             0.1.0.0
-github:              "lorenzleutgeb/lac"
-license:             GPL-3
-author:              "Lorenz Leutgeb"
-maintainer:          "lorenz@leutgeb.xyz"
-copyright:           "2019 Lorenz Leutgeb"
+name: interpreter
+version: 0.1.0.0
+github: "lorenzleutgeb/lac"
+license: GPL-3
+author: "Lorenz Leutgeb"
+maintainer: "lorenz@leutgeb.xyz"
+copyright: "2019-2020 Lorenz Leutgeb"
 
-#synopsis:            Short description of your package
-#category:            Web
+#synopsis: Short description of your package
+#category: Web
 
-description:         Please see the README on GitHub at <https://github.com/lorenzleutgeb/lax#readme>
+description: Please see the README on GitHub at <https://github.com/lorenzleutgeb/lac#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -20,35 +20,43 @@ custom-setup:
   - process >= 1.6.5.1
   - Cabal >= 3.0 && < 4.0
 
-library:
-  source-dirs:
-  - src
-  - generated-src
-  default-extensions:
-  - GADTs
-  - FlexibleContexts
-  - DeriveFunctor
+default-extensions:
+- GADTs
+- FlexibleContexts
+- DeriveFunctor
+
+source-dirs:
+- src
+- generated-src
+
+ghc-options:
+- -threaded
+- -rtsopts
+- -with-rtsopts=-N
+
+library: {}
 
 executables:
   interpreter:
-    main:                Main.hs
-    source-dirs:         app
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - interpreter
+    main: Main.hs
+    source-dirs:
+    - app
+    other-modules:
+    - InterpreterPrelude
+    - Bool
+    - LeftList
+    - PairingHeap
+    - RightList
+    - Scratch
+    - SkewHeap
+    - SplayTree
+    - Tree
 
 tests:
   interpreter-test:
     main: Spec.hs
     source-dirs:
     - test
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
     dependencies:
     - interpreter
     - HUnit
