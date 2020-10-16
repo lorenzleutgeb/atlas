@@ -22,7 +22,7 @@ tar xvf $DIST/${PROJECT}.tar -C $DIST/tacas/artifact --strip-components=1
 # to use OpenJDK 14.
 cp -Rv tacas $DIST/
 
-cp -Rv src/test/resources $DIST/tacas/artifact/resources
+cp -Rv src/test/resources $DIST/tacas/artifact
 
 # Copy over libz3java.so
 cp -v $ROOT/lib/libz3java.so $DIST/tacas/artifact/z3
