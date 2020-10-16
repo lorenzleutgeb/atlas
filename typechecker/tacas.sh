@@ -24,6 +24,9 @@ cp -Rv tacas $DIST/
 
 cp -Rv src/test/resources $DIST/tacas/artifact
 
+mkdir -p $DIST/tacas/resources/grammars 
+cp -v src/main/antlr/xyz/leutgeb/lorenz/lac/antlr/*.g4 $DIST/tacas/resources/grammars 
+
 # Copy over libz3java.so
 cp -v $ROOT/lib/libz3java.so $DIST/tacas/artifact/z3
 

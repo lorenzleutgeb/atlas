@@ -40,6 +40,9 @@ to be analyzed (`*.ml` files) as well as tactics
 for guided proof (`*.txt` files, this feature is
 currently not exposed via `bin/artifact.sh`).
 
+Contains grammars of the input languages for
+reference.
+
 ## Runtime and Dependencies
 
 This artifact is implemented in Java 14. It
@@ -90,6 +93,14 @@ the rational numbers, run
 
 To check a specific type, you will have to edit
 the annotation in the corresponding `*.ml` file.
+
+
+    ./bin/artifact.sh lnf --home=resources/examples --out=mydir
+
+Will print function definitions in let-normal-form
+to the directory passed as `out` argument. This
+directory must exist and be writable.
+
 
 ## Resource Limits
 
