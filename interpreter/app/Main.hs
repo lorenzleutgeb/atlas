@@ -5,6 +5,7 @@ import InterpreterPrelude
 import qualified LeftList
 import qualified RightList
 import qualified SplayTree
+import qualified SplayHeap
 import qualified Bool
 import qualified Tree
 import qualified PairingHeap

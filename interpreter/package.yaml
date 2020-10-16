@@ -49,6 +49,7 @@ executables:
     - RightList
     - Scratch
     - SkewHeap
+    - SplayHeap
     - SplayTree
     - Tree
 
