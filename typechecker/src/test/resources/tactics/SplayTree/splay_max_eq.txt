@@ -1,12 +1,28 @@
 (match (* t *)
   _{w}
-  (match (* r *)
-    _{w}
-    (ite
+  (w (match (* r *)
+    (w (let:tree:cf
       _{w}
-      (w
+      _{w}
+    ))
+    (w (ite
+      (w (let:tree:cf
         _{w}
-      )
-    )
-  )
+        _{w}
+      ))
+      (w (let:tree:cf
+        _{w}
+        (w (match
+          _{w}
+          (w (let:tree:cf
+            _{w}
+            (w (let:tree:cf
+              _{w}
+              _{w}
+            ))
+          ))
+        ))
+      ))
+    ))
+  ))
 )

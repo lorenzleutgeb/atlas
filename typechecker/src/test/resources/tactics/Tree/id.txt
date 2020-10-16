@@ -1,0 +1,12 @@
+(match
+  (leaf)
+  (match
+    (let:tree:cf
+      (leaf)
+      node
+    )
+    (let:tree:cf
+      node
+      node
+    )
+)

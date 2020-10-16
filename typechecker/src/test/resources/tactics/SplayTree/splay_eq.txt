@@ -10,7 +10,7 @@
             (let:tree:cf node (w node))
             (ite (* a < b *)
               (ite (* bl == leaf, zig zig *)
-                (let:tree:cf leaf (let:tree:cf node (w node)))
+                (let:tree:cf node (w node))
                 (w
                   (let:tree:cf
                     (w app) (* splay_eq a bl *)
@@ -28,7 +28,7 @@
                 )
               )
               (ite (* br == leaf, zig zag *)
-                (let:tree:cf leaf (let:tree:cf node (w node)))
+                (let:tree:cf node (w node))
                 (w
                   (let:tree:cf
                     (w app) (* splay_eq a br *)
@@ -56,7 +56,7 @@
             (let:tree:cf node (w node))
             (ite (* a < b *)
               (ite (* bl == leaf, zag zig *)
-                (let:tree:cf leaf (let:tree:cf node (w node)))
+                (let:tree:cf node (w node))
                 (w
                   (let:tree:cf
                     (w app) (* splay_eq a bl *)
@@ -74,7 +74,7 @@
                 )
               )
               (ite (* br == leaf, zag zag *)
-                (let:tree:cf node (let:tree:cf leaf (w node)))
+                (let:tree:cf node (w node))
                 (w
                   (let:tree:cf
                     (w app) (* splay_eq a br *)

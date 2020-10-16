@@ -1,0 +1,7 @@
+(match
+  _{w}
+  (w (let:tree:cf
+    _{w}
+    _{w}
+  ))
+)

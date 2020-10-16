@@ -1,0 +1,118 @@
+(match (* t *)
+  (w leaf)
+  Q1@(!{[0 ↦ 1, 1 ↦ 1, (1 1 0) ↦ 3, (1 0 0) ↦ 1, (0 1 0) ↦ 1, (0 0 2) ↦ 1] -> [0 ↦ 1, (0 2) ↦ 1]}
+  (ite (* a == c *)
+    (w node)
+    (ite (* a < c *)
+      (match (* cl, zig *)
+        (w (let:tree:cf leaf (w node)))
+        Q2@(!{[0 ↦ 1, 1 ↦ 1, 2 ↦ 1, (0 0 1 0) ↦ 1, (0 1 0 0) ↦ 1, (1 0 0 0) ↦ 1, (1 1 0 0) ↦ 1, (1 1 1 0) ↦ 3, (0 0 0 2) ↦ 1] -> [0 ↦ 1, (0 2) ↦ 1]}
+          (ite (* a == b *)
+            (w (let:tree:cf node (w node)))
+            (ite (* a < b *)
+              (ite (* bl == leaf, zig zig *)
+                (w (let:tree:cf node (w node)))
+                (w
+                  Q3@(!{[0 ↦ 1, 1 ↦ 1, 2 ↦ 1, (0 1 0 0) ↦ 1 , (1 0 0 0) ↦ 3, (0 0 1 0) ↦ 1 , (0 1 1 0) ↦ 1 , (1 1 1 0) ↦ 1, (0 0 0 2) ↦ 2] -> [0 ↦ 1, (0 2) ↦ 1]}
+                  (let:tree:cf
+                    (w app) (* splay_eq a bl *)
+                    Q4@(!{[0 ↦ 1, 1 ↦ 1, 2 ↦ 1, (1 0 0 0) ↦ 1, (0 1 0 0) ↦ 1, (1 1 0 0) ↦ 1, (1 1 1 0) ↦ 1, (0 0 0 2) ↦ 1] -> [0 ↦ 1, (0 2) ↦ 1]}
+                      (match
+                        _{w}
+                        (w
+                          (let:tree:cf
+                            node
+                            (w (let:tree:cf
+                              node
+                              (w node)
+                            ))
+                          )
+                        )
+                      )
+                    )
+                  )
+                  )
+                )
+              )
+              (ite (* br == leaf, zig zag *)
+                (w (let:tree:cf node
+                  (w node)
+                ))
+                Q3azigzag@(!{[0 ↦ 1, 1 ↦ 1, 2 ↦ 1, (0 1 0 0) ↦ 1, (1 0 0 0) ↦ 1, (1 1 0 0) ↦ 1, (0 0 1 0) ↦ 1, (1 1 1 0) ↦ 3, (0 0 0 2) ↦ 1] -> [0 ↦ 1, (0 2) ↦ 1]}
+                  (w
+                    Q3bzigzag@(!{[0 ↦ 1, 1 ↦ 1, 2 ↦ 1, (0 1 0 0) ↦ 3, (1 0 0 0) ↦ 1, (0 0 1 0) ↦ 1, (1 1 1 0) ↦ 2, (0 0 0 2) ↦ 1] -> [0 ↦ 1, (0 2) ↦ 1]}
+                      (let:tree:cf
+                        (w app) (* splay_eq a br *)
+                        Q4zigzag@(!{[0 ↦ 1, 1 ↦ 1, 2 ↦ 1, (0 1 0 0) ↦ 1, (1 0 0 0) ↦ 1, (1 1 1 0) ↦ 2] -> [0 ↦ 1, (0 2) ↦ 1]}
+                            (match
+                              _{w}
+                              Q5zigzag@(!{[0 ↦ 1, 1 ↦ 1, 2 ↦ 1, 3 ↦ 1, (1 0 0 0 0) ↦ 1, (0 1 0 0 0) ↦ 1, (0 0 1 0 0) ↦ 1, (0 0 0 1 0) ↦ 1, (1 1 1 1 0) ↦ 2] -> [0 ↦ 1, (0 2) ↦ 1]}
+                                (w (let:tree:cf
+                                  node
+                                  (let:tree:cf
+                                    node
+                                    Q6zigzag@(node)
+                                  )
+                                ))
+                              )
+                            )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+      (match (* cr, zag *)
+        (w (let:tree:cf leaf (w node)))
+        Q2zag@(w
+          Q3zag@(ite (* a == b *)
+            (w (let:tree:cf node (w node)))
+            (ite (* a < b *)
+              (ite (* bl == leaf, zag zig *)
+                (w (let:tree:cf node (w node)))
+                (w
+                  (let:tree:cf
+                    (w app) (* splay_eq a bl *)
+                    Q4zagzig@(match
+                      _{w}
+                      Q5zagzig@(w (let:tree:cf
+                        node
+                        (let:tree:cf
+                          node
+                          (w node)
+                        )
+                      ))
+                    )
+                  )
+                )
+              )
+              (ite (* br == leaf, zag zag *)
+                (let:tree:cf _{w} _{w})
+                (w
+                  (let:tree:cf
+                    _{w} (*w app*) (* splay_eq a br *)
+                    Q4zagzag@(match
+                      _{w}
+                      Q5zagzag@(w (let:tree:cf
+                        _{w}
+                        (let:tree:cf
+                          _{w}
+                          _{w}
+                        )
+                      ))
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+  )
+)

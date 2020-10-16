@@ -1,0 +1,7 @@
+(let:tree:cf
+  node
+  (let:tree:cf
+    node
+    node
+  )
+)

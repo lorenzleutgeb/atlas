@@ -27,7 +27,7 @@ Q@(!{[0 ↦ 1, (1 0) ↦ 3] -> [0 ↦ 1]}
                   (ite (* bl == leaf, zig zig *)
                     ?
                     (let:tree:cf
-                      (w app) (* splay_eq a bl *)
+                      app (* splay_eq a bl *)
                       (* In the paper we have cr, br, x while in the implementation we have br, cr, x *)
                       Q4@(!{[0 ↦ 1, 1 ↦ 1, 2 ↦ 1, (1 0 0 0) ↦ 1, (0 1 0 0) ↦ 1, (1 1 0 0) ↦ 1, (1 1 1 0) ↦ 1] -> [0 ↦ 1]}
                         ?

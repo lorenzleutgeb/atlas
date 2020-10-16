@@ -11,7 +11,7 @@
             (ite (* a < b *)
               ? (* zig zig *)
               (ite (* br == leaf, zig zag *)
-                (let:tree:cf leaf (let:tree:cf node (w node)))
+                (let:tree:cf node (w node))
                 (w
                   (let:tree:cf
                     (w app) (* splay_eq a br *)

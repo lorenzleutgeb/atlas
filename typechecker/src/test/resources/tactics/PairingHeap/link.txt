@@ -1,1 +1,16 @@
-_{w}
+(match
+  _{w}
+  (match
+    _{w}
+    (ite
+      (w (let:tree:cf
+        _{w}
+        _{w}
+      ))
+      (w (let:tree:cf
+         _{w}
+         _{w}
+      ))
+    )
+  )
+)

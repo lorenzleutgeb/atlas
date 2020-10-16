@@ -1,0 +1,43 @@
+(match
+  (w (let:tree:cf _{w} (let:tree:cf _{w} _{w})))
+  (ite
+    (match
+      (w (let:tree:cf _{w} (let:tree:cf _{w} (let:tree:cf _{w} _{w}))))
+      (ite
+        (w (let:tree:cf
+          _{w}
+          (match
+            _{w}
+            (w (let:tree:cf _{w} (let:tree:cf _{w} _{w})))
+          )
+        ))
+        (w (let:tree:cf
+          _{w}
+          (match
+            _{w}
+            (w (let:tree:cf _{w} (let:tree:cf _{w} _{w})))
+          )
+        ))
+      )
+    )
+    (match
+      (w (let:tree:cf _{w} (let:tree:cf _{w} (let:tree:cf _{w} _{w}))))
+      (ite
+        (w (let:tree:cf
+          _{w}
+          (match
+            _{w}
+            (w (let:tree:cf _{w} (let:tree:cf _{w} _{w})))
+          )
+        ))
+        (w (let:tree:cf
+          _{w}
+          (match
+            _{w}
+            (w (let:tree:cf _{w} (let:tree:cf _{w} _{w})))
+          )
+        ))
+      )
+    )
+  )
+)

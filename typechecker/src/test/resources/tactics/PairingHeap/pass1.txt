@@ -1,9 +1,11 @@
 (match
   _{w}
-  (match
-    _{w}
+  (w (match
     (w (let:tree:cf
       _{w}
+      _{w}
+    ))
+    (w
       (w (let:tree:cf
         _{w}
         (w (let:tree:cf
@@ -14,6 +16,6 @@
           ))
         ))
       ))
-    ))
-  )
+    )
+  ))
 )

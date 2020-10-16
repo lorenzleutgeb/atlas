@@ -1,0 +1,43 @@
+(match
+  ? (*w (let:tree:cf leaf (let:tree:cf leaf (w node)))*)
+  (ite
+    (match
+      ? (*w (let:tree:cf _{w} (let:tree:cf _{w} (let:tree:cf _{w} _{w})))*)
+      (ite
+        (w (let:tree:cf
+          _{w}
+          (match
+            ? (* _{w} *)
+            (w (let:tree:cf node (let:tree:cf node (w node))))
+          )
+        ))
+        (w (let:tree:cf
+          _{w}
+          (match
+            ? (* _{w} *)
+            (w (let:tree:cf node (let:tree:cf node (w node))))
+          )
+        ))
+      )
+    )
+    (match
+      ? (*w (let:tree:cf _{w} (let:tree:cf _{w} (let:tree:cf _{w} _{w})))*)
+      (ite
+        (w (let:tree:cf
+          _{w}
+          (match
+            ? (* _{w} *)
+            (w (let:tree:cf node (let:tree:cf node (w node))))
+          )
+        ))
+        (w (let:tree:cf
+          _{w}
+          (match
+            ? (* _{w} *)
+            (w (let:tree:cf node (let:tree:cf node (w node))))
+          )
+        ))
+      )
+    )
+  )
+)
