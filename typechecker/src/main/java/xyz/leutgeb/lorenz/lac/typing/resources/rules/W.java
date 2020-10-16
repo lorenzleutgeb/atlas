@@ -191,7 +191,7 @@ public class W implements Rule {
       return compareCoefficientsLessOrEqual(left, right);
     }
 
-    final var wid = randomHex(4);
+    final var wid = randomHex();
 
     final var p = potentialFunctions.stream().map(left::getCoefficientOrZero).collect(toList());
     final var q = potentialFunctions.stream().map(right::getCoefficientOrZero).collect(toList());
@@ -329,10 +329,11 @@ public class W implements Rule {
                 pp)),
         singletonList(
             append(
+                /*
                 obligation.getContext().getIds().isEmpty()
                     ? compareCoefficientsLessOrEqual(p, q)
-                    : compareCoefficientsLessOrEqualUsingFarkas(
-                        obligation.getContext().getIds(), p, q, globals.getSizeAnalysis()),
+                    : */ compareCoefficientsLessOrEqualUsingFarkas(
+                    obligation.getContext().getIds(), p, q, globals.getSizeAnalysis()),
                 compareCoefficientsLessOrEqualUsingFarkas(
                     qp.size() > 0
                         ? singletonList(
@@ -349,6 +350,7 @@ public class W implements Rule {
 
   public record Order<T>(T smaller, T larger) {}
 
+  @Deprecated
   public static List<Order<List<Integer>>> lessThanOrEqual(
       List<List<Integer>> potentialFunctions, Set<Order<Integer>> expertGt) {
     if (potentialFunctions.isEmpty()) {
@@ -362,12 +364,12 @@ public class W implements Rule {
     final var size = potentialFunctions.get(0).size();
 
     final List<ArithExpr> ls =
-        IntStream.rangeClosed(1, size)
+        IntStream.range(0, size)
             .mapToObj(i -> ctx.mkIntConst("l" + i))
             .collect(Collectors.toUnmodifiableList());
 
     final List<ArithExpr> rs =
-        IntStream.rangeClosed(1, size)
+        IntStream.range(0, size)
             .mapToObj(i -> ctx.mkIntConst("r" + i))
             .collect(Collectors.toUnmodifiableList());
 
@@ -381,7 +383,7 @@ public class W implements Rule {
      */
 
     final var xSymbols =
-        IntStream.range(1, size)
+        IntStream.range(0, size - 1)
             .mapToObj(i -> ctx.mkSymbol("x" + i))
             .collect(Collectors.toUnmodifiableList());
     final List<ArithExpr> xs =
@@ -390,7 +392,7 @@ public class W implements Rule {
     final var precondition =
         ctx.mkAnd(
             Stream.concat(
-                    xs.stream().map(x -> ctx.mkLe(zero, x)),
+                    xs.stream().map(x -> ctx.mkLe(one, x)),
                     expertGt.stream()
                         .map(pair -> ctx.mkGt(xs.get(pair.smaller()), xs.get(pair.larger()))))
                 .toArray(BoolExpr[]::new));
@@ -471,8 +473,8 @@ public class W implements Rule {
       List<Integer> o1, List<Integer> o2, Set<Order<Integer>> expertGt) {
     // o1 and o2 represent linear combinations:
     //
-    //     o1:  o1.1 * x1 + o1.2 * x2 + o1.3 * x3 + ... + o1.n * xn
-    //     o2:  o2.1 * x1 + o2.2 * x2 + o2.3 * x3 + ... + o2.n * xn
+    //     o1:  o1.1 * x1 + o1.2 * x2 + o1.3 * x3 + ... + o1.(n-1) * x(n-1) + o1.n
+    //     o2:  o2.1 * x1 + o2.2 * x2 + o2.3 * x3 + ... + o2.(n-1) * x(n-1) + o2.n
     //
     // expertGt represents additional knowledge about relations between xs,
     // it might contain:
@@ -493,15 +495,15 @@ public class W implements Rule {
     final ArithExpr one = ctx.mkInt(1);
     final ArithExpr zero = ctx.mkInt(0);
     final List<ArithExpr> vars =
-        IntStream.range(1, o1.size())
+        IntStream.range(0, o1.size() - 1)
             .mapToObj(i -> ctx.mkRealConst("x" + i))
             .collect(Collectors.toUnmodifiableList());
     for (var x : vars) {
       // TODO
       // State that all xs are greater than zero, because
       // they represent sizes of trees, which are at least 1.
-      // solver.add(ctx.mkLe(one, x));
-      solver.add(ctx.mkLe(zero, x));
+      solver.add(ctx.mkLe(one, x));
+      // solver.add(ctx.mkLe(zero, x));
     }
     for (var pair : expertGt) {
       solver.add(ctx.mkGt(vars.get(pair.smaller()), vars.get(pair.larger())));
@@ -510,11 +512,17 @@ public class W implements Rule {
         ctx.mkGt(
             ctx.mkAdd(
                 IntStream.range(0, o1.size())
-                    .mapToObj(i -> ctx.mkMul(ctx.mkInt(o1.get(i)), getOrDefault(vars, i, one)))
+                    .mapToObj(
+                        i ->
+                            ctx.mkMul(
+                                ctx.mkInt(o1.get(i)), getOrDefault(vars, i, ctx.mkInt(o1.get(i)))))
                     .toArray(ArithExpr[]::new)),
             ctx.mkAdd(
                 IntStream.range(0, o2.size())
-                    .mapToObj(i -> ctx.mkMul(ctx.mkInt(o2.get(i)), getOrDefault(vars, i, one)))
+                    .mapToObj(
+                        i ->
+                            ctx.mkMul(
+                                ctx.mkInt(o2.get(i)), getOrDefault(vars, i, ctx.mkInt(o1.get(i)))))
                     .toArray(ArithExpr[]::new))));
 
     final var status = solver.check();

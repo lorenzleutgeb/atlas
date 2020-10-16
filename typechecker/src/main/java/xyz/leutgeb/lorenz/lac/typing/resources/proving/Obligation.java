@@ -110,7 +110,7 @@ public class Obligation {
         idStr
             + " | "
             + context.getAnnotation()
-            + " <i style=\"fill:blue;\">"
+            + " <i style=\"color:blue;\">"
             + context.getAnnotation().getNameAndId()
             + "</i>";
 
@@ -121,7 +121,7 @@ public class Obligation {
         + expression
         + " | "
         + annotation
-        + " <i style=\"fill:blue;\">"
+        + " <i style=\"color:blue;\">"
         + annotation.getNameAndId()
         + "</i>";
   }

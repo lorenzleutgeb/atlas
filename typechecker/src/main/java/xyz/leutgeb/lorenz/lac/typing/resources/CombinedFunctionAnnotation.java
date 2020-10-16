@@ -39,4 +39,10 @@ public record CombinedFunctionAnnotation(
         withCost.substitute(solution),
         withoutCost.stream().map(x -> x.substitute(solution)).collect(Collectors.toSet()));
   }
+
+  public boolean isNonInteger() {
+    return withCost.isNonInteger()
+        || (!withoutCost().isEmpty()
+            && withoutCost.stream().allMatch(FunctionAnnotation::isNonInteger));
+  }
 }

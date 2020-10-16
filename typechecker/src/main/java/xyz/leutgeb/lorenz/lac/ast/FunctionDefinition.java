@@ -23,6 +23,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -61,7 +62,7 @@ public class FunctionDefinition {
   private Expression body;
   private FunctionSignature inferredSignature;
   private FunctionSignature annotatedSignature;
-  private FunctionAnnotation annotation;
+  // private FunctionAnnotation inferredAnnotation;
   private Set<FunctionAnnotation> cfAnnotations;
   private org.jgrapht.Graph<Identifier, SizeEdge> sizeAnalysis = null;
 
@@ -141,9 +142,11 @@ public class FunctionDefinition {
   }
 
   public void substitute(Map<Coefficient, KnownCoefficient> solution) {
-    annotation =
-        new FunctionAnnotation(
-            annotation.from().substitute(solution), annotation.to().substitute(solution));
+    inferredSignature =
+        new FunctionSignature(
+            inferredSignature.getConstraints(),
+            inferredSignature.getType(),
+            inferredSignature.getAnnotation().map(a -> a.substitute(solution)));
   }
 
   public List<Identifier> treeLikeArguments() {
@@ -183,14 +186,17 @@ public class FunctionDefinition {
   }
 
   public void stubAnnotations(
-      Map<String, CombinedFunctionAnnotation> functionAnnotations, AnnotationHeuristic heuristic) {
+      Map<String, CombinedFunctionAnnotation> functionAnnotations,
+      AnnotationHeuristic heuristic,
+      boolean infer) {
     stubAnnotations(functionAnnotations, heuristic, true);
   }
 
   public void stubAnnotations(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       AnnotationHeuristic heuristic,
-      boolean cf) {
+      boolean cf,
+      boolean infer) {
 
     analyzeSizes();
 
@@ -200,28 +206,48 @@ public class FunctionDefinition {
     final var returnsTree = body.getType() instanceof TreeType;
 
     if (predefined == null) {
-      annotation =
+      var inferredAnnotation =
           new FunctionAnnotation(
               heuristic.generate("args", treeLikeArguments.size()),
               heuristic.generate("return", returnsTree ? 1 : 0));
 
       var costFreeAnnotation =
           new FunctionAnnotation(
-              heuristic.generate("cfargs", annotation.from()),
-              heuristic.generate("cfreturn", annotation.to()));
+              heuristic.generate("cfargs1", inferredAnnotation.from()),
+              heuristic.generate("cfreturn1", inferredAnnotation.to()));
+
+      var costFreeAnnotation2 =
+          new FunctionAnnotation(
+              heuristic.generate("cfargs2", inferredAnnotation.from()),
+              heuristic.generate("cfreturn2", inferredAnnotation.to()));
 
       var zeroAnnotation =
           new FunctionAnnotation(
-              Annotation.zero(annotation.from().size(), "cfargszero"),
-              Annotation.zero(annotation.to().size(), "cfreturnzero"));
+              Annotation.zero(inferredAnnotation.from().size(), "cfargszero"),
+              Annotation.zero(inferredAnnotation.to().size(), "cfreturnzero"));
 
       if (cf) {
-        this.cfAnnotations = Set.of(costFreeAnnotation, zeroAnnotation);
+        this.cfAnnotations = Set.of(costFreeAnnotation, costFreeAnnotation2, zeroAnnotation);
       } else {
         this.cfAnnotations = emptySet();
       }
+      // TODO: Sort this out...
+      if (infer || annotatedSignature.getAnnotation().isEmpty()) {
+        inferredSignature =
+            new FunctionSignature(
+                inferredSignature.getConstraints(),
+                inferredSignature.getType(),
+                Optional.of(inferredAnnotation));
+      } else {
+        inferredSignature =
+            new FunctionSignature(
+                inferredSignature.getConstraints(),
+                inferredSignature.getType(),
+                annotatedSignature.getAnnotation());
+      }
       functionAnnotations.put(
-          getFullyQualifiedName(), new CombinedFunctionAnnotation(annotation, cfAnnotations));
+          getFullyQualifiedName(),
+          new CombinedFunctionAnnotation(inferredAnnotation, cfAnnotations));
     } else {
       if (predefined.withCost().from().size() != treeLikeArguments.size()) {
         throw new IllegalArgumentException(
@@ -243,7 +269,11 @@ public class FunctionDefinition {
                 + " but it is only of size "
                 + predefined.withCost().to().size());
       }
-      annotation = predefined.withCost();
+      inferredSignature =
+          new FunctionSignature(
+              inferredSignature.getConstraints(),
+              inferredSignature.getType(),
+              Optional.of(predefined.withCost()));
       cfAnnotations = predefined.withoutCost();
     }
   }
@@ -256,11 +286,14 @@ public class FunctionDefinition {
 
   public Obligation getTypingObligation(int cost) {
     return new Obligation(
-        new AnnotatingContext(treeLikeArguments(), annotation.from()), body, annotation.to(), cost);
+        new AnnotatingContext(treeLikeArguments(), inferredSignature.getAnnotation().get().from()),
+        body,
+        inferredSignature.getAnnotation().get().to(),
+        cost);
   }
 
   public String getAnnotationString() {
-    if (annotation == null) {
+    if (inferredSignature.getAnnotation().isEmpty()) {
       throw new IllegalStateException();
     }
 
@@ -270,9 +303,7 @@ public class FunctionDefinition {
         + (arguments.isEmpty() ? "" : " ")
         + String.join(" ", arguments)
         + " | "
-        + annotation.from()
-        + " -> "
-        + annotation.to();
+        + new CombinedFunctionAnnotation(inferredSignature.getAnnotation().get(), cfAnnotations);
   }
 
   public String getMockedAnnotationString(CombinedFunctionAnnotation annotation) {
@@ -321,9 +352,9 @@ public class FunctionDefinition {
                     turn(
                         name,
                         inferredSignature.toString().replace(">", "\\>").replace("<", "\\<"),
-                        annotation.from().getNameAndId()
+                        inferredSignature.getAnnotation().get().from().getNameAndId()
                             + " → "
-                            + annotation.to().getNameAndId())));
+                            + inferredSignature.getAnnotation().get().to().getNameAndId())));
     Graph result = body.toGraph(g, root);
     var viz = Graphviz.fromGraph(result);
     viz.render(Format.SVG).toOutputStream(out);

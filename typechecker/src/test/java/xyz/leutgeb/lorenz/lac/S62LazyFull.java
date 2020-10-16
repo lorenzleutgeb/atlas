@@ -130,7 +130,7 @@ public class S62LazyFull extends S62 {
 
     // Instantiate prover and enable weakening.
     final Prover prover = new Prover("splay-full", globals);
-    prover.setWeakenBeforeTerminal(true);
+    prover.setWeakenAggressively(true);
 
     // Partial proof up to the boundary.
     var remainingObligations =

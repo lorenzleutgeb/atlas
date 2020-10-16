@@ -2,21 +2,25 @@ package xyz.leutgeb.lorenz.lac.ast;
 
 import static java.util.stream.Collectors.joining;
 import static xyz.leutgeb.lorenz.lac.util.Util.flatten;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
@@ -42,7 +46,8 @@ public class Program {
   // SCC doesn't really matter. However we chose to still sort them to get consistent outputs
   // without resorting in multiple places.
   private final List<List<String>> order;
-  private final String name;
+
+  @Getter @Setter private String name;
   private final Path basePath;
 
   public Program(Map<String, FunctionDefinition> functionDefinitions, List<List<String>> order) {
@@ -83,7 +88,7 @@ public class Program {
     return solve(
         new HashMap<>(),
         new HashSet<>(),
-        constraints -> ConstraintSystemSolver.solve(constraints, name));
+        (program, constraints) -> ConstraintSystemSolver.solve(constraints, name));
   }
 
   public Optional<Map<Coefficient, KnownCoefficient>> solve(
@@ -91,7 +96,7 @@ public class Program {
     return solve(
         functionAnnotations,
         new HashSet<>(),
-        constraints -> ConstraintSystemSolver.solve(constraints, name));
+        (program, constraints) -> ConstraintSystemSolver.solve(constraints, name));
   }
 
   public Optional<Map<Coefficient, KnownCoefficient>> solve(
@@ -100,87 +105,20 @@ public class Program {
     return solve(
         functionAnnotations,
         outsideConstraints,
-        constraints -> ConstraintSystemSolver.solve(constraints, name));
+        (program, constraints) -> ConstraintSystemSolver.solve(constraints, name));
   }
 
-  public Optional<Prover> prove(Map<String, CombinedFunctionAnnotation> functionAnnotations) {
-    final var heuristic = SmartRangeHeuristic.DEFAULT;
-    final var prover = new Prover(name, null, basePath);
-
-    // For experimentation:
-    prover.setWeakenBeforeTerminal(true);
-    // prover.setTreeCf(true);
-    // prover.setAuto(true);
-
-    if (functionDefinitions.values().stream()
-        .map(FunctionDefinition::runaway)
-        .anyMatch(Predicate.not(Set::isEmpty))) {
-      log.info(namesAsSet() + " | UNSAT");
-      return Optional.empty();
-    }
-
-    final var called = calledFunctionNames();
-
-    forEach(
-        fd ->
-            fd.stubAnnotations(
-                functionAnnotations, heuristic, called.contains(fd.getFullyQualifiedName())));
-
-    forEach(
-        fd -> {
-          /*
-          if (!functionAnnotations.get(fd.getFullyQualifiedName()).withCost().isUnknown()
-                  && functionAnnotations.get(fd.getFullyQualifiedName()).withoutCost().stream()
-                  .noneMatch(FunctionAnnotation::isUnknown)) {
-            log.info(
-                    "Skipping type inference for {} because all given annotations are known.",
-                    fd.getFullyQualifiedName());
-            return;
-          }
-
-          */
-          final var globals =
-              new AnnotatingGlobals(functionAnnotations, fd.getSizeAnalysis(), heuristic);
-          prover.setGlobals(globals);
-          Obligation typingObligation = fd.getTypingObligation(1);
-          prover.prove(typingObligation);
-          if (called.contains(fd.getFullyQualifiedName())) {
-            log.info("Computing cf-typing for {}", fd.getFullyQualifiedName());
-            for (var cfAnnotation : fd.getCfAnnotations()) {
-              final var cfRoot =
-                  new Obligation(
-                      fd.treeLikeArguments(),
-                      cfAnnotation.from(),
-                      fd.getBody(),
-                      cfAnnotation.to(),
-                      0);
-              prover.prove(cfRoot);
-            }
-          }
-        });
-
-    /*
-    try {
-      prover.plot();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-     */
-
-    final var accumulatedConstraints = prover.getAccumulatedConstraints();
-    // accumulatedConstraints.addAll(outsideConstraints);
-    log.info(accumulatedConstraints.size() + " constraints accumulated");
-    return Optional.of(prover);
+  public Optional<Prover> prove(
+      Map<String, CombinedFunctionAnnotation> functionAnnotations, boolean infer) {
+    return proveWithTactics(functionAnnotations, Collections.emptyMap(), infer);
   }
 
   public Optional<Prover> proveWithTactics(
-      Map<String, CombinedFunctionAnnotation> functionAnnotations, Map<String, Path> tactics) {
+      Map<String, CombinedFunctionAnnotation> functionAnnotations,
+      Map<String, Path> tactics,
+      boolean infer) {
     final var heuristic = SmartRangeHeuristic.DEFAULT;
-    final var prover = new Prover(name, null, basePath);
-
-    // For experimentation:
-    // prover.setWeaken(true);
-    // prover.setTreeCf(true);
+    final var prover = new Prover(name + randomHex(), null, basePath);
 
     if (functionDefinitions.values().stream()
         .map(FunctionDefinition::runaway)
@@ -190,12 +128,13 @@ public class Program {
     }
 
     final var called = calledFunctionNames();
-
     forEach(
         fd ->
             fd.stubAnnotations(
-                functionAnnotations, heuristic, called.contains(fd.getFullyQualifiedName())));
-
+                functionAnnotations,
+                heuristic,
+                called.contains(fd.getFullyQualifiedName()),
+                infer));
     forEach(
         fd -> {
           /*
@@ -208,17 +147,20 @@ public class Program {
             return;
           }
            */
-          if (!tactics.containsKey(fd.getFullyQualifiedName())) {
-            log.info(
-                "Skipping type inference for {} and assuming {} is correct, because no tactics were provided.",
-                fd.getFullyQualifiedName(),
-                fd.getAnnotation());
-            return;
-          }
+          /*
+                 if (!tactics.containsKey(fd.getFullyQualifiedName())) {
+                   log.info(
+                       "Skipping type inference for {} and assuming {} is correct, because no tactics were provided.",
+                       fd.getFullyQualifiedName(),
+                       fd.getAnnotation());
+                   return;
+                 }
+          */
           final var globals =
               new AnnotatingGlobals(functionAnnotations, fd.getSizeAnalysis(), heuristic);
           prover.setGlobals(globals);
           Obligation typingObligation = fd.getTypingObligation(1);
+
           if (tactics.containsKey(fd.getFullyQualifiedName())) {
             try {
               prover.read(typingObligation, tactics.get(fd.getFullyQualifiedName()));
@@ -226,21 +168,45 @@ public class Program {
               throw new RuntimeException(e);
             }
           } else {
+            prover.setWeakenAggressively(true);
             prover.prove(typingObligation);
+            prover.setWeakenAggressively(false);
           }
-          if (called.contains(fd.getFullyQualifiedName())) {
-            for (var cfAnnotation : fd.getCfAnnotations()) {
-              final var cfRoot =
-                  new Obligation(
-                      fd.treeLikeArguments(),
-                      cfAnnotation.from(),
-                      fd.getBody(),
-                      cfAnnotation.to(),
-                      0);
-              // TODO: Weaken?
-              prover.setWeakenBeforeTerminal(true);
+
+          for (var cfAnnotation : fd.getCfAnnotations()) {
+            /*
+            if (cfAnnotation.from().coefficientsEqual(Annotation.zero(cfAnnotation.from().size())) &&
+            cfAnnotation.to().coefficientsEqual(Annotation.zero(cfAnnotation.to().size()))) {
+            	log.info("Skipping {}", cfAnnotation);
+              continue;
+            }
+            */
+
+            // prover.setWeakenAggressively(true);
+
+            final var cfRoot =
+                new Obligation(
+                    fd.treeLikeArguments(),
+                    cfAnnotation.from(),
+                    fd.getBody(),
+                    cfAnnotation.to(),
+                    0);
+
+            /*
+            prover.prove(
+                    );
+             */
+            // prover.setWeakenAggressively(false);
+
+            if (false && tactics.containsKey(fd.getFullyQualifiedName())) {
+              try {
+                log.info("Using tactic to prove cf typing!");
+                prover.read(cfRoot, tactics.get(fd.getFullyQualifiedName()));
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            } else {
               prover.prove(cfRoot);
-              prover.setWeakenBeforeTerminal(false);
             }
           }
         });
@@ -253,18 +219,15 @@ public class Program {
     }
      */
 
-    final var accumulatedConstraints = prover.getAccumulatedConstraints();
-    // accumulatedConstraints.addAll(outsideConstraints);
-    log.info(accumulatedConstraints.size() + " constraints accumulated");
     return Optional.of(prover);
   }
 
   public Optional<Map<Coefficient, KnownCoefficient>> solve(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       Set<Constraint> outsideConstraints,
-      Function<Set<Constraint>, Optional<Map<Coefficient, KnownCoefficient>>> solving) {
+      BiFunction<Program, Set<Constraint>, Optional<Map<Coefficient, KnownCoefficient>>> solving) {
 
-    final var optionalProver = prove(functionAnnotations);
+    final var optionalProver = prove(functionAnnotations, true);
     if (optionalProver.isEmpty()) {
       return Optional.empty();
     }
@@ -280,7 +243,8 @@ public class Program {
 
     // This is the entrypoint of new-style solving. We get a bunch of constraints
     // that need to be fulfilled in order to typecheck the program.
-    Optional<Map<Coefficient, KnownCoefficient>> solution = solving.apply(accumulatedConstraints);
+    Optional<Map<Coefficient, KnownCoefficient>> solution =
+        solving.apply(this, accumulatedConstraints);
 
     if (accumulatedConstraints.size() < 50) {
       try {
@@ -307,15 +271,15 @@ public class Program {
     if (solution.isPresent()) {
       forEach(fd -> fd.substitute(solution.get()));
       if (!(functionDefinitions.size() == 1)) {
-        log.info(namesAsSet() + ":");
+        // log.info(namesAsSet() + ":");
       }
       for (var group : order) {
         for (var fqn : group) {
-          log.info(functionDefinitions.get(fqn).getAnnotationString());
+          // log.info(functionDefinitions.get(fqn).getAnnotationString());
         }
       }
     } else {
-      log.info(namesAsSet() + " | UNSAT");
+      // log.info(namesAsSet() + " | UNSAT");
     }
   }
 
@@ -335,12 +299,16 @@ public class Program {
                           new FunctionAnnotation(
                               functionDefinitions
                                   .get(fqn)
+                                  .getInferredSignature()
                                   .getAnnotation()
+                                  .get()
                                   .from()
                                   .substitute(solution.get()),
                               functionDefinitions
                                   .get(fqn)
+                                  .getInferredSignature()
                                   .getAnnotation()
+                                  .get()
                                   .to()
                                   .substitute(solution.get())),
                           functionDefinitions.get(fqn).getCfAnnotations().stream()
@@ -385,5 +353,53 @@ public class Program {
     final var result = new HashSet<String>();
     forEach(fd -> result.addAll(fd.getOcurringFunctions()));
     return result;
+  }
+
+  public void printAllSimpleSignaturesInOrder(PrintStream out) {
+    for (int i = 0; i < order.size(); i++) {
+      final var stratum = order.get(i);
+      final var multiple = stratum.size() > 1;
+
+      if (multiple) {
+        out.println(stratum.stream().collect(joining(", ")) + ":");
+      }
+
+      for (var fqn : stratum) {
+        FunctionDefinition fd = functionDefinitions.get(fqn);
+        out.println(
+            (multiple ? "\t" : "")
+                + fd.getFullyQualifiedName()
+                + " ∷ "
+                + fd.getInferredSignature());
+      }
+    }
+  }
+
+  public void printAllAnnotatedSignaturesInOrder(PrintStream out) {
+    for (int i = 0; i < order.size(); i++) {
+      final var stratum = order.get(i);
+
+      for (var fqn : stratum) {
+        FunctionDefinition fd = functionDefinitions.get(fqn);
+        if (fd.getInferredSignature().getAnnotation().isPresent()) {
+          out.println(fd.getFullyQualifiedName() + " ∷ " + fd.getAnnotatedSignature().fullGlory());
+        }
+      }
+    }
+  }
+
+  public void printAllInferredSignaturesInOrder(PrintStream out) {
+    for (int i = 0; i < order.size(); i++) {
+      final var stratum = order.get(i);
+
+      for (var fqn : stratum) {
+        FunctionDefinition fd = functionDefinitions.get(fqn);
+        if (fd.getInferredSignature().getAnnotation().isPresent()) {
+          out.println(fd.getFullyQualifiedName() + " ∷ " + fd.getInferredSignature().fullGlory());
+        } else {
+          out.println(fd.getFullyQualifiedName() + " ∷ ?");
+        }
+      }
+    }
   }
 }

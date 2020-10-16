@@ -5,6 +5,7 @@ import static com.google.common.collect.Sets.intersection;
 import static java.util.Collections.singleton;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
@@ -22,6 +23,8 @@ import xyz.leutgeb.lorenz.lac.ast.LetExpression;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.DisjunctiveConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
@@ -142,42 +145,62 @@ public class LetTreeCf implements Rule {
     p.getRight()
         .addAll(
             EqualityConstraint.eqRanksDefineFromLeft(
-                varsForGammaAsList, gammaDeltaQ, gammaP, "(let:tree:cf) q_i = p_i"));
+                varsForGammaAsList, gammaDeltaQ, gammaP, "(let:tree:cf " + x + " ) q_i = p_i"));
 
+    // TODO: Maybe also add that a + c != 0?
     // Define non-rank coefficients in P from Q.
     p.getRight()
         .addAll(
             gammaDeltaQ
                 .streamNonRank()
-                // Ensure that b = 0.
-                .filter(
-                    entry ->
-                        varsForDeltaAsSet.isEmpty() || entry.zeroAndNonEmptyOn(varsForDeltaAsSet))
                 // Ensure that we do not point at a = 0 and c = 0.
                 .filter(
                     entry -> {
+                      final int c = entry.getOffsetIndex();
                       if (varsForGammaAsList.isEmpty()) {
-                        return entry.getOffsetIndex() > 0;
+                        return c != 0 && c != 2;
                       }
-                      if (entry.getOffsetIndex() == 0) {
+                      if (c == 0 || c == 2) {
                         return !entry.allAssociatedIndicesMatch(varsForGammaAsList, a -> a == 0);
                       }
                       return true;
                     })
+                // Ensure that b = 0 or b = ().
+                .filter(entry -> entry.allAssociatedIndicesMatch(varsForDeltaAsSet, b -> b == 0))
                 .map(
                     entry ->
                         new EqualityConstraint(
                             gammaP.getCoefficientOrDefine(entry),
                             entry.getValue(),
-                            "(let:tree:cf) p_{(a⃗⃗,c)} = q_{(a⃗⃗,0⃗,c)} with [a⃗⃗, c] = "
+                            "(let:tree:cf "
+                                + x
+                                + " ) p_{(a⃗⃗,c)} = q_{(a⃗⃗,0⃗,c)} with [a⃗⃗, c] = "
                                 + entry.toString()))
                 .collect(Collectors.toSet()));
+
+    crossConstraints.add(
+        new EqualsSumConstraint(
+            deltaxr.getAnnotation().getCoefficientOrDefine(unitIndex(deltax.size())),
+            List.of(
+                pp.getCoefficientOrDefine(unitIndex(pp.size())),
+                gammaP.getAnnotation().getCoefficientOrDefine(unitIndex(gammaP.size())).negate(),
+                gammaDeltaQ.getAnnotation().getCoefficientOrZero(unitIndex(gammaDeltaQ.size()))),
+            "(let:tree:cf) move const"));
+
+    crossConstraints.add(
+        new LessThanOrEqualConstraint(
+            gammaP.getAnnotation().getCoefficientOrDefine(unitIndex(gammaP.size())),
+            gammaDeltaQ.getAnnotation().getCoefficientOrZero(unitIndex(gammaDeltaQ.size())),
+            "(let:tree:cf) c_p less than c_q"));
 
     // Define rank coefficients in R from Q.
     r.getRight()
         .addAll(
             EqualityConstraint.eqRanksDefineFromLeft(
-                varsForDeltaAsList, gammaDeltaQ, deltaxr, "(let:tree:cf) q_{m+j} = r_j"));
+                varsForDeltaAsList,
+                gammaDeltaQ,
+                deltaxr,
+                "(let:tree:cf " + x + " ) q_{m+j} = r_j"));
 
     // Define rank coefficient for x in R from P'.
     crossConstraints.add(
@@ -186,11 +209,13 @@ public class LetTreeCf implements Rule {
         new EqualityConstraint(
             deltaxr.getRankCoefficientOrDefine(x),
             pp.getRankCoefficient(),
-            "(let:tree:cf) r_{k+1} = p'_{*}"));
+            "(let:tree:cf " + x + " ) r_{k+1} = p'_{*}"));
 
     // Define some non-rank coefficients in R from P'.
+    // Here we do not need to check whether d + e > 0 because P' was created via heuristics.
     crossConstraints.addAll(
         pp.streamNonRankCoefficients()
+            .filter(e -> !(e.getKey().equals(List.of(0, 2))))
             .map(
                 e -> {
                   final var index = e.getKey();
@@ -198,35 +223,35 @@ public class LetTreeCf implements Rule {
                       deltaxr.getCoefficientOrDefine(
                           id -> id.equals(x) ? index.get(0) : 0, index.get(1)),
                       e.getValue(),
-                      "(let:tree:cf) r_{(0⃗,d,e)} = p'_{(d,e)}");
+                      "(let:tree:cf " + x + " ) r_{(0⃗,d,e)} = p'_{(d,e)}");
                 })
-            .collect(toList()));
-
-    // Define some non-rank coefficients in R from Q.
-    crossConstraints.addAll(
-        gammaDeltaQ
-            .streamNonRank()
-            .filter(
-                entry ->
-                    // Ensure that b is not zero.
-                    varsForGammaAsList.isEmpty()
-                        || entry.allAssociatedIndicesMatch(varsForGammaAsList, b -> b == 0))
-            .filter(
-                entry ->
-                    // Ensure that a is zero.
-                    varsForDeltaAsList.isEmpty()
-                        || !entry.allAssociatedIndicesMatch(varsForDeltaAsList, zero -> zero == 0))
-            .map(
-                entry ->
-                    new EqualityConstraint(
-                        deltaxr.getCoefficientOrDefine(entry.mask(x, 0)),
-                        entry.getValue(),
-                        "(let:tree:cf) r_{(b⃗,0,e)} = q_{(0⃗,b⃗,e)}"))
             .collect(toList()));
 
     final Map<Index, Pair<Obligation, List<Constraint>>> pbdes = new HashMap<>();
 
     if (!varsForDeltaAsList.isEmpty()) {
+      // Define some non-rank coefficients in R from Q.
+      crossConstraints.addAll(
+          gammaDeltaQ
+              .streamNonRank()
+              .filter(entry -> entry.getOffsetIndex() == 0)
+              .filter(
+                  entry ->
+                      // Ensure that a is zero or empty.
+                      entry.allAssociatedIndicesMatch(varsForGammaAsList, a -> a == 0))
+              .filter(
+                  entry ->
+                      // Ensure that b is nonempty and nonzero.
+                      !varsForDeltaAsList.isEmpty()
+                          && !entry.allAssociatedIndicesMatch(varsForDeltaAsList, b -> b == 0))
+              .map(
+                  entry ->
+                      new EqualityConstraint(
+                          deltaxr.getCoefficientOrDefine(entry.mask(x, 0)),
+                          entry.getValue(),
+                          "(let:tree:cf " + x + " ) r_{(b⃗,0,0)} = q_{(0⃗,b⃗,0)}"))
+              .collect(toList()));
+
       // Find all indices (\vec{b}, d, e) such that \vec{b} \neq \vec{0}.
       final List<Index> bdes =
           gammaDeltaQ
@@ -238,7 +263,9 @@ public class LetTreeCf implements Rule {
               .flatMap(
                   entry ->
                       DE_RANGE.stream()
-                          // .filter(not(Util::isZero))
+                          .filter(not(Util::isZero))
+                          .filter(de -> de.get(0) != 0 || de.get(1) >= 2)
+                          // .filter(de -> !de.equals(List.of(1, 0)))
                           .map(
                               de -> {
                                 Map<Identifier, Integer> associatedIndices = new HashMap<>();
@@ -263,7 +290,6 @@ public class LetTreeCf implements Rule {
 
       gammaDeltaQ
           .streamNonRank()
-          .filter(entry1 -> entry1.nonZeroOrEmptyOn(varsForDeltaAsList))
           .filter(
               entry -> {
                 // If a is empty or zero, then c must be non-zero
@@ -277,10 +303,7 @@ public class LetTreeCf implements Rule {
                 }
                 return true;
               })
-          .filter(
-              entry ->
-                  varsForGammaAsList.isEmpty()
-                      || !entry.allAssociatedIndicesMatch(varsForGammaAsList, a -> a == 0))
+          .filter(entry -> !entry.allAssociatedIndicesMatch(varsForDeltaAsList, b -> b == 0))
           .map(
               qEntry ->
                   new EqualsSumConstraint(
@@ -309,16 +332,15 @@ public class LetTreeCf implements Rule {
         final var cfp = cfobligation.getContext().getAnnotation();
         final var cfpp = cfobligation.getAnnotation();
 
-        if (d != 0 || e != 0) {
-          cfconstraints.add(
-              new EqualityConstraint(
-                  deltaxr.getCoefficientOrDefine(bde),
-                  cfpp.getCoefficientOrDefine(d, e),
-                  "(let:tree:cf) r_{(b⃗,d,e)} = p'^{(b⃗,d,e)}_{(d,e)}"));
-        }
+        cfconstraints.add(
+            new EqualityConstraint(
+                deltaxr.getCoefficientOrDefine(bde),
+                cfpp.getCoefficientOrDefine(d, e),
+                "(let:tree:cf " + x + " ) r_{(b⃗,d,e)} = p'^{(b⃗,d,e)}_{(d,e)}"));
 
         DE_RANGE.stream()
             .filter(Predicate.not(Util::isZero))
+            // .filter(de -> !de.equals(List.of(1, 0)))
             .map(Pair::of)
             .filter(dpep -> !dpep.getLeft().equals(d) || !dpep.getRight().equals(e))
             .map(
@@ -326,32 +348,62 @@ public class LetTreeCf implements Rule {
                     new EqualityConstraint(
                         cfpp.getCoefficientOrDefine(dpep.getLeft(), dpep.getRight()),
                         ZERO,
-                        "(let:tree:cf) p'^{(b⃗,d,e}_{(d',e')}=0"))
+                        "(let:tree:cf " + x + " ) p'^{(b⃗,d,e}_{(d',e')}=0"))
             .forEach(cfconstraints::add);
 
-        if (d != 0 || e != 0) {
-          // TODO: Maybe use implication instead of DisjunctiveConstraint
-          cfp.streamNonRankCoefficients()
-              .filter(entry -> entry.getKey().size() == 1 || entry.getKey().get(0) != 0)
-              .map(
-                  entry ->
-                      new DisjunctiveConstraint(
-                          List.of(
-                              new EqualityConstraint(
-                                  entry.getValue(),
-                                  ZERO,
-                                  "(let:tree:cf) p^{(b⃗,d,e}_{(a⃗⃗,c)} == 0"),
-                              new LessThanOrEqualConstraint(
-                                  cfpp.getCoefficientOrDefine(d, e),
-                                  entry.getValue(),
-                                  "(let:tree:cf) p'^{(b⃗,d,e}_{(d,e)} ≤ p^{(b⃗,d,e}_{(a⃗⃗,c)}")),
-                          "(let:tree:cf) implication in line 3"))
-              .forEach(cfconstraints::add);
-        }
+        // \sum_(a,c) p^(b,d,e)_(a,c) >= p^(b,d,e)_(d,e)
+
+        final Predicate<Map.Entry<List<Integer>, Coefficient>> aNonZeroOrCGeq2 =
+            entry ->
+                (entry.getKey().size() == 2 && entry.getKey().get(0) != 0)
+                    || entry.getKey().get(entry.getKey().size() - 1) >= 2;
+
+        final List<Coefficient> lemma14guard =
+            cfp.streamNonRankCoefficients()
+                // .filter(aNonZeroOrCGeq2)
+                .map(Map.Entry::getValue)
+                .collect(Collectors.toList());
+
+        UnknownCoefficient u = UnknownCoefficient.unknown("lemma14guardsum" + x);
+
+        cfconstraints.add(new EqualsSumConstraint(u, lemma14guard, "(let:tree:cf) lemma14guard"));
+        cfconstraints.add(
+            new LessThanOrEqualConstraint(
+                cfpp.getCoefficientOrDefine(d, e), u, "(let:tree:cf) lemma 14 guard"));
+
+        // TODO: Maybe use implication instead of DisjunctiveConstraint
+        cfp.streamNonRankCoefficients()
+            // .filter(entry -> entry.getKey().size() == 1 || entry.getKey().get(0) != 0)
+            .filter(
+                entry ->
+                    (entry.getKey().size() == 2 && entry.getKey().get(0) != 0)
+                        || entry.getKey().get(entry.getKey().size() - 1) >= 2)
+            .map(
+                entry ->
+                    new DisjunctiveConstraint(
+                        List.of(
+                            new EqualityConstraint(
+                                entry.getValue(),
+                                ZERO,
+                                "(let:tree:cf " + x + " ) p^{(b⃗,d,e}_{(a⃗⃗,c)} == 0"),
+                            new LessThanOrEqualConstraint(
+                                cfpp.getCoefficientOrDefine(d, e),
+                                entry.getValue(),
+                                "(let:tree:cf "
+                                    + x
+                                    + " ) p'^{(b⃗,d,e}_{(d,e)} ≤ p^{(b⃗,d,e}_{(a⃗⃗,c)}")),
+                        "(let:tree:cf " + x + " ) implication in line 3"))
+            .forEach(cfconstraints::add);
       }
     }
 
-    final var old = Util.append(List.of(p, r), List.copyOf(pbdes.values()));
+    final List<Pair<Obligation, List<Constraint>>> pbdesOrdered =
+        pbdes.keySet().stream()
+            .sorted(new Index.DomainComparator(deltax))
+            .map(pbdes::get)
+            .collect(Collectors.toList());
+
+    final var old = Util.append(List.of(p, r), pbdesOrdered);
     final var result =
         new ApplicationResult(
             old.stream().map(Pair::getLeft).collect(Collectors.toUnmodifiableList()),

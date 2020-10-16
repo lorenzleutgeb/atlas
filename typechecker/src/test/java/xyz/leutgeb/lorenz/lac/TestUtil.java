@@ -64,7 +64,7 @@ public class TestUtil {
             Streams.zip(
                 Stream.concat(a.stream(), ac.stream().map(AnnotatingContext::getAnnotation)),
                 Stream.concat(
-                    a.stream().map(Annotation::getNameAndId),
+                    a.stream().map(Annotation::getName),
                     ac.stream().map(AnnotatingContext::toString)),
                 (annotation, name) ->
                     StringColumn.create(
@@ -90,7 +90,7 @@ public class TestUtil {
 
   public static String printTable(
       Prover prover, Optional<Map<Coefficient, KnownCoefficient>> solution) {
-    if (!solution.isPresent()) {
+    if (solution.isEmpty()) {
       return "UNSAT";
     }
 

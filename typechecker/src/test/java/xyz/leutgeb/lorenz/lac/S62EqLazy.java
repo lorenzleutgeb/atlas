@@ -393,7 +393,7 @@ public class S62EqLazy extends S62 {
             HEURISTIC);
 
     final Prover prover = new Prover("splay-cf", globals);
-    prover.setWeakenBeforeTerminal(true);
+    prover.setWeakenAggressively(true);
     prover.prove(new Obligation(SPLAY.treeLikeArguments(), Pvar, SPLAY.getBody(), Ppvar, 0));
 
     final var solution = prover.solve();
@@ -615,11 +615,11 @@ public class S62EqLazy extends S62 {
     assertEquals(5, belowRemainingObligations.size());
     assertEquals(E3, belowRemainingObligations.get(3).getExpression());
 
-    prover.setWeakenBeforeTerminal(true);
+    prover.setWeakenAggressively(true);
     prover.prove(belowRemainingObligations.get(0));
     prover.prove(belowRemainingObligations.get(1));
     prover.prove(belowRemainingObligations.get(2));
-    prover.setWeakenBeforeTerminal(false);
+    prover.setWeakenAggressively(false);
 
     // TODO(lorenz.leutgeb): Find a more efficient way to prove this branch.
     /*
@@ -654,11 +654,9 @@ public class S62EqLazy extends S62 {
     assertTrue(isE4.test(remainingObligations.get(1)));
     assertTrue(isIntermediateFalsy.test(remainingObligations.get(2)));
 
-    prover.setTreeCf(true);
-    prover.setWeakenBeforeTerminal(true);
+    prover.setWeakenAggressively(true);
     prover.prove(remainingObligations.get(0));
-    prover.setWeakenBeforeTerminal(false);
-    prover.setTreeCf(false);
+    prover.setWeakenAggressively(false);
 
     final var e4obligation = remainingObligations.get(1);
     final var e4result = prover.apply(e4obligation, LetTreeCfSimple.INSTANCE);
@@ -682,11 +680,9 @@ public class S62EqLazy extends S62 {
     final var symmObligation = prover.weaken(remainingObligations.get(2));
     final var symmBranches = prover.apply(symmObligation, Ite.INSTANCE);
 
-    prover.setTreeCf(true);
-    prover.setWeakenBeforeTerminal(true);
+    prover.setWeakenAggressively(true);
     prover.prove(symmBranches.get(0));
-    prover.setWeakenBeforeTerminal(false);
-    prover.setTreeCf(false);
+    prover.setWeakenAggressively(false);
 
     final var e4symmresult = prover.apply(symmBranches.get(1), LetTreeCfSimple.INSTANCE);
     assertEquals(5, e4symmresult.size());
@@ -703,10 +699,10 @@ public class S62EqLazy extends S62 {
     assertEquals(5, intermediate4.size());
     prover.prove(prover.weaken(intermediate4.get(1)));
 
-    prover.setWeakenBeforeTerminal(true);
+    prover.setWeakenAggressively(true);
     prover.prove(intermediate4.subList(2, 5));
     prover.prove(intermediate4.get(0));
-    prover.setWeakenBeforeTerminal(false);
+    prover.setWeakenAggressively(false);
 
     // We're done!
     prover.plot();
@@ -903,7 +899,7 @@ public class S62EqLazy extends S62 {
             HEURISTIC);
 
     final Prover cfProver = new Prover("splay-cf", cfGlobals);
-    cfProver.setWeakenBeforeTerminal(true);
+    cfProver.setWeakenAggressively(true);
     cfProver.prove(new Obligation(SPLAY.treeLikeArguments(), Pvar, SPLAY.getBody(), Ppvar, 0));
 
     final Coefficient qRankCoefficientSum = new UnknownCoefficient("Qranksum");

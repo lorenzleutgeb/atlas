@@ -39,7 +39,7 @@ public class UnknownCoefficient implements Coefficient {
   }
 
   public static UnknownCoefficient unknown(String namePrefix) {
-    return new UnknownCoefficient(namePrefix + randomHex(4));
+    return new UnknownCoefficient(namePrefix + randomHex());
   }
 
   @Override

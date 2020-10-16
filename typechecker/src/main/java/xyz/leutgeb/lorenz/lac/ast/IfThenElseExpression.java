@@ -134,7 +134,8 @@ public class IfThenElseExpression extends Expression {
     }
 
     if (lazy) {
-      log.info("Did not create sharing expression for {} because unsharing is lazy.", intersection);
+      // log.info("Did not create sharing expression for {} because unsharing is lazy.",
+      // intersection);
       return new IfThenElseExpression(source, condition, newT, newF, type);
     }
 

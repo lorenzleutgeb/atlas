@@ -12,6 +12,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.lac.ast.sources.Parsed;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
@@ -25,12 +26,15 @@ public class Leaf implements Rule {
 
   public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
     if (!LEAF.equals(obligation.getExpression())) {
-      throw bug("cannot apply (leaf) to identifier that is not 'leaf'");
+      throw bug(
+          "cannot apply (leaf) to identifier expression that is not identifier 'leaf' (it is '"
+              + obligation.getExpression().terminalOrBox()
+              + "')");
     }
 
     final var context = obligation.getContext();
     if (!context.isEmpty()) {
-      throw bug("have something in context for leaf");
+      throw bug("have something in context for leaf: " + context.getIds());
     }
 
     var q = context.getAnnotation();
@@ -44,13 +48,9 @@ public class Leaf implements Rule {
         .forEach(constraints::add);
      */
 
-    if (ZERO.equals(q.getCoefficientOrZero(2))) {
-      // throw bug("cannot pay leaf");
-      log.error("cannot pay leaf");
-    }
-
     final var constraints =
         q.streamNonRankCoefficients()
+            .filter(entry -> entry.getKey().get(0) >= 2)
             .flatMap(
                 qEntry -> {
                   final var c = qEntry.getKey().get(0);
@@ -73,14 +73,32 @@ public class Leaf implements Rule {
                   if (!sum.isEmpty()) {
                     return Stream.of(
                         new EqualsSumConstraint(
-                            qEntry.getValue(), sum, "(leaf) q_{(c)} = Σ_{a+b=c} q'_{(a, b)}"));
+                            qEntry.getValue(),
+                            sum,
+                            "(leaf on line "
+                                + ((Parsed) obligation.getExpression().getSource().getRoot())
+                                    .getTree()
+                                    .getStart()
+                                    .getLine()
+                                + ") q_{(c)} = Σ_{a+b=c} q'_{(a, b)}"));
                   } else {
-                    return Stream.of(new EqualityConstraint(qEntry.getValue(), ZERO, "(leaf)"));
+                    return Stream.of(
+                        new EqualityConstraint(qEntry.getValue(), ZERO, "(leaf) setToZero 2"));
                   }
                 })
             .collect(Collectors.<Constraint>toList());
 
+    if (ZERO.equals(q.getCoefficientOrZero(2))) {
+      constraints.add(
+          new EqualityConstraint(qp.getRankCoefficientOrZero(), ZERO, "(leaf) cannot pay"));
+    }
+
+    // TODO: Check whether this is okay.
+    // constraints.add(new EqualityConstraint(q.getCoefficientOrZero(1), ZERO, "(leaf) sanity"));
+
     qp.streamNonRankCoefficients()
+        // TODO: Check whether this is okay.
+        .filter(entry -> !(entry.getKey().get(0) == 1 && entry.getKey().get(1) == 0))
         .map(Map.Entry::getValue)
         .filter(Predicate.not(occurred::contains))
         .map(x -> new EqualityConstraint(x, ZERO, "(leaf) setToZero"))

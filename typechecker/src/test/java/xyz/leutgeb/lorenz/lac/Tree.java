@@ -28,7 +28,7 @@ public class Tree {
     final var definition = program.getFunctionDefinitions().get(fqn);
     assertNotNull(definition);
     Map<String, CombinedFunctionAnnotation> signature = new HashMap<>();
-    definition.stubAnnotations(signature, SmartRangeHeuristic.DEFAULT);
+    definition.stubAnnotations(signature, SmartRangeHeuristic.DEFAULT, true);
     final var functionSignature = signature.get(fqn);
 
     // NOTE: We show unsatisfiability of the constraint system together

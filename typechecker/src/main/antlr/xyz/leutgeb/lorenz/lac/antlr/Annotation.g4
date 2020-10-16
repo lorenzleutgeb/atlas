@@ -1,21 +1,25 @@
-grammar Tactic;
-
-import Annotation;
+grammar Annotation;
 
 options {
     language = Java;
 }
 
-tactic : tacticExpression EOF;
+annotation : SQUARE_OPEN entries+=annotationEntry (COMMA entries+=annotationEntry)* SQUARE_CLOSE # nonEmptyAnnotation
+           | SQUARE_OPEN SQUARE_CLOSE # zeroAnnotation
+           /*| UNDERSCORE # dontCareAnnotation*/
+           ;
 
-tacticExpression : PAREN_OPEN elements+=tacticExpression* PAREN_CLOSE # listTacticExpression
-                 | PAREN_OPEN EXCLAMATION_MARK CURLY_OPEN from=annotation ARROW to=annotation CURLY_CLOSE next=tacticExpression PAREN_CLOSE # fixedAnnotation
-                 | identifier=IDENTIFIER # terminalTacticExpression
-                 | name=IDENTIFIER AT tacticExpression # namedTacticExpression
-                 ;
+annotationEntry : index MAPSTO coefficient=number ;
+
+number : NUMBER # nat
+       | numerator=NUMBER SLASH denominator=NUMBER # rat
+       ;
+
+index : NUMBER # rankIndex
+      | PAREN_OPEN elements+=NUMBER* PAREN_CLOSE # otherIndex
+      ;
 
 NUMBER : ('0' .. '9' );
-ZERO : '0';
 SLASH : '/' ;
 TIMES : '*';
 CURLY_OPEN : '{';

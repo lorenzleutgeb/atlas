@@ -41,7 +41,7 @@ public class EqualityConstraint extends Constraint {
     Objects.requireNonNull(left);
     Objects.requireNonNull(right);
     if (left.equals(right)) {
-      log.warn("Creating an equality constraint for equal coefficients.");
+      // log.warn("Creating an equality constraint for equal coefficients.");
     }
     this.left = left;
     this.right = right;

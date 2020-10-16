@@ -205,7 +205,7 @@ public class AnnotatingContext {
     final var idStr =
         ids.isEmpty() ? "Ø" : ids.stream().map(Object::toString).collect(joining(", "));
     ;
-    return idStr + " | " + /*this.annotation + " named " +*/ this.annotation.getNameAndId();
+    return idStr + " | " + /*this.annotation + " named " +*/ this.annotation.getName();
   }
 
   public String potentialString() {

@@ -1,5 +1,7 @@
 grammar Splay;
 
+import Annotation;
+
 options {
     language = Java;
 }
@@ -9,7 +11,11 @@ program: (func)* EOF;
 // Function declaration (with list of arguments):
 func : signature? name=IDENTIFIER (args+=IDENTIFIER)* ASSIGN body=expression SEMICOLON?;
 
-signature : name=IDENTIFIER DOUBLECOLON (constraints DOUBLE_ARROW)? from=productType ARROW to=namedType;
+signature : name=IDENTIFIER DOUBLECOLON (constraints DOUBLE_ARROW)? arrow;
+
+arrow : from=productType ARROW to=namedType # simpleArrow
+      | from=productType PIPE fromAnnotation=annotation ARROW to=namedType PIPE toAnnotation=annotation # annotatedArrow
+      ;
 
 variableType : IDENTIFIER ;
 
@@ -46,7 +52,7 @@ productTypeNaming : PAREN_OPEN names+=IDENTIFIER (COMMA names+=IDENTIFIER) PAREN
 // Expressions
 expression : identifier # variableExpression
            | IF condition=expression THEN truthy=expression ELSE falsy=expression # iteExpression
-           | MATCH test=expression WITH OR LEAF ARROW leafCase=expression OR nodePattern=pattern ARROW nodeCase=expression # matchExpression
+           | MATCH test=expression WITH PIPE LEAF ARROW leafCase=expression PIPE nodePattern=pattern ARROW nodeCase=expression # matchExpression
            | node # nodeExpression
            | name=IDENTIFIER (params+=expression)* # callExpression
            | LET name=identifier ASSIGN value=expression IN body=expression # letExpression
@@ -73,11 +79,11 @@ DOT : '.';
 COMMA : ',';
 DOUBLECOLON : '::' | '∷';
 SEMICOLON : ';';
-OR : '|';
+PIPE : '|';
 PLUS : '+';
 MINUS : '-';
 CROSS : '*' | '⨯' ;
-DIV : '/';
+// DIV : '/';
 QUOTE : '"';
 
 PAREN_OPEN : '(';

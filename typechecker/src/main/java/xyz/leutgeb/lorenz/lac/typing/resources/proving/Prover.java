@@ -97,7 +97,7 @@ public class Prover {
   private static final Rule weakenVariableRule = WVar.INSTANCE;
   private static final Rule weakenRule = W.INSTANCE;
   private static final Rule leafRule = Leaf.INSTANCE;
-  private static final Rule chooseCf = letTreeCfPaperRule;
+  public static final Rule LET_TREE_CF = letTreeCfPaperRule;
 
   private static final Map<String, Rule> RULES_BY_NAME =
       Stream.of(
@@ -118,8 +118,6 @@ public class Prover {
           .collect(toUnmodifiableMap(Rule::getName, identity()));
 
   private static final boolean DEFAULT_WEAKEN = false;
-  private static final boolean DEFAULT_TREECF = false;
-  private static final boolean DEFAULT_AUTO = false;
 
   private final String name;
   private final Path basePath;
@@ -135,11 +133,7 @@ public class Prover {
   // TODO(lorenz.leutgeb): Find a better way to handle globals...
   @Getter @Setter private AnnotatingGlobals globals;
 
-  @Getter @Setter private boolean weakenBeforeTerminal = DEFAULT_WEAKEN;
-
-  @Getter @Setter private boolean auto = DEFAULT_AUTO;
-
-  @Getter @Setter private boolean treeCf = DEFAULT_TREECF;
+  @Getter @Setter private boolean weakenAggressively = DEFAULT_WEAKEN;
 
   @Getter private final Map<String, Obligation> named = new LinkedHashMap<String, Obligation>();
 
@@ -148,6 +142,8 @@ public class Prover {
   @Getter @Setter private boolean logApplications = false;
 
   private final Set<Constraint> externalConstraints = new HashSet<>();
+
+  @Getter @Setter private boolean weakenVariables = true;
 
   private record RuleApplication(Rule rule, Rule.ApplicationResult result) {}
 
@@ -163,42 +159,26 @@ public class Prover {
 
   /** Chooses which rules should be applied (in order) to prove given obligation. */
   private Stack<Rule> chooseRules(Obligation obligation) {
-    // if (obligation.isNothing()) {
-    //  return stack();
-    // }
-
-    // TODO(lorenz.leutgeb): Be smart about the application of (w:var) and (w). (w) should probably
-    // be applied
-    // maximizing the knowledge about identifiers in the context. This means that (w:var) should
-    // not be applied in some cases since it removes identifiers from the context that might carry
-    // otherwise useful information?!
-
     final var expression = obligation.getExpression();
-    if (WVar.redundantId(obligation).isPresent()) {
-      return stack(weakenVariableRule);
-    }
     if (expression.isTerminal()) {
-      if (weakenBeforeTerminal || auto) {
-        /*
-        log.info(
-            "Scheduling (w) for application to terminal expression {} because weakening is enabled!",
-            expression);
-        */
-        return stack(weakenRule, chooseRule(expression));
-      } else {
-        /*
-        log.info(
-            "Not scheduling (w) for application to terminal expression {} because weakening is disabled.",
-            expression);
-         */
-        return stack(chooseRule(expression));
+      final Stack<Rule> todo = new Stack<>();
+      todo.push(chooseRule(expression));
+      todo.push(weakenRule);
+      final var wvars = WVar.redundantIds(obligation).collect(Collectors.toUnmodifiableList());
+      for (int i = 0; i < wvars.size(); i++) {
+        todo.push(weakenVariableRule);
       }
+      if (wvars.size() > 0) {
+        todo.push(weakenRule);
+      }
+      return todo;
+    } else if (weakenAggressively) {
+      log.trace(
+          "Automatically applying (w) to expression `{}` because aggressive weakening is enabled!",
+          expression);
+      return stack(weakenRule, chooseRule(expression));
     } else {
-      if (!auto || (expression instanceof IfThenElseExpression)) {
-        return stack(chooseRule(expression));
-      } else {
-        return stack(weakenRule, chooseRule(expression));
-      }
+      return stack(chooseRule(expression));
     }
   }
 
@@ -222,12 +202,8 @@ public class Prover {
       return matchRule;
     } else if (e instanceof LetExpression) {
       if (((LetExpression) e).getValue().getType() instanceof TreeType) {
-        // TODO(lorenz.leutgeb): When should we apply the cost-free version?
-        if (treeCf || auto || true) {
-          return chooseCf;
-        } else {
-          return letTreeRule;
-        }
+        // TODO(lorenz.leutgeb): When can we apply let:tree?
+        return LET_TREE_CF;
       } else {
         return letGenRule;
       }
@@ -522,11 +498,6 @@ public class Prover {
   }
 
   public List<Obligation> applyByName(String ruleName, Obligation obligation) {
-    // TODO
-    if ("let:tree:cf".equals(ruleName) && chooseCf == letTreeCfFlorianRule) {
-      ruleName = "let:tree:cf:florian";
-    }
-
     Rule rule = RULES_BY_NAME.get(ruleName);
     if (rule == null) {
       throw new IllegalArgumentException(

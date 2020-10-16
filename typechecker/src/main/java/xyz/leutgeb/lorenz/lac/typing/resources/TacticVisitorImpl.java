@@ -1,12 +1,14 @@
 package xyz.leutgeb.lorenz.lac.typing.resources;
 
 import static java.util.Collections.emptyList;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +20,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
+import xyz.leutgeb.lorenz.lac.typing.resources.rules.WVar;
 import xyz.leutgeb.lorenz.lac.util.Fraction;
 
 @Value
@@ -40,18 +43,29 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
     Token start = null;
     if (tacticExpression instanceof TacticParser.FixedAnnotationContext fixedAnnotationContext) {
       start = fixedAnnotationContext.getStart();
+      final Optional<Annotation> optionalFromFixing = Optional.empty();
+      final Optional<Annotation> optionalToFixing = Optional.empty();
+
+      /*
       Optional<Annotation> optionalFromFixing =
           convert(obligation.getContext().getAnnotation().size(), fixedAnnotationContext.from);
       Optional<Annotation> optionalToFixing =
           convert(obligation.getAnnotation().size(), fixedAnnotationContext.to);
+       */
 
       if (optionalFromFixing.isPresent()) {
+        log.info(
+            "Fixing annotation named '{}' on line {}",
+            obligation.getContext().getAnnotation().getNameAndId(),
+            fixedAnnotationContext.getStart().getLine());
+        /*
         log.info(
             "Fixing annotation named '{}' on line {}: {} = {}",
             obligation.getContext().getAnnotation().getNameAndId(),
             fixedAnnotationContext.getStart().getLine(),
             obligation.getContext().getAnnotation(),
             optionalFromFixing.get());
+         */
         prover.addExternalConstraints(
             EqualityConstraint.eq(
                 optionalFromFixing.get(),
@@ -65,11 +79,18 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
 
       if (optionalToFixing.isPresent()) {
         log.info(
+            "Fixing annotation named '{}' on line {}",
+            obligation.getAnnotation().getNameAndId(),
+            fixedAnnotationContext.getStart().getLine());
+
+        /*
+        log.info(
             "Fixing annotation named '{}' on line {}: {} = {}",
             obligation.getAnnotation().getNameAndId(),
             fixedAnnotationContext.getStart().getLine(),
             obligation.getAnnotation(),
             optionalToFixing.get());
+        */
         prover.addExternalConstraints(
             EqualityConstraint.eq(
                 optionalToFixing.get(),
@@ -107,9 +128,15 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
           start.getCharPositionInLine(),
           obligation);
       return;
-    }
+    } else if (ruleNameText.startsWith("w:var:")) {
+      prover.setWeakenVariables(Boolean.parseBoolean(ruleNameText.substring(6)));
 
-    Obligation weakened = prover.weakenVariables(obligation);
+      if (next.size() != 1) {
+        throw bug("?");
+      }
+      proveInternal(obligation, next.get(0));
+      return;
+    }
 
     long count = 0;
     List<Obligation> result;
@@ -122,33 +149,41 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
             start.getCharPositionInLine());
         prover.setLogApplications(true);
       }
-      prover.setAuto(ruleNameText.contains("auto"));
-      prover.setTreeCf(ruleNameText.contains("cf"));
-      prover.setWeakenBeforeTerminal(ruleNameText.contains("w"));
+      prover.setWeakenAggressively(ruleNameText.contains("w"));
       prover.prove(obligation);
+      prover.setWeakenAggressively(!ruleNameText.contains("w"));
       if (!ruleNameText.contains("auto")) {
         prover.setLogApplications(false);
       }
       result = emptyList();
     } else {
-      result = prover.applyByName(ruleNameText, weakened);
+      if (obligation.getExpression().isTerminal()
+          && WVar.redundantId(obligation).isPresent()
+          && Set.of("leaf", "node", "var", "app").contains(ruleNameText)) {
+        log.info("Automatically removing leftover variables.");
+        prover.setLogApplications(true);
+        obligation = prover.weakenVariables(obligation);
+      }
+      result = prover.applyByName(ruleNameText, obligation);
       count = result.stream().filter(x -> x.getCost() != 0).count();
     }
 
     if (count != next.size()) {
-      throw new RuntimeException(
+      log.warn(
           "Given tactic does not apply: Rule ("
               + ruleNameText
               + ") applied to \n\n\t\t"
               + obligation
               + "\n\n yields "
-              + result.size()
+              + count
               + " new obligations but "
               + next.size()
               + " are covered.");
     }
+
     for (int i = 0; i < result.size(); i++) {
-      if (result.get(i).getCost() == 0) {
+      if ((i > 1 && result.get(i).getCost() == 0 && obligation.getCost() == 0)
+          || (obligation.getCost() == 1 && result.get(i).getCost() == 0)) {
         prover.prove(result.get(i));
       } else {
         proveInternal(result.get(i), next.get(i));
@@ -162,7 +197,8 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
     return null;
   }
 
-  private Optional<Annotation> convert(int size, TacticParser.AnnotationContext annotationContext) {
+  public static Optional<Annotation> convert(
+      int size, TacticParser.AnnotationContext annotationContext) {
     // if (annotationContext instanceof TacticParser.DontCareAnnotationContext) {
     //	return Optional.empty();
     // }
@@ -202,7 +238,7 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
     throw new IllegalArgumentException("cannot convert context");
   }
 
-  private KnownCoefficient convert(TacticParser.NumberContext context) {
+  private static KnownCoefficient convert(TacticParser.NumberContext context) {
     if (context instanceof TacticParser.NatContext) {
       return new KnownCoefficient(new Fraction(Integer.parseInt(context.getText())));
     }

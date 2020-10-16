@@ -1,10 +1,16 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.indices;
 
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.INDEX_COMPARATOR;
+
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
+import lombok.Value;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.util.Util;
 
@@ -51,5 +57,21 @@ public interface Index {
       return false;
     }
     return ids.stream().allMatch(id -> getAssociatedIndex(id) == 0);
+  }
+
+  @Value
+  class DomainComparator implements Comparator<Index> {
+    List<Identifier> domain;
+
+    @Override
+    public int compare(Index o1, Index o2) {
+      return INDEX_COMPARATOR.compare(manifest(o1)::iterator, manifest(o2)::iterator);
+    }
+
+    private Stream<Integer> manifest(Index index) {
+      final var paddedIndex = index.padWithZero();
+      return Stream.concat(
+          domain.stream().map(paddedIndex::getAssociatedIndex), Stream.of(index.getOffsetIndex()));
+    }
   }
 }

@@ -43,4 +43,8 @@ public class Fraction {
     }
     return str;
   }
+
+  public boolean isNonInteger() {
+    return denominator != 1;
+  }
 }

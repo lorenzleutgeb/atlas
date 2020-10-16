@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.isWeirdIndex;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.THREE;
@@ -19,8 +20,6 @@ import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.ALPHA;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.BETA;
 import static xyz.leutgeb.lorenz.lac.util.Util.fqnToFlatFilename;
 
-import guru.nidi.graphviz.engine.Format;
-import guru.nidi.graphviz.engine.Graphviz;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -33,7 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jgrapht.nio.AttributeType;
@@ -128,6 +126,7 @@ public class Tests {
         arguments("RightList.tl", sig(ATREE, ATREE), 0),
         arguments("LeftList.tl", sig(ATREE, ATREE), 0),
         arguments("Tree.id", sig(ATREE, ATREE), 0),
+        arguments("Tree.id_match", sig(ATREE, ATREE), 0),
         arguments("Tree.right", sig(ATREE, ATREE), 0),
         arguments("Tree.left", sig(ATREE, ATREE), 0),
         arguments("Tree.flip", sig(ATREE, ATREE), 0),
@@ -137,12 +136,12 @@ public class Tests {
         arguments("PairingHeap.link", sig(singleton(ord(ALPHA)), ATREE, ATREE), 0),
         arguments("PairingHeap.merge", sig(singleton(ord(ALPHA)), ATREE, ATREE, ATREE), 1),
         arguments("PairingHeap.insert", sig(singleton(ord(ALPHA)), ALPHA, ATREE, ATREE), 3),
-        arguments("Scratch.empty_1", sig(ATREE, BOOL), 1),
-        arguments("Scratch.empty_2", sig(ATREE, BOOL), 2),
+        arguments("Scratch.empty_1", sig(ATREE, BOOL), 0),
+        arguments("Scratch.empty_2", sig(ATREE, BOOL), 1),
         arguments("Scratch.id", sig(ALPHA, ALPHA), 0),
         arguments("Scratch.left", sig(ALPHA, BETA, ALPHA), 0),
         arguments("Scratch.right", sig(ALPHA, BETA, BETA), 0),
-        arguments("Scratch.empty_3", sig(ATREE, BOOL), 1),
+        arguments("Scratch.empty_3", sig(ATREE, BOOL), 0),
         arguments("Scratch.first_nonempty_and_second_empty", sig(ATREE, BTREE, BOOL), 1));
   }
 
@@ -271,6 +270,7 @@ public class Tests {
     final var program = loadAndNormalizeAndInferAndUnshare(fqn);
     System.out.println("Testing " + fqn);
     final var solution = program.solve();
+    program.ingest(solution);
     assertTrue(solution.isEmpty());
   }
 
@@ -338,7 +338,9 @@ public class Tests {
         Stream.generate(() -> ZERO)
             .limit(expectedSignature.getType().getFrom().treeSize())
             .collect(Collectors.toList());
-    int argCount = (int) expectedSignature.getType().getFrom().treeSize();
+
+    // If there are problems with one test case, use this snippet to check for satisfiability.
+
     final var inferredInput = new UnknownCoefficient("inferredInput");
     final var inferredResult = new UnknownCoefficient("inferredResult");
     final var inferred = new HashMap<String, CombinedFunctionAnnotation>();
@@ -346,11 +348,6 @@ public class Tests {
         fqn,
         new CombinedFunctionAnnotation(
             new FunctionAnnotation(
-                /*
-                  argCount == 0
-                      ? Annotation.zero(0, "zeroArgs")
-                      : SmartRangeHeuristic.DEFAULT.generate("inferredArgs", argCount),
-                */
                 Annotation.constant(
                     (int) expectedSignature.getType().getFrom().treeSize(),
                     "inferredArgs",
@@ -488,6 +485,8 @@ public class Tests {
                   .getAbsoluteFile()));
     }
     program.infer();
+    program.printAllSimpleSignaturesInOrder(System.out);
+    /*
     program.unshare(lazy);
     for (var fd : program.getFunctionDefinitions().values()) {
       fd.printTo(
@@ -522,17 +521,12 @@ public class Tests {
     for (var fd : program.getFunctionDefinitions().values()) {
       System.out.println(fd.getFullyQualifiedName() + " ∷ " + fd.getInferredSignature());
     }
+    */
   }
 
   @Test
   void fiddle() throws Exception {
-    final var loader = loader();
-    loader.autoload();
-    Program program = loader.loadMatching(Pattern.compile(".*"));
-    program.normalize();
-    program.infer();
-    // System.out.println(program.getFunctionDefinitions().keySet());
-    program.getFunctionDefinitions().values().forEach(x -> x.printHaskellTo(System.out));
+    assertTrue(isWeirdIndex(List.of(1)));
   }
 
   private enum ExpectedResult {

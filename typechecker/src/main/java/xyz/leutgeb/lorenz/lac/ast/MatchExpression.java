@@ -204,7 +204,8 @@ public class MatchExpression extends Expression {
     }
 
     if (lazy) {
-      log.info("Did not create sharing expression for {} because unsharing is lazy.", intersection);
+      // log.info("Did not create sharing expression for {} because unsharing is lazy.",
+      // intersection);
       return new MatchExpression(source, scrut, newLeaf, nodePattern, newNode, type);
     }
 

@@ -16,6 +16,7 @@ import com.microsoft.z3.Global;
 import com.microsoft.z3.IntNum;
 import com.microsoft.z3.Model;
 import com.microsoft.z3.Optimize;
+import com.microsoft.z3.Params;
 import com.microsoft.z3.RatNum;
 import com.microsoft.z3.Statistics;
 import com.microsoft.z3.Status;
@@ -73,8 +74,15 @@ public class ConstraintSystemSolver {
       Set<Constraint> constraints, String name, List<UnknownCoefficient> target, Domain domain) {
     final var unsatCore = target.isEmpty();
 
+    // domain = Domain.RATIONAL;
+
     final var ctx = new Context(z3Config(unsatCore));
+    // final var solver = Domain.INTEGER.equals(domain) && target.isEmpty() ? ctx.mkSolver("QF_LIA")
+    // : ctx.mkSolver();
     final var solver = ctx.mkSolver();
+    Params solver_params = ctx.mkParams();
+    solver_params.add("ignore_solver1", true);
+    solver.setParameters(solver_params);
 
     var optimize = !target.isEmpty();
     final Optimize opt = optimize ? ctx.mkOptimize() : null;
@@ -139,21 +147,22 @@ public class ConstraintSystemSolver {
       }
     }
 
-    log.info("lac Coefficients: " + generatedCoefficients.keySet().size());
-    log.info("lac Constraints:  " + constraints.size());
-    log.info("Z3  Scopes:       " + (optimize ? "?" : solver.getNumScopes()));
-    log.info("Z3  Assertions:   " + (optimize ? "?" : solver.getAssertions().length));
+    log.trace("lac Coefficients: " + generatedCoefficients.keySet().size());
+    log.trace("lac Constraints:  " + constraints.size());
+    log.trace("Z3  Scopes:       " + (optimize ? "?" : solver.getNumScopes()));
+    log.trace("Z3  Assertions:   " + (optimize ? "?" : solver.getAssertions().length));
 
     // TODO(lorenz.leutgeb): Parameterize location.
     File smtFile = new File("out", name + ".smt");
     try (PrintWriter out = new PrintWriter(smtFile)) {
       out.println(optimize ? opt : solver);
-      log.info("Wrote SMT instance to {}.", smtFile);
+      log.debug("Wrote SMT instance to {}.", smtFile);
     } catch (FileNotFoundException e) {
       log.warn("Failed to write SMT instance to {}.", smtFile, e);
     }
 
-    final Optional<Model> optionalModel;
+    Optional<Model> optionalModel = Optional.empty();
+
     if (optimize) {
       optionalModel =
           check(
@@ -221,7 +230,7 @@ public class ConstraintSystemSolver {
       Supplier<String> program,
       Supplier<Statistics> statistics) {
     final var start = Instant.now();
-    log.info("Invoking Z3 at " + start);
+    log.debug("Invoking Z3 at " + start);
     var status = check.get();
     final var stop = Instant.now();
     log.debug("Solving time: " + (Duration.between(start, stop)));

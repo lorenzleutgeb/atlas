@@ -90,9 +90,14 @@ public class Match implements Rule {
 
     gammaxq
         .streamNonRank()
+        .filter(entry -> !gammap.isEmpty() || entry.getOffsetIndex() > 1)
         .forEach(
             entry -> {
               int c = entry.getAssociatedIndex(x) + entry.getOffsetIndex();
+
+              if (gammap.isEmpty() && c == 1) {
+                return;
+              }
 
               final var index = new ArrayList<Integer>(gammap.size());
               for (var id : gammap.getIds()) {

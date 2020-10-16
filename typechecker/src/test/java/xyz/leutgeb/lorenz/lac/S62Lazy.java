@@ -130,13 +130,11 @@ public class S62Lazy extends S62 {
     final var q4v = AnnotatingContext.reorderByName(E4.freeVariables(), List.of("cr", "z₆", "br"));
 
     Obligation rootObligation = new Obligation(q4v, Q3, E4, Qp);
-    prover.setTreeCf(true);
     final var e4obligation = rootObligation;
 
     final var e4result = prover.apply(e4obligation, LetTreeCfSimple.INSTANCE);
 
     final var q4 = e4result.get(1).getContext();
-    prover.setTreeCf(true);
     /*
     We do need cf at
     via sec lnf
@@ -152,12 +150,11 @@ public class S62Lazy extends S62 {
     In s61 we apply tree:cf to
     br, cr, ar | lett''ΓP #1  ⊦₁  let t''' ≔ (br, c, cr) in (ar, b, t''') | lettree t'' P' #3
      */
-    prover.setWeakenBeforeTerminal(true);
+    prover.setWeakenAggressively(true);
     var intermediate1 =
         prover.proveUntil(e4result, o -> o.getExpression() instanceof LetExpression);
-    prover.setWeakenBeforeTerminal(false);
+    prover.setWeakenAggressively(false);
     var intermediate2 = prover.apply(intermediate1.get(0), LetTree.INSTANCE);
-    prover.setTreeCf(true);
     prover.prove(intermediate2);
     prover.plot();
 
@@ -238,12 +235,10 @@ public class S62Lazy extends S62 {
                 .equals(obligation.getExpression());
 
     Obligation rootObligation = new Obligation(q3v, Q3, E3, Qp);
-    prover.setTreeCf(true);
     final var remainingObligations =
         prover.proveUntil(
             rootObligation,
             isE4.or(isE3Truthy).or(isIntermediateFalsy).or(isIntermediateTruthyLeaf));
-    prover.setTreeCf(false);
     assertEquals(4, remainingObligations.size());
     assertEquals(E4, remainingObligations.get(2).getExpression());
     final var e4obligation = remainingObligations.get(2);
@@ -251,7 +246,6 @@ public class S62Lazy extends S62 {
     final var e4result = prover.apply(e4obligation, LetTreeCfSimple.INSTANCE);
 
     final var q4 = e4result.get(1).getContext();
-    prover.setTreeCf(true);
     /*
     We do need cf at
     via sec lnf
@@ -267,12 +261,11 @@ public class S62Lazy extends S62 {
     In s61 we apply tree:cf to
     br, cr, ar | lett''ΓP #1  ⊦₁  let t''' ≔ (br, c, cr) in (ar, b, t''') | lettree t'' P' #3
      */
-    prover.setWeakenBeforeTerminal(true);
+    prover.setWeakenAggressively(true);
     var intermediate1 =
         prover.proveUntil(e4result, o -> o.getExpression() instanceof LetExpression);
-    prover.setWeakenBeforeTerminal(false);
+    prover.setWeakenAggressively(false);
     var intermediate2 = prover.apply(intermediate1.get(0), LetTree.INSTANCE);
-    prover.setTreeCf(true);
     prover.prove(intermediate2);
     prover.plot();
 
@@ -356,7 +349,7 @@ public class S62Lazy extends S62 {
 
     // Instantiate prover and enable weakening.
     final Prover prover = new Prover("splay-below", globals);
-    prover.setWeakenBeforeTerminal(true);
+    prover.setWeakenAggressively(true);
 
     // Partial proof up to the boundary.
     final var remainingObligations =

@@ -140,7 +140,7 @@ public class Util {
           e);
       System.exit(1);
     }
-    log.info("Library '{}' loaded successfully.", name);
+    log.debug("Library '{}' loaded successfully.", name);
   }
 
   public static Fraction toFraction(RatNum x) {
@@ -193,7 +193,7 @@ public class Util {
   }
 
   public static String randomHex() {
-    return randomHex(16);
+    return randomHex(64);
   }
 
   public static String truncate(String s, int n) {
@@ -317,5 +317,9 @@ public class Util {
 
   public static <T> Stream<String> mapToString(Stream<T> stream) {
     return stream.map(Objects::toString);
+  }
+
+  public <E> Iterable<E> toIterable(Stream<E> stream) {
+    return stream::iterator;
   }
 }

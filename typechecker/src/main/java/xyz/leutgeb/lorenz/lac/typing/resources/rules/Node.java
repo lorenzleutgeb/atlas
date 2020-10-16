@@ -7,8 +7,6 @@ import static xyz.leutgeb.lorenz.lac.util.Util.toVectorString;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Predicate;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.ast.NodeExpression;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
@@ -88,9 +86,8 @@ public class Node implements Rule {
             "(node) q₍₀ ₁ ₀₎ = q'₀ for expression `" + expression + "`"));
 
     qp.streamNonRankCoefficients()
-        .map(Map.Entry::getValue)
-        .filter(Predicate.not(occurred::contains))
-        .map(x -> new EqualityConstraint(x, ZERO, "(leaf) setToZero"))
+        .filter(entry -> !occurred.contains(entry.getValue()))
+        .map(x -> new EqualityConstraint(x.getValue(), ZERO, "(node) setToZero " + x.getKey()))
         .forEach(constraints::add);
 
     return Rule.ApplicationResult.onlyConstraints(constraints);

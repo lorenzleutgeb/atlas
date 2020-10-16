@@ -17,4 +17,8 @@ public record FunctionAnnotation(Annotation from, Annotation to) {
   public FunctionAnnotation substitute(Map<Coefficient, KnownCoefficient> solution) {
     return new FunctionAnnotation(from.substitute(solution), to.substitute(solution));
   }
+
+  public boolean isNonInteger() {
+    return from.isNonInteger() || to.isNonInteger();
+  }
 }

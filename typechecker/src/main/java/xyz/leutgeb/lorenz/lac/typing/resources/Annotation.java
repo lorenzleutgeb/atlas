@@ -10,7 +10,6 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static java.util.stream.IntStream.range;
 import static java.util.stream.Stream.concat;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import static xyz.leutgeb.lorenz.lac.util.Util.generateSubscript;
@@ -26,10 +25,13 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
@@ -37,8 +39,6 @@ import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.ExclusiveDisjunctiveConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.IfThenElseConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.OffsetConstraint;
 import xyz.leutgeb.lorenz.lac.util.Fraction;
 import xyz.leutgeb.lorenz.lac.util.Pair;
@@ -51,11 +51,12 @@ public class Annotation {
 
   private final List<Coefficient> rankCoefficients;
   private final Map<List<Integer>, Coefficient> coefficients;
-  String name;
+
+  @Getter String name;
 
   private static int count = 0;
 
-  private final int id;
+  @Getter private final int id;
 
   public Annotation(int size, String name) {
     this.name = name;
@@ -173,6 +174,21 @@ public class Annotation {
     return true;
   }
 
+  public static boolean isWeirdIndex(List<Integer> index) {
+    if (index.isEmpty()) {
+      return true;
+    }
+    if (index.get(index.size() - 1) != 1) {
+      return false;
+    }
+    for (int i = 0; i < index.size() - 1; i++) {
+      if (index.get(i) != 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   public static List<Integer> unitIndex(int size) {
     final var unitIndex = Util.zero(size);
     unitIndex.add(2);
@@ -205,6 +221,9 @@ public class Annotation {
   }
 
   public Annotation substitute(Map<Coefficient, KnownCoefficient> solution) {
+    if (solution.keySet().stream().anyMatch(c -> c instanceof KnownCoefficient)) {
+      throw bug("cannot substitute known coefficient");
+    }
     return new Annotation(
         this.rankCoefficients.stream()
             .map(
@@ -221,7 +240,7 @@ public class Annotation {
                         entry.getValue() instanceof KnownCoefficient
                             ? entry.getValue()
                             : solution.getOrDefault(entry.getValue(), ZERO))),
-        this.name);
+        getNameAndId());
   }
 
   public Coefficient getCoefficientOrDefine(List<Integer> index) {
@@ -252,7 +271,7 @@ public class Annotation {
     }
     final var elem = coefficients.get(index);
     if (elem == null) {
-      log.info("{}{} = 0", id, generateSubscriptIndex(index));
+      // log.info("{}{} = 0", id, generateSubscriptIndex(index));
       return ZERO;
     }
     return elem;
@@ -547,56 +566,6 @@ public class Annotation {
     return new Annotation(rankCoefficients, coefficients, newName);
   }
 
-  public List<Constraint> diff(Annotation other, UnknownCoefficient sum) {
-    if (other.size() != this.size()) {
-      throw new IllegalArgumentException("size of annotations must be equal");
-    }
-
-    var potentialFunctions =
-        Stream.concat(streamNonRankCoefficients(), other.streamNonRankCoefficients())
-            .map(Map.Entry::getKey)
-            .distinct()
-            .sorted(INDEX_COMPARATOR)
-            .collect(toList());
-
-    final List<Constraint> constraints = new ArrayList<>();
-    final List<Coefficient> sumList = new ArrayList<>(potentialFunctions.size() + size());
-    for (var potentialFunction : potentialFunctions) {
-      final var x = UnknownCoefficient.unknown("x");
-      constraints.add(
-          new IfThenElseConstraint(
-              new ExclusiveDisjunctiveConstraint(
-                  new EqualityConstraint(
-                      this.getCoefficientOrZero(potentialFunction), ZERO, "(opt)"),
-                  new EqualityConstraint(
-                      other.getCoefficientOrZero(potentialFunction), ZERO, "(opt)"),
-                  "(opt)"),
-              ONE,
-              ZERO,
-              x,
-              "(opt)"));
-      sumList.add(x);
-    }
-
-    for (int i = 0; i < size(); i++) {
-      final var x = UnknownCoefficient.unknown("x");
-      constraints.add(
-          new IfThenElseConstraint(
-              new ExclusiveDisjunctiveConstraint(
-                  new EqualityConstraint(this.getRankCoefficient(i), ZERO, "(opt)"),
-                  new EqualityConstraint(other.getRankCoefficient(i), ZERO, "(opt)"),
-                  "(opt)"),
-              ONE,
-              ZERO,
-              x,
-              "(opt)"));
-      sumList.add(x);
-    }
-
-    constraints.add(new EqualsSumConstraint(sum, sumList, "(opt)"));
-    return constraints;
-  }
-
   public List<Constraint> abs(UnknownCoefficient sum) {
     final var x = UnknownCoefficient.unknown("x");
     final var y = UnknownCoefficient.unknown("y");
@@ -604,44 +573,6 @@ public class Annotation {
         sumRankCoefficients(x),
         sumCoefficients(y),
         new EqualsSumConstraint(sum, List.of(x, y), "(opt)"));
-  }
-
-  public List<Constraint> pairwiseDiff(Annotation other, UnknownCoefficient sum) {
-    if (other.size() != this.size()) {
-      throw new IllegalArgumentException("size of annotations must be equal");
-    }
-
-    var potentialFunctions =
-        Stream.concat(streamNonRankCoefficients(), other.streamNonRankCoefficients())
-            .map(Map.Entry::getKey)
-            .distinct()
-            .sorted(INDEX_COMPARATOR)
-            .collect(toList());
-
-    final List<Constraint> constraints = new ArrayList<>();
-    final List<Coefficient> sumList = new ArrayList<>(potentialFunctions.size() + size());
-    for (var potentialFunction : potentialFunctions) {
-      final var x = UnknownCoefficient.unknown("x");
-      constraints.add(
-          new EqualsSumConstraint(
-              x,
-              List.of(
-                  this.getCoefficientOrZero(potentialFunction),
-                  other.getCoefficientOrZero(potentialFunction).negate()),
-              "(opt)"));
-      sumList.add(x);
-    }
-
-    for (int i = 0; i < size(); i++) {
-      final var x = UnknownCoefficient.unknown("x");
-      constraints.add(
-          new EqualsSumConstraint(
-              x, List.of(this.getRankCoefficient(i), other.getRankCoefficient(i)), "(opt)"));
-      sumList.add(x);
-    }
-
-    constraints.add(new EqualsSumConstraint(sum, sumList, "(opt)"));
-    return constraints;
   }
 
   public boolean isUnknown() {
@@ -726,5 +657,14 @@ public class Annotation {
       return name.substring(name.lastIndexOf("#") + 1);
     }
     return name;
+  }
+
+  public boolean isNonInteger() {
+    return Stream.concat(
+            streamNonRankCoefficients().map(Map.Entry::getValue), rankCoefficients.stream())
+        .filter(Predicate.not(Objects::isNull))
+        .filter(x -> x instanceof KnownCoefficient)
+        .map(x -> ((KnownCoefficient) x).getValue())
+        .anyMatch(Fraction::isNonInteger);
   }
 }

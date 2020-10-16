@@ -2,12 +2,14 @@ package xyz.leutgeb.lorenz.lac.typing.resources.rules;
 
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
+import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 
+@Slf4j
 public class Var implements Rule {
   public static final Var INSTANCE = new Var();
 
@@ -15,20 +17,33 @@ public class Var implements Rule {
     final var context = obligation.getContext();
     final var expression = obligation.getExpression();
 
-    if (!(expression instanceof Identifier)) {
+    if (!(expression instanceof Identifier id)) {
       throw bug("cannot apply (var) to expression that is not an identifier");
     }
 
+    /* DANGER ZONE
     if (!(expression.getType() instanceof TreeType)) {
+      if (!context.isEmpty()) {
+        throw bug(
+                "cannot apply (var) to identifier that is not of type tree with nonempty context");
+      }
+      log.warn("NOT CONSTRAINING IN VAR");
+      return Rule.ApplicationResult.empty();
+    }
+     */
+
+    if (id.getType() instanceof TreeType) {
+      if (context.size() != 1) {
+        throw bug("cannot apply (var) when context does not have exactly one element");
+      }
+      if (!context.getIds().get(0).equals(id)) {
+        throw bug("wrong variable in context");
+      }
+    } else {
       if (!context.isEmpty()) {
         throw bug(
             "cannot apply (var) to identifier that is not of type tree with nonempty context");
       }
-      return Rule.ApplicationResult.empty();
-    }
-
-    if (context.size() != 1) {
-      throw bug("cannot apply (var) when context does not have exactly one element");
     }
 
     return Rule.ApplicationResult.onlyConstraints(

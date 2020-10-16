@@ -230,7 +230,7 @@ public class S62Eager extends S62 {
         expressionEqualsE2Falsy.or(expressionEqualsIfAltBFalsy).or(expressionEqualsE1Truthy);
 
     final Prover prover = new Prover("splay-below", globals, Paths.get("out"));
-    prover.setWeakenBeforeTerminal(true);
+    prover.setWeakenAggressively(true);
     final var rootObligation =
         new Obligation(
             new AnnotatingContext(

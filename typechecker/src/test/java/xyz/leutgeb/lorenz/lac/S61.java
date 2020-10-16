@@ -32,7 +32,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.AnnotationHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
-import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCfFlorian;
+import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 
@@ -106,7 +106,7 @@ public class S61 {
 
   @Test
   public void lnf() {
-    final var letTreeCf = LetTreeCfFlorian.INSTANCE;
+    final var letTreeCf = Prover.LET_TREE_CF;
 
     final var surroundingIntro = new Intro("Test." + NAME, null);
 
@@ -153,7 +153,7 @@ public class S61 {
     final var rootObligation = new Obligation(qv, Qvar, e, Qpvar);
 
     final var eResult = letTreeCf.apply(rootObligation, globals);
-    assertEquals(3, eResult.getObligations().size());
+    assertEquals(5, eResult.getObligations().size());
     assertEquals(ePrime, eResult.getObligations().get(0).getExpression());
     assertEquals(nodeAlATPrimePrime, eResult.getObligations().get(1).getExpression());
     eResult.collectInto(constraints);
@@ -165,7 +165,7 @@ public class S61 {
     nodeAlATPrimePrimeResult.collectInto(constraints);
 
     final var ePrimeResult = letTreeCf.apply(eResult.getObligations().get(0), globals);
-    assertEquals(3, ePrimeResult.getObligations().size());
+    assertEquals(5, ePrimeResult.getObligations().size());
     assertEquals(nodeBrCCr, ePrimeResult.getObligations().get(0).getExpression());
     assertEquals(nodeArBTPrimePrimePrime, ePrimeResult.getObligations().get(1).getExpression());
     assertEquals(nodeBrCCr, ePrimeResult.getObligations().get(2).getExpression());
