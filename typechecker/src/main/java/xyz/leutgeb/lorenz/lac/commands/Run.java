@@ -130,11 +130,11 @@ public class Run implements Runnable {
 
     for (final var fqn : program.getFunctionDefinitions().keySet()) {
       final var fd = program.getFunctionDefinitions().get(fqn);
-      if (fd.getInferredSignature().getAnnotation().get().to().size() == 1 && !relaxRank) {
+      if (fd.getInferredSignature().getAnnotation().get().to.size() == 1 && !relaxRank) {
         outsideConstraints.add(
             new LessThanOrEqualConstraint(
                 ONE,
-                fd.getInferredSignature().getAnnotation().get().to().getRankCoefficient(),
+                fd.getInferredSignature().getAnnotation().get().to.getRankCoefficient(),
                 "(outside) force rank"));
       }
     }
@@ -173,16 +173,16 @@ public class Run implements Runnable {
         FunctionAnnotation inferredAnnotation = fd.getInferredSignature().getAnnotation().get();
         final var setCounting = Optimization.setCounting(inferredAnnotation);
         if (setCounting.isPresent()) {
-          setCountingRankCoefficients.addAll(setCounting.get().rankCoefficients());
-          setCountingNonRankCoefficients.addAll(setCounting.get().nonRankCoefficients());
-          setCountingConstraints.addAll(setCounting.get().constraints());
+          setCountingRankCoefficients.addAll(setCounting.get().rankCoefficients);
+          setCountingNonRankCoefficients.addAll(setCounting.get().nonRankCoefficients);
+          setCountingConstraints.addAll(setCounting.get().constraints);
         }
 
         final var pairwiseDiff = Optimization.pairwiseDiff(inferredAnnotation);
         if (pairwiseDiff.isPresent()) {
-          pairwiseDiffRankCoefficients.addAll(pairwiseDiff.get().rankCoefficients());
-          pairwiseDiffNonRankCoefficients.addAll(pairwiseDiff.get().nonRankCoefficients());
-          pairwiseDiffConstraints.addAll(pairwiseDiff.get().constraints());
+          pairwiseDiffRankCoefficients.addAll(pairwiseDiff.get().rankCoefficients);
+          pairwiseDiffNonRankCoefficients.addAll(pairwiseDiff.get().nonRankCoefficients);
+          pairwiseDiffConstraints.addAll(pairwiseDiff.get().constraints);
         }
       }
 

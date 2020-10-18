@@ -100,12 +100,12 @@ public final class FunctionSignature {
 
     sb.append(type.getFrom());
     sb.append(" | ");
-    sb.append(annotation.get().from());
+    sb.append(annotation.get().from);
 
     sb.append(" → ");
     sb.append(type.getTo());
     sb.append(" | ");
-    sb.append(annotation.get().to());
+    sb.append(annotation.get().to);
     return sb.toString();
   }
 

@@ -16,8 +16,8 @@ repositories {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_14
-    targetCompatibility = JavaVersion.VERSION_14
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 configurations {
@@ -42,6 +42,7 @@ dependencies {
     // Lombok
     val lombok = "org.projectlombok:lombok:1.18.12"
     compileOnly(lombok)
+    testCompileOnly(lombok)
     annotationProcessor(lombok)
 
     // Graphs
@@ -78,14 +79,8 @@ application {
     mainClassName = "$rootPackage.Main"
 }
 
-tasks.withType<JavaExec> {
-    // TODO(lorenz.leutgeb): Remove --enable-preview as soon as used features are stable.
-    jvmArgs("--enable-preview")
-}
-
 tasks.withType<JavaCompile> {
-    // TODO(lorenz.leutgeb): Remove --enable-preview as soon as used features are stable.
-    options.compilerArgs.addAll(arrayOf("-Xlint:unchecked", "-Xlint:deprecation", "--enable-preview"))
+    options.compilerArgs.addAll(arrayOf("-Xlint:unchecked", "-Xlint:deprecation"))
 }
 
 tasks.withType<AntlrTask> {
@@ -106,13 +101,6 @@ tasks.test {
     testLogging {
         events("passed", "skipped", "failed")
     }
-    // TODO(lorenz.leutgeb): Remove --enable-preview as soon as used features are stable.
-    jvmArgs("--enable-preview")
-}
-
-tasks.withType<Wrapper> {
-    gradleVersion = "6.5"
-    distributionType = Wrapper.DistributionType.ALL
 }
 
 // Aggressively format code when building.

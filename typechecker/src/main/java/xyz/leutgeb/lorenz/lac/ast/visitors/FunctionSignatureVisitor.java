@@ -1,16 +1,5 @@
 package xyz.leutgeb.lorenz.lac.ast.visitors;
 
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import org.antlr.v4.runtime.Token;
 import xyz.leutgeb.lorenz.lac.antlr.SplayParser;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
@@ -24,6 +13,18 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.ProductType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.util.Fraction;
+
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature> {
   private final TypeVisitor typeVisitor;
@@ -50,10 +51,12 @@ class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature>
     ProductType from = null;
     Type to;
     Optional<FunctionAnnotation> annotation = Optional.empty();
-    if (arrow instanceof SplayParser.SimpleArrowContext simpleArrow) {
+    if (arrow instanceof SplayParser.SimpleArrowContext) {
+      final var simpleArrow = (SplayParser.SimpleArrowContext) arrow;
       from = (ProductType) typeVisitor.visitProductType(simpleArrow.from);
       to = typeVisitor.visit(simpleArrow.to);
-    } else if (arrow instanceof SplayParser.AnnotatedArrowContext annotatedArrow) {
+    } else if (arrow instanceof SplayParser.AnnotatedArrowContext) {
+      final var annotatedArrow = (SplayParser.AnnotatedArrowContext) arrow;
       from = (ProductType) typeVisitor.visitProductType(annotatedArrow.from);
       to = typeVisitor.visit(annotatedArrow.to);
       annotation =
@@ -81,7 +84,8 @@ class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature>
               + ":"
               + start.getCharPositionInLine());
     }
-    if (annotationContext instanceof SplayParser.NonEmptyAnnotationContext context) {
+    if (annotationContext instanceof SplayParser.NonEmptyAnnotationContext) {
+      final var context = (SplayParser.NonEmptyAnnotationContext) annotationContext;
       List<Coefficient> rankCoefficients = new ArrayList<>(size);
       for (int i = 0; i < size; i++) {
         rankCoefficients.add(KnownCoefficient.ZERO);
@@ -90,9 +94,11 @@ class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature>
       for (var entry : context.entries) {
         final var index = entry.index();
         final var value = convert(entry.coefficient);
-        if (index instanceof SplayParser.RankIndexContext rankIndex) {
+        if (index instanceof SplayParser.RankIndexContext) {
+          final var rankIndex = (SplayParser.RankIndexContext) index;
           rankCoefficients.set(Integer.parseInt(rankIndex.NUMBER().getText()), value);
-        } else if (index instanceof SplayParser.OtherIndexContext otherIndex) {
+        } else if (index instanceof SplayParser.OtherIndexContext) {
+          final var otherIndex = (SplayParser.OtherIndexContext) index;
           coeffiecients.put(
               otherIndex.elements.stream()
                   .map(Token::getText)
@@ -114,7 +120,8 @@ class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature>
     if (context instanceof SplayParser.NatContext) {
       return new KnownCoefficient(new Fraction(Integer.parseInt(context.getText())));
     }
-    if (context instanceof SplayParser.RatContext ratContext) {
+    if (context instanceof SplayParser.RatContext) {
+      final var ratContext = (SplayParser.RatContext) context;
       return new KnownCoefficient(
           new Fraction(
               Integer.parseInt(ratContext.numerator.getText()),

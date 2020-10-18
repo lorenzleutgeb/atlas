@@ -34,8 +34,8 @@ public class App implements Rule {
       final var candidate = candidates.iterator().next();
       return append(
           EqualityConstraint.eq(
-              candidate.from(), obligation.getContext().getAnnotation(), "(app:cf) Q"),
-          EqualityConstraint.eq(candidate.to(), obligation.getAnnotation(), "(app:cf) Q'"));
+              candidate.from, obligation.getContext().getAnnotation(), "(app:cf) Q"),
+          EqualityConstraint.eq(candidate.to, obligation.getAnnotation(), "(app:cf) Q'"));
     } else {
       return singletonList(
           new DisjunctiveConstraint(
@@ -45,11 +45,11 @@ public class App implements Rule {
                           new ConjunctiveConstraint(
                               append(
                                   EqualityConstraint.eq(
-                                      candidate.from(),
+                                      candidate.from,
                                       obligation.getContext().getAnnotation(),
                                       "(app:cf) Q"),
                                   EqualityConstraint.eq(
-                                      candidate.to(), obligation.getAnnotation(), "(app:cf) Q'")),
+                                      candidate.to, obligation.getAnnotation(), "(app:cf) Q'")),
                               "(app:cf)"))
                   .collect(Collectors.toUnmodifiableList()),
               "(app:cf)"));
@@ -59,11 +59,11 @@ public class App implements Rule {
   private List<Constraint> appMinus(Obligation obligation, FunctionAnnotation signature) {
     return append(
         EqualityConstraint.eq(
-            signature.from(),
+            signature.from,
             obligation.getContext().getAnnotation(),
             ruleName(obligation.getCost()) + " Q"),
         signature
-            .to()
+            .to
             .increment(
                 obligation.getAnnotation(),
                 obligation.getCost(),
@@ -76,11 +76,11 @@ public class App implements Rule {
             .getContext()
             .getAnnotation()
             .increment(
-                signature.from(),
+                signature.from,
                 1,
                 ruleName(obligation.getCost()) + " Q from signature + 1 = Q from context"),
         EqualityConstraint.eq(
-            signature.to(), obligation.getAnnotation(), ruleName(obligation.getCost()) + " Q'"));
+            signature.to, obligation.getAnnotation(), ruleName(obligation.getCost()) + " Q'"));
   }
 
   public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
@@ -91,8 +91,8 @@ public class App implements Rule {
 
     return Rule.ApplicationResult.onlyConstraints(
         obligation.getCost() == 1
-            ? appMinus(obligation, annotation.withCost())
-            : costFree(obligation, annotation.withoutCost()));
+            ? appMinus(obligation, annotation.withCost)
+            : costFree(obligation, annotation.withoutCost));
   }
 
   /*
@@ -109,14 +109,14 @@ public class App implements Rule {
                     .getContext()
                     .getAnnotation()
                     .increment(
-                        annotation.withCost().from(),
+                        annotation.withCost.from,
                         obligation.getCost(),
                         ruleName(obligation.getCost()) + " Q from signature + 1 = Q from context"),
                 EqualityConstraint.eq(
-                    annotation.withCost().to(),
+                    annotation.withCost.to,
                     obligation.getAnnotation(),
                     ruleName(obligation.getCost()) + " Q'"))
-            : costFree(obligation, annotation.withoutCost()));
+            : costFree(obligation, annotation.withoutCost));
   }
    */
 

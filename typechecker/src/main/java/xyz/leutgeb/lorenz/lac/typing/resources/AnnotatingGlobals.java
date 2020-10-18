@@ -47,16 +47,16 @@ public class AnnotatingGlobals {
     if (!costFrees.stream()
         .allMatch(
             costFree -> {
-              if (withCost.to().size() > 1 || costFree.to().size() > 1) {
+              if (withCost.to.size() > 1 || costFree.to.size() > 1) {
                 return false;
                 // throw new IllegalArgumentException("annotation of result can be of size one at
                 // most");
               }
-              if (withCost.from().size() != costFree.from().size()) {
+              if (withCost.from.size() != costFree.from.size()) {
                 return false;
                 // throw new IllegalArgumentException("size mismatch");
               }
-              if (withCost.to().size() != costFree.to().size()) {
+              if (withCost.to.size() != costFree.to.size()) {
                 return false;
                 // throw new IllegalArgumentException("size mismatch");
               }

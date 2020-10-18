@@ -138,8 +138,8 @@ public class Program {
     forEach(
         fd -> {
           /*
-          if (!functionAnnotations.get(fd.getFullyQualifiedName()).withCost().isUnknown()
-              && functionAnnotations.get(fd.getFullyQualifiedName()).withoutCost().stream()
+          if (!functionAnnotations.get(fd.getFullyQualifiedName()).withCost.isUnknown()
+              && functionAnnotations.get(fd.getFullyQualifiedName()).withoutCost.stream()
                   .noneMatch(FunctionAnnotation::isUnknown)) {
             log.info(
                 "Skipping type inference for {} because all given annotations are known.",
@@ -175,8 +175,8 @@ public class Program {
 
           for (var cfAnnotation : fd.getCfAnnotations()) {
             /*
-            if (cfAnnotation.from().coefficientsEqual(Annotation.zero(cfAnnotation.from().size())) &&
-            cfAnnotation.to().coefficientsEqual(Annotation.zero(cfAnnotation.to().size()))) {
+            if (cfAnnotation.from.coefficientsEqual(Annotation.zero(cfAnnotation.from.size())) &&
+            cfAnnotation.to.coefficientsEqual(Annotation.zero(cfAnnotation.to.size()))) {
             	log.info("Skipping {}", cfAnnotation);
               continue;
             }
@@ -187,9 +187,9 @@ public class Program {
             final var cfRoot =
                 new Obligation(
                     fd.treeLikeArguments(),
-                    cfAnnotation.from(),
+                    cfAnnotation.from,
                     fd.getBody(),
-                    cfAnnotation.to(),
+                    cfAnnotation.to,
                     0);
 
             /*
@@ -302,14 +302,14 @@ public class Program {
                                   .getInferredSignature()
                                   .getAnnotation()
                                   .get()
-                                  .from()
+                                  .from
                                   .substitute(solution.get()),
                               functionDefinitions
                                   .get(fqn)
                                   .getInferredSignature()
                                   .getAnnotation()
                                   .get()
-                                  .to()
+                                  .to
                                   .substitute(solution.get())),
                           functionDefinitions.get(fqn).getCfAnnotations().stream()
                               .map(annotation -> annotation.substitute(solution.get()))

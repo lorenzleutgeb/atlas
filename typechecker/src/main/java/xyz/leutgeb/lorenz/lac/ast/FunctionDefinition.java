@@ -1,15 +1,5 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
-import static com.google.common.collect.Sets.difference;
-import static guru.nidi.graphviz.attribute.Records.turn;
-import static guru.nidi.graphviz.model.Factory.graph;
-import static guru.nidi.graphviz.model.Factory.node;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.singleton;
-import static java.util.stream.Collectors.toList;
-import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.minimize;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-
 import com.google.common.collect.Sets;
 import guru.nidi.graphviz.attribute.Records;
 import guru.nidi.graphviz.attribute.Shape;
@@ -17,16 +7,6 @@ import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jgrapht.graph.DirectedMultigraph;
@@ -52,6 +32,27 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static com.google.common.collect.Sets.difference;
+import static guru.nidi.graphviz.attribute.Records.turn;
+import static guru.nidi.graphviz.model.Factory.graph;
+import static guru.nidi.graphviz.model.Factory.node;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singleton;
+import static java.util.stream.Collectors.toList;
+import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.minimize;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 @Data
 @Slf4j
@@ -213,18 +214,18 @@ public class FunctionDefinition {
 
       var costFreeAnnotation =
           new FunctionAnnotation(
-              heuristic.generate("cfargs1", inferredAnnotation.from()),
-              heuristic.generate("cfreturn1", inferredAnnotation.to()));
+              heuristic.generate("cfargs1", inferredAnnotation.from),
+              heuristic.generate("cfreturn1", inferredAnnotation.to));
 
       var costFreeAnnotation2 =
           new FunctionAnnotation(
-              heuristic.generate("cfargs2", inferredAnnotation.from()),
-              heuristic.generate("cfreturn2", inferredAnnotation.to()));
+              heuristic.generate("cfargs2", inferredAnnotation.from),
+              heuristic.generate("cfreturn2", inferredAnnotation.to));
 
       var zeroAnnotation =
           new FunctionAnnotation(
-              Annotation.zero(inferredAnnotation.from().size(), "cfargszero"),
-              Annotation.zero(inferredAnnotation.to().size(), "cfreturnzero"));
+              Annotation.zero(inferredAnnotation.from.size(), "cfargszero"),
+              Annotation.zero(inferredAnnotation.to.size(), "cfreturnzero"));
 
       if (cf) {
         this.cfAnnotations = Set.of(costFreeAnnotation, costFreeAnnotation2, zeroAnnotation);
@@ -249,32 +250,32 @@ public class FunctionDefinition {
           getFullyQualifiedName(),
           new CombinedFunctionAnnotation(inferredAnnotation, cfAnnotations));
     } else {
-      if (predefined.withCost().from().size() != treeLikeArguments.size()) {
+      if (predefined.withCost.from.size() != treeLikeArguments.size()) {
         throw new IllegalArgumentException(
             "the predefined annotation for parameters of "
                 + getFullyQualifiedName()
                 + " is expected to be of size "
                 + treeLikeArguments.size()
                 + " but it is only of size "
-                + predefined.withCost().from().size());
+                + predefined.withCost.from.size());
       }
       if (returnsTree
-          ? predefined.withCost().to().size() != 1
-          : predefined.withCost().to().size() != 0) {
+          ? predefined.withCost.to.size() != 1
+          : predefined.withCost.to.size() != 0) {
         throw new IllegalArgumentException(
             "the predefined annotation for the result of "
                 + getFullyQualifiedName()
                 + " is expected to be of size "
                 + treeLikeArguments.size()
                 + " but it is only of size "
-                + predefined.withCost().to().size());
+                + predefined.withCost.to.size());
       }
       inferredSignature =
           new FunctionSignature(
               inferredSignature.getConstraints(),
               inferredSignature.getType(),
-              Optional.of(predefined.withCost()));
-      cfAnnotations = predefined.withoutCost();
+              Optional.of(predefined.withCost));
+      cfAnnotations = predefined.withoutCost;
     }
   }
 
@@ -286,9 +287,9 @@ public class FunctionDefinition {
 
   public Obligation getTypingObligation(int cost) {
     return new Obligation(
-        new AnnotatingContext(treeLikeArguments(), inferredSignature.getAnnotation().get().from()),
+        new AnnotatingContext(treeLikeArguments(), inferredSignature.getAnnotation().get().from),
         body,
-        inferredSignature.getAnnotation().get().to(),
+        inferredSignature.getAnnotation().get().to,
         cost);
   }
 
@@ -352,9 +353,9 @@ public class FunctionDefinition {
                     turn(
                         name,
                         inferredSignature.toString().replace(">", "\\>").replace("<", "\\<"),
-                        inferredSignature.getAnnotation().get().from().getNameAndId()
+                        inferredSignature.getAnnotation().get().from.getNameAndId()
                             + " → "
-                            + inferredSignature.getAnnotation().get().to().getNameAndId())));
+                            + inferredSignature.getAnnotation().get().to.getNameAndId())));
     Graph result = body.toGraph(g, root);
     var viz = Graphviz.fromGraph(result);
     viz.render(Format.SVG).toOutputStream(out);

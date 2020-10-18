@@ -44,24 +44,6 @@ public class LetTreeCf implements Rule {
   private static final Set<Integer> E_RANGE = Set.of(0, 2);
   private static final Set<List<Integer>> DE_RANGE = cartesianProduct(D_RANGE, E_RANGE);
 
-  private static final record BDE(List<Integer> b, int d, int e) {
-    public List<Integer> toIndex() {
-      final var result = new ArrayList<Integer>(b.size() + 2);
-      result.addAll(b);
-      result.add(d);
-      result.add(e);
-      return result;
-    }
-
-    public static BDE fromIndex(List<Integer> index) {
-      int n = index.size() - 2;
-      if (index.subList(0, n).stream().allMatch(x -> x == 0)) {
-        throw new IllegalArgumentException();
-      }
-      return new BDE(index.subList(0, n), index.get(n - 1), index.get(n));
-    }
-  }
-
   /**
    * P wird durch Q definiert: * p_i = q_i * p_(a,c) = q_(a,0,c)
    *

@@ -1,39 +1,14 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.proving;
 
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.singletonList;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toUnmodifiableMap;
-import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.stack;
-import static xyz.leutgeb.lorenz.lac.util.Util.supply;
-import static xyz.leutgeb.lorenz.lac.util.Util.undefinedText;
-
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import guru.nidi.graphviz.attribute.Label;
 import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.Stack;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -80,6 +55,34 @@ import xyz.leutgeb.lorenz.lac.util.NidiAttribute;
 import xyz.leutgeb.lorenz.lac.util.NidiExporter;
 import xyz.leutgeb.lorenz.lac.util.Pair;
 import xyz.leutgeb.lorenz.lac.util.Util;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.Stack;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singletonList;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toUnmodifiableMap;
+import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.stack;
+import static xyz.leutgeb.lorenz.lac.util.Util.supply;
+import static xyz.leutgeb.lorenz.lac.util.Util.undefinedText;
 
 @Slf4j
 public class Prover {
@@ -145,7 +148,12 @@ public class Prover {
 
   @Getter @Setter private boolean weakenVariables = true;
 
-  private record RuleApplication(Rule rule, Rule.ApplicationResult result) {}
+  @Value
+  @AllArgsConstructor
+  private static class RuleApplication {
+    Rule rule;
+    Rule.ApplicationResult result;
+  }
 
   public Prover(String name, AnnotatingGlobals globals, Path basePath) {
     this.name = name;
@@ -407,7 +415,7 @@ public class Prover {
         obligation -> {
           var result = results.get(obligation);
           final List<Constraint> generalConstraints =
-              result != null ? result.result().getGeneralConstraints() : emptyList();
+              result != null ? result.result.getGeneralConstraints() : emptyList();
           return obligation.attributes(generalConstraints);
         });
     exporter.setEdgeAttributeProvider(edgeAttributes::get);
@@ -435,7 +443,7 @@ public class Prover {
         obligation -> {
           var result = results.get(obligation);
           final List<Constraint> generalConstraints =
-              result != null ? result.result().getGeneralConstraints() : emptyList();
+              result != null ? result.result.getGeneralConstraints() : emptyList();
           return (obligation.substitute(solution)).attributes(generalConstraints);
         });
     exporter.setEdgeAttributeProvider(edgeAttributes::get);

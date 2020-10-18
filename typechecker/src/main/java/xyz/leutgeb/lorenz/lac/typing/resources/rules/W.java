@@ -1,19 +1,5 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.rules;
 
-import static com.google.common.collect.Lists.cartesianProduct;
-import static com.google.common.collect.Streams.concat;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.toList;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.INDEX_COMPARATOR;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.nonRankIndices;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.MINUS_TWO;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
-import static xyz.leutgeb.lorenz.lac.util.Util.append;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
-
 import com.google.common.collect.Streams;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
@@ -21,17 +7,8 @@ import com.microsoft.z3.Context;
 import com.microsoft.z3.Expr;
 import com.microsoft.z3.IntNum;
 import com.microsoft.z3.Status;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.BiFunction;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
+import lombok.AllArgsConstructor;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
@@ -53,6 +30,32 @@ import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 import xyz.leutgeb.lorenz.lac.util.Util;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+import static com.google.common.collect.Lists.cartesianProduct;
+import static com.google.common.collect.Streams.concat;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.INDEX_COMPARATOR;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.nonRankIndices;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.MINUS_TWO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
+import static xyz.leutgeb.lorenz.lac.util.Util.append;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
 @Slf4j
 public class W implements Rule {
@@ -217,9 +220,9 @@ public class W implements Rule {
         final List<Coefficient> sum = sumByColumn.get(column);
         for (int row = 0; row < monoKnowledge.size(); row++) {
           final var knowledgeRow = monoKnowledge.get(row);
-          if (potentialFunction.equals(knowledgeRow.smaller())) {
+          if (potentialFunction.equals(knowledgeRow.smaller)) {
             sum.add(f.get(row));
-          } else if (potentialFunction.equals(knowledgeRow.larger())) {
+          } else if (potentialFunction.equals(knowledgeRow.larger)) {
             sum.add(f.get(row).negate());
           }
         }
@@ -348,7 +351,12 @@ public class W implements Rule {
         emptyList());
   }
 
-  public record Order<T>(T smaller, T larger) {}
+  @Value
+  @AllArgsConstructor
+  public static class Order<T> {
+    T smaller;
+    T larger;
+  }
 
   @Deprecated
   public static List<Order<List<Integer>>> lessThanOrEqual(
@@ -394,7 +402,7 @@ public class W implements Rule {
             Stream.concat(
                     xs.stream().map(x -> ctx.mkLe(one, x)),
                     expertGt.stream()
-                        .map(pair -> ctx.mkGt(xs.get(pair.smaller()), xs.get(pair.larger()))))
+                        .map(pair -> ctx.mkGt(xs.get(pair.smaller), xs.get(pair.larger))))
                 .toArray(BoolExpr[]::new));
     final var main =
         ctx.mkLe(
@@ -506,7 +514,7 @@ public class W implements Rule {
       // solver.add(ctx.mkLe(zero, x));
     }
     for (var pair : expertGt) {
-      solver.add(ctx.mkGt(vars.get(pair.smaller()), vars.get(pair.larger())));
+      solver.add(ctx.mkGt(vars.get(pair.smaller), vars.get(pair.larger)));
     }
     solver.add(
         ctx.mkGt(

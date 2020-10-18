@@ -1,14 +1,5 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
-import static com.google.common.collect.Sets.intersection;
-import static xyz.leutgeb.lorenz.lac.util.Util.indent;
-import static xyz.leutgeb.lorenz.lac.util.Util.pick;
-
-import java.io.PrintStream;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
-import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.jgrapht.Graph;
@@ -22,6 +13,16 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.util.Pair;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
+
+import java.io.PrintStream;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
+import java.util.stream.Stream;
+
+import static com.google.common.collect.Sets.intersection;
+import static xyz.leutgeb.lorenz.lac.util.Util.indent;
+import static xyz.leutgeb.lorenz.lac.util.Util.pick;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -164,7 +165,8 @@ public class LetExpression extends Expression {
       return;
     }
 
-    if (value instanceof NodeExpression node) {
+    if (value instanceof NodeExpression) {
+      final var node = (NodeExpression) value;
       sizeGraph.addVertex(declared);
       sizeGraph.addVertex((Identifier) node.getLeft());
       sizeGraph.addVertex((Identifier) node.getRight());
@@ -172,7 +174,8 @@ public class LetExpression extends Expression {
       sizeGraph.addEdge(declared, (Identifier) node.getRight(), SizeEdge.gt());
     }
 
-    if (value instanceof Identifier identifier) {
+    if (value instanceof Identifier) {
+      final var identifier = (Identifier) value;
       sizeGraph.addVertex(declared);
       sizeGraph.addVertex(identifier);
       sizeGraph.addEdge(declared, identifier, SizeEdge.eq());

@@ -47,8 +47,8 @@ public class Tree {
                     new NegationConstraint(
                         new ConjunctiveConstraint(
                             eq(
-                                functionSignature.withCost().from(),
-                                functionSignature.withCost().to(),
+                                functionSignature.withCost.from,
+                                functionSignature.withCost.to,
                                 EXT),
                             EXT),
                         EXT)))

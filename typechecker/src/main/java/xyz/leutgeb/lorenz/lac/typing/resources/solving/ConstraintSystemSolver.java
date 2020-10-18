@@ -1,13 +1,5 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.solving;
 
-import static com.microsoft.z3.Status.SATISFIABLE;
-import static com.microsoft.z3.Status.UNKNOWN;
-import static java.util.Collections.emptyList;
-import static java.util.Optional.empty;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.ensureLibrary;
-import static xyz.leutgeb.lorenz.lac.util.Util.signum;
-
 import com.google.common.collect.HashBiMap;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
@@ -20,6 +12,14 @@ import com.microsoft.z3.Params;
 import com.microsoft.z3.RatNum;
 import com.microsoft.z3.Statistics;
 import com.microsoft.z3.Status;
+import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.util.Fraction;
+import xyz.leutgeb.lorenz.lac.util.Util;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
@@ -36,13 +36,14 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.util.Fraction;
-import xyz.leutgeb.lorenz.lac.util.Util;
+
+import static com.microsoft.z3.Status.SATISFIABLE;
+import static com.microsoft.z3.Status.UNKNOWN;
+import static java.util.Collections.emptyList;
+import static java.util.Optional.empty;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.ensureLibrary;
+import static xyz.leutgeb.lorenz.lac.util.Util.signum;
 
 @Slf4j
 public class ConstraintSystemSolver {
@@ -95,9 +96,10 @@ public class ConstraintSystemSolver {
     }
 
     for (var coefficient : coefficients) {
-      if (!(coefficient instanceof UnknownCoefficient unknownCoefficient)) {
+      if (!(coefficient instanceof UnknownCoefficient)) {
         continue;
       }
+      final var unknownCoefficient = (UnknownCoefficient) coefficient;
       if (generatedCoefficients.inverse().containsKey(coefficient)) {
         continue;
       }
@@ -193,14 +195,16 @@ public class ConstraintSystemSolver {
         log.warn("solution for " + e.getValue() + " is not a rational number, it is " + x);
       }
       KnownCoefficient v;
-      if (x instanceof RatNum xr && Domain.RATIONAL.equals(domain)) {
+      if (x instanceof RatNum && Domain.RATIONAL.equals(domain)) {
+        final var xr = (RatNum) x;
         var num = xr.getNumerator();
         if (num.getBigInteger().intValueExact() == 0) {
           v = KnownCoefficient.ZERO;
         } else {
           v = new KnownCoefficient(Util.toFraction(xr));
         }
-      } else if (x instanceof IntNum xr && Domain.INTEGER.equals(domain)) {
+      } else if (x instanceof IntNum && Domain.INTEGER.equals(domain)) {
+      	final var xr = (IntNum) x;
         if (xr.getBigInteger().intValueExact() == 0) {
           v = KnownCoefficient.ZERO;
         } else {

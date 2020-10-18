@@ -1,15 +1,5 @@
 package xyz.leutgeb.lorenz.lac.typing.resources;
 
-import static java.util.Collections.emptyList;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.Token;
@@ -23,6 +13,17 @@ import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.WVar;
 import xyz.leutgeb.lorenz.lac.util.Fraction;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static java.util.Collections.emptyList;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+
 @Value
 @Slf4j
 public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
@@ -31,8 +32,9 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
 
   private void proveInternal(
       Obligation obligation, TacticParser.TacticExpressionContext tacticExpression) {
-    if (tacticExpression
-        instanceof TacticParser.NamedTacticExpressionContext annotatedTacticExpression) {
+    if (tacticExpression instanceof TacticParser.NamedTacticExpressionContext) {
+      final var annotatedTacticExpression =
+          (TacticParser.NamedTacticExpressionContext) tacticExpression;
       final String annotation = annotatedTacticExpression.name.getText();
       tacticExpression = annotatedTacticExpression.tacticExpression();
       if (annotation != null) {
@@ -41,7 +43,8 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
     }
 
     Token start = null;
-    if (tacticExpression instanceof TacticParser.FixedAnnotationContext fixedAnnotationContext) {
+    if (tacticExpression instanceof TacticParser.FixedAnnotationContext) {
+      final var fixedAnnotationContext = (TacticParser.FixedAnnotationContext) tacticExpression;
       start = fixedAnnotationContext.getStart();
       final Optional<Annotation> optionalFromFixing = Optional.empty();
       final Optional<Annotation> optionalToFixing = Optional.empty();
@@ -107,12 +110,14 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
 
     String ruleNameText;
     List<TacticParser.TacticExpressionContext> next;
-    if (tacticExpression instanceof TacticParser.TerminalTacticExpressionContext terminal) {
+    if (tacticExpression instanceof TacticParser.TerminalTacticExpressionContext) {
+      final var terminal = (TacticParser.TerminalTacticExpressionContext) tacticExpression;
       ruleNameText = terminal.identifier.getText();
       start = terminal.getStart();
       next = emptyList();
-    } else if (tacticExpression
-        instanceof TacticParser.ListTacticExpressionContext listTacticExpressionContext) {
+    } else if (tacticExpression instanceof TacticParser.ListTacticExpressionContext) {
+      final var listTacticExpressionContext =
+          (TacticParser.ListTacticExpressionContext) tacticExpression;
       start = listTacticExpressionContext.getStart();
       ruleNameText = listTacticExpressionContext.elements.get(0).getText();
       next =
@@ -208,7 +213,8 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
           Annotation.zero(
               size, "fixed at position " + start.getLine() + ":" + start.getCharPositionInLine()));
     }
-    if (annotationContext instanceof TacticParser.NonEmptyAnnotationContext context) {
+    if (annotationContext instanceof TacticParser.NonEmptyAnnotationContext) {
+      final var context = (TacticParser.NonEmptyAnnotationContext) annotationContext;
       List<Coefficient> rankCoefficients = new ArrayList<>(size);
       for (int i = 0; i < size; i++) {
         rankCoefficients.add(KnownCoefficient.ZERO);
@@ -217,9 +223,11 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
       for (var entry : context.entries) {
         final var index = entry.index();
         final var value = convert(entry.coefficient);
-        if (index instanceof TacticParser.RankIndexContext rankIndex) {
+        if (index instanceof TacticParser.RankIndexContext) {
+          final var rankIndex = (TacticParser.RankIndexContext) index;
           rankCoefficients.set(Integer.parseInt(rankIndex.NUMBER().getText()), value);
-        } else if (index instanceof TacticParser.OtherIndexContext otherIndex) {
+        } else if (index instanceof TacticParser.OtherIndexContext) {
+          final var otherIndex = (TacticParser.OtherIndexContext) index;
           coeffiecients.put(
               otherIndex.elements.stream()
                   .map(Token::getText)
@@ -242,7 +250,8 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
     if (context instanceof TacticParser.NatContext) {
       return new KnownCoefficient(new Fraction(Integer.parseInt(context.getText())));
     }
-    if (context instanceof TacticParser.RatContext ratContext) {
+    if (context instanceof TacticParser.RatContext) {
+      final var ratContext = (TacticParser.RatContext) context;
       return new KnownCoefficient(
           new Fraction(
               Integer.parseInt(ratContext.numerator.getText()),

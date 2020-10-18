@@ -1,14 +1,7 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.optimiziation;
 
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import lombok.AllArgsConstructor;
+import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
@@ -17,17 +10,30 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.ExclusiveDisjunctiveConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.IfThenElseConstraint;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+
 public class Optimization {
-  public record MultiTarget(
-      List<UnknownCoefficient> rankCoefficients,
-      List<UnknownCoefficient> nonRankCoefficients,
-      Set<Constraint> constraints) {}
+  @Value
+  @AllArgsConstructor
+  public static class MultiTarget {
+    public List<UnknownCoefficient> rankCoefficients;
+    public List<UnknownCoefficient> nonRankCoefficients;
+    public Set<Constraint> constraints;
+  }
 
   /*
   @Deprecated
   public static Target sum(FunctionAnnotation annotation) {
-    final var from = annotation.from();
-    final var to = annotation.to();
+    final var from = annotation.from;
+    final var to = annotation.to;
 
     final var qRankCoefficientSum = unknown("Qranksum");
     final var qpRankCoefficientSum = unknown("Qpranksum");
@@ -58,8 +64,8 @@ public class Optimization {
    */
 
   public static Optional<MultiTarget> setCounting(FunctionAnnotation annotation) {
-    final var from = annotation.from();
-    final var to = annotation.to();
+    final var from = annotation.from;
+    final var to = annotation.to;
 
     if (to.size() != from.size()) {
       return Optional.empty();
@@ -109,8 +115,8 @@ public class Optimization {
   }
 
   public static Optional<MultiTarget> pairwiseDiff(FunctionAnnotation annotation) {
-    final var from = annotation.from();
-    final var to = annotation.to();
+    final var from = annotation.from;
+    final var to = annotation.to;
 
     if (to.size() != from.size()) {
       return Optional.empty();

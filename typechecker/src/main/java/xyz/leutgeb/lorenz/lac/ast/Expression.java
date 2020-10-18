@@ -92,7 +92,7 @@ public abstract class Expression extends Syntax {
       final var normalization = context.pop();
       binder =
           new LetExpression(
-              Derived.anf(this), normalization.identifier(), normalization.expression(), binder);
+              Derived.anf(this), normalization.identifier, normalization.expression, binder);
     }
     return binder;
   }

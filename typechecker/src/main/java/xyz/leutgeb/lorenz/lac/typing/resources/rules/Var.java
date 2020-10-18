@@ -1,13 +1,13 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.rules;
 
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
+
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 @Slf4j
 public class Var implements Rule {
@@ -17,7 +17,7 @@ public class Var implements Rule {
     final var context = obligation.getContext();
     final var expression = obligation.getExpression();
 
-    if (!(expression instanceof Identifier id)) {
+    if (!(expression instanceof Identifier)) {
       throw bug("cannot apply (var) to expression that is not an identifier");
     }
 
@@ -31,6 +31,8 @@ public class Var implements Rule {
       return Rule.ApplicationResult.empty();
     }
      */
+
+    final var id = (Identifier) expression;
 
     if (id.getType() instanceof TreeType) {
       if (context.size() != 1) {

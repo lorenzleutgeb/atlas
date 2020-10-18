@@ -5,11 +5,19 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import lombok.AllArgsConstructor;
+import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 
-public record CombinedFunctionAnnotation(
-    FunctionAnnotation withCost, Set<FunctionAnnotation> withoutCost) {
+// TODO: Maybe refactor this to a record once Java 17 is out?
+@Value
+@AllArgsConstructor
+public class CombinedFunctionAnnotation {
+    public FunctionAnnotation withCost;
+    public Set<FunctionAnnotation> withoutCost;
+
   public static CombinedFunctionAnnotation of(
       Annotation withCostFrom, Annotation withCostTo, Annotation... withoutCost) {
     if (withoutCost.length % 2 != 0) {
@@ -42,7 +50,7 @@ public record CombinedFunctionAnnotation(
 
   public boolean isNonInteger() {
     return withCost.isNonInteger()
-        || (!withoutCost().isEmpty()
+        || (!withoutCost.isEmpty()
             && withoutCost.stream().allMatch(FunctionAnnotation::isNonInteger));
   }
 }

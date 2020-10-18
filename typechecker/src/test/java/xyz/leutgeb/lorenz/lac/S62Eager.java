@@ -176,7 +176,7 @@ public class S62Eager extends S62 {
         new Obligation(
             new AnnotatingContext(contextIds, Q3),
             E4,
-            globals.getSignature(FQN).withCost().to(),
+            globals.getSignature(FQN).withCost.to,
             1);
 
     final Prover prover = new Prover("splay-above", globals, Paths.get("out"));
@@ -234,9 +234,9 @@ public class S62Eager extends S62 {
     final var rootObligation =
         new Obligation(
             new AnnotatingContext(
-                SPLAY.treeLikeArguments(), globals.getSignature(FQN).withCost().from()),
+                SPLAY.treeLikeArguments(), globals.getSignature(FQN).withCost.from),
             SPLAY.getBody(),
-            globals.getSignature(FQN).withCost().to(),
+            globals.getSignature(FQN).withCost.to,
             1);
     final var first = prover.proveUntil(rootObligation, expressionEqualsE3.or(outOfScope));
     assertEquals(3, first.size());

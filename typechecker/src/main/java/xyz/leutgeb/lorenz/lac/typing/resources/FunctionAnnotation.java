@@ -1,10 +1,19 @@
 package xyz.leutgeb.lorenz.lac.typing.resources;
 
-import java.util.Map;
+import lombok.AllArgsConstructor;
+import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 
-public record FunctionAnnotation(Annotation from, Annotation to) {
+import java.util.Map;
+
+// TODO: Maybe refactor this to a record once Java 17 is out?
+@Value
+@AllArgsConstructor
+public class FunctionAnnotation {
+  public Annotation from;
+  public Annotation to;
+
   @Override
   public String toString() {
     return from.toString() + " → " + to.toString();

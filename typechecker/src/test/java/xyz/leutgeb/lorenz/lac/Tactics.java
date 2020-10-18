@@ -1,30 +1,7 @@
 package xyz.leutgeb.lorenz.lac;
 
-import static com.google.common.collect.Sets.union;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptyMap;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static xyz.leutgeb.lorenz.lac.TestUtil.printTable;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.zero;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.THREE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
-import static xyz.leutgeb.lorenz.lac.util.Util.append;
-import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
-
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import lombok.AllArgsConstructor;
+import lombok.Value;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -43,6 +20,32 @@ import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 import xyz.leutgeb.lorenz.lac.util.Fraction;
+
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static com.google.common.collect.Sets.union;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static xyz.leutgeb.lorenz.lac.TestUtil.printTable;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.zero;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.THREE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+import static xyz.leutgeb.lorenz.lac.util.Util.append;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
 public class Tactics {
   protected static final Annotation Q =
@@ -94,8 +97,8 @@ public class Tactics {
 
   private static final CombinedFunctionAnnotation SPLAY_EXPECTED_TACAS_VARCF =
       CombinedFunctionAnnotation.of(
-          SPLAY_EXPECTED_TACAS.withCost().from(),
-          SPLAY_EXPECTED_TACAS.withCost().to(),
+          SPLAY_EXPECTED_TACAS.withCost.from,
+          SPLAY_EXPECTED_TACAS.withCost.to,
           SmartRangeHeuristic.DEFAULT.generate("cf", 1),
           SmartRangeHeuristic.DEFAULT.generate("cf'", 1),
           Annotation.zero(1),
@@ -201,7 +204,12 @@ public class Tactics {
         SmartRangeHeuristic.DEFAULT.generate("cf'", to));
   }
 
-  private record Config(Optional<String> tactic, Optional<CombinedFunctionAnnotation> annotation) {
+  @Value
+  @AllArgsConstructor
+  private static class Config {
+    public Optional<String> tactic;
+    public Optional<CombinedFunctionAnnotation> annotation;
+
     public static Config of(String tactic) {
       return new Config(Optional.ofNullable(tactic), Optional.empty());
     }
@@ -236,6 +244,36 @@ public class Tactics {
 
   private static Stream<Arguments> allTactics() {
     return Stream.of(
+        Arguments.of(
+            Map.of(
+                "PairingHeap.pass2",
+                Config.of(
+                    "PairingHeap/pass2",
+                    CombinedFunctionAnnotation.of(
+                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                        SmartRangeHeuristic.DEFAULT.generate("Q'", 1),
+                        zero(1),
+                        zero(1),
+                        new Annotation(
+                            List.of(ZERO),
+                            Map.of(List.of(1, 0), TWO, List.of(1, 1), TWO, List.of(1, 2), TWO),
+                            "Qcf"),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), TWO), "Qcf'"),
+                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                        SmartRangeHeuristic.DEFAULT.generate("Q'", 1))))),
+        /*
+              Arguments.of(
+              Config.of(
+                      CombinedFunctionAnnotation.of(
+                              SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                              SmartRangeHeuristic.DEFAULT.generate("Q'", 1),
+                              //QpwithConst,
+                              SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
+                              SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
+                              Annotation.zero(1),
+                              Annotation.zero(1)))),
+        */
+
         Arguments.of(
             Map.of(
                 "PairingHeap.pass1",
@@ -340,7 +378,7 @@ public class Tactics {
                 Config.of(
                     CombinedFunctionAnnotation.of(
                         SmartRangeHeuristic.DEFAULT.generate("Q", 1),
-                        SPLAY_TIGHT.withCost().to(),
+                        SPLAY_TIGHT.withCost.to,
                         SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
                         SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
                         Annotation.zero(1),
@@ -349,7 +387,7 @@ public class Tactics {
                 "SplayTree.delete_eq", Config.of(
                         CombinedFunctionAnnotation.of(
                                 SmartRangeHeuristic.DEFAULT.generate("Q", 1),
-                                SPLAY_EXPECTED_TACAS.withCost().to(),
+                                SPLAY_EXPECTED_TACAS.withCost.to,
                                 SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
                                 SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
                                 Annotation.zero(1),
@@ -357,7 +395,7 @@ public class Tactics {
                 "SplayTree.insert_eq", Config.of(
                         CombinedFunctionAnnotation.of(
                                 SmartRangeHeuristic.DEFAULT.generate("Q", 1),
-                                SPLAY_EXPECTED_TACAS.withCost().to(),
+                                SPLAY_EXPECTED_TACAS.withCost.to,
                                 SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
                                 SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
                                 SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
@@ -698,14 +736,14 @@ public class Tactics {
     //noinspection OptionalGetWithoutIsPresent
     final var annotations =
         immutableAnnotations.entrySet().stream()
-            .filter(entry -> entry.getValue().annotation().isPresent())
+            .filter(entry -> entry.getValue().annotation.isPresent())
             .collect(
-                Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().annotation().get()));
+                Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().annotation.get()));
 
     //noinspection OptionalGetWithoutIsPresent
     final var tactics =
         immutableAnnotations.entrySet().stream()
-            .filter(entry -> entry.getValue().tactic().isPresent())
+            .filter(entry -> entry.getValue().tactic.isPresent())
             .collect(
                 Collectors.toMap(
                     Map.Entry::getKey,
@@ -716,7 +754,7 @@ public class Tactics {
                             "test",
                             "resources",
                             "tactics",
-                            entry.getValue().tactic().get() + ".txt")));
+                            entry.getValue().tactic.get() + ".txt")));
 
     final var optionalProver = program.proveWithTactics(annotations, tactics, true);
     assertTrue(optionalProver.isPresent());
@@ -749,33 +787,33 @@ public class Tactics {
       FunctionAnnotation functionAnnotation = fd.getInferredSignature().getAnnotation().get();
       final var setCounting = Optimization.setCounting(functionAnnotation);
       if (setCounting.isPresent()) {
-        setCountingRankCoefficients.addAll(setCounting.get().rankCoefficients());
-        setCountingNonRankCoefficients.addAll(setCounting.get().nonRankCoefficients());
-        setCountingConstraints.addAll(setCounting.get().constraints());
+        setCountingRankCoefficients.addAll(setCounting.get().rankCoefficients);
+        setCountingNonRankCoefficients.addAll(setCounting.get().nonRankCoefficients);
+        setCountingConstraints.addAll(setCounting.get().constraints);
       }
 
       final var pairwiseDiff = Optimization.pairwiseDiff(functionAnnotation);
       if (pairwiseDiff.isPresent()) {
-        pairwiseDiffRankCoefficients.addAll(pairwiseDiff.get().rankCoefficients());
-        pairwiseDiffNonRankCoefficients.addAll(pairwiseDiff.get().nonRankCoefficients());
-        pairwiseDiffConstraints.addAll(pairwiseDiff.get().constraints());
+        pairwiseDiffRankCoefficients.addAll(pairwiseDiff.get().rankCoefficients);
+        pairwiseDiffNonRankCoefficients.addAll(pairwiseDiff.get().nonRankCoefficients);
+        pairwiseDiffConstraints.addAll(pairwiseDiff.get().constraints);
       }
 
-      if (functionAnnotation.to().size() == 1) {
+      if (functionAnnotation.to.size() == 1) {
         hackingConstraints.add(
             new LessThanOrEqualConstraint(
-                ONE, functionAnnotation.to().getRankCoefficient(), "(hack) force rank"));
+                ONE, functionAnnotation.to.getRankCoefficient(), "(hack) force rank"));
       }
 
       /*
       if (fd.getFullyQualifiedName().equals(SPLAY_FQN) && tactics.getOrDefault(SPLAY_FQN, Path.of("/")).toString().contains("zigzig-light")) {
-        pairwiseDiffConstraints.add(new EqualityConstraint(fd.getAnnotation().from().getRankCoefficient(0), fd.getAnnotation().to().getRankCoefficient(0), "fix rk"));
+        pairwiseDiffConstraints.add(new EqualityConstraint(fd.getAnnotation().from.getRankCoefficient(0), fd.getAnnotation().to.getRankCoefficient(0), "fix rk"));
       }
 
       if (Set.of(SPLAY_FQN, MERGE_PAIRS).contains(fd.getFullyQualifiedName())) {
         pairwiseDiffConstraints.add(new
-                EqualityConstraint(fd.getAnnotation().from().getRankCoefficient(),
-        fd.getAnnotation().to().getRankCoefficient(), "hacking"));
+                EqualityConstraint(fd.getAnnotation().from.getRankCoefficient(),
+        fd.getAnnotation().to.getRankCoefficient(), "hacking"));
       }
        */
     }
@@ -791,7 +829,7 @@ public class Tactics {
 
     if (true
         || immutableAnnotations.values().stream()
-            .anyMatch(config -> config.annotation().isEmpty())) {
+            .anyMatch(config -> config.annotation.isEmpty())) {
       final var minimizationConstraints =
           union(union(setCountingConstraints, pairwiseDiffConstraints), hackingConstraints);
 

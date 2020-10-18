@@ -14,7 +14,7 @@
           buildInputs = [
             dot2tex
             gradle
-            jdk14
+            jdk11
             stack
             z3
           ];
