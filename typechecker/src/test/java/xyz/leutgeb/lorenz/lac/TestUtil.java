@@ -96,6 +96,11 @@ public class TestUtil {
 
     var acs = new ArrayList<AnnotatingContext>(prover.getNamed().size());
     var as = new ArrayList<Annotation>(prover.getNamed().size());
+
+    if (as.isEmpty() && acs.isEmpty()) {
+      return "";
+    }
+
     for (var entry : prover.getNamed().entrySet()) {
       acs.add(entry.getValue().getContext().substitute(solution.get()).rename(entry.getKey()));
       as.add(

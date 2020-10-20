@@ -1,5 +1,14 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.optimiziation;
 
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
@@ -9,16 +18,6 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.ExclusiveDisjunctiveConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.IfThenElseConstraint;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 
 public class Optimization {
   @Value

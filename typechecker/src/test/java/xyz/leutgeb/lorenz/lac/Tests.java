@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.isWeirdIndex;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.THREE;
@@ -19,6 +18,7 @@ import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.ord;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.ALPHA;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.BETA;
 import static xyz.leutgeb.lorenz.lac.util.Util.fqnToFlatFilename;
+import static xyz.leutgeb.lorenz.lac.util.Util.loadZ3;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -36,7 +36,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jgrapht.nio.AttributeType;
 import org.jgrapht.nio.DefaultAttribute;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -65,7 +67,6 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 import xyz.leutgeb.lorenz.lac.util.Fraction;
 import xyz.leutgeb.lorenz.lac.util.NidiExporter;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
-import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Timeout(value = 1, unit = TimeUnit.MINUTES)
 public class Tests {
@@ -134,8 +135,8 @@ public class Tests {
         arguments("Tree.clone", sig(ALPHA, ATREE, ATREE), 0),
         arguments("PairingHeap.is_root", sig(ATREE, BOOL), 0),
         arguments("PairingHeap.link", sig(singleton(ord(ALPHA)), ATREE, ATREE), 0),
-        arguments("PairingHeap.merge", sig(singleton(ord(ALPHA)), ATREE, ATREE, ATREE), 1),
-        arguments("PairingHeap.insert", sig(singleton(ord(ALPHA)), ALPHA, ATREE, ATREE), 3),
+        // arguments("PairingHeap.merge", sig(singleton(ord(ALPHA)), ATREE, ATREE, ATREE), 1),
+        // arguments("PairingHeap.insert", sig(singleton(ord(ALPHA)), ALPHA, ATREE, ATREE), 3),
         arguments("Scratch.empty_1", sig(ATREE, BOOL), 0),
         arguments("Scratch.empty_2", sig(ATREE, BOOL), 1),
         arguments("Scratch.id", sig(ALPHA, ALPHA), 0),
@@ -181,13 +182,7 @@ public class Tests {
     final var exporter =
         new NidiExporter<Identifier, SizeEdge>(
             identifier ->
-                identifier.getName()
-                    + "_"
-                    + (identifier.getIntro() == null
-                        ? "null"
-                        : (identifier.getIntro().getFqn()
-                            + "_"
-                            + Util.stamp(identifier.getIntro().getExpression()))));
+                identifier.getName() + "_" + (identifier.getIntro() == null ? "null" : identifier));
     exporter.setVertexAttributeProvider(
         v -> Map.of("label", new DefaultAttribute<>(v.getName(), AttributeType.STRING)));
     exporter.setEdgeAttributeProvider(
@@ -210,6 +205,11 @@ public class Tests {
     return result;
   }
 
+  @BeforeAll
+  public static void beforeAll() {
+    loadZ3();
+  }
+
   @ParameterizedTest
   @MethodSource("nonConstantCostDefinitions")
   void nonConstantCost(String fqn, FunctionSignature expectedSignature) throws Exception {
@@ -223,8 +223,6 @@ public class Tests {
     assertNotNull(definition);
     assertEquals(expectedSignature, definition.getAnnotatedSignature(), "annotated signature");
     assertEquals(expectedSignature, definition.getInferredSignature(), "inferred signature");
-
-    System.out.println("Testing " + fqn);
 
     // TODO(lorenz.leutgeb): Check outcome.
     program.solve();
@@ -268,9 +266,9 @@ public class Tests {
   @MethodSource("infiniteCostDefinitions")
   void infiniteCost(String fqn) throws Exception {
     final var program = loadAndNormalizeAndInferAndUnshare(fqn);
-    System.out.println("Testing " + fqn);
     final var solution = program.solve();
     program.ingest(solution);
+    program.printAllInferredSignaturesInOrder(System.out);
     assertTrue(solution.isEmpty());
   }
 
@@ -281,7 +279,6 @@ public class Tests {
     final var program = loadAndNormalizeAndInferAndUnshare(fqn);
     final var definition = program.getFunctionDefinitions().get(fqn);
 
-    System.out.println("Testing " + fqn);
     assertEquals(expectedSignature, definition.getInferredSignature());
 
     final var solution = program.solve();
@@ -323,13 +320,14 @@ public class Tests {
 
   @ParameterizedTest
   @MethodSource("constantCostDefinitions")
+  @DisplayName("Constant Cost")
+  @Timeout(value = 15)
   void constantCost(final String fqn, FunctionSignature expectedSignature, int constantCost)
       throws Exception {
     final var program = loadAndNormalizeAndInferAndUnshare(fqn);
     final var definition = program.getFunctionDefinitions().get(fqn);
 
     assertNotNull(definition);
-    System.out.println("Testing " + fqn);
     assertEquals(expectedSignature, definition.getInferredSignature());
 
     final var returnsTree = expectedSignature.getType().getTo() instanceof TreeType;
@@ -525,9 +523,7 @@ public class Tests {
   }
 
   @Test
-  void fiddle() throws Exception {
-    assertTrue(isWeirdIndex(List.of(1)));
-  }
+  void fiddle() throws Exception {}
 
   private enum ExpectedResult {
     SAT,

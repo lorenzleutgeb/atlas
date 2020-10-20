@@ -18,7 +18,6 @@ import guru.nidi.graphviz.engine.GraphvizCmdLineEngine;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Link;
 import guru.nidi.graphviz.model.Node;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -49,50 +48,54 @@ public abstract class Constraint {
     this.reason = reason;
   }
 
-  public static void plot(String name, Set<Constraint> constraints, Path path) throws IOException {
-    Graph graph =
-        graph(name)
-            .directed()
-            .graphAttr()
-            .with("ranksep", "2.5")
-            .graphAttr()
-            .with("splines", "ortho") /*.graphAttr().with(Rank.RankDir.BOTTOM_TO_TOP)*/;
+  public static void plot(String name, Set<Constraint> constraints, Path path) {
+    try {
+      Graph graph =
+          graph(name)
+              .directed()
+              .graphAttr()
+              .with("ranksep", "2.5")
+              .graphAttr()
+              .with("splines", "ortho") /*.graphAttr().with(Rank.RankDir.BOTTOM_TO_TOP)*/;
 
-    var nodes = new HashMap<Coefficient, Node>();
+      var nodes = new HashMap<Coefficient, Node>();
 
-    // var clusters = new HashMap<String, Graph>();
+      // var clusters = new HashMap<String, Graph>();
 
-    for (var constraint : constraints) {
-      for (var it : constraint.occurringCoefficients()) {
-        var s = it.toString();
-        var label = s.startsWith("h") ? Records.of(s.substring(1).split(",")) : Label.of(s);
-        nodes.put(it, rawObjectNode(it).with(label));
-        // if (it instanceof  UnknownCoefficient) {
-        //	var name = ((UnknownCoefficient) it).getName().split(" ")[0];
-        //	var cluster = clusters.getOrDefault(name, graph(name).cluster());
-        //  var node = objectNode(it);
-        //	cluster = cluster.with(node);
-        //	clusters.put(name, cluster);
-        // }
-        // graph = graph.with(objectNode(it));
+      for (var constraint : constraints) {
+        for (var it : constraint.occurringCoefficients()) {
+          var s = it.toString();
+          var label = s.startsWith("h") ? Records.of(s.substring(1).split(",")) : Label.of(s);
+          nodes.put(it, rawObjectNode(it).with(label));
+          // if (it instanceof  UnknownCoefficient) {
+          //	var name = ((UnknownCoefficient) it).getName().split(" ")[0];
+          //	var cluster = clusters.getOrDefault(name, graph(name).cluster());
+          //  var node = objectNode(it);
+          //	cluster = cluster.with(node);
+          //	clusters.put(name, cluster);
+          // }
+          // graph = graph.with(objectNode(it));
+        }
       }
-    }
 
-    // for (var cluster : clusters.values()) {
-    //  graph = graph.with(cluster);
-    // }
+      // for (var cluster : clusters.values()) {
+      //  graph = graph.with(cluster);
+      // }
 
-    for (var it : constraints) {
-      graph = it.toGraph(graph, nodes);
-    }
-    var lel = new GraphvizCmdLineEngine();
-    lel.timeout(2, TimeUnit.MINUTES);
-    Graphviz.useEngine(lel);
-    var viz = Graphviz.fromGraph(graph);
-    Path target = path.resolve(name + "-constraints.svg");
-    try (final var out = Files.newOutputStream(target)) {
-      viz.engine(Engine.DOT).render(Format.SVG).toOutputStream(out);
-      log.info("Wrote plot to {}", target);
+      for (var it : constraints) {
+        graph = it.toGraph(graph, nodes);
+      }
+      var lel = new GraphvizCmdLineEngine();
+      lel.timeout(2, TimeUnit.MINUTES);
+      Graphviz.useEngine(lel);
+      var viz = Graphviz.fromGraph(graph);
+      Path target = path.resolve(name + "-constraints.svg");
+      try (final var out = Files.newOutputStream(target)) {
+        viz.engine(Engine.DOT).render(Format.SVG).toOutputStream(out);
+        log.info("Wrote plot to {}", target);
+      }
+    } catch (Exception e) {
+      log.warn("Non-critical exception thrown.", e);
     }
   }
 

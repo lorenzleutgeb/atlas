@@ -1,7 +1,14 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
+import static java.util.Collections.singleton;
+
+import com.google.common.collect.Sets;
 import java.io.PrintStream;
-import java.util.*;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.Stack;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.NonNull;
@@ -9,6 +16,7 @@ import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
 import xyz.leutgeb.lorenz.lac.ast.sources.Predefined;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
+import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.BoolType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
@@ -18,9 +26,11 @@ import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.util.Util;
 
 public class Identifier extends Expression {
-  public static final Identifier LEAF = new Identifier(Predefined.INSTANCE, "leaf");
-  private static final Set<String> CONSTANT_NAMES = Set.of("true", "false", "leaf");
+  public static final String LEAF_NAME = "leaf";
+  public static final Identifier DUMMY_TREE_ALPHA =
+      new Identifier(Predefined.INSTANCE, "_", new TreeType(TypeVariable.ALPHA));
   private static final Set<String> BOOLEAN_NAMES = Set.of("true", "false");
+  private static final Set<String> CONSTANT_NAMES = Sets.union(BOOLEAN_NAMES, singleton(LEAF_NAME));
 
   @NonNull @Getter private final String name;
   @Getter private Intro intro;
@@ -36,6 +46,31 @@ public class Identifier extends Expression {
     Objects.requireNonNull(name);
     this.name = name;
     this.intro = intro;
+  }
+
+  private static Identifier predefined(String name, Type type) {
+    return new Identifier(Predefined.INSTANCE, name, type, SystemIntro.INSTANCE);
+  }
+
+  public static Identifier predefinedBase(String name, TypeVariable type) {
+    return new Identifier(Predefined.INSTANCE, name, type, SystemIntro.INSTANCE);
+  }
+
+  public static Identifier predefinedBase(String name) {
+    return predefinedBase(name, TypeVariable.ALPHA);
+  }
+
+  public static Identifier predefinedTree(String name) {
+    return predefinedTree(name, TypeVariable.ALPHA);
+  }
+
+  public static Identifier predefinedTree(String name, TypeVariable typeVariable) {
+    return predefined(name, new TreeType(typeVariable));
+  }
+
+  @Deprecated
+  public Identifier(Source source, @NonNull String name, Type type) {
+    this(source, name, type, SystemIntro.INSTANCE);
   }
 
   public static Identifier getSugar(Source source, IntIdGenerator idGenerator) {
@@ -62,7 +97,7 @@ public class Identifier extends Expression {
 
   @Override
   public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
-    if (name.equals(LEAF.name)) {
+    if (name.equals(LEAF_NAME)) {
       return new TreeType(context.fresh());
     }
     if (BOOLEAN_NAMES.contains(name)) {
@@ -110,7 +145,7 @@ public class Identifier extends Expression {
     if (!(type instanceof TreeType) || isConstant()) {
       return Collections.emptySet();
     }
-    return Collections.singleton(this);
+    return singleton(this);
   }
 
   private boolean isConstant() {
@@ -137,7 +172,7 @@ public class Identifier extends Expression {
 
   @Override
   public void printHaskellTo(PrintStream out, int indentation, String currentFunction) {
-    if (name.equals((LEAF.name))) {
+    if (name.equals((LEAF_NAME))) {
       out.print("Leaf");
     } else if (BOOLEAN_NAMES.contains(name)) {
       out.print(Util.capitalizeFirstLetter(name));

@@ -2,16 +2,23 @@ package xyz.leutgeb.lorenz.lac.ast;
 
 import static com.google.common.collect.Sets.union;
 import static xyz.leutgeb.lorenz.lac.util.Util.mapToString;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
 import java.io.PrintStream;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
+import xyz.leutgeb.lorenz.lac.ast.sources.Predefined;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
+import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
@@ -39,6 +46,22 @@ public class NodeExpression extends Expression {
       throw new IllegalArgumentException("only tuples with exactly three elements are supported");
     }
     this.elements = elements;
+  }
+
+  public static NodeExpression predefinedNode(Identifier left, Identifier right) {
+    return new NodeExpression(
+        Predefined.INSTANCE,
+        List.of(left, Identifier.predefinedBase(randomHex()), right),
+        new TreeType(TypeVariable.ALPHA));
+  }
+
+  public static NodeExpression predefinedNode(
+      Identifier left, Identifier middle, Identifier right) {
+    // TODO: Check whether type of left and right matches up with type of middle.
+    return new NodeExpression(
+        Predefined.INSTANCE,
+        List.of(left, middle, right),
+        new TreeType((TypeVariable) middle.getType()));
   }
 
   public Expression getLeft() {

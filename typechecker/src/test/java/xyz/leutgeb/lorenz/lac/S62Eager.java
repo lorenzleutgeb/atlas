@@ -174,10 +174,7 @@ public class S62Eager extends S62 {
 
     final var rootObligation =
         new Obligation(
-            new AnnotatingContext(contextIds, Q3),
-            E4,
-            globals.getSignature(FQN).withCost.to,
-            1);
+            new AnnotatingContext(contextIds, Q3), E4, globals.getSignature(FQN).withCost.to, 1);
 
     final Prover prover = new Prover("splay-above", globals, Paths.get("out"));
 

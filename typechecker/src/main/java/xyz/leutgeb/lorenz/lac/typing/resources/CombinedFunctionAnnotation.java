@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
@@ -15,8 +14,8 @@ import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 @Value
 @AllArgsConstructor
 public class CombinedFunctionAnnotation {
-    public FunctionAnnotation withCost;
-    public Set<FunctionAnnotation> withoutCost;
+  public FunctionAnnotation withCost;
+  public Set<FunctionAnnotation> withoutCost;
 
   public static CombinedFunctionAnnotation of(
       Annotation withCostFrom, Annotation withCostTo, Annotation... withoutCost) {
@@ -52,5 +51,10 @@ public class CombinedFunctionAnnotation {
     return withCost.isNonInteger()
         || (!withoutCost.isEmpty()
             && withoutCost.stream().allMatch(FunctionAnnotation::isNonInteger));
+  }
+
+  public boolean isUnknown() {
+    return withCost.isUnknown()
+        || (!withoutCost.isEmpty() && withoutCost.stream().anyMatch(FunctionAnnotation::isUnknown));
   }
 }

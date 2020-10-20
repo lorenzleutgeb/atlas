@@ -1,5 +1,15 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
+import static com.google.common.collect.Sets.difference;
+import static guru.nidi.graphviz.attribute.Records.turn;
+import static guru.nidi.graphviz.model.Factory.graph;
+import static guru.nidi.graphviz.model.Factory.node;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singleton;
+import static java.util.stream.Collectors.toList;
+import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.minimize;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+
 import com.google.common.collect.Sets;
 import guru.nidi.graphviz.attribute.Records;
 import guru.nidi.graphviz.attribute.Shape;
@@ -7,6 +17,15 @@ import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jgrapht.graph.DirectedMultigraph;
@@ -32,27 +51,6 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static com.google.common.collect.Sets.difference;
-import static guru.nidi.graphviz.attribute.Records.turn;
-import static guru.nidi.graphviz.model.Factory.graph;
-import static guru.nidi.graphviz.model.Factory.node;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.singleton;
-import static java.util.stream.Collectors.toList;
-import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.minimize;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 @Data
 @Slf4j
@@ -189,13 +187,6 @@ public class FunctionDefinition {
   public void stubAnnotations(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       AnnotationHeuristic heuristic,
-      boolean infer) {
-    stubAnnotations(functionAnnotations, heuristic, true);
-  }
-
-  public void stubAnnotations(
-      Map<String, CombinedFunctionAnnotation> functionAnnotations,
-      AnnotationHeuristic heuristic,
       boolean cf,
       boolean infer) {
 
@@ -259,9 +250,7 @@ public class FunctionDefinition {
                 + " but it is only of size "
                 + predefined.withCost.from.size());
       }
-      if (returnsTree
-          ? predefined.withCost.to.size() != 1
-          : predefined.withCost.to.size() != 0) {
+      if (returnsTree ? predefined.withCost.to.size() != 1 : predefined.withCost.to.size() != 0) {
         throw new IllegalArgumentException(
             "the predefined annotation for the result of "
                 + getFullyQualifiedName()
@@ -342,23 +331,27 @@ public class FunctionDefinition {
     out.println();
   }
 
-  public void toGraph(OutputStream out) throws IOException {
-    // Graphviz.useEngine(new GraphvizCmdLineEngine());
-    Graph g = graph(name).directed(); // .graphAttr();//.with(RankDir.BOTTOM_TO_TOP);
-    Node root =
-        node(name)
-            .with(
-                Shape.DOUBLE_OCTAGON,
-                Records.of(
-                    turn(
-                        name,
-                        inferredSignature.toString().replace(">", "\\>").replace("<", "\\<"),
-                        inferredSignature.getAnnotation().get().from.getNameAndId()
-                            + " → "
-                            + inferredSignature.getAnnotation().get().to.getNameAndId())));
-    Graph result = body.toGraph(g, root);
-    var viz = Graphviz.fromGraph(result);
-    viz.render(Format.SVG).toOutputStream(out);
+  public void toGraph(OutputStream out) {
+    try {
+      // Graphviz.useEngine(new GraphvizCmdLineEngine());
+      Graph g = graph(name).directed(); // .graphAttr();//.with(RankDir.BOTTOM_TO_TOP);
+      Node root =
+          node(name)
+              .with(
+                  Shape.DOUBLE_OCTAGON,
+                  Records.of(
+                      turn(
+                          name,
+                          inferredSignature.toString().replace(">", "\\>").replace("<", "\\<"),
+                          inferredSignature.getAnnotation().get().from.getNameAndId()
+                              + " → "
+                              + inferredSignature.getAnnotation().get().to.getNameAndId())));
+      Graph result = body.toGraph(g, root);
+      var viz = Graphviz.fromGraph(result);
+      viz.render(Format.SVG).toOutputStream(out);
+    } catch (Exception e) {
+      log.warn("Non-critical exception thrown.", e);
+    }
   }
 
   public String getFullyQualifiedName() {

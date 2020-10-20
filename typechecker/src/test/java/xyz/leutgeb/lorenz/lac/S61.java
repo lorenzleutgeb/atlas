@@ -18,9 +18,9 @@ import java.util.Optional;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.Test;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
-import xyz.leutgeb.lorenz.lac.ast.Intro;
 import xyz.leutgeb.lorenz.lac.ast.LetExpression;
 import xyz.leutgeb.lorenz.lac.ast.NodeExpression;
+import xyz.leutgeb.lorenz.lac.ast.SourceIntro;
 import xyz.leutgeb.lorenz.lac.ast.sources.Predefined;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
@@ -108,7 +108,7 @@ public class S61 {
   public void lnf() {
     final var letTreeCf = Prover.LET_TREE_CF;
 
-    final var surroundingIntro = new Intro("Test." + NAME, null);
+    final var surroundingIntro = new SourceIntro("Test." + NAME, null);
 
     final var tpp = new Identifier(Predefined.INSTANCE, "t''", ATREE, surroundingIntro);
     final var tppp = new Identifier(Predefined.INSTANCE, "t'''", ATREE, surroundingIntro);

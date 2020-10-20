@@ -62,12 +62,10 @@ public class App implements Rule {
             signature.from,
             obligation.getContext().getAnnotation(),
             ruleName(obligation.getCost()) + " Q"),
-        signature
-            .to
-            .increment(
-                obligation.getAnnotation(),
-                obligation.getCost(),
-                ruleName(obligation.getCost()) + " Q' from signature = Q' + 1 from context"));
+        signature.to.increment(
+            obligation.getAnnotation(),
+            1,
+            ruleName(obligation.getCost()) + " Q' from signature = Q' + 1 from context"));
   }
 
   private List<Constraint> appPlus(Obligation obligation, FunctionAnnotation signature) {

@@ -17,7 +17,7 @@ import javax.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.ast.Expression;
-import xyz.leutgeb.lorenz.lac.ast.Intro;
+import xyz.leutgeb.lorenz.lac.ast.SourceIntro;
 import xyz.leutgeb.lorenz.lac.typing.simple.FunctionSignature;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.FunctionType;
@@ -36,7 +36,7 @@ public class UnificationContext {
    */
   Map<String, Type> types;
 
-  Map<String, Intro> intros;
+  Map<String, SourceIntro> intros;
 
   Set<String> hidden;
 
@@ -51,7 +51,7 @@ public class UnificationContext {
   private UnificationContext(
       UnificationContext parent,
       Map<String, Type> types,
-      Map<String, Intro> intros,
+      Map<String, SourceIntro> intros,
       Set<String> hidden,
       Map<String, FunctionSignature> signatures,
       String functionInScope,
@@ -139,7 +139,7 @@ public class UnificationContext {
     throw new TypeError(Util.undefinedText(id, iterateIdentifiers()));
   }
 
-  public Intro getIntro(final String id) {
+  public SourceIntro getIntro(final String id) {
     return getIntroRecursive(id);
   }
 
@@ -171,8 +171,8 @@ public class UnificationContext {
     }
   }
 
-  private Intro getIntroRecursive(final String key) {
-    Intro t = intros.get(key);
+  private SourceIntro getIntroRecursive(final String key) {
+    SourceIntro t = intros.get(key);
     if (t != null) {
       return t;
     } else if (parent != null) {
@@ -217,7 +217,7 @@ public class UnificationContext {
     }
 
     types.put(key, value);
-    intros.put(key, new Intro(this.functionInScope, intro));
+    intros.put(key, new SourceIntro(this.functionInScope, intro));
   }
 
   private Iterator<String> iterateIdentifiers() {

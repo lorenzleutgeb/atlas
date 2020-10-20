@@ -33,13 +33,13 @@ public class Fraction {
 
   @Override
   public String toString() {
-    String str = null;
+    String str = numerator < 0 ? "-" : "";
     if (denominator == 1) {
-      str = Integer.toString(numerator);
+      str += Integer.toString(numerator);
     } else if (numerator == 0) {
-      str = "0";
+      str += "0";
     } else {
-      str = numerator + " / " + denominator;
+      str += numerator + "/" + denominator;
     }
     return str;
   }

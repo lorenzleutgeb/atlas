@@ -1,22 +1,24 @@
 package xyz.leutgeb.lorenz.lac.commands;
 
-import picocli.CommandLine;
-import xyz.leutgeb.lorenz.lac.ast.Program;
-import xyz.leutgeb.lorenz.lac.module.Loader;
-import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import static xyz.leutgeb.lorenz.lac.util.Util.fqnToFlatFilename;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
-
-import static xyz.leutgeb.lorenz.lac.util.Util.fqnToFlatFilename;
+import picocli.CommandLine;
+import xyz.leutgeb.lorenz.lac.ast.Program;
+import xyz.leutgeb.lorenz.lac.module.Loader;
+import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
+import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
 @CommandLine.Command(name = "lnf")
 public class LNF implements Runnable {
-  @CommandLine.Option(defaultValue = ".", names = "--home", description = "Where to search for *.ml files containing function definitions.")
+  @CommandLine.Option(
+      defaultValue = ".",
+      names = "--home",
+      description = "Where to search for *.ml files containing function definitions.")
   private Path home;
 
   @CommandLine.Option(

@@ -1,5 +1,21 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.rules;
 
+import static com.google.common.collect.Lists.cartesianProduct;
+import static com.google.common.collect.Streams.concat;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toUnmodifiableList;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.INDEX_COMPARATOR;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.nonRankIndices;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.MINUS_ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.MINUS_TWO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
+import static xyz.leutgeb.lorenz.lac.util.Util.append;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
+
 import com.google.common.collect.Streams;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
@@ -7,6 +23,18 @@ import com.microsoft.z3.Context;
 import com.microsoft.z3.Expr;
 import com.microsoft.z3.IntNum;
 import com.microsoft.z3.Status;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +42,6 @@ import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
-import xyz.leutgeb.lorenz.lac.ast.sources.Predefined;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
@@ -26,42 +53,14 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.GreaterThanOrEqualConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.LessThanOrEqualConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
-import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
-import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
+import xyz.leutgeb.lorenz.lac.util.Pair;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
-import xyz.leutgeb.lorenz.lac.util.Util;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.BiFunction;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
-import static com.google.common.collect.Lists.cartesianProduct;
-import static com.google.common.collect.Streams.concat;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.toList;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.INDEX_COMPARATOR;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.nonRankIndices;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.MINUS_TWO;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
-import static xyz.leutgeb.lorenz.lac.util.Util.append;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
 @Slf4j
 public class W implements Rule {
   public static final W INSTANCE = new W();
 
-  private static final Map<List<List<Integer>>, List<Order<List<Integer>>>> MONO_CACHE =
+  private static final Map<List<List<Integer>>, List<LessThanOrEqual<List<Integer>>>> MONO_CACHE =
       new HashMap<>();
 
   private static List<Constraint> compareCoefficientsGreaterOrEqual(
@@ -116,8 +115,8 @@ public class W implements Rule {
         path ->
             path.getEdgeList().stream().allMatch(edge -> SizeEdge.Kind.EQ.equals(edge.getKind()));
 
-    Set<Order<Integer>> knowGt = new HashSet<>();
-    Set<Order<Integer>> knowEq = new HashSet<>();
+    Set<LessThan<Integer>> knowLt = new HashSet<>();
+    Set<Equal<Integer>> knowEq = new HashSet<>();
     cartesianProduct(identifiers, identifiers).stream()
         .filter(pair -> !pair.get(0).equals(pair.get(1)))
         .filter(pair -> sizeAnalysis.containsVertex(pair.get(0)))
@@ -130,27 +129,31 @@ public class W implements Rule {
             paths -> {
               final var pathGt = paths.stream().filter(isGt).findFirst();
               if (pathGt.isPresent()) {
-                knowGt.add(
-                    new Order<>(
-                        identifiers.indexOf(pathGt.get().getStartVertex()),
-                        identifiers.indexOf(pathGt.get().getEndVertex())));
+                knowLt.add(
+                    new LessThan<>(
+                        identifiers.indexOf(pathGt.get().getEndVertex()),
+                        identifiers.indexOf(pathGt.get().getStartVertex())));
                 return;
               }
               final var pathEq = paths.stream().filter(isEq).findFirst();
               if (pathEq.isPresent()) {
-                knowEq.add(
-                    new Order<>(
-                        identifiers.indexOf(pathEq.get().getStartVertex()),
-                        identifiers.indexOf(pathEq.get().getEndVertex())));
+                int startIndex = identifiers.indexOf(pathEq.get().getStartVertex());
+                int endIndex = identifiers.indexOf(pathEq.get().getEndVertex());
+                if (startIndex < endIndex) {
+                  knowEq.add(new Equal<>(startIndex, endIndex));
+                }
               }
             });
 
-    if (!knowGt.isEmpty() || !knowEq.isEmpty()) {
-      log.info("Size analysis useful ({})!", identifiers);
+    if (!knowLt.isEmpty() || !knowEq.isEmpty()) {
+      log.info(
+          "Size analysis useful ({}, {})!",
+          knowLt.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()),
+          knowEq.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
     }
 
     final List<Constraint> constraints = new ArrayList<>();
-    // TODO(lorenz.leutgeb): What about rank coefficients?
+    // TODO(lorenz.leutgeb): Exploit |t| > |t'| ==> rk(t) > rk(t')
     IntStream.range(0, left.size())
         .mapToObj(
             i ->
@@ -165,28 +168,36 @@ public class W implements Rule {
     final var n = potentialFunctions.size();
 
     // TODO(lorenz.leutgeb): This is a little inefficient: We compute the full cartesian product,
-    // and
-    // then filter out most pairs. It would be much better to only generate matching
-    // pairs in the first place.
+    // and then filter out most pairs. It would be much better to only generate matching pairs in
+    // the first place.
     // final var monoStamp = DateTime.now();
-    // final List<Order<List<Integer>>> monoKnowledge = emptyList();
-    final List<Order<List<Integer>>> monoKnowledge =
-        knowGt.isEmpty()
+    final List<LessThanOrEqual<List<Integer>>> monotonyInstances =
+        knowLt.isEmpty() && knowEq.isEmpty()
             ? MONO_CACHE.computeIfAbsent(
                 potentialFunctions,
                 (key) ->
                     cartesianProduct(potentialFunctions, potentialFunctions).stream()
-                        .filter(pair -> lessThanOrEqual(pair.get(0), pair.get(1), knowGt))
-                        .filter(pair -> !pair.get(0).equals(pair.get(1)))
-                        .map(pair -> new Order<>(pair.get(0), pair.get(1)))
-                        .collect(toList()))
-            : lessThanOrEqual(potentialFunctions, emptySet());
+                        .filter(pair -> lessThanOrEqual(pair.get(0), pair.get(1), knowLt, knowEq))
+                        .map(pair -> new LessThanOrEqual<>(pair.get(0), pair.get(1)))
+                        .collect(toList())
+                // lessThan(potentialFunctions, emptySet(), emptySet())
+                )
+            : cartesianProduct(potentialFunctions, potentialFunctions).stream()
+                .filter(pair -> lessThanOrEqual(pair.get(0), pair.get(1), knowLt, knowEq))
+                .map(pair -> new LessThanOrEqual<>(pair.get(0), pair.get(1)))
+                .collect(toList());
 
-    final var lemmaKnowledge = lemma17(potentialFunctions);
-    // final List<List<List<Integer>>> lemmaKnowledge = emptyList();
+    final var lemma2XYInstances = lemma2XY(potentialFunctions);
+    // final List<List<List<Integer>>> lemma2XYInstances = emptyList();
+
+    // final var lemmaPlus1Instances = lemmaPlus1(potentialFunctions);
+    final List<Pair<List<Integer>, List<Integer>>> lemmaPlus1Instances = emptyList();
+    // log.info("{}", lemmaPlus1Instances);
+
+    // TODO: Exploit 1 + log(x) >= log(x + 1)
 
     // m is the number of rows of expert knowledge.
-    final var m = monoKnowledge.size() + lemmaKnowledge.size();
+    final var m = monotonyInstances.size() + lemma2XYInstances.size() + lemmaPlus1Instances.size();
     // log.info("m = {}", m);
 
     if (m == 0) {
@@ -199,7 +210,7 @@ public class W implements Rule {
     final var p = potentialFunctions.stream().map(left::getCoefficientOrZero).collect(toList());
     final var q = potentialFunctions.stream().map(right::getCoefficientOrZero).collect(toList());
 
-    // Note: We do not add constraints saying f ≥ 0. This is generated for all unknown coefficients!
+    // NOTE: We do not add constraints saying f ≥ 0. This is generated for all unknown coefficients!
     final var f =
         IntStream.range(0, m)
             .mapToObj(i -> new UnknownCoefficient(wid + ".f[" + i + "]"))
@@ -214,12 +225,12 @@ public class W implements Rule {
     }
 
     // First, we handle comparison with monotony.
-    if (!monoKnowledge.isEmpty()) {
+    if (!monotonyInstances.isEmpty()) {
       for (int column = 0; column < n; column++) {
         final List<Integer> potentialFunction = potentialFunctions.get(column);
         final List<Coefficient> sum = sumByColumn.get(column);
-        for (int row = 0; row < monoKnowledge.size(); row++) {
-          final var knowledgeRow = monoKnowledge.get(row);
+        for (int row = 0; row < monotonyInstances.size(); row++) {
+          final var knowledgeRow = monotonyInstances.get(row);
           if (potentialFunction.equals(knowledgeRow.smaller)) {
             sum.add(f.get(row));
           } else if (potentialFunction.equals(knowledgeRow.larger)) {
@@ -229,14 +240,14 @@ public class W implements Rule {
       }
     }
 
-    // Then we handle lemma 17.
-    if (!lemmaKnowledge.isEmpty()) {
-      final var lemmaOffset = monoKnowledge.size();
+    // Then we handle lemma2XY.
+    if (!lemma2XYInstances.isEmpty()) {
+      final var lemmaOffset = monotonyInstances.size();
       for (int column = 0; column < n; column++) {
         final List<Integer> potentialFunction = potentialFunctions.get(column);
         final List<Coefficient> sum = sumByColumn.get(column);
-        for (int row = 0; row < lemmaKnowledge.size(); row++) {
-          final var knowledgeRow = lemmaKnowledge.get(row);
+        for (int row = 0; row < lemma2XYInstances.size(); row++) {
+          final var knowledgeRow = lemma2XYInstances.get(row);
           UnknownCoefficient fi = f.get(row + lemmaOffset);
           if (potentialFunction.equals(knowledgeRow.get(0))) {
             sum.add(fi);
@@ -249,7 +260,7 @@ public class W implements Rule {
                 new EqualsProductConstraint(
                     prod, List.of(MINUS_TWO, fi), "(w:l17) " + prod + " = (-2) * " + fi));
             sum.add(prod);
-          } else if (Util.isConstant(potentialFunction)) {
+          } else if (Annotation.isUnitIndex(potentialFunction)) {
             UnknownCoefficient prod =
                 UnknownCoefficient.maybeNegative(wid + ".l17.prod[" + column + "," + row + "]");
             constraints.add(
@@ -268,7 +279,7 @@ public class W implements Rule {
 
       /*
       final List<Coefficient> fbsum = new ArrayList<>();
-      for (int i = 0; i < lemmaKnowledge.size(); i++) {
+      for (int i = 0; i < lemma2XYInstances.size(); i++) {
         UnknownCoefficient x = UnknownCoefficient.maybeNegative(wid + ".(f * b)[" + i + "]");
         UnknownCoefficient fi = f.get(lemmaOffset + i);
         constraints.add(
@@ -283,6 +294,36 @@ public class W implements Rule {
       constraints.add(
           new LessThanOrEqualConstraint(fbcp, cq, "(w:l17) " + fbcp + " ≤ " + wid + ".c_q"));
       */
+    }
+
+    // Then we handle lemma1Plus.
+    if (!lemmaPlus1Instances.isEmpty()) {
+      final var lemmaOffset = monotonyInstances.size() + lemma2XYInstances.size();
+      for (int column = 0; column < n; column++) {
+        final List<Integer> potentialFunction = potentialFunctions.get(column);
+        final List<Coefficient> sum = sumByColumn.get(column);
+        for (int row = 0; row < lemmaPlus1Instances.size(); row++) {
+          final var knowledgeRow = lemmaPlus1Instances.get(row);
+          UnknownCoefficient fi = f.get(row + lemmaOffset);
+          if (potentialFunction.equals(knowledgeRow.getLeft())) {
+            UnknownCoefficient prod =
+                UnknownCoefficient.maybeNegative(wid + ".l17.prod[" + column + "," + row + "]");
+            constraints.add(
+                new EqualsProductConstraint(
+                    prod, List.of(MINUS_ONE, fi), "(w:l17) " + prod + " = (-1) * " + fi));
+            sum.add(prod);
+          } else if (potentialFunction.equals(knowledgeRow.getRight())) {
+            sum.add(fi);
+          } else if (Annotation.isUnitIndex(potentialFunction)) {
+            UnknownCoefficient prod =
+                UnknownCoefficient.maybeNegative(wid + ".l17.prod[" + column + "," + row + "]");
+            constraints.add(
+                new EqualsProductConstraint(
+                    prod, List.of(MINUS_ONE, fi), "(w:l17) " + prod + " = (-1) * " + fi));
+            sum.add(prod);
+          }
+        }
+      }
     }
 
     // fb + c_p ≤ c_q (Note: fb is computed using dot product. Since b is all zeros, we simplify
@@ -302,14 +343,50 @@ public class W implements Rule {
     return constraints;
   }
 
-  private static List<List<List<Integer>>> lemma17(List<List<Integer>> potentialFunctions) {
+  /**
+   * ∀ x ≥ 1, y ≥ 1 . 2 + log(x) + log(y) ≤ 2 * log(x + y)
+   *
+   * <p>Matrix row looks like:
+   *
+   * <table>
+   *   <thead><th>c</th><th>x</th><th>y</th><th>x + y</th></thead>
+   *   <tbody><td>2</td><td>1</td><td>1</td><td>-2</td></tbody>
+   * </table>
+   *
+   * @return Instantiations as lists with three elements. The first element corresponds to x, the
+   *     second element corresponds to y and the third element corresponds to x + y.
+   */
+  private static List<List<List<Integer>>> lemma2XY(List<List<Integer>> potentialFunctions) {
     final var set = Set.copyOf(potentialFunctions);
     return cartesianProduct(potentialFunctions, potentialFunctions).stream()
-        .filter(pair -> !Util.isConstant(pair.get(0)))
-        .filter(pair -> !Util.isConstant(pair.get(1)))
+        .filter(pair -> !Annotation.isUnitIndex(pair.get(0))) // x is not unit
+        .filter(pair -> !Annotation.isUnitIndex(pair.get(1))) // y is not unit
         .filter(pair -> INDEX_COMPARATOR.compare(pair.get(0), pair.get(1)) < 1)
         .map(pair -> List.of(pair.get(0), pair.get(1), sum(pair.get(0), pair.get(1))))
         .filter(triple -> set.contains(triple.get(2)))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * ∀ x ≥ 1. log(x + 1) ≤ 1 + log(x)
+   *
+   * <p>Matrix row looks like:
+   *
+   * <table>
+   *   <thead><th>c</th><th>x</th><th>x + 1</th></thead>
+   *   <tbody><td>-1</td><td>-1</td><td>1</td></tbody>
+   * </table>
+   *
+   * @return Instantations as pairs. The left element corresponds to x, the right element
+   *     corresponds to x + 1.
+   */
+  private static List<Pair<List<Integer>, List<Integer>>> lemmaPlus1(
+      List<List<Integer>> potentialFunctions) {
+    final var set = Set.copyOf(potentialFunctions);
+    return potentialFunctions.stream()
+        .filter(Predicate.not(Annotation::isUnitIndex)) // x is not unit
+        .map(x -> Pair.of(x, sum(x, unitIndex(x.size() - 1))))
+        .filter(instance -> set.contains(instance.getRight()))
         .collect(Collectors.toList());
   }
 
@@ -338,11 +415,7 @@ public class W implements Rule {
                     : */ compareCoefficientsLessOrEqualUsingFarkas(
                     obligation.getContext().getIds(), p, q, globals.getSizeAnalysis()),
                 compareCoefficientsLessOrEqualUsingFarkas(
-                    qp.size() > 0
-                        ? singletonList(
-                            new Identifier(
-                                Predefined.INSTANCE, "_", new TreeType(TypeVariable.ALPHA), null))
-                        : emptyList(),
+                    qp.size() > 0 ? singletonList(Identifier.DUMMY_TREE_ALPHA) : emptyList(),
                     qp,
                     pp,
                     globals.getSizeAnalysis())
@@ -353,110 +426,195 @@ public class W implements Rule {
 
   @Value
   @AllArgsConstructor
-  public static class Order<T> {
-    T smaller;
-    T larger;
+  public static class Equal<T> {
+    public T left;
+    public T right;
+
+    @Override
+    public String toString() {
+      return left + " = " + right;
+    }
+
+    public <U> Equal<U> map(Function<T, U> f) {
+      return new Equal<>(f.apply(left), f.apply(right));
+    }
+  }
+
+  @Value
+  @AllArgsConstructor
+  public static class LessThanOrEqual<T> {
+    public T smaller;
+    public T larger;
+
+    @Override
+    public String toString() {
+      return smaller + " <= " + larger;
+    }
+
+    public <U> LessThanOrEqual<U> map(Function<T, U> f) {
+      return new LessThanOrEqual<>(f.apply(smaller), f.apply(larger));
+    }
+  }
+
+  @Value
+  @AllArgsConstructor
+  public static class LessThan<T> {
+    public T smaller;
+    public T larger;
+
+    @Override
+    public String toString() {
+      return smaller + " < " + larger;
+    }
+
+    public <U> LessThan<U> map(Function<T, U> f) {
+      return new LessThan<>(f.apply(smaller), f.apply(larger));
+    }
   }
 
   @Deprecated
-  public static List<Order<List<Integer>>> lessThanOrEqual(
-      List<List<Integer>> potentialFunctions, Set<Order<Integer>> expertGt) {
+  public static List<LessThanOrEqual<List<Integer>>> lessThanOrEqual(
+      List<List<Integer>> potentialFunctions,
+      Set<LessThan<Integer>> expertLt,
+      Set<Equal<Integer>> expertEq) {
     if (potentialFunctions.isEmpty()) {
       return emptyList();
     }
 
-    final var ctx = new Context(Map.of("unsat_core", "true"));
-    final ArithExpr zero = ctx.mkInt(0);
-    final ArithExpr one = ctx.mkInt(1);
-    final var solver = ctx.mkSolver();
-    final var size = potentialFunctions.get(0).size();
+    // p1 and p2 represent linear combinations:
+    //
+    //     p1  =  a1.1 * x1 + a1.2 * x2 + a1.3 * x3 + ... + a1.n * xn + b1
+    //     p2  =  a2.1 * x1 + a2.2 * x2 + a2.3 * x3 + ... + a2.n * xn + b2
+    //
+    // expertLt represents additional knowledge about relations between xs,
+    // it might contain:
+    //
+    //     x1 < x2
+    //     x4 < x3
+    //
+    // We now must decide whether p1 <= p2. This is done by setting up a
+    // SMT instance that tries to find a solution such that p1 > p2 given
+    // expertLt. If this is not possible, we return true.
 
-    final List<ArithExpr> ls =
-        IntStream.range(0, size)
-            .mapToObj(i -> ctx.mkIntConst("l" + i))
-            .collect(Collectors.toUnmodifiableList());
+    // NOTE: We decrement to get the "size" that we also use for annotations.
+    final var size = potentialFunctions.get(0).size() - 1;
 
-    final List<ArithExpr> rs =
-        IntStream.range(0, size)
-            .mapToObj(i -> ctx.mkIntConst("r" + i))
-            .collect(Collectors.toUnmodifiableList());
+    if (size == 0) {
+      return cartesianProduct(potentialFunctions, potentialFunctions).stream()
+          .filter(
+              pair -> {
+                final var l = pair.get(0).get(0);
+                final var r = pair.get(1).get(0);
+                return l >= 1 && r >= 1 && l <= r;
+              })
+          .map(pair -> new LessThanOrEqual<>(pair.get(0), pair.get(1)))
+          .collect(toUnmodifiableList());
+    }
 
-    solver.add(encodeAll(potentialFunctions, ls, ctx));
-    solver.add(encodeAll(potentialFunctions, rs, ctx));
+    try (final var ctx = new Context()) {
+      final ArithExpr one = ctx.mkInt(1);
+      final var solver = ctx.mkSolver();
+      final ArithExpr depthBound = ctx.mkInt(16);
 
-    /*
-    solver.add(
-        ctx.mkNot(
-            ctx.mkAnd(Streams.zip(ls.stream(), rs.stream(), ctx::mkEq).toArray(BoolExpr[]::new))));
-     */
-
-    final var xSymbols =
-        IntStream.range(0, size - 1)
-            .mapToObj(i -> ctx.mkSymbol("x" + i))
-            .collect(Collectors.toUnmodifiableList());
-    final List<ArithExpr> xs =
-        xSymbols.stream().map(ctx::mkRealConst).collect(Collectors.toUnmodifiableList());
-
-    final var precondition =
-        ctx.mkAnd(
-            Stream.concat(
-                    xs.stream().map(x -> ctx.mkLe(one, x)),
-                    expertGt.stream()
-                        .map(pair -> ctx.mkGt(xs.get(pair.smaller), xs.get(pair.larger))))
-                .toArray(BoolExpr[]::new));
-    final var main =
-        ctx.mkLe(
-            ctx.mkAdd(
-                Streams.concat(
-                        Streams.zip(ls.stream(), xs.stream(), ctx::mkMul),
-                        Stream.of(ls.get(ls.size() - 1)))
-                    .toArray(ArithExpr[]::new)),
-            ctx.mkAdd(
-                Streams.concat(
-                        Streams.zip(rs.stream(), xs.stream(), ctx::mkMul),
-                        Stream.of(rs.get(rs.size() - 1)))
-                    .toArray(ArithExpr[]::new)));
-
-    solver.add(
-        ctx.mkForall(
-            xs.stream().toArray(Expr[]::new),
-            ctx.mkImplies(precondition, main),
-            1,
-            null,
-            null,
-            null,
-            null));
-
-    final List<Order<List<Integer>>> result = new ArrayList<>();
-    while (solver.check().equals(Status.SATISFIABLE)) {
-      final var model = solver.getModel();
-      final List<Integer> leftSolution =
-          ls.stream()
-              .map(model::getConstInterp)
-              .map(x -> (IntNum) x)
-              .map(IntNum::getInt)
+      final List<ArithExpr> ls =
+          IntStream.rangeClosed(0, size)
+              .mapToObj(i -> ctx.mkIntConst("l" + i))
               .collect(Collectors.toUnmodifiableList());
 
-      final List<Integer> rightSolution =
-          rs.stream()
-              .map(model::getConstInterp)
-              .map(x -> (IntNum) x)
-              .map(IntNum::getInt)
+      final List<ArithExpr> rs =
+          IntStream.rangeClosed(0, size)
+              .mapToObj(i -> ctx.mkIntConst("r" + i))
               .collect(Collectors.toUnmodifiableList());
 
-      result.add(new Order<>(leftSolution, rightSolution));
+      solver.add(encodeAll(potentialFunctions, ls, ctx));
+      solver.add(encodeAll(potentialFunctions, rs, ctx));
 
       solver.add(
           ctx.mkNot(
               ctx.mkAnd(
+                  Streams.zip(ls.stream(), rs.stream(), ctx::mkEq).toArray(BoolExpr[]::new))));
+
+      final List<ArithExpr> xs =
+          IntStream.range(0, size)
+              .mapToObj(i -> ctx.mkIntConst("x" + i))
+              .collect(Collectors.toUnmodifiableList());
+
+      final var precondition =
+          ctx.mkAnd(
+              Stream.concat(
+                      xs.stream().map(x -> ctx.mkAnd(ctx.mkLe(one, x), ctx.mkLe(x, depthBound))),
+                      Stream.concat(
+                          expertLt.stream()
+                              .map(pair -> ctx.mkLt(xs.get(pair.smaller), xs.get(pair.larger))),
+                          expertEq.stream()
+                              .map(pair -> ctx.mkEq(xs.get(pair.left), xs.get(pair.right)))))
+                  .toArray(BoolExpr[]::new));
+
+      final var main =
+          ctx.mkGe(
+              ctx.mkAdd(
                   Streams.concat(
-                          Streams.zip(
-                              ls.stream(), leftSolution.stream().map(ctx::mkInt), ctx::mkEq),
-                          Streams.zip(
-                              rs.stream(), rightSolution.stream().map(ctx::mkInt), ctx::mkEq))
-                      .toArray(BoolExpr[]::new))));
+                          Streams.zip(ls.stream(), xs.stream(), ctx::mkMul),
+                          Stream.of(ls.get(ls.size() - 1)))
+                      .toArray(ArithExpr[]::new)),
+              ctx.mkAdd(
+                  Streams.concat(
+                          Streams.zip(rs.stream(), xs.stream(), ctx::mkMul),
+                          Stream.of(rs.get(rs.size() - 1)))
+                      .toArray(ArithExpr[]::new)));
+
+      solver.add(
+          ctx.mkNot(
+              ctx.mkExists(
+                  xs.stream().toArray(Expr[]::new),
+                  ctx.mkAnd(precondition, main),
+                  1,
+                  null,
+                  null,
+                  null,
+                  null)));
+
+      solver.push();
+
+      // System.out.println(solver);
+
+      final List<LessThanOrEqual<List<Integer>>> result = new ArrayList<>();
+      while (true) {
+        final var checked = solver.check();
+        if (checked.equals(Status.UNSATISFIABLE)) {
+          return result;
+        }
+        if (!checked.equals(Status.SATISFIABLE)) {
+          throw bug("unexepected status: " + checked);
+        }
+        final var model = solver.getModel();
+        final List<Integer> leftSolution =
+            ls.stream()
+                .map(model::getConstInterp)
+                .map(x -> (IntNum) x)
+                .map(IntNum::getInt)
+                .collect(Collectors.toUnmodifiableList());
+
+        final List<Integer> rightSolution =
+            rs.stream()
+                .map(model::getConstInterp)
+                .map(x -> (IntNum) x)
+                .map(IntNum::getInt)
+                .collect(Collectors.toUnmodifiableList());
+
+        result.add(new LessThanOrEqual<>(leftSolution, rightSolution));
+
+        solver.add(
+            ctx.mkNot(
+                ctx.mkAnd(
+                    Streams.concat(
+                            Streams.zip(
+                                ls.stream(), leftSolution.stream().map(ctx::mkInt), ctx::mkEq),
+                            Streams.zip(
+                                rs.stream(), rightSolution.stream().map(ctx::mkInt), ctx::mkEq))
+                        .toArray(BoolExpr[]::new))));
+      }
     }
-    return result;
   }
 
   public static BoolExpr encodeAll(
@@ -478,63 +636,98 @@ public class W implements Rule {
   }
 
   public static boolean lessThanOrEqual(
-      List<Integer> o1, List<Integer> o2, Set<Order<Integer>> expertGt) {
-    // o1 and o2 represent linear combinations:
+      List<Integer> p1,
+      List<Integer> p2,
+      Set<LessThan<Integer>> expertLt,
+      Set<Equal<Integer>> expertEq) {
+    // p1 and p2 represent linear combinations:
     //
-    //     o1:  o1.1 * x1 + o1.2 * x2 + o1.3 * x3 + ... + o1.(n-1) * x(n-1) + o1.n
-    //     o2:  o2.1 * x1 + o2.2 * x2 + o2.3 * x3 + ... + o2.(n-1) * x(n-1) + o2.n
+    //     p1  =  a1.1 * x1 + a1.2 * x2 + a1.3 * x3 + ... + a1.n * xn + b1
+    //     p2  =  a2.1 * x1 + a2.2 * x2 + a2.3 * x3 + ... + a2.n * xn + b2
     //
-    // expertGt represents additional knowledge about relations between xs,
+    // expertLt represents additional knowledge about relations between xs,
     // it might contain:
     //
-    //     x1 > x2
-    //     x4 > x3
+    //     x1 < x2
+    //     x4 < x3
     //
-    // We now must decide whether o1 <= o2. This is done by setting up a
-    // SMT instance that tries to find a solution such that o1 > o2 given
-    // expertGt. If this is not possible, we return true.
+    // We now must decide whether p1 <= p2. This is done by setting up a
+    // SMT instance that tries to find a solution such that p1 > p2 given
+    // expertLt. If this is not possible, we return true.
 
-    if (o1.equals(o2)) {
-      return true;
+    if (p1.equals(p2)) {
+      return false;
     }
 
-    final var ctx = new Context();
-    final var solver = ctx.mkSolver();
-    final ArithExpr one = ctx.mkInt(1);
-    final ArithExpr zero = ctx.mkInt(0);
-    final List<ArithExpr> vars =
-        IntStream.range(0, o1.size() - 1)
-            .mapToObj(i -> ctx.mkRealConst("x" + i))
-            .collect(Collectors.toUnmodifiableList());
-    for (var x : vars) {
-      // TODO
-      // State that all xs are greater than zero, because
-      // they represent sizes of trees, which are at least 1.
-      solver.add(ctx.mkLe(one, x));
-      // solver.add(ctx.mkLe(zero, x));
+    if (p1.size() != p2.size()) {
+      throw bug("not supported");
     }
-    for (var pair : expertGt) {
-      solver.add(ctx.mkGt(vars.get(pair.smaller), vars.get(pair.larger)));
-    }
-    solver.add(
-        ctx.mkGt(
-            ctx.mkAdd(
-                IntStream.range(0, o1.size())
-                    .mapToObj(
-                        i ->
-                            ctx.mkMul(
-                                ctx.mkInt(o1.get(i)), getOrDefault(vars, i, ctx.mkInt(o1.get(i)))))
-                    .toArray(ArithExpr[]::new)),
-            ctx.mkAdd(
-                IntStream.range(0, o2.size())
-                    .mapToObj(
-                        i ->
-                            ctx.mkMul(
-                                ctx.mkInt(o2.get(i)), getOrDefault(vars, i, ctx.mkInt(o1.get(i)))))
-                    .toArray(ArithExpr[]::new))));
 
-    final var status = solver.check();
-    return status.equals(Status.UNSATISFIABLE);
+    // NOTE: We decrement to get the "size" that we also use for annotations.
+    final var size = p1.size() - 1;
+
+    if (size == 0) {
+      final var l = p1.get(0);
+      final var r = p2.get(0);
+      return l >= 1 && r >= 1 && l <= r;
+    }
+
+    try (final var ctx = new Context()) {
+      final var solver = ctx.mkSolver();
+      final ArithExpr one = ctx.mkInt(1);
+      final List<ArithExpr> vars =
+          IntStream.range(0, size)
+              .mapToObj(i -> ctx.mkIntConst("x" + i))
+              .collect(Collectors.toUnmodifiableList());
+      for (var x : vars) {
+        solver.add(ctx.mkLe(one, x));
+      }
+      for (var pair : expertLt) {
+        solver.add(ctx.mkLt(vars.get(pair.smaller), vars.get(pair.larger)));
+      }
+      for (var pair : expertEq) {
+        solver.add(ctx.mkEq(vars.get(pair.left), vars.get(pair.right)));
+      }
+
+      /*
+         ctx.mkGt(
+             ctx.mkAdd(
+                 IntStream.range(0, p1.size())
+                     .mapToObj(
+                         i ->
+                             ctx.mkMul(
+                                 ctx.mkInt(p1.get(i)),
+                                 getOrDefault(vars, i, ctx.mkInt(p1.get(i)))))
+                     .toArray(ArithExpr[]::new)),
+             ctx.mkAdd(
+                 IntStream.range(0, p2.size())
+                     .mapToObj(
+                         i ->
+                             ctx.mkMul(
+                                 ctx.mkInt(p2.get(i)),
+                                 getOrDefault(vars, i, ctx.mkInt(p1.get(i)))))
+                     .toArray(ArithExpr[]::new))));
+      */
+
+      solver.add(
+          ctx.mkGt(
+              ctx.mkAdd(
+                  Streams.concat(
+                          Streams.zip(p1.stream().map(ctx::mkInt), vars.stream(), ctx::mkMul),
+                          Stream.of(ctx.mkInt(p1.get(size))))
+                      .toArray(ArithExpr[]::new)),
+              ctx.mkAdd(
+                  Streams.concat(
+                          Streams.zip(p2.stream().map(ctx::mkInt), vars.stream(), ctx::mkMul),
+                          Stream.of(ctx.mkInt(p2.get(size))))
+                      .toArray(ArithExpr[]::new))));
+
+      final var status = solver.check();
+      if (Status.UNKNOWN.equals(status)) {
+        throw bug("unknown");
+      }
+      return status.equals(Status.UNSATISFIABLE);
+    }
   }
 
   private static <T> T getOrDefault(List<T> list, int index, T defaultValue) {

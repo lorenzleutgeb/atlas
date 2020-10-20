@@ -16,6 +16,7 @@ public class KnownCoefficient implements Coefficient {
   public static final KnownCoefficient TWO = new KnownCoefficient(Fraction.TWO);
   public static final KnownCoefficient THREE = new KnownCoefficient(Fraction.THREE);
   public static final KnownCoefficient MINUS_TWO = new KnownCoefficient(Fraction.TWO.negate());
+  public static final KnownCoefficient MINUS_ONE = new KnownCoefficient(Fraction.ONE.negate());
 
   Fraction value;
 

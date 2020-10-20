@@ -33,7 +33,9 @@ import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 
 @Slf4j
 public class Util {
-  private static final Random RANDOM = new Random();
+  private static final Random RANDOM = new Random(0L);
+  private static final String LIBRARY_PATH = "java.library.path";
+  private static final String LIBRARY_PATH_PREFIX = "./:./lib/:../lib:";
 
   public static String generateSubscriptIndex(List<Integer> index) {
     return index.stream().map(Util::generateSubscript).collect(joining(" ", "₍", "₎"));
@@ -125,22 +127,33 @@ public class Util {
         + "?)";
   }
 
-  public static void ensureLibrary(String name) {
+  private static void patchLibraryPath() {
+    final String libraryPath = System.getProperty(LIBRARY_PATH);
+    if (!libraryPath.startsWith(LIBRARY_PATH_PREFIX)) {
+      System.setProperty(LIBRARY_PATH, LIBRARY_PATH_PREFIX + libraryPath);
+    }
+  }
+
+  public static void loadLibrary(String name) {
+    patchLibraryPath();
+
     try {
       System.loadLibrary(name);
     } catch (UnsatisfiedLinkError e) {
-      log.error(
-          "The library '"
+      System.err.println(
+          "!!! The library '"
               + name
-              + "' is required, but could not be loaded. Make sure that a file named 'lib"
+              + "' is required, but could not be loaded.\n!!! Make sure that a file named 'lib"
               + name
               + ".so' (or similar, since this name is platform-dependent) exists in one of the following paths: '"
               + System.getProperty("java.library.path")
-              + "'.",
-          e);
-      System.exit(1);
+              + "'.\n!!! Execution will continue but may fail at a later time because of this.");
+      return;
     }
-    log.debug("Library '{}' loaded successfully.", name);
+  }
+
+  public static void loadZ3() {
+    loadLibrary("z3java");
   }
 
   public static Fraction toFraction(RatNum x) {
@@ -166,13 +179,6 @@ public class Util {
 
   public static List<Coefficient> zeroCoefficients(int n) {
     return repeat(ZERO, n).collect(Collectors.toList());
-  }
-
-  public static boolean isConstant(List<Integer> xs) {
-    if (xs.size() < 2) {
-      return true;
-    }
-    return xs.subList(0, xs.size() - 1).stream().allMatch(x -> x == 0);
   }
 
   public static String fqnToFlatFilename(String fqn) {

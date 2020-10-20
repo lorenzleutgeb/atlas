@@ -1,20 +1,27 @@
 package xyz.leutgeb.lorenz.lac.typing.resources;
 
+import static com.google.common.collect.Comparators.lexicographical;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singletonList;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toUnmodifiableList;
+import static java.util.stream.IntStream.range;
+import static java.util.stream.Stream.concat;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.generateSubscript;
+import static xyz.leutgeb.lorenz.lac.util.Util.generateSubscriptIndex;
+import static xyz.leutgeb.lorenz.lac.util.Util.isZero;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
+import static xyz.leutgeb.lorenz.lac.util.Util.repeat;
+
 import com.google.common.collect.Streams;
 import com.google.common.primitives.Ints;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.OffsetConstraint;
-import xyz.leutgeb.lorenz.lac.util.Fraction;
-import xyz.leutgeb.lorenz.lac.util.Pair;
-import xyz.leutgeb.lorenz.lac.util.Util;
-
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,23 +34,18 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import static com.google.common.collect.Comparators.lexicographical;
-import static java.util.Collections.emptyMap;
-import static java.util.Collections.emptySet;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toUnmodifiableList;
-import static java.util.stream.IntStream.range;
-import static java.util.stream.Stream.concat;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.generateSubscript;
-import static xyz.leutgeb.lorenz.lac.util.Util.generateSubscriptIndex;
-import static xyz.leutgeb.lorenz.lac.util.Util.isZero;
-import static xyz.leutgeb.lorenz.lac.util.Util.repeat;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.OffsetConstraint;
+import xyz.leutgeb.lorenz.lac.util.Fraction;
+import xyz.leutgeb.lorenz.lac.util.Pair;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Slf4j
 public class Annotation {
@@ -93,6 +95,10 @@ public class Annotation {
     for (int i : rankCoefficients) {
       this.getRankCoefficientOrDefine(i);
     }
+  }
+
+  public Annotation(Coefficient rankCoefficient, Map<List<Integer>, Coefficient> coefficients) {
+    this(singletonList(rankCoefficient), coefficients, randomHex());
   }
 
   public Annotation(
@@ -158,6 +164,18 @@ public class Annotation {
 
   private UnknownCoefficient unknown(String suffix) {
     return new UnknownCoefficient(id + suffix);
+  }
+
+  public static boolean isConstantIndex(List<Integer> index) {
+    if (index.size() < 2) {
+      return true;
+    }
+    for (int i = 0; i < index.size() - 1; i++) {
+      if (index.get(i) != 0) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public static boolean isUnitIndex(List<Integer> index) {
@@ -292,7 +310,13 @@ public class Annotation {
         continue;
       }
       nonzero = true;
-      sb.append(q).append("·p").append(generateSubscript(i));
+
+      if (!q.equals(ONE)) {
+        sb.append(q);
+        sb.append("·");
+      }
+
+      sb.append("p").append(generateSubscript(i));
 
       if (i < size() - 1) {
         sb.append(" + ");
@@ -300,6 +324,7 @@ public class Annotation {
     }
     final var schoenmakerPart =
         coefficients.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey(Annotation.INDEX_COMPARATOR))
             .filter(e -> e.getValue() != ZERO)
             .map(
                 e -> {
@@ -310,8 +335,14 @@ public class Annotation {
                     return coefficient.toString();
                   }
 
-                  return coefficient
-                      + "·p"
+                  String result = "";
+                  if (!coefficient.equals(ONE)) {
+                    result += coefficient;
+                    result += "·";
+                  }
+
+                  return result
+                      + "p"
                       + index.stream().map(Util::generateSubscript).collect(joining(" ", "₍", "₎"));
                 })
             .collect(Collectors.joining(" + "));

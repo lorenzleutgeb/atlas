@@ -10,7 +10,6 @@ import xyz.leutgeb.lorenz.lac.commands.Run;
     mixinStandardHelpOptions = true,
     subcommands = {LNF.class, Haskell.class, Run.class})
 public class Main implements Runnable {
-
   public static void main(String[] args) {
     new CommandLine(new Main()).execute(args);
   }

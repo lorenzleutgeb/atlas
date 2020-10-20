@@ -107,12 +107,7 @@ public class Obligation {
             : context.getIds().stream().map(Object::toString).collect(joining(", "));
     ;
     final var contextStr =
-        idStr
-            + " | "
-            + context.getAnnotation()
-            + " <i style=\"color:blue;\">"
-            + context.getAnnotation().getNameAndId()
-            + "</i>";
+        idStr + " | " + context.getAnnotation() + " " + context.getAnnotation().getNameAndId();
 
     return contextStr
         + "  ⊦"
@@ -121,8 +116,7 @@ public class Obligation {
         + expression
         + " | "
         + annotation
-        + " <i style=\"color:blue;\">"
-        + annotation.getNameAndId()
-        + "</i>";
+        + " "
+        + annotation.getNameAndId();
   }
 }

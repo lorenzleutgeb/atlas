@@ -1,10 +1,38 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.proving;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singletonList;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toUnmodifiableMap;
+import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF_NAME;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.loadZ3;
+import static xyz.leutgeb.lorenz.lac.util.Util.stack;
+import static xyz.leutgeb.lorenz.lac.util.Util.supply;
+import static xyz.leutgeb.lorenz.lac.util.Util.undefinedText;
+
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import guru.nidi.graphviz.attribute.Label;
 import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.Stack;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -56,34 +84,6 @@ import xyz.leutgeb.lorenz.lac.util.NidiExporter;
 import xyz.leutgeb.lorenz.lac.util.Pair;
 import xyz.leutgeb.lorenz.lac.util.Util;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.Stack;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.singletonList;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toUnmodifiableMap;
-import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.stack;
-import static xyz.leutgeb.lorenz.lac.util.Util.supply;
-import static xyz.leutgeb.lorenz.lac.util.Util.undefinedText;
-
 @Slf4j
 public class Prover {
   private static final Rule letTreeCfPaperRule = LetTreeCf.INSTANCE;
@@ -120,7 +120,8 @@ public class Prover {
               leafRule)
           .collect(toUnmodifiableMap(Rule::getName, identity()));
 
-  private static final boolean DEFAULT_WEAKEN = false;
+  private static final boolean DEFAULT_WEAKEN_AGGRESSIVELY = false;
+  private static final boolean DEFAULT_WEAKEN_BEFORE_TERMINAL = true;
 
   private final String name;
   private final Path basePath;
@@ -136,7 +137,8 @@ public class Prover {
   // TODO(lorenz.leutgeb): Find a better way to handle globals...
   @Getter @Setter private AnnotatingGlobals globals;
 
-  @Getter @Setter private boolean weakenAggressively = DEFAULT_WEAKEN;
+  @Getter @Setter private boolean weakenAggressively = DEFAULT_WEAKEN_AGGRESSIVELY;
+  @Getter @Setter private boolean weakenBeforeTerminal = DEFAULT_WEAKEN_BEFORE_TERMINAL;
 
   @Getter private final Map<String, Obligation> named = new LinkedHashMap<String, Obligation>();
 
@@ -156,6 +158,7 @@ public class Prover {
   }
 
   public Prover(String name, AnnotatingGlobals globals, Path basePath) {
+    loadZ3();
     this.name = name;
     this.globals = globals;
     this.basePath = basePath;
@@ -171,7 +174,9 @@ public class Prover {
     if (expression.isTerminal()) {
       final Stack<Rule> todo = new Stack<>();
       todo.push(chooseRule(expression));
-      todo.push(weakenRule);
+      if (weakenBeforeTerminal) {
+        todo.push(weakenRule);
+      }
       final var wvars = WVar.redundantIds(obligation).collect(Collectors.toUnmodifiableList());
       for (int i = 0; i < wvars.size(); i++) {
         todo.push(weakenVariableRule);
@@ -199,7 +204,7 @@ public class Prover {
     } else if (e instanceof CallExpression) {
       return applicationRule;
     } else if (e instanceof Identifier) {
-      if (LEAF.equals(e)) {
+      if (LEAF_NAME.equals(((Identifier) e).getName())) {
         return leafRule;
       } else {
         return variableRule;
@@ -404,61 +409,69 @@ public class Prover {
     ruleResult.collectInto(accumulatedConstraints);
   }
 
-  public void plot() throws IOException {
+  public void plot() {
     if (basePath == null) {
       log.warn("Cannot plot without base path.");
       return;
     }
 
-    final NidiExporter<Obligation, DefaultEdge> exporter = new NidiExporter<>(Util::stamp);
-    exporter.setVertexAttributeProvider(
-        obligation -> {
-          var result = results.get(obligation);
-          final List<Constraint> generalConstraints =
-              result != null ? result.result.getGeneralConstraints() : emptyList();
-          return obligation.attributes(generalConstraints);
-        });
-    exporter.setEdgeAttributeProvider(edgeAttributes::get);
-    exporter.setGraphAttributeProvider(
-        supply(Map.of("rankdir", new DefaultAttribute<>("BT", AttributeType.STRING))));
+    try {
+      final NidiExporter<Obligation, DefaultEdge> exporter = new NidiExporter<>(Util::stamp);
+      exporter.setVertexAttributeProvider(
+          obligation -> {
+            var result = results.get(obligation);
+            final List<Constraint> generalConstraints =
+                result != null ? result.result.getGeneralConstraints() : emptyList();
+            return obligation.attributes(generalConstraints);
+          });
+      exporter.setEdgeAttributeProvider(edgeAttributes::get);
+      exporter.setGraphAttributeProvider(
+          supply(Map.of("rankdir", new DefaultAttribute<>("BT", AttributeType.STRING))));
 
-    Graphviz transformed = Graphviz.fromGraph(exporter.transform(proof));
+      Graphviz transformed = Graphviz.fromGraph(exporter.transform(proof));
 
-    final var target = basePath.resolve(name + "-proof.svg");
-    transformed.render(Format.SVG).toOutputStream(Files.newOutputStream(target));
-    log.info("Proof plotted to {}", target);
+      final var target = basePath.resolve(name + "-proof.svg");
+      transformed.render(Format.SVG).toOutputStream(Files.newOutputStream(target));
+      log.info("Proof plotted to {}", target);
 
-    final var dotTarget = basePath.resolve(name + "-proof.dot");
-    transformed.render(Format.DOT).toOutputStream(Files.newOutputStream(dotTarget));
-    log.info("Proof exported to {}", dotTarget);
+      final var dotTarget = basePath.resolve(name + "-proof.dot");
+      transformed.render(Format.DOT).toOutputStream(Files.newOutputStream(dotTarget));
+      log.info("Proof exported to {}", dotTarget);
+    } catch (Exception e) {
+      log.warn("Non-critical exception thrown.", e);
+    }
   }
 
-  public void plotWithSolution(Map<Coefficient, KnownCoefficient> solution) throws IOException {
+  public void plotWithSolution(Map<Coefficient, KnownCoefficient> solution) {
     if (basePath == null) {
       return;
     }
 
-    final NidiExporter<Obligation, DefaultEdge> exporter = new NidiExporter<>(Util::stamp);
-    exporter.setVertexAttributeProvider(
-        obligation -> {
-          var result = results.get(obligation);
-          final List<Constraint> generalConstraints =
-              result != null ? result.result.getGeneralConstraints() : emptyList();
-          return (obligation.substitute(solution)).attributes(generalConstraints);
-        });
-    exporter.setEdgeAttributeProvider(edgeAttributes::get);
-    exporter.setGraphAttributeProvider(
-        () -> Map.of("rankdir", new DefaultAttribute<>("BT", AttributeType.STRING)));
+    try {
+      final NidiExporter<Obligation, DefaultEdge> exporter = new NidiExporter<>(Util::stamp);
+      exporter.setVertexAttributeProvider(
+          obligation -> {
+            var result = results.get(obligation);
+            final List<Constraint> generalConstraints =
+                result != null ? result.result.getGeneralConstraints() : emptyList();
+            return (obligation.substitute(solution)).attributes(generalConstraints);
+          });
+      exporter.setEdgeAttributeProvider(edgeAttributes::get);
+      exporter.setGraphAttributeProvider(
+          () -> Map.of("rankdir", new DefaultAttribute<>("BT", AttributeType.STRING)));
 
-    Graphviz transformed = Graphviz.fromGraph(exporter.transform(proof));
+      Graphviz transformed = Graphviz.fromGraph(exporter.transform(proof));
 
-    final var target = basePath.resolve(name + "-proof.svg");
-    transformed.render(Format.SVG).toOutputStream(Files.newOutputStream(target));
-    log.info("Proof plotted to {}", target);
+      final var target = basePath.resolve(name + "-proof.svg");
+      transformed.render(Format.SVG).toOutputStream(Files.newOutputStream(target));
+      log.info("Proof plotted to {}", target);
 
-    final var dotTarget = basePath.resolve(name + "-proof.xdot");
-    transformed.render(Format.XDOT).toOutputStream(Files.newOutputStream(dotTarget));
-    log.info("Proof exported to {}", dotTarget);
+      final var dotTarget = basePath.resolve(name + "-proof.xdot");
+      transformed.render(Format.XDOT).toOutputStream(Files.newOutputStream(dotTarget));
+      log.info("Proof exported to {}", dotTarget);
+    } catch (Exception e) {
+      log.warn("Non-critical exception thrown.", e);
+    }
   }
 
   public Optional<Map<Coefficient, KnownCoefficient>> solve() {

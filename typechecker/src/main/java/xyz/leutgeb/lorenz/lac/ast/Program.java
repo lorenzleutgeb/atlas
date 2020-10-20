@@ -123,7 +123,6 @@ public class Program {
     if (functionDefinitions.values().stream()
         .map(FunctionDefinition::runaway)
         .anyMatch(Predicate.not(Set::isEmpty))) {
-      log.info(namesAsSet() + " | UNSAT");
       return Optional.empty();
     }
 
@@ -182,21 +181,9 @@ public class Program {
             }
             */
 
-            // prover.setWeakenAggressively(true);
-
             final var cfRoot =
                 new Obligation(
-                    fd.treeLikeArguments(),
-                    cfAnnotation.from,
-                    fd.getBody(),
-                    cfAnnotation.to,
-                    0);
-
-            /*
-            prover.prove(
-                    );
-             */
-            // prover.setWeakenAggressively(false);
+                    fd.treeLikeArguments(), cfAnnotation.from, fd.getBody(), cfAnnotation.to, 0);
 
             if (false && tactics.containsKey(fd.getFullyQualifiedName())) {
               try {
@@ -206,7 +193,9 @@ public class Program {
                 throw new RuntimeException(e);
               }
             } else {
+              prover.setWeakenBeforeTerminal(true);
               prover.prove(cfRoot);
+              prover.setWeakenBeforeTerminal(false);
             }
           }
         });
@@ -235,11 +224,7 @@ public class Program {
     final var accumulatedConstraints = prover.getAccumulatedConstraints();
     accumulatedConstraints.addAll(outsideConstraints);
 
-    try {
-      prover.plot();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+    prover.plot();
 
     // This is the entrypoint of new-style solving. We get a bunch of constraints
     // that need to be fulfilled in order to typecheck the program.
@@ -247,21 +232,11 @@ public class Program {
         solving.apply(this, accumulatedConstraints);
 
     if (accumulatedConstraints.size() < 50) {
-      try {
-        Constraint.plot(name, accumulatedConstraints, basePath);
-      } catch (IOException e) {
-        // Not critical...
-        e.printStackTrace();
-      }
+      Constraint.plot(name, accumulatedConstraints, basePath);
     }
 
     if (solution.isPresent()) {
-      try {
-        prover.plotWithSolution(solution.get());
-      } catch (IOException e) {
-        // Not critical...
-        e.printStackTrace();
-      }
+      prover.plotWithSolution(solution.get());
     }
 
     return solution;
@@ -382,7 +357,7 @@ public class Program {
       for (var fqn : stratum) {
         FunctionDefinition fd = functionDefinitions.get(fqn);
         if (fd.getInferredSignature().getAnnotation().isPresent()) {
-          out.println(fd.getFullyQualifiedName() + " ∷ " + fd.getAnnotatedSignature().fullGlory());
+          out.println(fd.getFullyQualifiedName() + " ∷ " + fd.getAnnotatedSignature());
         }
       }
     }
@@ -395,7 +370,7 @@ public class Program {
       for (var fqn : stratum) {
         FunctionDefinition fd = functionDefinitions.get(fqn);
         if (fd.getInferredSignature().getAnnotation().isPresent()) {
-          out.println(fd.getFullyQualifiedName() + " ∷ " + fd.getInferredSignature().fullGlory());
+          out.println(fd.getFullyQualifiedName() + " ∷ " + fd.getInferredSignature());
         } else {
           out.println(fd.getFullyQualifiedName() + " ∷ ?");
         }

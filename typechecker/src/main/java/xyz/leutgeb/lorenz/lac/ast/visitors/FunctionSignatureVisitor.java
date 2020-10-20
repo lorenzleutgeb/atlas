@@ -1,5 +1,16 @@
 package xyz.leutgeb.lorenz.lac.ast.visitors;
 
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.antlr.v4.runtime.Token;
 import xyz.leutgeb.lorenz.lac.antlr.SplayParser;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
@@ -13,18 +24,6 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.ProductType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.util.Fraction;
-
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature> {
   private final TypeVisitor typeVisitor;

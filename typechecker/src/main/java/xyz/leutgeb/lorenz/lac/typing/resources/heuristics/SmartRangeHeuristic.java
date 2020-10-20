@@ -38,13 +38,17 @@ public class SmartRangeHeuristic implements AnnotationHeuristic {
     return new Annotation(
         size,
         range(0, size).boxed().collect(toUnmodifiableList()),
-        cartesianProduct(
-                concat(Stream.generate(() -> as).limit(size), Stream.of(bs))
-                    .collect(toUnmodifiableList()))
-            .stream()
-            .filter(index -> !Util.isConstant(index) || index.get(size).equals(2))
-            .filter(Predicate.not(Util::isZero))
-            .collect(Collectors.toUnmodifiableList()),
+        generate(size).collect(Collectors.toUnmodifiableList()),
         namePrefix);
+  }
+
+  public Stream<List<Integer>> generate(int size) {
+    return cartesianProduct(
+            concat(Stream.generate(() -> as).limit(size), Stream.of(bs))
+                .collect(toUnmodifiableList()))
+        .stream()
+        .filter(Predicate.not(Util::isZero))
+        // TODO: Allow offset = 1.
+        .filter(index -> !Annotation.isConstantIndex(index) || index.get(size).equals(2));
   }
 }

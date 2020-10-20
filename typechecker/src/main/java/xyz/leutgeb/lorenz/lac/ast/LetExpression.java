@@ -1,9 +1,19 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
+import static com.google.common.collect.Sets.intersection;
+import static xyz.leutgeb.lorenz.lac.util.Util.indent;
+import static xyz.leutgeb.lorenz.lac.util.Util.pick;
+
+import java.io.PrintStream;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
+import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.jgrapht.Graph;
 import xyz.leutgeb.lorenz.lac.ast.sources.Derived;
+import xyz.leutgeb.lorenz.lac.ast.sources.Predefined;
 import xyz.leutgeb.lorenz.lac.ast.sources.Source;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
@@ -13,16 +23,6 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.util.Pair;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
-
-import java.io.PrintStream;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
-import java.util.stream.Stream;
-
-import static com.google.common.collect.Sets.intersection;
-import static xyz.leutgeb.lorenz.lac.util.Util.indent;
-import static xyz.leutgeb.lorenz.lac.util.Util.pick;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -47,6 +47,11 @@ public class LetExpression extends Expression {
     this.declared = declared;
     this.value = value;
     this.body = body;
+  }
+
+  public static LetExpression predefinedLet(
+      Identifier declared, Identifier value, Expression body) {
+    return new LetExpression(Predefined.INSTANCE, declared, value, body, body.getType());
   }
 
   @Override

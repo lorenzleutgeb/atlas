@@ -1,5 +1,9 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 
+import static guru.nidi.graphviz.model.Link.to;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.objectNode;
+
 import com.google.common.collect.BiMap;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
@@ -7,18 +11,13 @@ import com.microsoft.z3.Context;
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
+import java.util.Map;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.lac.util.Fraction;
-
-import java.util.Map;
-
-import static guru.nidi.graphviz.model.Link.to;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.objectNode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)

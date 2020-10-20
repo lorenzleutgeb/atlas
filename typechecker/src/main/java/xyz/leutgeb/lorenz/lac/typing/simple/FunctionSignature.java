@@ -76,36 +76,21 @@ public final class FunctionSignature {
       }
       sb.append(" ⇒ ");
     }
-    sb.append(type);
-    return sb.toString();
-  }
-
-  public String fullGlory() {
-    if (annotation.isEmpty()) {
-      return toString();
-    }
-
-    StringBuilder sb = new StringBuilder();
-    if (!constraints.isEmpty()) {
-      final var omitParens = constraints.size() == 1;
-      if (!omitParens) {
-        sb.append("(");
-      }
-      sb.append(constraints.stream().map(Objects::toString).collect(Collectors.joining(", ")));
-      if (!omitParens) {
-        sb.append(")");
-      }
-      sb.append(" ⇒ ");
-    }
 
     sb.append(type.getFrom());
-    sb.append(" | ");
-    sb.append(annotation.get().from);
+
+    if (annotation.isPresent()) {
+      sb.append(" | ");
+      sb.append(annotation.get().from);
+    }
 
     sb.append(" → ");
     sb.append(type.getTo());
-    sb.append(" | ");
-    sb.append(annotation.get().to);
+
+    if (annotation.isPresent()) {
+      sb.append(" | ");
+      sb.append(annotation.get().to);
+    }
     return sb.toString();
   }
 

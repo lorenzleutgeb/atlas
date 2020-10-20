@@ -37,7 +37,8 @@ public class Loader {
 
   Path home;
 
-  private final Graph<String, DefaultEdge> g = new DefaultDirectedGraph<>(DefaultEdge.class);
+  private final Graph<String, DefaultEdge> g =
+      new DefaultDirectedGraph<>(null, DefaultEdge::new, false);
 
   public Loader(Path home) {
     if (!Files.exists(home) || !Files.isDirectory(home) || !Files.isReadable(home)) {

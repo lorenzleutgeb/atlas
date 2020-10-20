@@ -48,7 +48,7 @@ public class S62 {
               unitIndex(2), ONE),
           "Q1shared");
 
-  protected static final Annotation Q2 =
+  public static final Annotation Q2 =
       new Annotation(
           List.of(ONE, ONE, ONE),
           Map.of(
@@ -60,7 +60,7 @@ public class S62 {
               unitIndex(3), ONE),
           "Q2");
 
-  protected static final Annotation Q3 =
+  public static final Annotation Q3 =
       new Annotation(
           List.of(ONE, ONE, ONE),
           Map.of(
