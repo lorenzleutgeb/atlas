@@ -19,8 +19,8 @@
 
 (let:tree:cf
   leaf
-  (let:tree:cf
-    leaf
+  (w (let:tree:cf
+    (w leaf)
     (w node)
-  )
+  ))
 )
