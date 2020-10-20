@@ -9,16 +9,20 @@ import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.ast.ShareExpression;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 
+@Slf4j
 public class Share implements Rule {
   public static final Share INSTANCE = new Share();
 
   public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+    log.warn("This rule is not tested well.");
+
     // This is denoted by \/(Q) in the paper.
     final var gammazSQ = obligation.getContext();
 
