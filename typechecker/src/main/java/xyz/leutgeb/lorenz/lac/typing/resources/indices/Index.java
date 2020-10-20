@@ -15,8 +15,6 @@ import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.util.Util;
 
 public interface Index {
-  Index CONSTANT = new FunctionIndex(id -> 0, 2);
-
   Integer getAssociatedIndex(Identifier id);
 
   Integer getOffsetIndex();
