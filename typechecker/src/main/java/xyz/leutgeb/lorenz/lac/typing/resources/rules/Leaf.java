@@ -1,6 +1,6 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.rules;
 
-import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF;
+import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF_NAME;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
@@ -12,6 +12,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.ast.sources.Parsed;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
@@ -25,11 +26,17 @@ public class Leaf implements Rule {
   public static final Leaf INSTANCE = new Leaf();
 
   public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
-    if (!LEAF.equals(obligation.getExpression())) {
+    final var expression = obligation.getExpression();
+    if (!(expression instanceof Identifier)) {
       throw bug(
           "cannot apply (leaf) to identifier expression that is not identifier 'leaf' (it is '"
-              + obligation.getExpression().terminalOrBox()
+              + expression.terminalOrBox()
               + "')");
+    }
+
+    final var id = (Identifier) expression;
+    if (!id.getName().equals(LEAF_NAME)) {
+      throw bug("cannot apply (leaf) to identifier 'leaf' (it is '" + id.getName() + "')");
     }
 
     final var context = obligation.getContext();
