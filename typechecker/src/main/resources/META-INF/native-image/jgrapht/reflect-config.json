@@ -1,0 +1,9 @@
+[
+  {
+    "name" : "org.jgrapht.graph.DefaultEdge",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true
+  }
+]

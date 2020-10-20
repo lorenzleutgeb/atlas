@@ -34,7 +34,7 @@ If there is an issue loading Z3, the program will show a
 ## Interpreter
 
 ```
-$ cabal run
+/interpreter $ stack build
 ```
 
 ## Reading

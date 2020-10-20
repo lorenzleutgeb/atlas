@@ -1,0 +1,22 @@
+[
+  {
+    "name" : "com.microsoft.z3.Native$IntPtr",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "value", "allowWrite" : true }
+    ]
+  },
+  {
+    "name" : "com.microsoft.z3.Native$LongPtr",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "value", "allowWrite" : true }
+    ]
+  }
+]

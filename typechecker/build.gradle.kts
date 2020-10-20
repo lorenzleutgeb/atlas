@@ -1,5 +1,26 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+
 val rootPackage = "xyz.leutgeb.lorenz.lac"
 val rootPackagePath = rootPackage.replace(".", "/")
+val mainClassName = "$rootPackage.Main"
+
+fun run(command: String, workingDir: File = file("./")): String {
+    val parts = command.split("\\s".toRegex())
+    val proc = ProcessBuilder(*parts.toTypedArray())
+            .directory(workingDir)
+            .redirectOutput(ProcessBuilder.Redirect.PIPE)
+            .redirectError(ProcessBuilder.Redirect.PIPE)
+            .start()
+
+    proc.waitFor(1, TimeUnit.MINUTES)
+    return proc.inputStream.bufferedReader().readText().trim()
+}
+
+version = run("../version.sh")
+
+task("printVersion") {
+    doLast { println(project.version) }
+}
 
 plugins {
     java
@@ -8,6 +29,8 @@ plugins {
 
     id("com.diffplug.spotless") version "5.2.0"
     id("com.github.jk1.dependency-license-report") version "1.13"
+    id("com.github.johnrengelman.shadow") version "5.2.0"
+    id("org.mikeneck.graalvm-native-image") version "0.8.0"
 }
 
 repositories {
@@ -22,6 +45,16 @@ java {
 
 configurations {
     create("z3")
+}
+
+buildscript {
+    dependencyLocking {
+        lockAllConfigurations()
+    }
+}
+
+dependencyLocking {
+    lockAllConfigurations()
 }
 
 dependencies {
@@ -54,10 +87,11 @@ dependencies {
 
     // Commandline Parameters
     implementation("info.picocli:picocli:4.2.0")
+    annotationProcessor("info.picocli:picocli-codegen:4.2.0")
 
     // Testing
     fun jupiter(x: String): String {
-        return "org.junit.jupiter:junit-jupiter$x:5.6.2"
+        return "org.junit.jupiter:junit-jupiter$x:5.7.0"
     }
     testImplementation(jupiter("-params"))
     testRuntimeOnly(jupiter(""))
@@ -79,9 +113,31 @@ application {
     mainClassName = "$rootPackage.Main"
 }
 
+tasks.shadowJar {
+    archiveClassifier.set("shadow")
+}
+
 tasks.withType<JavaCompile> {
     options.compilerArgs.addAll(arrayOf("-Xlint:unchecked", "-Xlint:deprecation"))
 }
+
+tasks.nativeImage {
+    setGraalVmHome(System.getenv("GRAAL_HOME"))
+    mainClass = "$rootPackage.Main"
+    executableName = project.name + "-" + project.version
+    jarTask = tasks.shadowJar.get()
+    arguments(
+            "--no-fallback",
+            "--enable-all-security-services",
+            "--initialize-at-build-time=com.microsoft.z3.Native",
+            "--report-unsupported-elements-at-runtime",
+            "-H:+ReportExceptionStackTraces",
+            "--static",
+            "-H:+StaticExecutableWithDynamicLibC"
+    )
+}
+
+tasks["build"].dependsOn("nativeImage")
 
 tasks.withType<AntlrTask> {
     // See https://github.com/antlr/antlr4/blob/master/doc/tool-options.md
@@ -99,7 +155,9 @@ tasks.withType<AntlrTask> {
 tasks.test {
     useJUnitPlatform()
     testLogging {
-        events("passed", "skipped", "failed")
+        events("failed")
+        showStackTraces = true
+        exceptionFormat = TestExceptionFormat.FULL
     }
 }
 

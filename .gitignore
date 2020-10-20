@@ -5,6 +5,10 @@ typechecker/*.smt
 typechecker/*.hs
 typechecker/gradle.properties
 
+# ANTLR
+*.tokens
+*.interp
+
 # Binaries
 *.jar
 *.so
