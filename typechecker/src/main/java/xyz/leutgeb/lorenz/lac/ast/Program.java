@@ -136,6 +136,7 @@ public class Program {
                 infer));
     forEach(
         fd -> {
+
           /*
           if (!functionAnnotations.get(fd.getFullyQualifiedName()).withCost.isUnknown()
               && functionAnnotations.get(fd.getFullyQualifiedName()).withoutCost.stream()
@@ -155,9 +156,11 @@ public class Program {
                    return;
                  }
           */
+
           final var globals =
               new AnnotatingGlobals(functionAnnotations, fd.getSizeAnalysis(), heuristic);
           prover.setGlobals(globals);
+
           Obligation typingObligation = fd.getTypingObligation(1);
 
           if (tactics.containsKey(fd.getFullyQualifiedName())) {
@@ -173,13 +176,19 @@ public class Program {
           }
 
           for (var cfAnnotation : fd.getCfAnnotations()) {
-            /*
-            if (cfAnnotation.from.coefficientsEqual(Annotation.zero(cfAnnotation.from.size())) &&
-            cfAnnotation.to.coefficientsEqual(Annotation.zero(cfAnnotation.to.size()))) {
-            	log.info("Skipping {}", cfAnnotation);
+            if (cfAnnotation.isZero()) {
+              log.info("Skipping {}", cfAnnotation);
               continue;
             }
-            */
+
+            /*
+            if (!cfAnnotation.isUnknown()) {
+              log.info(
+                      "Skipping type inference for {} | {} because all given annotations are known.",
+                      fd.getFullyQualifiedName(), cfAnnotation);
+              return;
+            }
+             */
 
             final var cfRoot =
                 new Obligation(
@@ -193,20 +202,16 @@ public class Program {
                 throw new RuntimeException(e);
               }
             } else {
+              // prover.setWeakenAggressively(true);
               prover.setWeakenBeforeTerminal(true);
               prover.prove(cfRoot);
+              // prover.setWeakenAggressively(false);
               prover.setWeakenBeforeTerminal(false);
             }
           }
         });
 
-    /*
-    try {
-      prover.plot();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-     */
+    prover.plot();
 
     return Optional.of(prover);
   }
