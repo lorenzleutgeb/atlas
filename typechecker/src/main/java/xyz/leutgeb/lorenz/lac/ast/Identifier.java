@@ -27,6 +27,7 @@ import xyz.leutgeb.lorenz.lac.util.Util;
 
 public class Identifier extends Expression {
   public static final String LEAF_NAME = "leaf";
+  public static final Identifier LEAF = new Identifier(Predefined.INSTANCE, LEAF_NAME);
   public static final Identifier DUMMY_TREE_ALPHA =
       new Identifier(Predefined.INSTANCE, "_", new TreeType(TypeVariable.ALPHA));
   private static final Set<String> BOOLEAN_NAMES = Set.of("true", "false");
