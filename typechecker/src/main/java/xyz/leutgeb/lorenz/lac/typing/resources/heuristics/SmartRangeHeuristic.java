@@ -47,7 +47,7 @@ public class SmartRangeHeuristic implements AnnotationHeuristic {
             concat(Stream.generate(() -> as).limit(size), Stream.of(bs))
                 .collect(toUnmodifiableList()))
         .stream()
-        .filter(Predicate.not(Util::isZero))
+        .filter(Predicate.not(Util::isAllZeroes))
         // TODO: Allow offset = 1.
         .filter(index -> !Annotation.isConstantIndex(index) || index.get(size).equals(2));
   }

@@ -29,4 +29,8 @@ public class FunctionAnnotation {
   public boolean isNonInteger() {
     return from.isNonInteger() || to.isNonInteger();
   }
+
+  public boolean isZero() {
+    return from.isZero() && to.isZero();
+  }
 }
