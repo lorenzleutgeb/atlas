@@ -170,6 +170,58 @@ public class WTest {
     System.out.println(solution.get());
   }
 
+  @Test
+  void lemmaPlus1Y() {
+    final var x = Identifier.predefinedTree("x");
+    final var y = Identifier.predefinedTree("y");
+
+    final var sizeAnalysis = new DirectedMultigraph<Identifier, SizeEdge>(SizeEdge.class);
+    sizeAnalysis.addVertex(x);
+    sizeAnalysis.addVertex(Identifier.LEAF);
+    sizeAnalysis.addEdge(x, Identifier.LEAF, SizeEdge.eq());
+
+    // P <= Q
+    final Annotation P = new Annotation(List.of(ZERO, ZERO), Map.of(List.of(1, 0, 1), ONE), "P");
+    final Annotation Q =
+        new Annotation(List.of(ZERO, ZERO), Map.of(List.of(1, 0, 0), ONE, unitIndex(2), ONE), "Q");
+
+    final var solution =
+        ConstraintSystemSolver.solve(
+            Set.copyOf(
+                W.compareCoefficientsLessOrEqualUsingFarkas(List.of(x, y), P, Q, sizeAnalysis)));
+
+    assertTrue(solution.isPresent());
+  }
+
+  @Test
+  void lemmaPlus1() {
+    final var x = Identifier.predefinedTree("x");
+
+    final var sizeAnalysis = new DirectedMultigraph<Identifier, SizeEdge>(SizeEdge.class);
+    sizeAnalysis.addVertex(x);
+
+    // P <= Q
+    final Annotation P =
+        new Annotation(
+            List.of(ZERO),
+            Map.of(
+                List.of(0, 1), ZERO,
+                // List.of(0, 2), ZERO,
+                // List.of(1, 0), ZERO,
+                List.of(1, 1), ONE,
+                List.of(1, 2), ZERO),
+            "P");
+    final Annotation Q =
+        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE, unitIndex(1), ONE), "Q");
+
+    final var solution =
+        ConstraintSystemSolver.solve(
+            Set.copyOf(
+                W.compareCoefficientsLessOrEqualUsingFarkas(List.of(x), P, Q, sizeAnalysis)));
+
+    assertTrue(solution.isPresent());
+  }
+
   private static Stream<Arguments> pairs() {
     return Stream.of(
         Arguments.of(

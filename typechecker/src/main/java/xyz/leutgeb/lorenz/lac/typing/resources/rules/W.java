@@ -1,45 +1,5 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.rules;
 
-import com.google.common.collect.Streams;
-import com.microsoft.z3.ArithExpr;
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
-import com.microsoft.z3.Expr;
-import com.microsoft.z3.IntNum;
-import com.microsoft.z3.Status;
-import lombok.AllArgsConstructor;
-import lombok.Value;
-import lombok.extern.slf4j.Slf4j;
-import org.jgrapht.Graph;
-import org.jgrapht.GraphPath;
-import org.jgrapht.alg.shortestpath.AllDirectedPaths;
-import xyz.leutgeb.lorenz.lac.ast.Identifier;
-import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
-import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
-import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsProductConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.LessThanOrEqualConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
-import xyz.leutgeb.lorenz.lac.util.Pair;
-import xyz.leutgeb.lorenz.lac.util.SizeEdge;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
 import static com.google.common.collect.Lists.cartesianProduct;
 import static com.google.common.collect.Streams.concat;
 import static com.microsoft.z3.Status.UNKNOWN;
@@ -61,12 +21,51 @@ import static xyz.leutgeb.lorenz.lac.util.Util.append;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
+import com.google.common.collect.Streams;
+import com.microsoft.z3.ArithExpr;
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Context;
+import com.microsoft.z3.Expr;
+import com.microsoft.z3.IntNum;
+import com.microsoft.z3.Status;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+import lombok.AllArgsConstructor;
+import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
+import org.jgrapht.Graph;
+import org.jgrapht.GraphPath;
+import org.jgrapht.alg.shortestpath.AllDirectedPaths;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
+import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
+import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsProductConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.LessThanOrEqualConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
+import xyz.leutgeb.lorenz.lac.util.Pair;
+import xyz.leutgeb.lorenz.lac.util.SizeEdge;
+
 @Slf4j
 public class W implements Rule {
   public static final W INSTANCE = new W();
 
   private static final boolean LEMMA_2XY_ENABLED = true;
-  private static final boolean LEMMA_PLUS1_ENABLED = false;
+  private static final boolean LEMMA_PLUS1_ENABLED = true;
   private static final boolean LEMMA_PLUS1Y_ENABLED = false;
   private static final boolean LEMMA_PLUS2_ENABLED = false;
   private static final boolean MONO_ONE_ENABLED = false;
@@ -161,11 +160,9 @@ public class W implements Rule {
         LEMMA_2XY_ENABLED ? lemma2XY(potentialFunctions) : emptyList();
 
     final List<Pair<List<Integer>, List<Integer>>> lemmaPlus1Instances =
-        LEMMA_PLUS1_ENABLED
-            ? append(
-                lemmaPlus1(potentialFunctions),
-                LEMMA_PLUS1Y_ENABLED ? lemmaPlus1Known(potentialFunctions, knowOne) : emptyList())
-            : emptyList();
+        append(
+            LEMMA_PLUS1_ENABLED ? lemmaPlus1(potentialFunctions) : emptyList(),
+            LEMMA_PLUS1Y_ENABLED ? lemmaPlus1Known(potentialFunctions, knowOne) : emptyList());
 
     final List<Pair<List<Integer>, List<Integer>>> lemmaPlus2Instances =
         LEMMA_PLUS2_ENABLED ? lemmaPlus2(potentialFunctions) : emptyList();
@@ -175,6 +172,7 @@ public class W implements Rule {
     // List<String> identifierNames = identifiers.stream().map(Object::toString).collect(toList());
     /*
     System.out.println("(w) --- " + left.getId() + " <= " + right.getId() + " --- ");
+    System.out.println("pot: " + potentialFunctions);
     System.out.println("ids: " + identifiers);
     System.out.println(
         "lts: " + knowLt.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
@@ -274,17 +272,17 @@ public class W implements Rule {
             sum.add(fi);
           } else if (potentialFunction.equals(knowledgeRow.get(2))) {
             // fi corresponds to log(x + y)
-            UnknownCoefficient prod = maybeNegative(wid + ".l17.prod[" + column + "," + row + "]");
+            UnknownCoefficient prod = maybeNegative(wid + ".lxy2.prod[" + column + "," + row + "]");
             constraints.add(
                 new EqualsProductConstraint(
-                    prod, List.of(MINUS_TWO, fi), "(w:l17) " + prod + " = (-2) * " + fi));
+                    prod, List.of(MINUS_TWO, fi), "(w) lxy2" + prod + " = (-2) * " + fi));
             sum.add(prod);
           } else if (Annotation.isUnitIndex(potentialFunction)) {
             // fi corresponds to log(2) = 1
-            UnknownCoefficient prod = maybeNegative(wid + ".l17.prod[" + column + "," + row + "]");
+            UnknownCoefficient prod = maybeNegative(wid + ".lxy2.prod[" + column + "," + row + "]");
             constraints.add(
                 new EqualsProductConstraint(
-                    prod, List.of(TWO, fi), "(w) lxy2  const: " + prod + " = (2) * " + fi));
+                    prod, List.of(TWO, fi), "(w) lxy2 const: " + prod + " = (2) * " + fi));
             sum.add(prod);
           }
         }
@@ -301,7 +299,7 @@ public class W implements Rule {
           final var fi = f.get(row + lemmaOffset);
           if (potentialFunction.equals(knowledgeRow.getLeft())) {
             // fi corresponds to log(x)
-            final var prod = maybeNegative(wid + ".l17.prod[" + column + "," + row + "]");
+            final var prod = maybeNegative(wid + ".lp1.prod[" + column + "," + row + "]");
             constraints.add(
                 new EqualsProductConstraint(
                     prod, List.of(MINUS_ONE, fi), "(w) lp1 log(x): " + prod + " = (-1) * " + fi));
@@ -311,7 +309,7 @@ public class W implements Rule {
             sum.add(fi);
           } else if (Annotation.isUnitIndex(potentialFunction)) {
             // fi corresponds to log(2) = 1
-            final var prod = maybeNegative(wid + ".l17.prod[" + column + "," + row + "]");
+            final var prod = maybeNegative(wid + ".lp1.prod[" + column + "," + row + "]");
             constraints.add(
                 new EqualsProductConstraint(
                     prod, List.of(MINUS_ONE, fi), "(w) lp1 const: " + prod + " = (-1) * " + fi));
@@ -332,7 +330,7 @@ public class W implements Rule {
           final var fi = f.get(row + lemmaOffset);
           if (potentialFunction.equals(knowledgeRow.getLeft())) {
             // fi corresponds to log(x)
-            final var prod = maybeNegative(wid + ".l17.prod[" + column + "," + row + "]");
+            final var prod = maybeNegative(wid + ".lp2.prod[" + column + "," + row + "]");
             constraints.add(
                 new EqualsProductConstraint(
                     prod, List.of(MINUS_ONE, fi), "(w) lp2 log(x): " + prod + " = (-1) * " + fi));
@@ -342,7 +340,7 @@ public class W implements Rule {
             sum.add(fi);
           } else if (Annotation.isUnitIndex(potentialFunction)) {
             // fi corresponds to log(2) = 1
-            final var prod = maybeNegative(wid + ".l17.prod[" + column + "," + row + "]");
+            final var prod = maybeNegative(wid + ".lp2.prod[" + column + "," + row + "]");
             constraints.add(
                 new EqualsProductConstraint(
                     prod, List.of(MINUS_TWO, fi), "(w) lp2 const: " + prod + " = (-2) * " + fi));
