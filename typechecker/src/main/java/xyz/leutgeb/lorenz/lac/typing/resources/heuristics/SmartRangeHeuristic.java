@@ -1,21 +1,18 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.heuristics;
 
-import lombok.Data;
-import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
-import xyz.leutgeb.lorenz.lac.util.Util;
+import static com.google.common.collect.Lists.cartesianProduct;
+import static java.util.stream.Collectors.toUnmodifiableList;
+import static java.util.stream.IntStream.range;
+import static java.util.stream.Stream.concat;
 
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static com.google.common.collect.Lists.cartesianProduct;
-import static java.util.stream.Collectors.toUnmodifiableList;
-import static java.util.stream.IntStream.range;
-import static java.util.stream.Stream.concat;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.isConstantIndex;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.isUnitIndex;
+import lombok.Data;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Data
 public class SmartRangeHeuristic implements AnnotationHeuristic {
@@ -51,7 +48,7 @@ public class SmartRangeHeuristic implements AnnotationHeuristic {
                 .collect(toUnmodifiableList()))
         .stream()
         .filter(Predicate.not(Util::isAllZeroes));
-        // TODO: Allow offset = 1.
-        //.filter(index -> !isConstantIndex(index) || isUnitIndex(index));
+    // TODO: Be smart about when to allow constants, especially 1. Only when there's a leaf?
+    // .filter(index -> !isConstantIndex(index) || isUnitIndex(index));
   }
 }
