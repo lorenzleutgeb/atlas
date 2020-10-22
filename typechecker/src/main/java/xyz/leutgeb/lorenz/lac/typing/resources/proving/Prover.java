@@ -174,7 +174,7 @@ public class Prover {
     if (expression.isTerminal()) {
       final Stack<Rule> todo = new Stack<>();
       todo.push(chooseRule(expression));
-      if (weakenBeforeTerminal) {
+      if (weakenBeforeTerminal || weakenAggressively) {
         todo.push(weakenRule);
       }
       final var wvars = WVar.redundantIds(obligation).collect(Collectors.toUnmodifiableList());
