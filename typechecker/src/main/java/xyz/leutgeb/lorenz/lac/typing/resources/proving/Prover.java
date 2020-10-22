@@ -388,7 +388,7 @@ public class Prover {
                                       + rule.getName()
                                       + ")"
                                       + "<br />"
-                                      + (!rule.equals(weakenRule)
+                                      + (!rule.equals(weakenRule) || o.getRight().size() <= 32
                                           ? (o.getRight().isEmpty()
                                               ? "No constraints."
                                               : (o.getRight().stream()
