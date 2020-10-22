@@ -92,6 +92,8 @@ public class LetTreeCf implements Rule {
       throw bug("shared variables in let expression when attempting to generate constraints");
     }
 
+    final var prefix = "(let:tree:cf `" + x.getName() + "`) ";
+
     final var varsForGammaAsList =
         obligation.getContext().getIds().stream()
             .filter(varsForGammaAsSet::contains)
@@ -127,7 +129,7 @@ public class LetTreeCf implements Rule {
     p.getRight()
         .addAll(
             EqualityConstraint.eqRanksDefineFromLeft(
-                varsForGammaAsList, gammaDeltaQ, gammaP, "(let:tree:cf " + x + " ) q_i = p_i"));
+                varsForGammaAsList, gammaDeltaQ, gammaP, prefix + "q_i = p_i"));
 
     // TODO: Maybe also add that a + c != 0?
     // Define non-rank coefficients in P from Q.
@@ -154,10 +156,9 @@ public class LetTreeCf implements Rule {
                         new EqualityConstraint(
                             gammaP.getCoefficientOrDefine(entry),
                             entry.getValue(),
-                            "(let:tree:cf "
-                                + x
-                                + " ) p_{(a⃗⃗,c)} = q_{(a⃗⃗,0⃗,c)} with [a⃗⃗, c] = "
-                                + entry.toString()))
+                            prefix
+                                + "p_{(a⃗⃗,c)} = q_{(a⃗⃗,0⃗,c)} with (a⃗⃗,c) = "
+                                + entry.toIndexString()))
                 .collect(Collectors.toSet()));
 
     crossConstraints.add(
@@ -167,22 +168,19 @@ public class LetTreeCf implements Rule {
                 pp.getCoefficientOrDefine(unitIndex(pp.size())),
                 gammaP.getAnnotation().getCoefficientOrDefine(unitIndex(gammaP.size())).negate(),
                 gammaDeltaQ.getAnnotation().getCoefficientOrZero(unitIndex(gammaDeltaQ.size()))),
-            "(let:tree:cf) move const"));
+            prefix + "move const"));
 
     crossConstraints.add(
         new LessThanOrEqualConstraint(
             gammaP.getAnnotation().getCoefficientOrDefine(unitIndex(gammaP.size())),
             gammaDeltaQ.getAnnotation().getCoefficientOrZero(unitIndex(gammaDeltaQ.size())),
-            "(let:tree:cf) c_p less than c_q"));
+            prefix + "c_p less than c_q"));
 
     // Define rank coefficients in R from Q.
     r.getRight()
         .addAll(
             EqualityConstraint.eqRanksDefineFromLeft(
-                varsForDeltaAsList,
-                gammaDeltaQ,
-                deltaxr,
-                "(let:tree:cf " + x + " ) q_{m+j} = r_j"));
+                varsForDeltaAsList, gammaDeltaQ, deltaxr, prefix + "q_{m+j} = r_j"));
 
     // Define rank coefficient for x in R from P'.
     crossConstraints.add(
@@ -191,7 +189,7 @@ public class LetTreeCf implements Rule {
         new EqualityConstraint(
             deltaxr.getRankCoefficientOrDefine(x),
             pp.getRankCoefficient(),
-            "(let:tree:cf " + x + " ) r_{k+1} = p'_{*}"));
+            prefix + "r_{k+1} = p'_{*}"));
 
     // Define some non-rank coefficients in R from P'.
     // Here we do not need to check whether d + e > 0 because P' was created via heuristics.
@@ -205,7 +203,7 @@ public class LetTreeCf implements Rule {
                       deltaxr.getCoefficientOrDefine(
                           id -> id.equals(x) ? index.get(0) : 0, index.get(1)),
                       e.getValue(),
-                      "(let:tree:cf " + x + " ) r_{(0⃗,d,e)} = p'_{(d,e)}");
+                      prefix + "r_{(0⃗,d,e)} = p'_{(d,e)}");
                 })
             .collect(toList()));
 
@@ -231,7 +229,9 @@ public class LetTreeCf implements Rule {
                       new EqualityConstraint(
                           deltaxr.getCoefficientOrDefine(entry.mask(x, 0)),
                           entry.getValue(),
-                          "(let:tree:cf " + x + " ) r_{(b⃗,0,0)} = q_{(0⃗,b⃗,0)}"))
+                          prefix
+                              + "r_{(b⃗,0,0)} = q_{(0⃗,b⃗,0)} with (b⃗,0) = "
+                              + entry.toIndexString()))
               .collect(toList()));
 
       // Find all indices (\vec{b}, d, e) such that \vec{b} \neq \vec{0}.
@@ -300,7 +300,7 @@ public class LetTreeCf implements Rule {
                                       .getContext()
                                       .getCoefficientOrDefine(qEntry))
                           .collect(Collectors.toUnmodifiableList()),
-                      "q_{(a⃗⃗,b⃗,c)} = Σ_{(d,e)}{p^{(b⃗,d,e)}_{(a⃗⃗,c})}"))
+                      prefix + "q_{(a⃗⃗,b⃗,c)} = Σ_{(d,e)}{p^{(b⃗,d,e)}_{(a⃗⃗,c})}"))
           .forEach(crossConstraints::add);
 
       for (var bde : bdes) {
@@ -318,7 +318,7 @@ public class LetTreeCf implements Rule {
             new EqualityConstraint(
                 deltaxr.getCoefficientOrDefine(bde),
                 cfpp.getCoefficientOrDefine(d, e),
-                "(let:tree:cf " + x + " ) r_{(b⃗,d,e)} = p'^{(b⃗,d,e)}_{(d,e)}"));
+                prefix + "r_{(b⃗,d,e)} = p'^{(b⃗,d,e)}_{(d,e)}"));
 
         DE_RANGE.stream()
             .filter(Predicate.not(Util::isZero))
@@ -330,7 +330,7 @@ public class LetTreeCf implements Rule {
                     new EqualityConstraint(
                         cfpp.getCoefficientOrDefine(dpep.getLeft(), dpep.getRight()),
                         ZERO,
-                        "(let:tree:cf " + x + " ) p'^{(b⃗,d,e}_{(d',e')}=0"))
+                        prefix + "p'^{(b⃗,d,e}_{(d',e')}=0"))
             .forEach(cfconstraints::add);
 
         // \sum_(a,c) p^(b,d,e)_(a,c) >= p^(b,d,e)_(d,e)
@@ -348,10 +348,10 @@ public class LetTreeCf implements Rule {
 
         UnknownCoefficient u = UnknownCoefficient.unknown("lemma14guardsum" + x);
 
-        cfconstraints.add(new EqualsSumConstraint(u, lemma14guard, "(let:tree:cf) lemma14guard"));
+        cfconstraints.add(new EqualsSumConstraint(u, lemma14guard, prefix + "lemma14guard"));
         cfconstraints.add(
             new LessThanOrEqualConstraint(
-                cfpp.getCoefficientOrDefine(d, e), u, "(let:tree:cf) lemma 14 guard"));
+                cfpp.getCoefficientOrDefine(d, e), u, prefix + "lemma 14 guard"));
 
         // TODO: Maybe use implication instead of DisjunctiveConstraint
         cfp.streamNonRankCoefficients()
@@ -365,16 +365,12 @@ public class LetTreeCf implements Rule {
                     new DisjunctiveConstraint(
                         List.of(
                             new EqualityConstraint(
-                                entry.getValue(),
-                                ZERO,
-                                "(let:tree:cf " + x + " ) p^{(b⃗,d,e}_{(a⃗⃗,c)} == 0"),
+                                entry.getValue(), ZERO, prefix + "p^{(b⃗,d,e}_{(a⃗⃗,c)} == 0"),
                             new LessThanOrEqualConstraint(
                                 cfpp.getCoefficientOrDefine(d, e),
                                 entry.getValue(),
-                                "(let:tree:cf "
-                                    + x
-                                    + " ) p'^{(b⃗,d,e}_{(d,e)} ≤ p^{(b⃗,d,e}_{(a⃗⃗,c)}")),
-                        "(let:tree:cf " + x + " ) implication in line 3"))
+                                prefix + "p'^{(b⃗,d,e}_{(d,e)} ≤ p^{(b⃗,d,e}_{(a⃗⃗,c)}")),
+                        prefix + "implication in line 3"))
             .forEach(cfconstraints::add);
       }
     }

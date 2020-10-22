@@ -32,6 +32,8 @@ public class Node implements Rule {
       throw bug("context was not weakened");
     }
 
+    final var prefix = "(node `" + expression + "`) ";
+
     // We reorder the context such that it matches the syntax.
     final var q = qunordered.reorder(List.of(leftId, rightId)).getAnnotation();
 
@@ -54,40 +56,32 @@ public class Node implements Rule {
               return new EqualityConstraint(
                   q.getCoefficientOrZero(a, a, c),
                   qpCoeff,
-                  "(node) q_{(a,a,c)} = q'_{(a,c)} for expression `"
-                      + expression
-                      + "` with (a,a,c)="
+                  prefix
+                      + "q_{(a,a,c)} = q'_{(a,c)}"
+                      + " with (a,a,c)="
                       + toVectorString(qEntry.getKey()));
             })
         .forEach(constraints::add);
 
     constraints.add(
         new EqualityConstraint(
-            q.getRankCoefficientOrZero(0),
-            q.getRankCoefficientOrZero(1),
-            "(node) q₀ = q₁ for expression (note starting index 0) `" + expression + "`"));
+            q.getRankCoefficientOrZero(0), q.getRankCoefficientOrZero(1), prefix + "q₀ = q₁"));
 
     constraints.add(
         new EqualityConstraint(
-            q.getRankCoefficientOrZero(1),
-            rankCoefficient,
-            "(node) q₂ = q'₀ for expression `" + expression + "`"));
+            q.getRankCoefficientOrZero(1), rankCoefficient, prefix + "q₂ = q'₀"));
 
     constraints.add(
         new EqualityConstraint(
-            q.getCoefficientOrZero(1, 0, 0),
-            rankCoefficient,
-            "(node) q₍₁ ₀ ₀₎ = q'₀ for expression `" + expression + "`"));
+            q.getCoefficientOrZero(1, 0, 0), rankCoefficient, prefix + "q₍₁ ₀ ₀₎ = q'₀"));
 
     constraints.add(
         new EqualityConstraint(
-            q.getCoefficientOrZero(0, 1, 0),
-            rankCoefficient,
-            "(node) q₍₀ ₁ ₀₎ = q'₀ for expression `" + expression + "`"));
+            q.getCoefficientOrZero(0, 1, 0), rankCoefficient, prefix + "q₍₀ ₁ ₀₎ = q'₀"));
 
     qp.streamNonRankCoefficients()
         .filter(entry -> !occurred.contains(entry.getValue()))
-        .map(x -> new EqualityConstraint(x.getValue(), ZERO, "(node) setToZero " + x.getKey()))
+        .map(x -> new EqualityConstraint(x.getValue(), ZERO, prefix + "setToZero " + x.getKey()))
         .forEach(constraints::add);
 
     return Rule.ApplicationResult.onlyConstraints(constraints);
