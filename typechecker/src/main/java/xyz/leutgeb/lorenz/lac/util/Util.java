@@ -189,13 +189,12 @@ public class Util {
     return new RuntimeException("bug: " + message);
   }
 
-  public static String randomHex(int length) {
+  private static String randomHex(int length) {
     StringBuilder sb = new StringBuilder();
     while (sb.length() < length) {
       sb.append(String.format("%08x", RANDOM.nextInt()));
     }
-
-    return sb.toString().substring(0, length);
+    return sb.substring(0, length);
   }
 
   public static String randomHex() {
