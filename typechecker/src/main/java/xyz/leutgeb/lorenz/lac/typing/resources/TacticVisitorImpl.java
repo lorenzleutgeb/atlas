@@ -29,78 +29,81 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
   Prover prover;
   Obligation obligation;
 
+  private static final boolean FIXING_ENABLED = false;
+  private static final boolean RECORDING_ENABLED = false;
+
   private void proveInternal(
       Obligation obligation, TacticParser.TacticExpressionContext tacticExpression) {
     if (tacticExpression instanceof TacticParser.NamedTacticExpressionContext) {
       final var annotatedTacticExpression =
           (TacticParser.NamedTacticExpressionContext) tacticExpression;
-      final String annotation = annotatedTacticExpression.name.getText();
-      tacticExpression = annotatedTacticExpression.tacticExpression();
-      if (annotation != null) {
-        prover.record(annotation, obligation);
+
+      if (RECORDING_ENABLED) {
+        final String annotation = annotatedTacticExpression.name.getText();
+        if (annotation != null) {
+          prover.record(annotation, obligation);
+        }
       }
+
+      tacticExpression = annotatedTacticExpression.tacticExpression();
     }
 
     Token start = null;
+
     if (tacticExpression instanceof TacticParser.FixedAnnotationContext) {
       final var fixedAnnotationContext = (TacticParser.FixedAnnotationContext) tacticExpression;
       start = fixedAnnotationContext.getStart();
-      final Optional<Annotation> optionalFromFixing = Optional.empty();
-      final Optional<Annotation> optionalToFixing = Optional.empty();
+      if (FIXING_ENABLED) {
+        final Optional<Annotation> optionalFromFixing =
+            convert(obligation.getContext().getAnnotation().size(), fixedAnnotationContext.from);
+        final Optional<Annotation> optionalToFixing =
+            convert(obligation.getAnnotation().size(), fixedAnnotationContext.to);
 
-      /*
-      Optional<Annotation> optionalFromFixing =
-          convert(obligation.getContext().getAnnotation().size(), fixedAnnotationContext.from);
-      Optional<Annotation> optionalToFixing =
-          convert(obligation.getAnnotation().size(), fixedAnnotationContext.to);
-       */
+        if (optionalFromFixing.isPresent()) {
+          log.info(
+              "Fixing annotation named '{}' on line {}",
+              obligation.getContext().getAnnotation().getNameAndId(),
+              fixedAnnotationContext.getStart().getLine());
+          log.info(
+              "Fixing annotation named '{}' on line {}: {} = {}",
+              obligation.getContext().getAnnotation().getNameAndId(),
+              fixedAnnotationContext.getStart().getLine(),
+              obligation.getContext().getAnnotation(),
+              optionalFromFixing.get());
 
-      if (optionalFromFixing.isPresent()) {
-        log.info(
-            "Fixing annotation named '{}' on line {}",
-            obligation.getContext().getAnnotation().getNameAndId(),
-            fixedAnnotationContext.getStart().getLine());
-        /*
-        log.info(
-            "Fixing annotation named '{}' on line {}: {} = {}",
-            obligation.getContext().getAnnotation().getNameAndId(),
-            fixedAnnotationContext.getStart().getLine(),
-            obligation.getContext().getAnnotation(),
-            optionalFromFixing.get());
-         */
-        prover.addExternalConstraints(
-            EqualityConstraint.eq(
-                optionalFromFixing.get(),
-                obligation.getContext().reorderLexicographically().getAnnotation(),
-                "(tactic) fixed at position "
-                    + start.getLine()
-                    + ":"
-                    + start.getCharPositionInLine()
-                    + " (indices mean lexicographically reordered context)"));
-      }
+          prover.addExternalConstraints(
+              EqualityConstraint.eq(
+                  optionalFromFixing.get(),
+                  obligation.getContext().reorderLexicographically().getAnnotation(),
+                  "(tactic) fixed at position "
+                      + start.getLine()
+                      + ":"
+                      + start.getCharPositionInLine()
+                      + " (indices mean lexicographically reordered context)"));
+        }
 
-      if (optionalToFixing.isPresent()) {
-        log.info(
-            "Fixing annotation named '{}' on line {}",
-            obligation.getAnnotation().getNameAndId(),
-            fixedAnnotationContext.getStart().getLine());
+        if (optionalToFixing.isPresent()) {
+          log.info(
+              "Fixing annotation named '{}' on line {}",
+              obligation.getAnnotation().getNameAndId(),
+              fixedAnnotationContext.getStart().getLine());
 
-        /*
-        log.info(
-            "Fixing annotation named '{}' on line {}: {} = {}",
-            obligation.getAnnotation().getNameAndId(),
-            fixedAnnotationContext.getStart().getLine(),
-            obligation.getAnnotation(),
-            optionalToFixing.get());
-        */
-        prover.addExternalConstraints(
-            EqualityConstraint.eq(
-                optionalToFixing.get(),
-                obligation.getAnnotation(),
-                "(tactic) fixed at position "
-                    + start.getLine()
-                    + ":"
-                    + start.getCharPositionInLine()));
+          log.info(
+              "Fixing annotation named '{}' on line {}: {} = {}",
+              obligation.getAnnotation().getNameAndId(),
+              fixedAnnotationContext.getStart().getLine(),
+              obligation.getAnnotation(),
+              optionalToFixing.get());
+
+          prover.addExternalConstraints(
+              EqualityConstraint.eq(
+                  optionalToFixing.get(),
+                  obligation.getAnnotation(),
+                  "(tactic) fixed at position "
+                      + start.getLine()
+                      + ":"
+                      + start.getCharPositionInLine()));
+        }
       }
 
       proveInternal(obligation, fixedAnnotationContext.next);
