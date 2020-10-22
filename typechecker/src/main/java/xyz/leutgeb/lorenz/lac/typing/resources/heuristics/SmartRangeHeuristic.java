@@ -1,18 +1,21 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.heuristics;
 
-import static com.google.common.collect.Lists.cartesianProduct;
-import static java.util.stream.Collectors.toUnmodifiableList;
-import static java.util.stream.IntStream.range;
-import static java.util.stream.Stream.concat;
+import lombok.Data;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.Data;
-import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
-import xyz.leutgeb.lorenz.lac.util.Util;
+
+import static com.google.common.collect.Lists.cartesianProduct;
+import static java.util.stream.Collectors.toUnmodifiableList;
+import static java.util.stream.IntStream.range;
+import static java.util.stream.Stream.concat;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.isConstantIndex;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.isUnitIndex;
 
 @Data
 public class SmartRangeHeuristic implements AnnotationHeuristic {
@@ -42,13 +45,13 @@ public class SmartRangeHeuristic implements AnnotationHeuristic {
         namePrefix);
   }
 
-  public Stream<List<Integer>> generate(int size) {
+  public Stream<List<Integer>> generate(int treeSize) {
     return cartesianProduct(
-            concat(Stream.generate(() -> as).limit(size), Stream.of(bs))
+            concat(Stream.generate(() -> as).limit(treeSize), Stream.of(bs))
                 .collect(toUnmodifiableList()))
         .stream()
-        .filter(Predicate.not(Util::isAllZeroes))
+        .filter(Predicate.not(Util::isAllZeroes));
         // TODO: Allow offset = 1.
-        .filter(index -> !Annotation.isConstantIndex(index) || index.get(size).equals(2));
+        //.filter(index -> !isConstantIndex(index) || isUnitIndex(index));
   }
 }

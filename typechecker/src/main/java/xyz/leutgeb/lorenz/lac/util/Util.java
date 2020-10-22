@@ -185,6 +185,10 @@ public class Util {
     return fqn.replace(".", "~");
   }
 
+  public static RuntimeException bug() {
+    return new RuntimeException("bug");
+  }
+
   public static RuntimeException bug(String message) {
     return new RuntimeException("bug: " + message);
   }

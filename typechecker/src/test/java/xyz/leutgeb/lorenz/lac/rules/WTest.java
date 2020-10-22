@@ -215,7 +215,10 @@ public class WTest {
     // resultAllWithout.stream().forEach(pair -> System.out.println(" all: " + pair));
     final var resultEachWithout =
         pairs.stream()
-            .filter(pair -> W.lessThanOrEqual(pair.get(0), pair.get(1), emptySet(), emptySet()))
+            .filter(
+                pair ->
+                    W.lessThanOrEqual(
+                        pair.get(0), pair.get(1), emptySet(), emptySet(), Collections.emptySet()))
             .map(list -> new W.LessThanOrEqual<>(list.get(0), list.get(1)))
             // .peek(pair -> System.out.println("each: " + pair))
             .collect(Collectors.toSet());
@@ -229,7 +232,10 @@ public class WTest {
 
     final var resultEachWithLt =
         pairs.stream()
-            .filter(pair -> W.lessThanOrEqual(pair.get(0), pair.get(1), knowLt, emptySet()))
+            .filter(
+                pair ->
+                    W.lessThanOrEqual(
+                        pair.get(0), pair.get(1), knowLt, emptySet(), Collections.emptySet()))
             .map(list -> new W.LessThanOrEqual<>(list.get(0), list.get(1)))
             // .peek(pair -> System.out.println("each: " + pair))
             .collect(Collectors.toSet());
@@ -250,7 +256,10 @@ public class WTest {
 
     final var resultEachWithEq =
         pairs.stream()
-            .filter(pair -> W.lessThanOrEqual(pair.get(0), pair.get(1), emptySet(), knowEq))
+            .filter(
+                pair ->
+                    W.lessThanOrEqual(
+                        pair.get(0), pair.get(1), emptySet(), knowEq, Collections.emptySet()))
             .map(list -> new W.LessThanOrEqual<>(list.get(0), list.get(1)))
             // .peek(pair -> System.out.println("each: " + pair.smaller + " < " + pair.larger))
             .collect(Collectors.toSet());
@@ -327,7 +336,10 @@ public class WTest {
     // resultAllWithout.stream().forEach(pair -> System.out.println(" all: " + pair));
     final var resultEachWithout =
         pairs.stream()
-            .filter(pair -> W.lessThanOrEqual(pair.get(0), pair.get(1), emptySet(), emptySet()))
+            .filter(
+                pair ->
+                    W.lessThanOrEqual(
+                        pair.get(0), pair.get(1), emptySet(), emptySet(), Collections.emptySet()))
             .map(list -> new W.LessThanOrEqual<>(list.get(0), list.get(1)))
             .peek(pair -> System.out.println("each: " + pair))
             .collect(Collectors.toSet());
@@ -414,7 +426,10 @@ public class WTest {
     // resultAllWithout.stream().forEach(pair -> System.out.println(" all: " + pair));
     final var resultEachWithout =
         pairs.stream()
-            .filter(pair -> W.lessThanOrEqual(pair.get(0), pair.get(1), emptySet(), emptySet()))
+            .filter(
+                pair ->
+                    W.lessThanOrEqual(
+                        pair.get(0), pair.get(1), emptySet(), emptySet(), Collections.emptySet()))
             .map(list -> new W.LessThanOrEqual<>(list.get(0), list.get(1)))
             .peek(pair -> System.out.println("each: " + pair))
             .collect(Collectors.toSet());

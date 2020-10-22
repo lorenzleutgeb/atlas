@@ -119,7 +119,9 @@ public class Tests {
   private static Stream<Arguments> constantCostDefinitions() {
     return Stream.of(
         arguments("LeftList.cons", sig(ALPHA, ATREE, ATREE), 0),
+        arguments("LeftList.cons_cons", sig(ALPHA, ALPHA, ATREE, ATREE), 0),
         arguments("RightList.cons", sig(ALPHA, ATREE, ATREE), 0),
+        arguments("RightList.cons_cons", sig(ALPHA, ALPHA, ATREE, ATREE), 0),
         arguments("Tree.singleton", sig(ALPHA, ATREE), 0),
         arguments("Bool.neg", sig(BOOL, BOOL), 0),
         arguments("Bool.or", sig(BOOL, BOOL, BOOL), 0),
