@@ -16,7 +16,7 @@ import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoeffici
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import static xyz.leutgeb.lorenz.lac.util.Util.generateSubscript;
 import static xyz.leutgeb.lorenz.lac.util.Util.generateSubscriptIndex;
-import static xyz.leutgeb.lorenz.lac.util.Util.isZero;
+import static xyz.leutgeb.lorenz.lac.util.Util.isAllZeroes;
 import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 import static xyz.leutgeb.lorenz.lac.util.Util.repeat;
 
@@ -209,8 +209,12 @@ public class Annotation {
   }
 
   public static List<Integer> unitIndex(int size) {
+    return constantIndex(size, 2);
+  }
+
+  public static List<Integer> constantIndex(int size, int value) {
     final var unitIndex = Util.zero(size);
-    unitIndex.add(2);
+    unitIndex.add(value);
     return unitIndex;
   }
 
@@ -266,7 +270,7 @@ public class Annotation {
     if (index.size() != size() + 1) {
       throw new IllegalArgumentException();
     }
-    if (isZero(index)) {
+    if (isAllZeroes(index)) {
       throw bug("attempting to create zero index");
     }
     return coefficients.computeIfAbsent(index, key -> unknown(generateSubscriptIndex(key)));
@@ -285,7 +289,7 @@ public class Annotation {
     if (index.size() != size() + 1) {
       throw new IllegalArgumentException();
     }
-    if (isZero(index)) {
+    if (isAllZeroes(index)) {
       throw bug("attempting to create zero index");
     }
     final var elem = coefficients.get(index);
@@ -362,25 +366,37 @@ public class Annotation {
 
   public String toLongString() {
     return toLongString(
-        IntStream.rangeClosed(1, size())
-            .mapToObj(i -> "t" + generateSubscript(i))
-            .collect(toList()),
-        true);
+        IntStream.range(0, size()).mapToObj(i -> "_" + generateSubscript(i)).collect(toList()));
+  }
+
+  public static String toPotential(List<String> names, List<Integer> index) {
+    if (isUnitIndex(index)) {
+      return "1";
+    }
+    final var items = new ArrayList<String>(index.size());
+    for (int i = 0; i < index.size() - 1; i++) {
+      if (index.get(i) == 0) {
+        continue;
+      }
+      var item = "";
+      if (index.get(i) != 1) {
+        item += index.get(i) + " · ";
+      }
+      item += "|" + names.get(i) + "|";
+      items.add(item);
+    }
+    if (index.get(index.size() - 1) != 0) {
+      items.add(String.valueOf(index.get(index.size() - 1)));
+    }
+    return "log(" + String.join(" + ", items) + ")";
   }
 
   public String toLongString(List<String> parameters) {
-    return toLongString(parameters, true);
-  }
-
-  public String toLongString(List<String> parameters, boolean simplify) {
     StringBuilder sb = new StringBuilder();
     boolean nonzero = false;
     for (int i = 0; i < size(); i++) {
-      var q = rankCoefficients.get(i);
-      if (q == null) {
-        q = ZERO;
-      }
-      if (q == ZERO && simplify) {
+      var q = getRankCoefficientOrZero(i);
+      if (q == ZERO) {
         continue;
       }
       nonzero = true;
@@ -400,31 +416,15 @@ public class Annotation {
     final var schoenmakerPart =
         coefficients.entrySet().stream()
             .filter(e -> e.getValue() != ZERO)
-            .filter(e -> !Annotation.isUnitIndex(e.getKey()))
             .map(
                 e -> {
                   final var index = e.getKey();
                   final var coefficient = e.getValue();
-                  final var items = new ArrayList<String>(index.size());
-                  for (int i = 0; i < index.size() - 1; i++) {
-                    if (index.get(i) == 0 && simplify) {
-                      continue;
-                    }
-                    var item = "";
-                    if (index.get(i) != 1 || !simplify) {
-                      item += index.get(i) + " · ";
-                    }
-                    item += "|" + parameters.get(i) + "|";
-                    items.add(item);
-                  }
-                  if (index.get(index.size() - 1) != 0 || !simplify) {
-                    items.add(String.valueOf(index.get(index.size() - 1)));
-                  }
                   var result = "";
-                  if (!coefficient.equals(new KnownCoefficient(Fraction.ONE)) || !simplify) {
+                  if (!coefficient.equals(new KnownCoefficient(Fraction.ONE))) {
                     result = coefficient + " · ";
                   }
-                  return result + "lg(" + String.join(" + ", items) + ")";
+                  return result + toPotential(parameters, index);
                 })
             .collect(Collectors.joining(" + "));
 
@@ -486,7 +486,7 @@ public class Annotation {
     if (index.size() != size() + 1) {
       throw new IllegalArgumentException();
     }
-    if (isZero(index)) {
+    if (isAllZeroes(index)) {
       throw bug("attempting to access zero index");
     }
     if (!coefficients.containsKey(index)) {
@@ -699,5 +699,10 @@ public class Annotation {
         .filter(x -> x instanceof KnownCoefficient)
         .map(x -> ((KnownCoefficient) x).getValue())
         .anyMatch(Fraction::isNonInteger);
+  }
+
+  public boolean isZero() {
+    return Streams.concat(rankCoefficients.stream(), coefficients.values().stream())
+        .allMatch(x -> x == null || ZERO.equals(x));
   }
 }

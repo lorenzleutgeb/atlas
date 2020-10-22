@@ -245,7 +245,7 @@ public class LetTreeCf implements Rule {
               .flatMap(
                   entry ->
                       DE_RANGE.stream()
-                          .filter(not(Util::isZero))
+                          .filter(not(Util::isAllZeroes))
                           .filter(de -> de.get(0) != 0 || de.get(1) >= 2)
                           // .filter(de -> !de.equals(List.of(1, 0)))
                           .map(
@@ -321,7 +321,7 @@ public class LetTreeCf implements Rule {
                 prefix + "r_{(b⃗,d,e)} = p'^{(b⃗,d,e)}_{(d,e)}"));
 
         DE_RANGE.stream()
-            .filter(Predicate.not(Util::isZero))
+            .filter(Predicate.not(Util::isAllZeroes))
             // .filter(de -> !de.equals(List.of(1, 0)))
             .map(Pair::of)
             .filter(dpep -> !dpep.getLeft().equals(d) || !dpep.getRight().equals(e))

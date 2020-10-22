@@ -169,7 +169,7 @@ public class Util {
     return (T a, U b) -> b;
   }
 
-  public static boolean isZero(List<Integer> xs) {
+  public static boolean isAllZeroes(List<Integer> xs) {
     return xs.stream().allMatch(x -> x == 0);
   }
 

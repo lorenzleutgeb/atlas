@@ -210,7 +210,7 @@ public class AnnotatingContext {
 
   public String potentialString() {
     return annotation.toLongString(
-        ids.stream().map(Object::toString).collect(toUnmodifiableList()), true);
+        ids.stream().map(Object::toString).collect(toUnmodifiableList()));
   }
 
   public String toShortPotentialString() {
