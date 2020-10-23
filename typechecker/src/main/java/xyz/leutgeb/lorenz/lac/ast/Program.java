@@ -146,7 +146,7 @@ public class Program {
                 fd.getFullyQualifiedName());
             return;
           }
-           */
+          */
           /*
                  if (!tactics.containsKey(fd.getFullyQualifiedName())) {
                    log.info(
@@ -177,7 +177,7 @@ public class Program {
 
           for (var cfAnnotation : fd.getCfAnnotations()) {
             if (cfAnnotation.isZero()) {
-              log.info("Skipping {}", cfAnnotation);
+              log.debug("Skipping {}", cfAnnotation);
               continue;
             }
 
@@ -194,7 +194,7 @@ public class Program {
                 new Obligation(
                     fd.treeLikeArguments(), cfAnnotation.from, fd.getBody(), cfAnnotation.to, 0);
 
-            if (false && tactics.containsKey(fd.getFullyQualifiedName())) {
+            if (tactics.containsKey(fd.getFullyQualifiedName())) {
               try {
                 log.info("Using tactic to prove cf typing!");
                 prover.read(cfRoot, tactics.get(fd.getFullyQualifiedName()));
@@ -202,16 +202,12 @@ public class Program {
                 throw new RuntimeException(e);
               }
             } else {
-              // prover.setWeakenAggressively(true);
-              prover.setWeakenBeforeTerminal(true);
+              prover.setWeakenAggressively(true);
               prover.prove(cfRoot);
-              // prover.setWeakenAggressively(false);
-              prover.setWeakenBeforeTerminal(false);
+              prover.setWeakenAggressively(false);
             }
           }
         });
-
-    prover.plot();
 
     return Optional.of(prover);
   }
