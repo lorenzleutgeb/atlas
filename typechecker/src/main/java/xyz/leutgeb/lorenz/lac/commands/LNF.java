@@ -42,34 +42,22 @@ public class LNF implements Runnable {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-    for (var fd : program.getFunctionDefinitions().values()) {
-      try {
-        fd.printTo(
-            new PrintStream(
-                new File(out.toFile(), fqnToFlatFilename(fd.getFullyQualifiedName()) + "-loaded.ml")
-                    .getAbsoluteFile()));
-      } catch (FileNotFoundException e) {
-        e.printStackTrace();
-      }
-    }
     program.normalize();
-    for (var fd : program.getFunctionDefinitions().values()) {
-      try {
-        fd.printTo(
-            new PrintStream(
-                new File(
-                        out.toFile(),
-                        fqnToFlatFilename(fd.getFullyQualifiedName()) + "-normalized.ml")
-                    .getAbsoluteFile()));
-      } catch (FileNotFoundException e) {
-        e.printStackTrace();
-      }
-    }
     try {
       program.infer();
     } catch (UnificationError | TypeError unificationError) {
       unificationError.printStackTrace();
       System.exit(1);
+    }
+    for (var fd : program.getFunctionDefinitions().values()) {
+      try {
+        fd.printTo(
+            new PrintStream(
+                new File(out.toFile(), fqnToFlatFilename(fd.getFullyQualifiedName()) + ".ml")
+                    .getAbsoluteFile()));
+      } catch (FileNotFoundException e) {
+        e.printStackTrace();
+      }
     }
     program.printAllSimpleSignaturesInOrder(System.out);
   }

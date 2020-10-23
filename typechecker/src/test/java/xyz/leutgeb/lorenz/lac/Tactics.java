@@ -416,6 +416,18 @@ public class Tactics {
 
   private static Stream<Arguments> afterTacas() {
     return Stream.of(
+        Arguments.of(
+            Map.of(
+                "SplayHeap.del_min",
+                Config.of(
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            ONE, Map.of(List.of(1, 0), ONE, List.of(1, 1), ONE, unitIndex(1), ONE)),
+                        new Annotation(ONE, Map.of(unitIndex(1), ONE)),
+                        SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
+                        SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
+                        Annotation.zero(1),
+                        Annotation.zero(1))))),
         // SplayTree.splay_max_eq t | [[p₀ + 1 + p₍₁ ₀₎ + p₍₁ ₁₎ + 2·p₍₁ ₂₎] → [p₀ + 1], {[p₍₁ ₀₎] →
         // [p₍₁ ₀₎], 0 → 0}]
         Arguments.of(
@@ -448,18 +460,6 @@ public class Tactics {
         // + 1], {[2·p₍₁ ₀₎ + 15·p₍₁ ₁₎ + 6·p₍₁ ₂₎] → [p₍₁ ₀₎], [p₍₁ ₀₎ + 14·p₍₁ ₁₎ + 4·p₍₁ ₂₎] → 0,
         // 0 → 0}
         Arguments.of(Map.of("PairingHeap.merge_pairs_isolated", Config.of())),
-        Arguments.of(
-            Map.of(
-                "SplayHeap.del_min",
-                Config.of(
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            ONE, Map.of(List.of(1, 0), ONE, List.of(1, 1), ONE, unitIndex(1), ONE)),
-                        new Annotation(ONE, Map.of(unitIndex(1), ONE)),
-                        SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
-                        SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
-                        Annotation.zero(1),
-                        Annotation.zero(1))))),
         Arguments.of(
             Map.of(
                 "SplayHeap.del_min",
@@ -854,8 +854,8 @@ public class Tactics {
   }
 
   @ParameterizedTest
-  @MethodSource("tacas")
-  public void all(Map<String, Config> immutableAnnotations) throws IOException {
+  @MethodSource("afterTacas")
+  public void all(Map<String, Config> immutableAnnotations) {
     final var loader = Tests.loader();
 
     Program program = null;
@@ -922,7 +922,8 @@ public class Tactics {
 
       final var fd = program.getFunctionDefinitions().get(fqn);
 
-      FunctionAnnotation functionAnnotation = fd.getInferredSignature().getAnnotation().get();
+      FunctionAnnotation functionAnnotation =
+          fd.getInferredSignature().getAnnotation().get().withCost;
       final var setCounting = Optimization.setCounting(functionAnnotation);
       if (setCounting.isPresent()) {
         setCountingRankCoefficients.addAll(setCounting.get().rankCoefficients);

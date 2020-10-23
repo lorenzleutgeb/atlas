@@ -1,7 +1,5 @@
 package xyz.leutgeb.lorenz.lac.ast.visitors;
 
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,6 +12,7 @@ import java.util.stream.Collectors;
 import org.antlr.v4.runtime.Token;
 import xyz.leutgeb.lorenz.lac.antlr.SplayParser;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
@@ -40,31 +39,34 @@ class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature>
     if (ctx == null) {
       return null;
     }
-    final var arrow = ctx.arrow();
     Set<TypeConstraint> typeConstraints =
         ctx.constraints() != null
             ? ctx.constraints().items.stream()
                 .map(typeConstraintVisitor::visitConstraint)
                 .collect(Collectors.toSet())
             : Collections.emptySet();
-    ProductType from = null;
-    Type to;
-    Optional<FunctionAnnotation> annotation = Optional.empty();
-    if (arrow instanceof SplayParser.SimpleArrowContext) {
-      final var simpleArrow = (SplayParser.SimpleArrowContext) arrow;
-      from = (ProductType) typeVisitor.visitProductType(simpleArrow.from);
-      to = typeVisitor.visit(simpleArrow.to);
-    } else if (arrow instanceof SplayParser.AnnotatedArrowContext) {
-      final var annotatedArrow = (SplayParser.AnnotatedArrowContext) arrow;
-      from = (ProductType) typeVisitor.visitProductType(annotatedArrow.from);
-      to = typeVisitor.visit(annotatedArrow.to);
+    Optional<CombinedFunctionAnnotation> annotation = Optional.empty();
+
+    final ProductType from = (ProductType) typeVisitor.visitProductType(ctx.from);
+    final Type to = typeVisitor.visit(ctx.to);
+
+    if (ctx.annotatedAnnotation != null) {
+
       annotation =
           Optional.of(
-              new FunctionAnnotation(
-                  convert((int) from.treeSize(), annotatedArrow.fromAnnotation),
-                  convert(to instanceof TreeType ? 1 : 0, annotatedArrow.toAnnotation)));
-    } else {
-      throw bug("unknown arrow");
+              new CombinedFunctionAnnotation(
+                  new FunctionAnnotation(
+                      convert((int) from.treeSize(), ctx.annotatedAnnotation.with.from),
+                      convert(to instanceof TreeType ? 1 : 0, ctx.annotatedAnnotation.with.to)),
+
+                  // TODO: Parse cf-annotations.
+                  ctx.annotatedAnnotation.without.stream()
+                      .map(
+                          cf ->
+                              new FunctionAnnotation(
+                                  convert((int) from.treeSize(), cf.from),
+                                  convert(to instanceof TreeType ? 1 : 0, cf.to)))
+                      .collect(Collectors.toSet())));
     }
 
     return new FunctionSignature(typeConstraints, new FunctionType(from, to), annotation);

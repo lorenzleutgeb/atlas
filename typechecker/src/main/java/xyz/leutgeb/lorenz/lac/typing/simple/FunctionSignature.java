@@ -6,7 +6,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Value;
-import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.FunctionType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.unification.Substitution;
@@ -16,7 +16,7 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 public final class FunctionSignature {
   private final FunctionType type;
   private final Set<TypeConstraint> constraints;
-  private final Optional<FunctionAnnotation> annotation;
+  private final Optional<CombinedFunctionAnnotation> annotation;
 
   private FunctionSignature(FunctionType type) {
     this.type = type;
@@ -41,7 +41,9 @@ public final class FunctionSignature {
   }
 
   public FunctionSignature(
-      Set<TypeConstraint> constraints, FunctionType type, Optional<FunctionAnnotation> annotation) {
+      Set<TypeConstraint> constraints,
+      FunctionType type,
+      Optional<CombinedFunctionAnnotation> annotation) {
     this.type = type;
     this.constraints = constraints;
     this.annotation = annotation;
@@ -79,17 +81,12 @@ public final class FunctionSignature {
 
     sb.append(type.getFrom());
 
-    if (annotation.isPresent()) {
-      sb.append(" | ");
-      sb.append(annotation.get().from);
-    }
-
     sb.append(" → ");
     sb.append(type.getTo());
 
     if (annotation.isPresent()) {
       sb.append(" | ");
-      sb.append(annotation.get().to);
+      sb.append(annotation.get());
     }
     return sb.toString();
   }

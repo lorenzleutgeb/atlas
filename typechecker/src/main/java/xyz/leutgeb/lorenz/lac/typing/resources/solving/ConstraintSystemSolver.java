@@ -240,10 +240,10 @@ public class ConstraintSystemSolver {
       Supplier<String> program,
       Supplier<Statistics> statistics) {
     final var start = Instant.now();
-    log.info("Solving start: " + start);
+    log.debug("Solving start: " + start);
     var status = check.get();
     final var stop = Instant.now();
-    log.info("Solving duration: " + (Duration.between(start, stop)));
+    log.debug("Solving duration: " + (Duration.between(start, stop)));
     if (SATISFIABLE.equals(status)) {
       /*
       for (var entry : statistics.get().getEntries()) {

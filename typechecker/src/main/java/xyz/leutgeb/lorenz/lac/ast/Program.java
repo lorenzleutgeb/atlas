@@ -45,7 +45,7 @@ public class Program {
   // Note that this could also be List<Set<...>> since the order of nodes within the same
   // SCC doesn't really matter. However we chose to still sort them to get consistent outputs
   // without resorting in multiple places.
-  private final List<List<String>> order;
+  @Getter private final List<List<String>> order;
 
   @Getter @Setter private String name;
   private final Path basePath;
@@ -175,7 +175,7 @@ public class Program {
             prover.setWeakenAggressively(false);
           }
 
-          for (var cfAnnotation : fd.getCfAnnotations()) {
+          for (var cfAnnotation : fd.getInferredSignature().getAnnotation().get().withoutCost) {
             if (cfAnnotation.isZero()) {
               log.debug("Skipping {}", cfAnnotation);
               continue;
@@ -196,7 +196,7 @@ public class Program {
 
             if (tactics.containsKey(fd.getFullyQualifiedName())) {
               try {
-                log.info("Using tactic to prove cf typing!");
+                log.debug("Using tactic to prove cf typing!");
                 prover.read(cfRoot, tactics.get(fd.getFullyQualifiedName()));
               } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -278,6 +278,7 @@ public class Program {
                                   .getInferredSignature()
                                   .getAnnotation()
                                   .get()
+                                  .withCost
                                   .from
                                   .substitute(solution.get()),
                               functionDefinitions
@@ -285,9 +286,16 @@ public class Program {
                                   .getInferredSignature()
                                   .getAnnotation()
                                   .get()
+                                  .withCost
                                   .to
                                   .substitute(solution.get())),
-                          functionDefinitions.get(fqn).getCfAnnotations().stream()
+                          functionDefinitions
+                              .get(fqn)
+                              .getInferredSignature()
+                              .getAnnotation()
+                              .get()
+                              .withoutCost
+                              .stream()
                               .map(annotation -> annotation.substitute(solution.get()))
                               .collect(Collectors.toSet()))));
         }
@@ -334,19 +342,9 @@ public class Program {
   public void printAllSimpleSignaturesInOrder(PrintStream out) {
     for (int i = 0; i < order.size(); i++) {
       final var stratum = order.get(i);
-      final var multiple = stratum.size() > 1;
-
-      if (multiple) {
-        out.println(stratum.stream().collect(joining(", ")) + ":");
-      }
-
       for (var fqn : stratum) {
         FunctionDefinition fd = functionDefinitions.get(fqn);
-        out.println(
-            (multiple ? "\t" : "")
-                + fd.getFullyQualifiedName()
-                + " ∷ "
-                + fd.getInferredSignature());
+        out.println(fd.getSimpleSignatureString());
       }
     }
   }
@@ -354,12 +352,9 @@ public class Program {
   public void printAllAnnotatedSignaturesInOrder(PrintStream out) {
     for (int i = 0; i < order.size(); i++) {
       final var stratum = order.get(i);
-
       for (var fqn : stratum) {
         FunctionDefinition fd = functionDefinitions.get(fqn);
-        if (fd.getInferredSignature().getAnnotation().isPresent()) {
-          out.println(fd.getFullyQualifiedName() + " ∷ " + fd.getAnnotatedSignature());
-        }
+        out.println(fd.getAnnotatedSignatureString());
       }
     }
   }
@@ -367,14 +362,9 @@ public class Program {
   public void printAllInferredSignaturesInOrder(PrintStream out) {
     for (int i = 0; i < order.size(); i++) {
       final var stratum = order.get(i);
-
       for (var fqn : stratum) {
         FunctionDefinition fd = functionDefinitions.get(fqn);
-        if (fd.getInferredSignature().getAnnotation().isPresent()) {
-          out.println(fd.getFullyQualifiedName() + " ∷ " + fd.getInferredSignature());
-        } else {
-          out.println(fd.getFullyQualifiedName() + " ∷ ?");
-        }
+        out.println(fd.getInferredSignatureString());
       }
     }
   }

@@ -149,7 +149,7 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
     List<Obligation> result;
     if (ruleNameText.startsWith("_")) {
       if (!ruleNameText.contains("auto")) {
-        log.info(
+        log.debug(
             "Expanding {} at position {}:{}",
             ruleNameText,
             start.getLine(),

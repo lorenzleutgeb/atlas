@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
-import xyz.leutgeb.lorenz.lac.ast.sources.Parsed;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
@@ -82,11 +81,8 @@ public class Leaf implements Rule {
                         new EqualsSumConstraint(
                             qEntry.getValue(),
                             sum,
-                            "(leaf on line "
-                                + ((Parsed) obligation.getExpression().getSource().getRoot())
-                                    .getTree()
-                                    .getStart()
-                                    .getLine()
+                            "(leaf from "
+                                + (obligation.getExpression().getSource().getRoot())
                                 + ") q_{(c)} = Σ_{a+b=c} q'_{(a, b)}"));
                   } else {
                     return Stream.of(

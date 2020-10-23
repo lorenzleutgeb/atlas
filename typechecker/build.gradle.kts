@@ -128,12 +128,14 @@ tasks.nativeImage {
     jarTask = tasks.shadowJar.get()
     arguments(
             "--no-fallback",
-            "--enable-all-security-services",
+            // "--enable-all-security-services",
             "--initialize-at-build-time=com.microsoft.z3.Native",
             "--report-unsupported-elements-at-runtime",
-            "-H:+ReportExceptionStackTraces",
-            "--static",
-            "-H:+StaticExecutableWithDynamicLibC"
+            "-H:+ReportExceptionStackTraces"
+            // "--static",
+            // "--libc=musl",
+            // "-H:+JNI"
+            // "-H:+StaticExecutableWithDynamicLibC"
     )
 }
 

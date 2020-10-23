@@ -108,8 +108,8 @@ public class Run implements Runnable {
     } catch (UnificationError | TypeError unificationError) {
       throw new RuntimeException(unificationError);
     }
-    System.out.println("Loaded definitions:");
-    program.printAllSimpleSignaturesInOrder(System.out);
+    // System.out.println("Loaded definitions:");
+    // program.printAllSimpleSignaturesInOrder(System.out);
     Multimap<String, FunctionDefinition> output = ArrayListMultimap.create();
     Multimap<String, String> imports = HashMultimap.create();
     for (var entry : program.getFunctionDefinitions().entrySet()) {
@@ -123,27 +123,45 @@ public class Run implements Runnable {
     }
 
     Map<String, Path> tacticsMap = new HashMap<>();
-    if (tactics != null) {
-      for (var entry : program.getFunctionDefinitions().entrySet()) {
-        var fd = entry.getValue();
 
-        var path =
-            tactics.resolve(fd.getModuleName().replace(".", "/") + "/" + fd.getName() + ".txt");
+    // System.out.println(infer ? "Given for comparison:" : "Will check following types:");
 
-        System.out.println(path);
-        if (Files.exists(path) && Files.isReadable(path)) {
-          System.out.println("Using tactic " + path);
-          tacticsMap.put(fd.getFullyQualifiedName(), path);
-        } else {
-          System.out.println("No tactic for " + fd.getFullyQualifiedName());
+    for (int i = 0; i < program.getOrder().size(); i++) {
+      final var stratum = program.getOrder().get(i);
+      for (var fqn : stratum) {
+        FunctionDefinition fd = program.getFunctionDefinitions().get(fqn);
+
+        if (tactics != null) {
+          var path =
+              tactics.resolve(fd.getModuleName().replace(".", "/") + "/" + fd.getName() + ".txt");
+          if (Files.exists(path) && Files.isReadable(path)) {
+            tacticsMap.put(fd.getFullyQualifiedName(), path);
+          }
+        }
+
+        System.out.println(fd.getAnnotatedSignatureString());
+
+        System.out.println("\tDependencies: " + fd.getOcurringFunctionsNonRecursive());
+        System.out.println("\tSource:       " + fd.getBody().getSource().getRoot());
+
+        if (tactics != null) {
+          final var p = tacticsMap.get(fd.getFullyQualifiedName());
+          if (p == null) {
+            System.out.println("\tTactic:       n/a (will use automatic proof generation)");
+          } else {
+            System.out.println("\tTactic:       " + p.toAbsolutePath());
+          }
         }
       }
     }
 
+    System.out.println();
+    System.out.println("Generating constraints...");
     Optional<Prover> optionalProver = program.proveWithTactics(new HashMap<>(), tacticsMap, infer);
+    System.out.println("Done.");
 
     if (optionalProver.isEmpty()) {
-      System.out.println("UNSAT");
+      System.out.println("Nonterminating function definition detected. Aborting.");
       System.exit(1);
       return;
     }
@@ -154,11 +172,11 @@ public class Run implements Runnable {
 
     for (final var fqn : program.getFunctionDefinitions().keySet()) {
       final var fd = program.getFunctionDefinitions().get(fqn);
-      if (fd.getInferredSignature().getAnnotation().get().to.size() == 1 && !relaxRank) {
+      if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1 && !relaxRank) {
         outsideConstraints.add(
             new LessThanOrEqualConstraint(
                 ONE,
-                fd.getInferredSignature().getAnnotation().get().to.getRankCoefficient(),
+                fd.getInferredSignature().getAnnotation().get().withCost.to.getRankCoefficient(),
                 "(outside) force rank"));
       }
     }
@@ -169,8 +187,8 @@ public class Run implements Runnable {
 
     Optional<Map<Coefficient, KnownCoefficient>> solution = Optional.empty();
 
+    System.out.println("Solving constraints...");
     if (infer) {
-
       final List<UnknownCoefficient> setCountingRankCoefficients = new ArrayList<>();
       final List<UnknownCoefficient> setCountingNonRankCoefficients = new ArrayList<>();
 
@@ -194,7 +212,8 @@ public class Run implements Runnable {
 
         final var fd = program.getFunctionDefinitions().get(fqn);
 
-        FunctionAnnotation inferredAnnotation = fd.getInferredSignature().getAnnotation().get();
+        FunctionAnnotation inferredAnnotation =
+            fd.getInferredSignature().getAnnotation().get().withCost;
         final var setCounting = Optimization.setCounting(inferredAnnotation);
         if (setCounting.isPresent()) {
           setCountingRankCoefficients.addAll(setCounting.get().rankCoefficients);
@@ -230,13 +249,7 @@ public class Run implements Runnable {
       solution = prover.solve(outsideConstraints, emptyList(), "sat", domain);
     }
 
-    if (infer) {
-      System.out.println("Given for comparison: ");
-      program.printAllAnnotatedSignaturesInOrder(System.out);
-      System.out.println();
-    }
-
-    System.out.println(infer ? "Inferred results:" : "Checked results:");
+    System.out.println("Done. Result(s): ");
     if (solution.isEmpty()) {
       System.out.println("UNSAT");
       System.exit(1);

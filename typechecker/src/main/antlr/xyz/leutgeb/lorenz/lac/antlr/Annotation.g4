@@ -19,7 +19,8 @@ index : NUMBER # rankIndex
       | PAREN_OPEN elements+=NUMBER* PAREN_CLOSE # otherIndex
       ;
 
-NUMBER : ('0' .. '9' );
+// NUMBER : ('0' .. '9' );
+NUMBER : '0' | ('1'..'9') ('0'..'9')*;
 SLASH : '/' ;
 TIMES : '*';
 CURLY_OPEN : '{';

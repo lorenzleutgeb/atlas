@@ -11,11 +11,11 @@ program: (func)* EOF;
 // Function declaration (with list of arguments):
 func : signature? name=IDENTIFIER (args+=IDENTIFIER)* ASSIGN body=expression SEMICOLON?;
 
-signature : name=IDENTIFIER DOUBLECOLON (constraints DOUBLE_ARROW)? arrow;
+signature : name=IDENTIFIER DOUBLECOLON (constraints DOUBLE_ARROW)? from=productType ARROW to=namedType (PIPE annotatedAnnotation=combinedFunctionAnnotation)? ;
 
-arrow : from=productType ARROW to=namedType # simpleArrow
-      | from=productType PIPE fromAnnotation=annotation ARROW to=namedType PIPE toAnnotation=annotation # annotatedArrow
-      ;
+combinedFunctionAnnotation : SQUARE_OPEN with=functionAnnotation (COMMA CURLY_OPEN (without+=functionAnnotation (COMMA without+=functionAnnotation)*)? CURLY_CLOSE)? SQUARE_CLOSE ;
+
+functionAnnotation : from=annotation ARROW to=annotation ;
 
 variableType : IDENTIFIER ;
 
@@ -72,7 +72,7 @@ pattern : PAREN_OPEN left=IDENTIFIER COMMA middle=IDENTIFIER COMMA right=IDENTIF
 
 node: PAREN_OPEN left=expression COMMA middle=expression COMMA right=expression PAREN_CLOSE ;
 
-identifier : LEAF | IDENTIFIER | ANONYMOUS_IDENTIFIER | DERIVED_IDENTIFIER;
+identifier : LEAF | IDENTIFIER ;
 
 ANONYMOUS_IDENTIFIER : '_';
 DOT : '.';
@@ -115,11 +115,6 @@ TREE : 'Tree' | 'T';
 BOOL : 'Bool' | 'Bo';
 TYC_ORD : 'Ord';
 TYC_EQ : 'Eq';
-
-// TODO(lorenz.leutgeb): Add greek alphabet and lowercase letters.
-
-SUBSCRIPT_NUMBER : [\u2080-\u2089];
-DERIVED_IDENTIFIER : '∂' SUBSCRIPT_NUMBER+;
 
 IDENTIFIER : (('A' .. 'Z' | 'a'..'z' | 'α' | 'β' | 'γ' | 'δ' | 'ε' | '∂') ( 'A'..'Z' | 'a'..'z' | 'α' | 'β' | 'γ' | 'δ' | 'ε' | '∂' | '0'..'9' | '_' | '\'' | '.' )*) ;
 TYPE : ('A'..'Z') ( 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' )*;

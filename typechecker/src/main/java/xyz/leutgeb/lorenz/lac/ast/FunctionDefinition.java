@@ -17,12 +17,12 @@ import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
-import java.awt.*;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -66,7 +66,9 @@ public class FunctionDefinition {
   private FunctionSignature inferredSignature;
   private FunctionSignature annotatedSignature;
   // private FunctionAnnotation inferredAnnotation;
-  private Set<FunctionAnnotation> cfAnnotations;
+
+  @Deprecated private Set<FunctionAnnotation> cfAnnotations;
+
   private org.jgrapht.Graph<Identifier, SizeEdge> sizeAnalysis = null;
 
   public FunctionDefinition(
@@ -107,7 +109,7 @@ public class FunctionDefinition {
     // TODO(lorenz.leutgeb): Maybe do this in stub?
     if (annotatedSignature != null) {
       if (annotatedSignature.getType().getFrom().getElements().size() != arguments.size()) {
-        throw new TypeError();
+        throw new TypeError("expected " + arguments.size() + " for " + getFullyQualifiedName());
       }
       for (int i = 0; i < arguments.size(); i++) {
         Type ty = annotatedSignature.getType().getFrom().getElements().get(i);
@@ -256,18 +258,17 @@ public class FunctionDefinition {
               Annotation.zero(inferredAnnotation.from.size(), "cfargszero"),
               Annotation.zero(inferredAnnotation.to.size(), "cfreturnzero"));
 
-      if (cf) {
-        this.cfAnnotations = Set.of(costFreeAnnotation, costFreeAnnotation2, zeroAnnotation);
-      } else {
-        this.cfAnnotations = emptySet();
-      }
+      Set<FunctionAnnotation> cfAnnotations =
+          cf ? Set.of(costFreeAnnotation, costFreeAnnotation2, zeroAnnotation) : emptySet();
+
+      final var combined = new CombinedFunctionAnnotation(inferredAnnotation, cfAnnotations);
       // TODO: Sort this out...
       if (infer || annotatedSignature.getAnnotation().isEmpty()) {
         inferredSignature =
             new FunctionSignature(
                 inferredSignature.getConstraints(),
                 inferredSignature.getType(),
-                Optional.of(inferredAnnotation));
+                Optional.of(combined));
       } else {
         inferredSignature =
             new FunctionSignature(
@@ -275,9 +276,7 @@ public class FunctionDefinition {
                 inferredSignature.getType(),
                 annotatedSignature.getAnnotation());
       }
-      functionAnnotations.put(
-          getFullyQualifiedName(),
-          new CombinedFunctionAnnotation(inferredAnnotation, cfAnnotations));
+      functionAnnotations.put(getFullyQualifiedName(), combined);
     } else {
       if (predefined.withCost.from.size() != treeLikeArguments.size()) {
         throw new IllegalArgumentException(
@@ -301,8 +300,7 @@ public class FunctionDefinition {
           new FunctionSignature(
               inferredSignature.getConstraints(),
               inferredSignature.getType(),
-              Optional.of(predefined.withCost));
-      cfAnnotations = predefined.withoutCost;
+              Optional.of(predefined));
     }
   }
 
@@ -314,34 +312,34 @@ public class FunctionDefinition {
 
   public Obligation getTypingObligation(int cost) {
     return new Obligation(
-        new AnnotatingContext(treeLikeArguments(), inferredSignature.getAnnotation().get().from),
+        new AnnotatingContext(
+            treeLikeArguments(), inferredSignature.getAnnotation().get().withCost.from),
         body,
-        inferredSignature.getAnnotation().get().to,
+        inferredSignature.getAnnotation().get().withCost.to,
         cost);
   }
 
-  public String getAnnotationString() {
-    if (inferredSignature.getAnnotation().isEmpty()) {
-      throw new IllegalStateException();
-    }
-
+  public String getInferredSignatureString() {
     return moduleName
         + "."
         + name
-        + (arguments.isEmpty() ? "" : " ")
-        + String.join(" ", arguments)
-        + " | "
-        + new CombinedFunctionAnnotation(inferredSignature.getAnnotation().get(), cfAnnotations);
+        + " ∷ "
+        + inferredSignature.getType()
+        + inferredSignature.getAnnotation().map(Objects::toString).map(x -> " | " + x).orElse("");
   }
 
-  public String getMockedAnnotationString(CombinedFunctionAnnotation annotation) {
+  public String getAnnotatedSignatureString() {
     return moduleName
         + "."
         + name
-        + (arguments.isEmpty() ? "" : " ")
-        + String.join(" ", arguments)
-        + " | "
-        + annotation;
+        + " ∷ "
+        + inferredSignature.getType()
+        + annotatedSignature.getAnnotation().map(Objects::toString).map(x -> " | " + x).orElse("");
+  }
+
+  @Deprecated
+  public String getMockedAnnotationString(CombinedFunctionAnnotation annotation) {
+    return moduleName + "." + name + " ∷ " + inferredSignature.getType() + " | " + annotation;
   }
 
   public void printTo(PrintStream out) {
@@ -381,9 +379,14 @@ public class FunctionDefinition {
                       turn(
                           name,
                           inferredSignature.toString().replace(">", "\\>").replace("<", "\\<"),
-                          inferredSignature.getAnnotation().get().from.getNameAndId()
+                          inferredSignature.getAnnotation().get().withCost.from.getNameAndId()
                               + " → "
-                              + inferredSignature.getAnnotation().get().to.getNameAndId())));
+                              + inferredSignature
+                                  .getAnnotation()
+                                  .get()
+                                  .withCost
+                                  .to
+                                  .getNameAndId())));
       Graph result = body.toGraph(g, root);
       var viz = Graphviz.fromGraph(result);
       viz.render(Format.SVG).toOutputStream(out);
@@ -427,5 +430,9 @@ public class FunctionDefinition {
         + String.join(" ", arguments)
         + " = "
         + body.terminalOrBox();
+  }
+
+  public String getSimpleSignatureString() {
+    return moduleName + "." + name + " ∷ " + inferredSignature.getType();
   }
 }

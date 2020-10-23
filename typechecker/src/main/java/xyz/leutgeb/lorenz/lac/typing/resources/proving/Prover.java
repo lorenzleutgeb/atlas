@@ -303,7 +303,7 @@ public class Prover {
 
   private Rule.ApplicationResult applyInternal(Obligation obligation, Rule rule) {
     if (logApplications) {
-      log.info("{}: {}", String.format("%-12s", rule.getName()), obligation);
+      log.debug("{}: {}", String.format("%-12s", rule.getName()), obligation);
     }
     final var result = rule.apply(obligation, globals);
     if (result == null) {

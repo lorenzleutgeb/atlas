@@ -315,6 +315,47 @@ public class Annotation {
       }
       nonzero = true;
 
+      sb.append(i).append(" ↦ ").append(q);
+
+      if (i < size() - 1) {
+        sb.append(", ");
+      }
+    }
+    final var schoenmakerPart =
+        coefficients.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey(Annotation.INDEX_COMPARATOR))
+            .filter(e -> e.getValue() != ZERO)
+            .map(
+                e ->
+                    e.getKey().stream().map(Object::toString).collect(joining(" ", "(", ")"))
+                        + " ↦ "
+                        + e.getValue())
+            .collect(Collectors.joining(", "));
+
+    if (!schoenmakerPart.equals("") && size() > 0 && nonzero) {
+      sb.append(", ");
+    }
+
+    sb.append(schoenmakerPart);
+
+    return sb.append("]").toString();
+  }
+
+  public String toFunctionString() {
+    /*
+    if (size() == 0) {
+      return "∅";
+    }
+     */
+    StringBuilder sb = new StringBuilder("[");
+    boolean nonzero = false;
+    for (int i = 0; i < size(); i++) {
+      final var q = rankCoefficients.get(i);
+      if (q == null || q == ZERO) {
+        continue;
+      }
+      nonzero = true;
+
       if (!q.equals(ONE)) {
         sb.append(q);
         sb.append("·");
