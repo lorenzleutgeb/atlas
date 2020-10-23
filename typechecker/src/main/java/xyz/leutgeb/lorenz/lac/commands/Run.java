@@ -11,6 +11,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -79,6 +80,11 @@ public class Run implements Runnable {
   @CommandLine.Option(names = "--name", description = "Name of the run.")
   private String name;
 
+  @CommandLine.Option(
+      names = "--tactics",
+      description = "When present, tactics will be loaded from this directory.")
+  private Path tactics;
+
   @Override
   public void run() {
     Loader loader = new Loader(home);
@@ -116,7 +122,25 @@ public class Run implements Runnable {
       }
     }
 
-    Optional<Prover> optionalProver = program.prove(new HashMap<>(), infer);
+    Map<String, Path> tacticsMap = new HashMap<>();
+    if (tactics != null) {
+      for (var entry : program.getFunctionDefinitions().entrySet()) {
+        var fd = entry.getValue();
+
+        var path =
+            tactics.resolve(fd.getModuleName().replace(".", "/") + "/" + fd.getName() + ".txt");
+
+        System.out.println(path);
+        if (Files.exists(path) && Files.isReadable(path)) {
+          System.out.println("Using tactic " + path);
+          tacticsMap.put(fd.getFullyQualifiedName(), path);
+        } else {
+          System.out.println("No tactic for " + fd.getFullyQualifiedName());
+        }
+      }
+    }
+
+    Optional<Prover> optionalProver = program.proveWithTactics(new HashMap<>(), tacticsMap, infer);
 
     if (optionalProver.isEmpty()) {
       System.out.println("UNSAT");
