@@ -65,10 +65,10 @@ public class W implements Rule {
   public static final W INSTANCE = new W();
 
   private static final boolean LEMMA_2XY_ENABLED = true;
-  private static final boolean LEMMA_PLUS1_ENABLED = true;
+  private static final boolean LEMMA_PLUS1_ENABLED = false;
   private static final boolean LEMMA_PLUS1Y_ENABLED = false;
   private static final boolean LEMMA_PLUS2_ENABLED = false;
-  private static final boolean MONO_ONE_ENABLED = false;
+  private static final boolean MONO_ONE_ENABLED = true;
 
   private static final Map<List<List<Integer>>, List<LessThanOrEqual<List<Integer>>>> MONO_CACHE =
       new HashMap<>();
@@ -133,28 +133,13 @@ public class W implements Rule {
             ? MONO_CACHE.computeIfAbsent(
                 potentialFunctions,
                 (key) ->
-                    cartesianProduct(potentialFunctions, potentialFunctions).stream()
-                        .filter(
-                            pair ->
-                                lessThanOrEqual(
-                                    pair.get(0),
-                                    pair.get(1),
-                                    knowLt,
-                                    knowEq,
-                                    MONO_ONE_ENABLED ? knowOne : emptySet()))
-                        .map(pair -> new LessThanOrEqual<>(pair.get(0), pair.get(1)))
-                        .collect(toList()))
-            : cartesianProduct(potentialFunctions, potentialFunctions).stream()
-                .filter(
-                    pair ->
-                        lessThanOrEqual(
-                            pair.get(0),
-                            pair.get(1),
-                            knowLt,
-                            knowEq,
-                            MONO_ONE_ENABLED ? knowOne : emptySet()))
-                .map(pair -> new LessThanOrEqual<>(pair.get(0), pair.get(1)))
-                .collect(toList());
+                    lessThanOrEqualNew(
+                        potentialFunctions,
+                        knowLt,
+                        knowEq,
+                        MONO_ONE_ENABLED ? knowOne : emptySet()))
+            : lessThanOrEqualNew(
+                potentialFunctions, knowLt, knowEq, MONO_ONE_ENABLED ? knowOne : emptySet());
 
     final List<List<List<Integer>>> lemma2XYInstances =
         LEMMA_2XY_ENABLED ? lemma2XY(potentialFunctions) : emptyList();
@@ -779,6 +764,90 @@ public class W implements Rule {
             .toArray(BoolExpr[]::new));
   }
 
+  public static List<LessThanOrEqual<List<Integer>>> lessThanOrEqualNew(
+      List<List<Integer>> potentialFunctions,
+      Set<LessThan<Integer>> knowLt,
+      Set<Equal<Integer>> knowEq,
+      Set<Integer> knowOne) {
+
+    if (potentialFunctions.isEmpty()) {
+      return emptyList();
+    }
+
+    final var treeSize = potentialFunctions.get(0).size() - 1;
+
+    final var prod =
+        cartesianProduct(potentialFunctions, potentialFunctions).stream()
+            .filter(comparison -> !comparison.get(0).equals(comparison.get(1)))
+            .collect(toUnmodifiableList());
+
+    if (treeSize == 0) {
+      return prod.stream()
+          .filter(comparison -> comparison.get(0).get(0) <= comparison.get(1).get(0))
+          .map(comparison -> new LessThanOrEqual<>(comparison.get(0), comparison.get(1)))
+          .collect(toList());
+    }
+
+    try (final var ctx = new Context()) {
+      final var solver = ctx.mkSolver();
+      solver.push();
+      final ArithExpr one = ctx.mkInt(1);
+      final List<ArithExpr> vars =
+          IntStream.range(0, treeSize)
+              .mapToObj(i -> ctx.mkIntConst("x" + i))
+              .collect(Collectors.toUnmodifiableList());
+
+      for (var x : vars) {
+        solver.add(ctx.mkLe(one, x));
+      }
+      for (var pair : knowLt) {
+        solver.add(ctx.mkLt(vars.get(pair.smaller), vars.get(pair.larger)));
+      }
+      for (var pair : knowEq) {
+        solver.add(ctx.mkEq(vars.get(pair.left), vars.get(pair.right)));
+      }
+      for (var index : knowOne) {
+        solver.add(ctx.mkEq(vars.get(index), one));
+      }
+
+      final var result = new ArrayList<LessThanOrEqual<List<Integer>>>();
+
+      for (var comparison : prod) {
+        final var smaller = comparison.get(0);
+        final var bigger = comparison.get(1);
+
+        solver.push();
+
+        solver.add(
+            ctx.mkGt(
+                ctx.mkAdd(
+                    Streams.concat(
+                            Streams.zip(
+                                smaller.stream().map(ctx::mkInt), vars.stream(), ctx::mkMul),
+                            Stream.of(ctx.mkInt(smaller.get(treeSize))))
+                        .toArray(ArithExpr[]::new)),
+                ctx.mkAdd(
+                    Streams.concat(
+                            Streams.zip(bigger.stream().map(ctx::mkInt), vars.stream(), ctx::mkMul),
+                            Stream.of(ctx.mkInt(bigger.get(treeSize))))
+                        .toArray(ArithExpr[]::new))));
+
+        final var status = solver.check();
+        if (UNKNOWN.equals(status)) {
+          throw bug("Z3 returned unknown status for monotonicity analysis");
+        }
+
+        if (status.equals(UNSATISFIABLE)) {
+          result.add(new LessThanOrEqual<>(smaller, bigger));
+        }
+
+        solver.pop();
+      }
+      return result;
+    }
+  }
+
+  @Deprecated
   public static boolean lessThanOrEqual(
       List<Integer> smaller,
       List<Integer> bigger,
