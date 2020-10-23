@@ -1,0 +1,13 @@
+(match
+  _{w}
+  (ite
+    (match
+      _{w}
+      ?
+    )
+    (match
+      _{w}
+      ?
+    )
+  )
+)

@@ -1,0 +1,10 @@
+ (let:tree:cf
+  leaf
+  (w (let:tree:cf
+    leaf
+    (let:tree:cf
+      node
+      (w node)
+    )
+  ))
+)
