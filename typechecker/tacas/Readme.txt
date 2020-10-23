@@ -130,3 +130,8 @@ The authors will not take extra steps to archive the artifact. Its source code i
 
     https://github.com/lorenzleutgeb/lac
 
+and is also archived on Zenodo, see
+
+    https://doi.org/10.5281/zenodo.4122492
+
+Note that Zenodo will archive the source of the artifact, not the artifact itself.
