@@ -101,6 +101,13 @@ Will print function definitions in let-normal-form
 to the directory passed as `out` argument. This
 directory must exist and be writable.
 
+# Results reported in the TACAS tool paper
+
+The artifact is consistent with the results reported in the TACAS tool paper
+(see Fig. 8 on page 16), submitted on 2020-10-23. These results differ slightly
+from the results in the paper submitted on 2020-10-16, since we fixed a bug and
+added two additional benchmark (`SplayTree.splay_max_eq`, and
+`PairingHeap.insert`).
 
 ## Resource Limits
 
@@ -111,7 +118,7 @@ The artifact imposes following resource limits:
 
 All results were computed on a machine with 32GiB
 main memory, and computations took on the order of
-less than a second up to five minutes.
+less than a second up to fifteen minutes.
 
 ## Archiving
 
