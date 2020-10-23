@@ -18,8 +18,6 @@ import guru.nidi.graphviz.engine.Graphviz;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
 import java.awt.*;
-import java.io.File;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -57,7 +55,6 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.util.NidiExporter;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
-import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Data
 @Slf4j
@@ -205,7 +202,13 @@ public class FunctionDefinition {
                 new DefaultAttribute<>(
                     e.getKind().equals(SizeEdge.Kind.EQ) ? "blue4" : "red", AttributeType.STRING)));
 
+    /*
     final var exp = exporter.transform(sizeAnalysis);
+
+    var lel = new GraphvizCmdLineEngine();
+    lel.timeout(2, TimeUnit.MINUTES);
+    Graphviz.useEngine(lel);
+
     final var viz = Graphviz.fromGraph(exp);
     try {
       File out =
@@ -216,6 +219,7 @@ public class FunctionDefinition {
     } catch (IOException e) {
       e.printStackTrace();
     }
+     */
   }
 
   public void stubAnnotations(
