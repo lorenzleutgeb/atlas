@@ -213,7 +213,6 @@ public class FunctionDefinition {
               new File("out"),
               Util.fqnToFlatFilename(getFullyQualifiedName()) + "-" + "-sizes.svg");
       viz.render(Format.SVG).toOutputStream(new PrintStream(out));
-      System.out.println(out);
     } catch (IOException e) {
       e.printStackTrace();
     }
