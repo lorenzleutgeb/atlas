@@ -145,7 +145,7 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
       return;
     }
 
-    long count = 0;
+    long withCount = 0;
     List<Obligation> result;
     if (ruleNameText.startsWith("_")) {
       if (!ruleNameText.contains("auto")) {
@@ -172,28 +172,31 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
         obligation = prover.weakenVariables(obligation);
       }
       result = prover.applyByName(ruleNameText, obligation);
-      count = result.stream().filter(x -> x.getCost() != 0).count();
+      withCount = result.stream().filter(x -> x.getCost() != 0).count();
     }
 
-    if (count != next.size()) {
+    if (withCount != next.size() && obligation.getCost() == 1) {
       log.warn(
           "Given tactic does not apply: Rule ("
               + ruleNameText
               + ") applied to \n\n\t\t"
               + obligation
               + "\n\n yields "
-              + count
+              + withCount
               + " new obligations but "
               + next.size()
               + " are covered.");
     }
 
+    final boolean isLetCfRule = ruleNameText.startsWith("let:tree:cf");
+
     for (int i = 0; i < result.size(); i++) {
-      if ((i > 1 && result.get(i).getCost() == 0 && obligation.getCost() == 0)
-          || (obligation.getCost() == 1 && result.get(i).getCost() == 0)) {
-        prover.prove(result.get(i));
-      } else {
+      if (i < next.size()) {
         proveInternal(result.get(i), next.get(i));
+      } else if (isLetCfRule) {
+        proveInternal(result.get(i), next.get(0));
+      } else {
+        prover.prove(result.get(i));
       }
     }
   }
