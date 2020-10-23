@@ -7,7 +7,6 @@ import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
-import xyz.leutgeb.lorenz.lac.util.Util;
 
 public interface AnnotationHeuristic {
   Annotation generate(String namePrefix, int size);
@@ -26,10 +25,5 @@ public interface AnnotationHeuristic {
 
   default Annotation generate(String namePrefix, Expression expression) {
     return generate(namePrefix, expression.getType() instanceof TreeType ? 1 : 0);
-  }
-
-  @Deprecated
-  default Annotation generate(Expression expression) {
-    return generate("_" + Util.randomHex(), expression);
   }
 }
