@@ -9,7 +9,11 @@ import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoeffici
 
 import com.microsoft.z3.RatNum;
 import guru.nidi.graphviz.model.Node;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -152,10 +156,6 @@ public class Util {
               + "'.\n!!! Execution will continue but may fail at a later time because of this.");
       return;
     }
-  }
-
-  public static void loadZ3() {
-    loadLibrary("z3java");
   }
 
   public static Fraction toFraction(RatNum x) {
@@ -332,5 +332,10 @@ public class Util {
 
   public <E> Iterable<E> toIterable(Stream<E> stream) {
     return stream::iterator;
+  }
+
+  public static OutputStream output(Path path) throws IOException {
+    Files.createDirectories(path.getParent());
+    return Files.newOutputStream(path);
   }
 }

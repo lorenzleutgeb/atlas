@@ -5,25 +5,26 @@ import static com.microsoft.z3.Status.UNKNOWN;
 import static java.util.Collections.emptyList;
 import static java.util.Optional.empty;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.loadZ3;
+import static xyz.leutgeb.lorenz.lac.util.Util.output;
 import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 import static xyz.leutgeb.lorenz.lac.util.Util.signum;
+import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
 
 import com.google.common.collect.HashBiMap;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
-import com.microsoft.z3.Global;
 import com.microsoft.z3.IntNum;
 import com.microsoft.z3.Model;
 import com.microsoft.z3.Optimize;
-import com.microsoft.z3.Params;
 import com.microsoft.z3.RatNum;
 import com.microsoft.z3.Statistics;
 import com.microsoft.z3.Status;
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
@@ -47,48 +48,33 @@ import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Slf4j
 public class ConstraintSystemSolver {
-  private static final long BYTES_IN_A_GIBIBYTE = 1 << 30;
-
-  static {
-    Global.setParameter("timeout", String.valueOf(Duration.ofMinutes(15).toMillis()));
-    Global.setParameter("memory_max_size", String.valueOf(24L * BYTES_IN_A_GIBIBYTE));
-  }
-
   private static Map<String, String> z3Config(boolean unsatCore) {
     // Execute `z3 -p` to get a list of parameters.
     return Map.of("unsat_core", String.valueOf(unsatCore));
   }
 
   public static Optional<Map<Coefficient, KnownCoefficient>> solve(Set<Constraint> constraints) {
-    return solve(constraints, randomHex(), emptyList(), Domain.INTEGER);
+    return solve(constraints, Paths.get("out", randomHex()), emptyList(), Domain.INTEGER);
   }
 
   public static Optional<Map<Coefficient, KnownCoefficient>> solve(
-      Set<Constraint> constraints, String name) {
-    return solve(constraints, name, emptyList(), Domain.INTEGER);
+      Set<Constraint> constraints, Path outPath) {
+    return solve(constraints, outPath, emptyList(), Domain.INTEGER);
   }
 
   public static Optional<Map<Coefficient, KnownCoefficient>> solve(
-      Set<Constraint> constraints, String name, List<UnknownCoefficient> target) {
-    return solve(constraints, name, target, Domain.INTEGER);
+      Set<Constraint> constraints, Path outPath, List<UnknownCoefficient> target) {
+    return solve(constraints, outPath, target, Domain.INTEGER);
   }
 
   public static Optional<Map<Coefficient, KnownCoefficient>> solve(
-      Set<Constraint> constraints, String name, List<UnknownCoefficient> target, Domain domain) {
-    loadZ3();
+      Set<Constraint> constraints, Path outPath, List<UnknownCoefficient> target, Domain domain) {
+    load();
 
     final var unsatCore = target.isEmpty();
 
-    // domain = Domain.RATIONAL;
-
     try (final var ctx = new Context(z3Config(unsatCore))) {
-      // final var solver = Domain.INTEGER.equals(domain) && target.isEmpty() ?
-      // ctx.mkSolver("QF_LIA")
-      // : ctx.mkSolver();
       final var solver = ctx.mkSolver();
-      Params solver_params = ctx.mkParams();
-      solver_params.add("ignore_solver1", true);
-      solver.setParameters(solver_params);
 
       var optimize = !target.isEmpty();
       final Optimize opt = optimize ? ctx.mkOptimize() : null;
@@ -159,13 +145,14 @@ public class ConstraintSystemSolver {
       log.trace("Z3  Scopes:       " + (optimize ? "?" : solver.getNumScopes()));
       log.trace("Z3  Assertions:   " + (optimize ? "?" : solver.getAssertions().length));
 
-      // TODO(lorenz.leutgeb): Parameterize location.
-      File smtFile = new File("out", name + ".smt");
-      try (PrintWriter out = new PrintWriter(smtFile)) {
+      final Path smtFile = outPath.resolve("instance.smt");
+
+      try (final var out = new PrintWriter(output(smtFile))) {
         out.println(optimize ? opt : solver);
         log.debug("Wrote SMT instance to {}.", smtFile);
-      } catch (FileNotFoundException e) {
-        log.warn("Failed to write SMT instance to {}.", smtFile, e);
+      } catch (IOException ioException) {
+        log.warn("Failed to write SMT instance to {}.", smtFile, ioException);
+        ioException.printStackTrace();
       }
 
       Optional<Model> optionalModel = Optional.empty();
@@ -178,7 +165,8 @@ public class ConstraintSystemSolver {
                 opt::getUnsatCore,
                 unsatCore,
                 opt::toString,
-                opt::getStatistics);
+                opt::getStatistics,
+                outPath);
       } else {
         optionalModel =
             check(
@@ -187,7 +175,8 @@ public class ConstraintSystemSolver {
                 solver::getUnsatCore,
                 unsatCore,
                 solver::toString,
-                solver::getStatistics);
+                solver::getStatistics,
+                outPath);
       }
       if (optionalModel.isEmpty()) {
         return empty();
@@ -238,18 +227,25 @@ public class ConstraintSystemSolver {
       Supplier<BoolExpr[]> getUnsatCore,
       boolean unsatCore,
       Supplier<String> program,
-      Supplier<Statistics> statistics) {
+      Supplier<Statistics> statistics,
+      Path outPath) {
     final var start = Instant.now();
     log.debug("Solving start: " + start);
     var status = check.get();
     final var stop = Instant.now();
     log.debug("Solving duration: " + (Duration.between(start, stop)));
     if (SATISFIABLE.equals(status)) {
-      /*
-      for (var entry : statistics.get().getEntries()) {
-        log.info("{}={}", entry.Key, entry.getValueString());
+      try {
+        try (final var out = output(outPath.resolve("z3-statistics.txt"))) {
+          final var printer = new PrintStream(out);
+          for (var entry : statistics.get().getEntries()) {
+            log.trace("{}={}", entry.Key, entry.getValueString());
+            printer.println(entry.Key + "=" + entry.getValueString());
+          }
+        }
+      } catch (Exception exception) {
+        // ignored
       }
-       */
       return Optional.of(getModel.get());
     } else if (UNKNOWN.equals(status)) {
       log.error("Attempt to solve constraint system yielded unknown result.");

@@ -1058,14 +1058,14 @@ public class S62EqLazy extends S62 {
                 emptySet() /*cfProver.getAccumulatedConstraints()*/),
             sumConstraints);
 
-    final var solution = ConstraintSystemSolver.solve(combined, SPLAY_FQN);
+    final var solution = ConstraintSystemSolver.solve(combined);
     // final var solution =
     //    prover.solve(); // (Sets.union(fixQ3, fixQ2)); // ;Sets.union(sumConstraints, fixQ2));
     // Constraint.plot(FQN, prover.getAccumulatedConstraints(), Paths.get("out"));
     assertTrue(solution.isPresent());
     final var minSolution =
         ConstraintSystemSolver.solve(
-            sumConstraints, SPLAY_FQN, List.of(rankCoefficientSum, coefficientSum));
+            sumConstraints, Paths.get("TODO"), List.of(rankCoefficientSum, coefficientSum));
 
     System.out.println(
         "splay_eq w/out minimization: "

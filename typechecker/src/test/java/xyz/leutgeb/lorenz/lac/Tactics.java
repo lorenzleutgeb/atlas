@@ -14,8 +14,8 @@ import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoeffici
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient.unknown;
 import static xyz.leutgeb.lorenz.lac.util.Util.append;
-import static xyz.leutgeb.lorenz.lac.util.Util.loadZ3;
 import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
+import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -50,7 +50,7 @@ import xyz.leutgeb.lorenz.lac.util.Fraction;
 public class Tactics {
   @BeforeAll
   public static void beforeAll() {
-    loadZ3();
+    load();
   }
 
   protected static final Annotation Q =

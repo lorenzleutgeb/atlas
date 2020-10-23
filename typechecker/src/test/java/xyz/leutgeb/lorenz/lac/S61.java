@@ -185,7 +185,7 @@ public class S61 {
 
     constraints.addAll(sumConstraints);
     Optional<Map<Coefficient, KnownCoefficient>> optionalSolution =
-        ConstraintSystemSolver.solve(constraints, NAME /*, singletonList(target)*/);
+        ConstraintSystemSolver.solve(constraints /*, singletonList(target)*/);
 
     assertTrue(optionalSolution.isPresent());
 

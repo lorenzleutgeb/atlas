@@ -63,7 +63,7 @@ public class WTest {
             Annotation.constant(1, "expected", ONE),
             "test"));
 
-    final var solution = ConstraintSystemSolver.solve(constraints, "test");
+    final var solution = ConstraintSystemSolver.solve(constraints);
     assertTrue(solution.isPresent());
   }
 
@@ -112,8 +112,7 @@ public class WTest {
                     List.of(smallerTree, biggerTree),
                     smallerPotential,
                     biggerPotential,
-                    sizeAnalysis)),
-            testInfo.getDisplayName());
+                    sizeAnalysis)));
 
     assertEquals(expectedSolution, solution.isPresent());
   }

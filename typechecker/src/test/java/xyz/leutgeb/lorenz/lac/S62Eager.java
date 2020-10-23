@@ -186,7 +186,7 @@ public class S62Eager extends S62 {
     prover.plot();
 
     final var constraints = prover.getAccumulatedConstraints();
-    final var solution = ConstraintSystemSolver.solve(constraints, "splay");
+    final var solution = ConstraintSystemSolver.solve(constraints);
     try {
       Constraint.plot("splay-above", constraints, Path.of("out"));
     } catch (Exception e) {
@@ -240,7 +240,7 @@ public class S62Eager extends S62 {
     assertEquals(E3, first.get(1).getExpression());
 
     final var constraints = prover.getAccumulatedConstraints();
-    final var solution = ConstraintSystemSolver.solve(constraints, "splay-below");
+    final var solution = ConstraintSystemSolver.solve(constraints);
     assertTrue(solution.isPresent());
     final var assertions = new ArrayList<Executable>();
     for (Obligation o : prover.getProof()) {
@@ -288,7 +288,7 @@ public class S62Eager extends S62 {
 
     prover.plot();
     final var constraints = prover.getAccumulatedConstraints();
-    final var solution = ConstraintSystemSolver.solve(constraints, "splay-cf");
+    final var solution = ConstraintSystemSolver.solve(constraints);
     assertTrue(solution.isPresent());
 
     final var assertions = new ArrayList<Executable>();

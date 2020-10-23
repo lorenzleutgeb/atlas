@@ -7,7 +7,6 @@ import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -48,13 +47,16 @@ public class Program {
   @Getter private final List<List<String>> order;
 
   @Getter @Setter private String name;
-  private final Path basePath;
+  @Getter private final Path basePath;
 
-  public Program(Map<String, FunctionDefinition> functionDefinitions, List<List<String>> order) {
+  public Program(
+      Map<String, FunctionDefinition> functionDefinitions,
+      List<List<String>> order,
+      Path basePath) {
     this.functionDefinitions = functionDefinitions;
     this.order = order;
     this.name = flatten(this.order).stream().map(Util::fqnToFlatFilename).collect(joining("+"));
-    this.basePath = Paths.get(".", "out");
+    this.basePath = basePath;
   }
 
   public void infer() throws UnificationError, TypeError {
@@ -88,7 +90,7 @@ public class Program {
     return solve(
         new HashMap<>(),
         new HashSet<>(),
-        (program, constraints) -> ConstraintSystemSolver.solve(constraints, name));
+        (program, constraints) -> ConstraintSystemSolver.solve(constraints, basePath));
   }
 
   public Optional<Map<Coefficient, KnownCoefficient>> solve(
@@ -96,7 +98,7 @@ public class Program {
     return solve(
         functionAnnotations,
         new HashSet<>(),
-        (program, constraints) -> ConstraintSystemSolver.solve(constraints, name));
+        (program, constraints) -> ConstraintSystemSolver.solve(constraints, basePath));
   }
 
   public Optional<Map<Coefficient, KnownCoefficient>> solve(
@@ -105,7 +107,7 @@ public class Program {
     return solve(
         functionAnnotations,
         outsideConstraints,
-        (program, constraints) -> ConstraintSystemSolver.solve(constraints, name));
+        (program, constraints) -> ConstraintSystemSolver.solve(constraints, basePath));
   }
 
   public Optional<Prover> prove(

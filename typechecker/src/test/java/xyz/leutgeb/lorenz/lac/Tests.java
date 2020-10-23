@@ -18,7 +18,7 @@ import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.ord;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.ALPHA;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.BETA;
 import static xyz.leutgeb.lorenz.lac.util.Util.fqnToFlatFilename;
-import static xyz.leutgeb.lorenz.lac.util.Util.loadZ3;
+import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -209,7 +209,7 @@ public class Tests {
 
   @BeforeAll
   public static void beforeAll() {
-    loadZ3();
+    load();
   }
 
   @ParameterizedTest

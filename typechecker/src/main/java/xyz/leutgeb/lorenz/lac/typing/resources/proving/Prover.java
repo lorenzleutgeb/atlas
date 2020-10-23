@@ -7,10 +7,11 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF_NAME;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.loadZ3;
+import static xyz.leutgeb.lorenz.lac.util.Util.output;
 import static xyz.leutgeb.lorenz.lac.util.Util.stack;
 import static xyz.leutgeb.lorenz.lac.util.Util.supply;
 import static xyz.leutgeb.lorenz.lac.util.Util.undefinedText;
+import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
 
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
@@ -18,7 +19,6 @@ import guru.nidi.graphviz.attribute.Label;
 import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
@@ -158,12 +158,13 @@ public class Prover {
   }
 
   public Prover(String name, AnnotatingGlobals globals, Path basePath) {
-    loadZ3();
+    load();
     this.name = name;
     this.globals = globals;
     this.basePath = basePath;
   }
 
+  @Deprecated
   public Prover(String name, AnnotatingGlobals globals) {
     this(name, globals, Paths.get("out"));
   }
@@ -431,11 +432,11 @@ public class Prover {
       Graphviz transformed = Graphviz.fromGraph(exporter.transform(proof));
 
       final var target = basePath.resolve(name + "-proof.svg");
-      transformed.render(Format.SVG).toOutputStream(Files.newOutputStream(target));
+      transformed.render(Format.SVG).toOutputStream(output(target));
       log.info("Proof plotted to {}", target);
 
       final var dotTarget = basePath.resolve(name + "-proof.dot");
-      transformed.render(Format.DOT).toOutputStream(Files.newOutputStream(dotTarget));
+      transformed.render(Format.DOT).toOutputStream(output(dotTarget));
       log.info("Proof exported to {}", dotTarget);
     } catch (Exception e) {
       log.warn("Non-critical exception thrown.", e);
@@ -463,11 +464,11 @@ public class Prover {
       Graphviz transformed = Graphviz.fromGraph(exporter.transform(proof));
 
       final var target = basePath.resolve(name + "-proof.svg");
-      transformed.render(Format.SVG).toOutputStream(Files.newOutputStream(target));
+      transformed.render(Format.SVG).toOutputStream(output(target));
       log.info("Proof plotted to {}", target);
 
       final var dotTarget = basePath.resolve(name + "-proof.xdot");
-      transformed.render(Format.XDOT).toOutputStream(Files.newOutputStream(dotTarget));
+      transformed.render(Format.XDOT).toOutputStream(output(dotTarget));
       log.info("Proof exported to {}", dotTarget);
     } catch (Exception e) {
       log.warn("Non-critical exception thrown.", e);
@@ -486,7 +487,7 @@ public class Prover {
       Set<Constraint> outsideConstraints, List<UnknownCoefficient> target) {
     return ConstraintSystemSolver.solve(
         Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
-        name,
+        basePath,
         target);
   }
 
@@ -494,7 +495,7 @@ public class Prover {
       Set<Constraint> outsideConstraints, List<UnknownCoefficient> target, String suffix) {
     return ConstraintSystemSolver.solve(
         Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
-        name + suffix,
+        basePath.resolve(suffix),
         target);
   }
 
@@ -505,7 +506,7 @@ public class Prover {
       ConstraintSystemSolver.Domain domain) {
     return ConstraintSystemSolver.solve(
         Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
-        name + suffix,
+        basePath.resolve(suffix),
         target,
         domain);
   }

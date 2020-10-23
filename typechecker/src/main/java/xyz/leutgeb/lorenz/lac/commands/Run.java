@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.lac.ast.Program;
@@ -39,6 +40,7 @@ import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
 @CommandLine.Command(name = "run")
+@Slf4j
 public class Run implements Runnable {
   @CommandLine.Parameters(
       index = "0",
@@ -108,7 +110,7 @@ public class Run implements Runnable {
     } catch (UnificationError | TypeError unificationError) {
       throw new RuntimeException(unificationError);
     }
-    // System.out.println("Loaded definitions:");
+    // log.info("Loaded definitions:");
     // program.printAllSimpleSignaturesInOrder(System.out);
     Multimap<String, FunctionDefinition> output = ArrayListMultimap.create();
     Multimap<String, String> imports = HashMultimap.create();
@@ -122,9 +124,11 @@ public class Run implements Runnable {
       }
     }
 
+    log.info("Output will go to {}", program.getBasePath().toAbsolutePath());
+
     Map<String, Path> tacticsMap = new HashMap<>();
 
-    // System.out.println(infer ? "Given for comparison:" : "Will check following types:");
+    // log.info(infer ? "Given for comparison:" : "Will check following types:");
 
     for (int i = 0; i < program.getOrder().size(); i++) {
       final var stratum = program.getOrder().get(i);
@@ -139,29 +143,28 @@ public class Run implements Runnable {
           }
         }
 
-        System.out.println(fd.getAnnotatedSignatureString());
+        log.info(fd.getAnnotatedSignatureString());
 
-        System.out.println("\tDependencies: " + fd.getOcurringFunctionsNonRecursive());
-        System.out.println("\tSource:       " + fd.getBody().getSource().getRoot());
+        log.info("\tDependencies: " + fd.getOcurringFunctionsNonRecursive());
+        log.info("\tSource:       " + fd.getBody().getSource().getRoot());
 
         if (tactics != null) {
           final var p = tacticsMap.get(fd.getFullyQualifiedName());
           if (p == null) {
-            System.out.println("\tTactic:       n/a (will use automatic proof generation)");
+            log.info("\tTactic:       n/a (will use automatic proof generation)");
           } else {
-            System.out.println("\tTactic:       " + p.toAbsolutePath());
+            log.info("\tTactic:       " + p.toAbsolutePath());
           }
         }
       }
     }
 
-    System.out.println();
-    System.out.println("Generating constraints...");
+    log.info("Generating constraints...");
     Optional<Prover> optionalProver = program.proveWithTactics(new HashMap<>(), tacticsMap, infer);
-    System.out.println("Done.");
+    log.info("Done.");
 
     if (optionalProver.isEmpty()) {
-      System.out.println("Nonterminating function definition detected. Aborting.");
+      log.info("Nonterminating function definition detected. Aborting.");
       System.exit(1);
       return;
     }
@@ -187,7 +190,7 @@ public class Run implements Runnable {
 
     Optional<Map<Coefficient, KnownCoefficient>> solution = Optional.empty();
 
-    System.out.println("Solving constraints...");
+    log.info("Solving constraints...");
     if (infer) {
       final List<UnknownCoefficient> setCountingRankCoefficients = new ArrayList<>();
       final List<UnknownCoefficient> setCountingNonRankCoefficients = new ArrayList<>();
@@ -249,9 +252,9 @@ public class Run implements Runnable {
       solution = prover.solve(outsideConstraints, emptyList(), "sat", domain);
     }
 
-    System.out.println("Done. Result(s): ");
+    log.info("Done. Result(s): ");
     if (solution.isEmpty()) {
-      System.out.println("UNSAT");
+      log.info("UNSAT");
       System.exit(1);
       return;
     }

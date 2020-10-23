@@ -7,6 +7,12 @@
 The presented system compiled as an x86-64 ELF binary.
 It will dynamically link to `libc`. Usage of is explained below.
 
+### `lac.properties`
+
+Configuration file that can be used to change Z3 parameters and
+logging settings. By setting the log level to "debug" or "trace",
+much more detailled output can be obtained.
+
 ### `dependencies`
 
 Contains the Ubuntu package dependencies. They must be installed before the
@@ -37,10 +43,6 @@ accompanying paper, you will need the "run"
 subcommand
 
     ./lac run --help
-
-Create a directory where output can be placed
-
-    mkdir out
 
 For example, to check the type annotation of the function definition
 `PairingHeap.link`, run
@@ -116,10 +118,12 @@ These correspond to the following lines/names in the paper (line by line):
 
 ## Resource Limits
 
-The artifact imposes following resource limits:
+The artifact imposes following resource limits on Z3:
 
   Wall clock runtime: 15 minutes
-  Limit for Z3 memory: 24GiB
+  Limit for memory: 24GiB
+
+These (and other) parameters as well as logging configuration can be changed in `lac.properties`.
 
 All results were computed on a machine with 32GiB main memory, and computations took on the order of
 less than a second up to fifteen minutes.

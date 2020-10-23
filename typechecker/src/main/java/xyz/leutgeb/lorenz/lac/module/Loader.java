@@ -1,13 +1,21 @@
 package xyz.leutgeb.lorenz.lac.module;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toUnmodifiableList;
 
 import com.google.common.base.Functions;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Spliterators;
+import java.util.Stack;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -39,6 +47,8 @@ public class Loader {
 
   private final Graph<String, DefaultEdge> g =
       new DefaultDirectedGraph<>(null, DefaultEdge::new, false);
+
+  @Getter private final String id = String.format("%08x", System.currentTimeMillis() * 31);
 
   public Loader(Path home) {
     if (!Files.exists(home) || !Files.isDirectory(home) || !Files.isReadable(home)) {
@@ -174,7 +184,8 @@ public class Loader {
             .collect(toMap(Functions.identity(), functionDefinitions::get)),
         stronglyConnectedSubgraphs.stream()
             .map(g -> g.vertexSet().stream().sorted().collect(toUnmodifiableList()))
-            .collect(toList()));
+            .collect(toList()),
+        Path.of(".", "out", id));
   }
 
   private Path path(String moduleName) {

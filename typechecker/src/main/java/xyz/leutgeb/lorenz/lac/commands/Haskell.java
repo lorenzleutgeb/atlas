@@ -11,6 +11,7 @@ import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.lac.ast.Program;
@@ -19,6 +20,7 @@ import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
 @CommandLine.Command(name = "hs")
+@Slf4j
 public class Haskell implements Runnable {
   @CommandLine.Parameters(
       index = "0",
@@ -91,7 +93,7 @@ public class Haskell implements Runnable {
       } catch (IOException ex) {
         ex.printStackTrace();
       }
-      System.out.println(path);
+      log.info("{}", path);
     }
   }
 }

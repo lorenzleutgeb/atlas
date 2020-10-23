@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 import static guru.nidi.graphviz.model.Factory.graph;
 import static guru.nidi.graphviz.model.Factory.node;
 import static xyz.leutgeb.lorenz.lac.util.Util.append;
+import static xyz.leutgeb.lorenz.lac.util.Util.output;
 import static xyz.leutgeb.lorenz.lac.util.Util.rawObjectNode;
 
 import com.google.common.collect.BiMap;
@@ -18,7 +19,6 @@ import guru.nidi.graphviz.engine.GraphvizCmdLineEngine;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Link;
 import guru.nidi.graphviz.model.Node;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
@@ -90,7 +90,7 @@ public abstract class Constraint {
       Graphviz.useEngine(lel);
       var viz = Graphviz.fromGraph(graph);
       Path target = path.resolve(name + "-constraints.svg");
-      try (final var out = Files.newOutputStream(target)) {
+      try (final var out = output(target)) {
         viz.engine(Engine.DOT).render(Format.SVG).toOutputStream(out);
         log.info("Wrote plot to {}", target);
       }

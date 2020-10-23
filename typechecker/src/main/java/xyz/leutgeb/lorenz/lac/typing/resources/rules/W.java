@@ -152,27 +152,23 @@ public class W implements Rule {
     final List<Pair<List<Integer>, List<Integer>>> lemmaPlus2Instances =
         LEMMA_PLUS2_ENABLED ? lemmaPlus2(potentialFunctions) : emptyList();
 
-    // TODO(lorenz.leutgeb): Make this a log.trace(...);
-
     // List<String> identifierNames = identifiers.stream().map(Object::toString).collect(toList());
-    /*
-    System.out.println("(w) --- " + left.getId() + " <= " + right.getId() + " --- ");
-    System.out.println("pot: " + potentialFunctions);
-    System.out.println("ids: " + identifiers);
-    System.out.println(
+    log.trace("(w) --- " + left.getId() + " <= " + right.getId() + " --- ");
+    log.trace("pot: " + potentialFunctions);
+    log.trace("ids: " + identifiers);
+    log.trace(
         "lts: " + knowLt.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
-    System.out.println(
+    log.trace(
         "eqs: " + knowEq.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
-    System.out.println(
-        "one: " + knowOne.stream().map(identifiers::get).collect(toUnmodifiableList()));
+    log.trace("one: " + knowOne.stream().map(identifiers::get).collect(toUnmodifiableList()));
 
-    System.out.println("monotony:");
+    log.trace("monotony:");
     monotonyInstances.forEach(System.out::println);
 
-    System.out.println("lemma2XY:");
+    log.trace("lemma2XY:");
     lemma2XYInstances.forEach(
         instance -> {
-          System.out.println(
+          log.trace(
               "2 * [...0, 2] + "
                   + instance.get(0)
                   + " + "
@@ -181,20 +177,19 @@ public class W implements Rule {
                   + instance.get(2));
         });
 
-    System.out.println("lemma1Plus:");
+    log.trace("lemma1Plus:");
     lemmaPlus1Instances.forEach(
         instance -> {
-          System.out.println(instance.getRight() + " <= 1 * [...0, 2] + " + instance.getLeft());
+          log.trace(instance.getRight() + " <= 1 * [...0, 2] + " + instance.getLeft());
         });
 
-    System.out.println("lemma2Plus:");
+    log.trace("lemma2Plus:");
     lemmaPlus2Instances.forEach(
         instance -> {
-          System.out.println(instance.getRight() + " <= 2 * [...0, 2] + " + instance.getLeft());
+          log.trace(instance.getRight() + " <= 2 * [...0, 2] + " + instance.getLeft());
         });
 
-    System.out.println(" --- ");
-     */
+    log.trace(" --- ");
 
     // m is the number of rows of expert knowledge.
     final var m =

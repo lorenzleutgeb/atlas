@@ -16,6 +16,7 @@ mkdir -p $DIST/tacas/artifact/{dependencies,resources/grammars}
 
 # Copy over executable and remove version specifier.
 cp -v build/native-image/$PROJECT-$VERSION $DIST/tacas/artifact/lac
+cp -v lac.properties $DIST/tacas/artifact/lac.properties
 
 # Target Ubuntu
 patchelf $DIST/tacas/artifact/lac \
