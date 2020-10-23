@@ -1,4 +1,8 @@
-# Automated Analysis of Logarithmic Amoritzed Complexity
+# lac
+
+[![DOI](https://zenodo.org/badge/156873559.svg)](https://zenodo.org/badge/latestdoi/156873559)
+
+A tool for Automated Analysis of **L**ogarithmic **A**moritzed **C**omplexity
 
 See [arXiv:1807.08242](https://arxiv.org/abs/1807.08242).
 
