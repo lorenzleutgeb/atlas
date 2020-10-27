@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.Token;
 import xyz.leutgeb.lorenz.lac.antlr.TacticBaseVisitor;
 import xyz.leutgeb.lorenz.lac.antlr.TacticParser;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
@@ -164,14 +165,20 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
       }
       result = emptyList();
     } else {
+      final List<Identifier> redundant = WVar.redundantIds(obligation).collect(Collectors.toUnmodifiableList());
       if (obligation.getExpression().isTerminal()
-          && WVar.redundantId(obligation).isPresent()
+          && !redundant.isEmpty()
           && Set.of("leaf", "node", "var", "app").contains(ruleNameText)) {
-        log.info("Automatically removing leftover variables.");
+        log.info("Automatically applying (w:var) to remove leftover variables {} on line {}.", redundant, start.getLine());
         prover.setLogApplications(true);
         obligation = prover.weakenVariables(obligation);
       }
-      result = prover.applyByName(ruleNameText, obligation);
+      try {
+        result = prover.applyByName(ruleNameText, obligation);
+      } catch (Exception e) {
+        log.error("Error in line {}", start.getLine(), e);
+        throw e;
+      }
       withCount = result.stream().filter(x -> x.getCost() != 0).count();
     }
 
