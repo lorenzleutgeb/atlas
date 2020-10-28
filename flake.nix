@@ -24,11 +24,11 @@
             z3
           ];
           shellHook = ''
-            export LD_LIBRARY_PATH=$PWD/typechecker/lib:$LD_LIBRARY_PATH
+            export LD_LIBRARY_PATH=$PWD/lib:$LD_LIBRARY_PATH
             export GRAAL_HOME="${glittersharkPkgs.graalvm11-ce}"
             export JAVA_HOME="${pkgs.jdk11}/lib/openjdk"
             export GRADLE_HOME="${pkgs.gradle}"
-            echo "org.gradle.java.home=$JAVA_HOME" > typechecker/gradle.properties
+            echo "org.gradle.java.home=$JAVA_HOME" > gradle.properties
 
             $JAVA_HOME/bin/java -version
 

@@ -1,19 +1,15 @@
 package xyz.leutgeb.lorenz.lac.commands;
 
-import jdk.jshell.tool.JavaShellToolBuilder;
-import picocli.CommandLine;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import picocli.CommandLine;
 
 @CommandLine.Command(name = "repl")
 public class REPL implements Runnable {
@@ -46,17 +42,20 @@ public class REPL implements Runnable {
           }
         });
 
+    /*
     executorService.submit(
         () -> {
           System.out.println("tool thread started");
           try (final PipedInputStream input = new PipedInputStream(output)) {
-            final JavaShellToolBuilder builder = JavaShellToolBuilder.builder().in(input, null).promptCapture(false);
+            final JavaShellToolBuilder builder =
+                JavaShellToolBuilder.builder().in(input, null).promptCapture(false);
             System.out.println("Tool will run now!");
             builder.run();
           } catch (Exception exception) {
             exception.printStackTrace();
           }
         });
+    */
 
     System.out.println("main thread will await termination.");
     try {

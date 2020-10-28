@@ -6,25 +6,24 @@ A tool for Automated Analysis of **L**ogarithmic **A**moritzed **C**omplexity
 
 See [arXiv:1807.08242](https://arxiv.org/abs/1807.08242).
 
-## Typechecker
 
-### Interpreting results
+## Interpreting results
 
 The size of a tree `t`, denoted as `|t|` is defined to be the number of its leaves. That, is `|nil| := 1` as well as
 `|(t₁, _, t₂)| := |t₁| + |t₂|`.
 
-### Dependencies
+## Dependencies
 
 All dependencies except the [The Z3 Theorem Prover](https://github.com/Z3Prover/z3)
 are managed and automatically downloaded/installed by [Gradle](https://gradle.org/)
 (see the section labelled `dependencies` in `build.gradle.kts`).
 
-#### The Z3 Theorem Prover
+### The Z3 Theorem Prover
 
 Refer to https://github.com/Z3Prover/z3#java
 
 To compile against Z3, make sure that `com.microsoft.z3.jar` exists in
-`typechecker/libs`. This Java archive should contain all classes from the
+`lib`. This Java archive should contain all classes from the
 `com.microsoft.z3` package which implements the Java API for Z3.
 
 At runtime, `libz3.so` and `libz3java.so` must be available on the system.
@@ -34,12 +33,6 @@ should be sufficient to place the files in any of the following `:`-separated
 locations: `/usr/java/packages/lib:/usr/lib64:/lib64:/lib:/usr/lib`.
 If there is an issue loading Z3, the program will show a
 `java.lang.UnsatisfiedLinkError` and terminate with a non-zero exit code.
-
-## Interpreter
-
-```
-/interpreter $ stack build
-```
 
 ## Reading
 

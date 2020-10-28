@@ -14,12 +14,6 @@ jobs:
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts') }}
         restore-keys: |
           ${{ runner.os }}-gradle-
-    - uses: actions/cache@preview
-      with:
-        path: interpreter/.stack-work
-        key: ${{ runner.os }}-stack-work-${{ hashFiles('**/stack.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-stack-work-
     - uses: cachix/install-nix-action@v11
       with:
         install_url: https://github.com/numtide/nix-flakes-installer/releases/download/nix-3.0pre20201007_5257a25/install
@@ -33,17 +27,12 @@ jobs:
     - run: nix flake check
     - run: "eval \"$(nix print-dev-env)\""
     - run: javac -version
-    - run: stack --version
     - run: gradle -version
-    - run: wget https://lorenz.leutgeb.xyz/lac/com.microsoft.z3.jar --directory-prefix typechecker/lib/
-    - run: wget https://lorenz.leutgeb.xyz/lac/libz3java.so --directory-prefix typechecker/lib/
+    - run: wget https://lorenz.leutgeb.xyz/lac/com.microsoft.z3.jar --directory-prefix lib/
+    - run: wget https://lorenz.leutgeb.xyz/lac/libz3java.so --directory-prefix lib/
     - run: gradle build -x test
-      working-directory: typechecker
-    - run: stack build
-      working-directory: interpreter
     - run: ./tacas.sh
-      working-directory: typechecker
     - uses: actions/upload-artifact@v2
       with:
         name: tacas
-        path: typechecker/build/distributions/tacas.zip
+        path: build/distributions/tacas.zip

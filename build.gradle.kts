@@ -15,7 +15,7 @@ fun run(command: String, workingDir: File = file("./")): String {
     return proc.inputStream.bufferedReader().readText().trim()
 }
 
-version = run("../version.sh")
+version = run("./version.sh")
 
 task("printVersion") {
     doLast { println(project.version) }

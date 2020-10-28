@@ -1,5 +1,11 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
+import static java.util.stream.Collectors.joining;
+import static xyz.leutgeb.lorenz.lac.util.Util.flatten;
+import static xyz.leutgeb.lorenz.lac.util.Util.inImageRuntimeCode;
+import static xyz.leutgeb.lorenz.lac.util.Util.output;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
+
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -7,6 +13,22 @@ import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.googlejavaformat.java.Formatter;
 import com.google.googlejavaformat.java.FormatterException;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -26,29 +48,6 @@ import xyz.leutgeb.lorenz.lac.unification.Equivalence;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 import xyz.leutgeb.lorenz.lac.util.Util;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.joining;
-import static xyz.leutgeb.lorenz.lac.util.Util.flatten;
-import static xyz.leutgeb.lorenz.lac.util.Util.inImageRuntimeCode;
-import static xyz.leutgeb.lorenz.lac.util.Util.output;
-import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
 @Slf4j
 public class Program {

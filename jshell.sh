@@ -1,8 +1,10 @@
 #! /usr/bin/env sh
 
+gradle shadowJar -x test
+
 jshell \
 	--feedback verbose \
-	--class-path build/libs/typechecker-v0.0.2-2-g91bb6ff-dirty-shadow.jar \
+	--class-path build/libs/lac-$(./version.sh)-shadow.jar \
 	--startup DEFAULT \
 	--startup PRINTING \
 	--startup lac.jsh

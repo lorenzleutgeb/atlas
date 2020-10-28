@@ -1,9 +1,9 @@
 interpreter/generated-src/*.hs
 
-typechecker/*.svg
-typechecker/*.smt
-typechecker/*.hs
-typechecker/gradle.properties
+*.svg
+*.smt
+*.hs
+gradle.properties
 
 # ANTLR
 *.tokens

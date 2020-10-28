@@ -6,8 +6,8 @@ ROOT=$PWD
 DIST=$PWD/build/distributions
 JDK=$DIST/tacas/artifact/jdk
 JDK_URL="https://download.java.net/java/GA/jdk14.0.2/205943a0976c4ed48cb16f1043c5c647/12/GPL/openjdk-14.0.2_linux-x64_bin.tar.gz"
-PROJECT=typechecker
-VERSION=$(../version.sh)
+PROJECT=lac
+VERSION=$(./version.sh)
 
 gradle build -x test
 

@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.lac;
 
+import java.nio.file.Path;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import xyz.leutgeb.lorenz.lac.commands.Haskell;
@@ -8,8 +9,6 @@ import xyz.leutgeb.lorenz.lac.commands.LNF;
 import xyz.leutgeb.lorenz.lac.commands.REPL;
 import xyz.leutgeb.lorenz.lac.commands.Run;
 import xyz.leutgeb.lorenz.lac.util.Util;
-
-import java.nio.file.Path;
 
 @Command(
     mixinStandardHelpOptions = true,
