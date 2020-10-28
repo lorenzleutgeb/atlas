@@ -1,1 +1,0 @@
-https://stackoverflow.com/questions/7333376/difference-between-average-case-and-amortized-analysis#7335098
