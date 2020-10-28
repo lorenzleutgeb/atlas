@@ -1,9 +1,6 @@
 package xyz.leutgeb.lorenz.lac.rules;
 
-import static com.google.common.collect.Sets.difference;
-import static com.google.common.collect.Sets.symmetricDifference;
 import static java.util.Collections.emptyMap;
-import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
@@ -11,14 +8,11 @@ import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoeffici
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.DisplayName;
@@ -35,7 +29,6 @@ import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.W;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;

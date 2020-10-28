@@ -1,11 +1,13 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
 import static com.google.common.collect.Sets.intersection;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import static xyz.leutgeb.lorenz.lac.util.Util.indent;
 import static xyz.leutgeb.lorenz.lac.util.Util.pick;
 
 import com.google.common.collect.Sets;
 import java.io.PrintStream;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
@@ -32,14 +34,10 @@ public class MatchExpression extends Expression {
   private final Expression scrut;
   private final Expression leaf;
   private final Expression node;
-  private final NodeExpression nodePattern;
+  private final Expression nodePattern;
 
   public MatchExpression(
-      Source source,
-      Expression scrut,
-      Expression leaf,
-      NodeExpression nodePattern,
-      Expression node) {
+      Source source, Expression scrut, Expression leaf, Expression nodePattern, Expression node) {
     super(source);
     this.scrut = scrut;
     this.leaf = leaf;
@@ -51,7 +49,7 @@ public class MatchExpression extends Expression {
       Source source,
       Expression scrut,
       Expression leaf,
-      NodeExpression nodePattern,
+      Expression nodePattern,
       Expression node,
       Type type) {
     super(source, type);
@@ -72,6 +70,10 @@ public class MatchExpression extends Expression {
 
   @Override
   public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
+    if (!(nodePattern instanceof NodeExpression)) {
+      throw bug("node expression as node pattern required");
+    }
+
     final var result = context.fresh();
 
     final var scrutType = context.fresh();
@@ -87,7 +89,9 @@ public class MatchExpression extends Expression {
     var subNode = sub.get();
     for (int i = 0; i < 3; i++) {
       subNode.putType(
-          ((Identifier) nodePattern.getElements().get(i)).getName(), subNode.fresh(), this);
+          ((Identifier) ((NodeExpression) nodePattern).getElements().get(i)).getName(),
+          subNode.fresh(),
+          this);
     }
     subNode.addIfNotEqual(scrutType, nodePattern.infer(subNode).wiggle(subNode));
     subNode.addIfNotEqual(result, node.infer(subNode).wiggle(subNode));
@@ -97,6 +101,33 @@ public class MatchExpression extends Expression {
 
   @Override
   public Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
+    Expression node = this.node;
+    Expression nodePattern = this.nodePattern;
+
+    if (nodePattern instanceof Identifier) {
+      final var nodeId = (Identifier) nodePattern;
+      final var source = Derived.desugar(this);
+
+      if (nodeId.getName().startsWith("_")) {
+        nodePattern =
+            new NodeExpression(
+                source,
+                List.of(
+                    Identifier.anonymous(source),
+                    Identifier.anonymous(source),
+                    Identifier.anonymous(source)));
+      } else {
+        final Identifier left =
+            Identifier.get(nodeId.getName() + "_l_" + idGenerator.next(), source);
+        final Identifier middle =
+            Identifier.get(nodeId.getName() + "_x_" + idGenerator.next(), source);
+        final Identifier right =
+            Identifier.get(nodeId.getName() + "_r_" + idGenerator.next(), source);
+        nodePattern = new NodeExpression(source, List.of(left, middle, right));
+        node = new LetExpression(source, nodeId, nodePattern, node);
+      }
+    }
+
     if (scrut.isImmediate()) {
       return new MatchExpression(
           source,
@@ -158,6 +189,60 @@ public class MatchExpression extends Expression {
     nodePattern.printHaskellTo(out, indentation + 1, currentFunction);
     out.print(" -> ");
     node.printHaskellTo(out, indentation + 1, currentFunction);
+  }
+
+  @Override
+  public void printJavaTo(PrintStream out, int indentation, String currentFunction) {
+    out.print("if (");
+    scrut.printTo(out, indentation);
+    out.println(".isLeaf()) {");
+
+    indent(out, indentation);
+    if (leaf.isTerminal()) {
+      indent(out, indentation + 1);
+      out.println("return (");
+      leaf.printJavaTo(out, indentation + 1, currentFunction);
+      indent(out, indentation + 1);
+      out.println(");");
+    } else {
+      leaf.printJavaTo(out, indentation + 1, currentFunction);
+    }
+
+    out.println();
+    indent(out, indentation);
+    out.println("} else { ");
+    indent(out, indentation + 1);
+    out.println(
+        "final var "
+            + ((Identifier) ((NodeExpression) nodePattern).getLeft()).getName()
+            + " = "
+            + ((Identifier) scrut).getName()
+            + ".left;");
+    indent(out, indentation + 1);
+    out.println(
+        "final var "
+            + ((Identifier) ((NodeExpression) nodePattern).getElements().get(1)).getName()
+            + " = "
+            + ((Identifier) scrut).getName()
+            + ".value;");
+    indent(out, indentation + 1);
+    out.println(
+        "final var "
+            + ((Identifier) ((NodeExpression) nodePattern).getRight()).getName()
+            + " = "
+            + ((Identifier) scrut).getName()
+            + ".right;");
+    if (node.isTerminal()) {
+      indent(out, indentation + 1);
+      out.println("return (");
+      node.printJavaTo(out, indentation + 1, currentFunction);
+      indent(out, indentation + 1);
+      out.println(");");
+    } else {
+      node.printJavaTo(out, indentation + 1, currentFunction);
+    }
+    indent(out, indentation);
+    out.println("}");
   }
 
   @Override
@@ -228,9 +313,11 @@ public class MatchExpression extends Expression {
   public void analyzeSizes(Graph<Identifier, SizeEdge> sizeGraph) {
     super.analyzeSizes(sizeGraph);
     sizeGraph.addVertex((Identifier) scrut);
-    sizeGraph.addVertex((Identifier) nodePattern.getLeft());
-    sizeGraph.addVertex((Identifier) nodePattern.getRight());
-    sizeGraph.addEdge((Identifier) scrut, (Identifier) nodePattern.getLeft(), SizeEdge.gt());
-    sizeGraph.addEdge((Identifier) scrut, (Identifier) nodePattern.getRight(), SizeEdge.gt());
+    sizeGraph.addVertex((Identifier) ((NodeExpression) nodePattern).getLeft());
+    sizeGraph.addVertex((Identifier) ((NodeExpression) nodePattern).getRight());
+    sizeGraph.addEdge(
+        (Identifier) scrut, (Identifier) ((NodeExpression) nodePattern).getLeft(), SizeEdge.gt());
+    sizeGraph.addEdge(
+        (Identifier) scrut, (Identifier) ((NodeExpression) nodePattern).getRight(), SizeEdge.gt());
   }
 }

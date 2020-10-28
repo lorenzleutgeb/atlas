@@ -112,6 +112,45 @@ public class IfThenElseExpression extends Expression {
   }
 
   @Override
+  public void printJavaTo(PrintStream out, int indentation, String currentFunction) {
+    indent(out, indentation);
+    out.print("if (");
+    condition.printJavaTo(out, indentation, currentFunction);
+    out.println();
+    indent(out, indentation);
+    out.println(") {");
+
+    indent(out, indentation);
+    if (truthy.isTerminal()) {
+      indent(out, indentation + 1);
+      out.println("return (");
+      truthy.printJavaTo(out, indentation + 1, currentFunction);
+      indent(out, indentation + 1);
+      out.println(");");
+    } else {
+      truthy.printJavaTo(out, indentation + 1, currentFunction);
+    }
+
+    // out.println();
+    indent(out, indentation);
+    out.println("} else {");
+
+    indent(out, indentation);
+    if (falsy.isTerminal()) {
+      indent(out, indentation + 1);
+      out.println("return (");
+      falsy.printJavaTo(out, indentation + 1, currentFunction);
+      indent(out, indentation + 1);
+      out.println(");");
+    } else {
+      falsy.printJavaTo(out, indentation + 1, currentFunction);
+    }
+
+    indent(out, indentation);
+    out.println("}");
+  }
+
+  @Override
   public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
     /*
     if (!(condition instanceof Identifier)) {

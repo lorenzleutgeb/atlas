@@ -1,14 +1,11 @@
 package xyz.leutgeb.lorenz.lac.util;
 
-import static guru.nidi.graphviz.model.Factory.node;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Stream.generate;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
-
 import com.microsoft.z3.RatNum;
 import guru.nidi.graphviz.model.Node;
+import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -22,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.PriorityQueue;
+import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.Stack;
@@ -31,9 +29,13 @@ import java.util.function.Supplier;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.lac.ast.Identifier;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+
+import static guru.nidi.graphviz.model.Factory.node;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Stream.generate;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 
 @Slf4j
 public class Util {
@@ -330,6 +332,29 @@ public class Util {
     return stream.map(Objects::toString);
   }
 
+  public static boolean goodForReading(Path path) {
+    return Files.exists(path) && Files.isReadable(path) && Files.isRegularFile(path);
+  }
+
+  public static void readProperties(Path propertiesPath) {
+    if (!goodForReading(propertiesPath)) {
+      return;
+    }
+    try (final var reader = Files.newBufferedReader(propertiesPath)) {
+      final Properties properties = new Properties();
+      properties.load(reader);
+      for (final var property : properties.entrySet()) {
+        if (!(property.getKey() instanceof String && property.getValue() instanceof String)) {
+          continue;
+        }
+        System.out.println(property);
+        System.setProperty((String) property.getKey(), (String) property.getValue());
+      }
+    } catch (IOException ioException) {
+      ioException.printStackTrace();
+    }
+  }
+
   public <E> Iterable<E> toIterable(Stream<E> stream) {
     return stream::iterator;
   }
@@ -337,5 +362,19 @@ public class Util {
   public static OutputStream output(Path path) throws IOException {
     Files.createDirectories(path.getParent());
     return Files.newOutputStream(path);
+  }
+
+  public static boolean haveClass(String className) {
+    try {
+      Class.forName(className);
+    } catch (ClassNotFoundException e) {
+      return false;
+    }
+    return true;
+  }
+
+  /** See {@link org.graalvm.nativeimage.ImageInfo#inImageRuntimeCode} */
+  public static boolean inImageRuntimeCode() {
+    return "runtime".equals(System.getProperty("org.graalvm.nativeimage.imagecode"));
   }
 }

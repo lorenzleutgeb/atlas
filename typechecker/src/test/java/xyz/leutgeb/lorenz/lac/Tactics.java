@@ -77,6 +77,9 @@ public class Tactics {
   protected static final Annotation P2 =
       new Annotation(List.of(ZERO), Map.of(List.of(1, 0), TWO), "P2");
 
+  protected static final Annotation P3 =
+      new Annotation(List.of(ZERO), Map.of(List.of(1, 0), THREE), "P3");
+
   protected static final Annotation Prk =
       new Annotation(List.of(ONE), Map.of(List.of(1, 0), ONE), "Prk");
 
@@ -211,6 +214,42 @@ public class Tactics {
 
   private static final Annotation SPLAY_HEAP_TO =
       new Annotation(List.of(ONE), Map.of(unitIndex(1), new KnownCoefficient(1)), "Q'");
+
+  private static Stream<Arguments> splayTest() {
+    return Stream.of(
+        Arguments.of(
+            Map.of(
+                "SplayTree.splay",
+                Config.of(
+                    "SplayTree/splay",
+                    CombinedFunctionAnnotation.of(
+                        QwithConst, QpwithConst, P, P, P2, P2, P3, P3, zero(1), zero(1))),
+                "SplayTree.insert",
+                Config.of())),
+        Arguments.of(
+            Map.of(
+                "SplayHeap.del_min",
+                Config.of(
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            ONE, Map.of(List.of(1, 0), ONE, List.of(1, 1), ONE, unitIndex(1), ONE)),
+                        new Annotation(ONE, Map.of(unitIndex(1), ONE)),
+                        SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
+                        SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
+                        Annotation.zero(1),
+                        Annotation.zero(1)))))
+
+        /*
+        Arguments.of(
+                Map.of(
+                        "SplayTree.splay_max",
+                        Config.of("SplayTree/splay_max", SPLAY_EXPECTED_TACAS))),
+         */
+        // 1
+        // 3 log(|t|)
+
+        );
+  }
 
   private static Stream<Arguments> tacas() {
     return Stream.of(
@@ -418,7 +457,7 @@ public class Tactics {
     return Stream.of(
         Arguments.of(
             Map.of(
-                "SplayHeap.del_min",
+                "SplayHeap.del_min_eq",
                 Config.of(
                     CombinedFunctionAnnotation.of(
                         new Annotation(
@@ -462,7 +501,7 @@ public class Tactics {
         Arguments.of(Map.of("PairingHeap.merge_pairs_isolated", Config.of())),
         Arguments.of(
             Map.of(
-                "SplayHeap.del_min",
+                "SplayHeap.del_min_eq",
                 Config.of(
                     CombinedFunctionAnnotation.of(
                         new Annotation(
@@ -472,7 +511,7 @@ public class Tactics {
                         P2,
                         Annotation.zero(1),
                         Annotation.zero(1))))),
-        Arguments.of(Map.of("SplayHeap.del_min", Config.of())),
+        Arguments.of(Map.of("SplayHeap.del_min_eq", Config.of())),
 
         /*
               Arguments.of(
@@ -854,7 +893,7 @@ public class Tactics {
   }
 
   @ParameterizedTest
-  @MethodSource("afterTacas")
+  @MethodSource("splayTest")
   public void all(Map<String, Config> immutableAnnotations) {
     final var loader = Tests.loader();
 

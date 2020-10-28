@@ -5,18 +5,25 @@ import static java.util.function.Predicate.isEqual;
 import java.io.PrintStream;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.BiFunction;
 
 public enum ComparisonOperator {
-  EQ(List.of("⩵", "==")),
-  NE(List.of("≠", "!=")),
-  LT(List.of("⪱", "<")),
-  LE(List.of("⪯", "<=")),
-  GT(List.of("⪲", ">")),
-  GE(List.of("⪰", ">="));
+  EQ(List.of("⩵", "=="), (x, y) -> "Objects.equals(" + x + ", " + y + ")"),
+  NE(List.of("≠", "!="), (x, y) -> "!Objects.equals(" + x + ", " + y + ")"),
+  LT(List.of("⪱", "<"), comparable("<")),
+  LE(List.of("⪯", "<="), comparable("<=")),
+  GT(List.of("⪲", ">"), comparable(">")),
+  GE(List.of("⪰", ">="), comparable(">="));
 
   private final List<String> tokens;
+  private final BiFunction<String, String, String> toJava;
 
-  ComparisonOperator(List<String> tokens) {
+  private static BiFunction<String, String, String> comparable(String operator) {
+    return (x, y) -> x + ".compareTo(" + y + ") " + operator + " 0";
+  }
+
+  ComparisonOperator(List<String> tokens, BiFunction<String, String, String> toJava) {
+    this.toJava = toJava;
     if (tokens.isEmpty()) {
       throw new IllegalArgumentException();
     }
@@ -38,6 +45,10 @@ public enum ComparisonOperator {
 
   public void printHaskellTo(PrintStream out) {
     out.print(tokens.get(1));
+  }
+
+  public void printJavaTo(String x, String y, PrintStream out) {
+    out.print(toJava.apply(x, y));
   }
 
   @Override

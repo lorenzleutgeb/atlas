@@ -9,8 +9,10 @@ import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.toList;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.minimize;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.indent;
 
 import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
 import guru.nidi.graphviz.attribute.Records;
 import guru.nidi.graphviz.attribute.Shape;
 import guru.nidi.graphviz.engine.Format;
@@ -42,6 +44,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.AnnotationHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.simple.FunctionSignature;
+import xyz.leutgeb.lorenz.lac.typing.simple.TypeClass;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.BoolType;
@@ -434,5 +437,58 @@ public class FunctionDefinition {
 
   public String getSimpleSignatureString() {
     return moduleName + "." + name + " ∷ " + inferredSignature.getType();
+  }
+
+  public void printJavaTo(PrintStream out, boolean makeStatic) {
+    out.print("public ");
+
+    if (makeStatic) {
+      out.print("static ");
+    }
+
+    final var variables = inferredSignature.getType().variables();
+    if (!variables.isEmpty()) {
+      out.print("<");
+      out.print(
+          variables.stream()
+              .map(
+                  variable -> {
+                    for (var constraint : inferredSignature.getConstraints()) {
+                      if (constraint.getTypeClass().equals(TypeClass.ORD)
+                          && constraint.getConstrained().size() == 1
+                          && constraint.getConstrained().get(0).equals(variable)) {
+                        return variable.toJava() + " extends Comparable<" + variable.toJava() + ">";
+                      }
+                    }
+                    return variable.toJava();
+                  })
+              .collect(Collectors.joining(", ")));
+      out.print("> ");
+    }
+
+    out.print(inferredSignature.getType().getTo().toJava());
+    out.print(" ");
+    out.print(name);
+    out.print("(");
+    out.print(
+        Streams.zip(
+                inferredSignature.getType().getFrom().getElements().stream(),
+                arguments.stream(),
+                (type, name) -> type.toJava() + " " + name)
+            .collect(Collectors.joining(", ")));
+    out.print(") {");
+
+    if (body.isTerminal()) {
+      indent(out, 1);
+      out.println("return (");
+      body.printJavaTo(out, 1, getFullyQualifiedName());
+      indent(out, 1);
+      out.println(");");
+    } else {
+      body.printJavaTo(out, 1, getFullyQualifiedName());
+    }
+
+    out.println("}");
+    out.println();
   }
 }

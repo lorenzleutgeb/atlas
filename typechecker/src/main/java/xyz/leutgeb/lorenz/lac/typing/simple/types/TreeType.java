@@ -65,6 +65,11 @@ public class TreeType implements Type {
   }
 
   @Override
+  public String toJava() {
+    return "Tree<" + elementType.toJava() + ">";
+  }
+
+  @Override
   public Type generalize(Generalizer g) {
     return new TreeType(elementType.generalize(g));
   }

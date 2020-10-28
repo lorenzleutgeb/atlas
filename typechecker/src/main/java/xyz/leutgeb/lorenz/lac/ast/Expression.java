@@ -158,6 +158,11 @@ public abstract class Expression extends Syntax {
     out.println(toString());
   }
 
+  public void printJavaTo(PrintStream out, int indentation, String currentFunction) {
+    indent(out, indentation);
+    out.println(toString());
+  }
+
   public Set<String> getOccurringFunctions() {
     return getChildren()
         .flatMap(e -> e.getOccurringFunctions().stream())

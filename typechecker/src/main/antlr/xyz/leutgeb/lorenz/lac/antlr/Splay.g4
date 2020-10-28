@@ -52,7 +52,7 @@ productTypeNaming : PAREN_OPEN names+=IDENTIFIER (COMMA names+=IDENTIFIER) PAREN
 // Expressions
 expression : identifier # variableExpression
            | IF condition=expression THEN truthy=expression ELSE falsy=expression # iteExpression
-           | MATCH test=expression WITH PIPE LEAF ARROW leafCase=expression PIPE nodePattern=pattern ARROW nodeCase=expression # matchExpression
+           | MATCH test=expression WITH (PIPE LEAF ARROW leafCase=expression)? PIPE nodePattern=pattern ARROW nodeCase=expression # matchExpression
            | node # nodeExpression
            | name=IDENTIFIER (params+=expression)* # callExpression
            | LET name=identifier ASSIGN value=expression IN body=expression # letExpression
@@ -66,13 +66,15 @@ op : EQ | NE | LT | LE | GT | GE ;
 // For patterns we only admit simpler tuples:
 //  - non-recursive, i.e. it is only possible to match one level of a tree
 //  - no derived identifiers
-// TODO(lorenz.leutgeb):
-//  - anonymous identifiers are allowed
-pattern : PAREN_OPEN left=IDENTIFIER COMMA middle=IDENTIFIER COMMA right=IDENTIFIER PAREN_CLOSE;
+pattern : PAREN_OPEN left=maybeAnonymousIdentifier COMMA middle=maybeAnonymousIdentifier COMMA right=maybeAnonymousIdentifier PAREN_CLOSE # deconstructionPattern
+        | maybeAnonymousIdentifier # aliasingPattern
+        ;
 
 node: PAREN_OPEN left=expression COMMA middle=expression COMMA right=expression PAREN_CLOSE ;
 
 identifier : LEAF | IDENTIFIER ;
+
+maybeAnonymousIdentifier : IDENTIFIER | ANONYMOUS_IDENTIFIER ;
 
 ANONYMOUS_IDENTIFIER : '_';
 DOT : '.';
@@ -116,7 +118,7 @@ BOOL : 'Bool' | 'Bo';
 TYC_ORD : 'Ord';
 TYC_EQ : 'Eq';
 
-IDENTIFIER : (('A' .. 'Z' | 'a'..'z' | 'α' | 'β' | 'γ' | 'δ' | 'ε' | '∂') ( 'A'..'Z' | 'a'..'z' | 'α' | 'β' | 'γ' | 'δ' | 'ε' | '∂' | '0'..'9' | '_' | '\'' | '.' )*) ;
+IDENTIFIER : (('A' .. 'Z' | 'a'..'z' | 'α' | 'β' | 'γ' | 'δ' | 'ε' | '∂') ( 'A'..'Z' | 'a'..'z' | 'α' | 'β' | 'γ' | 'δ' | 'ε' | '∂' | '0'..'9' | '_' | '.' )*) ;
 TYPE : ('A'..'Z') ( 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' )*;
 NUMBER : '0' | ('1'..'9') ('0'..'9')*;
 QUOTED_STRING : QUOTE ( '\\"' | . )*? QUOTE;

@@ -27,7 +27,7 @@ import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
-public class NodeExpression extends Expression {
+public class NodeExpression extends Expression implements MatchPattern {
   List<Expression> elements;
 
   public NodeExpression(Source source, List<Expression> elements) {
@@ -133,6 +133,18 @@ public class NodeExpression extends Expression {
         out.print(" ");
       }
     }
+  }
+
+  @Override
+  public void printJavaTo(PrintStream out, int indentation, String currentFunction) {
+    out.print("node(");
+    for (int i = 0; i < elements.size(); i++) {
+      elements.get(i).printHaskellTo(out, indentation, currentFunction);
+      if (i < elements.size() - 1) {
+        out.print(", ");
+      }
+    }
+    out.print(")");
   }
 
   @Override

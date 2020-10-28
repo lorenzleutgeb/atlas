@@ -23,4 +23,6 @@ public interface Type {
   }
 
   String toHaskell();
+
+  String toJava();
 }

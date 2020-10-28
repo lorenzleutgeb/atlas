@@ -60,6 +60,11 @@ public class TypeVariable implements Type {
   }
 
   @Override
+  public String toJava() {
+    return name;
+  }
+
+  @Override
   public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
     throw new TypeMismatch(this, b);
   }

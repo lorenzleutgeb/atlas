@@ -111,6 +111,11 @@ public class BooleanExpression extends Expression {
   }
 
   @Override
+  public void printJavaTo(PrintStream out, int indentation, String currentFunction) {
+    operator.printJavaTo(((Identifier) left).getName(), ((Identifier) right).getName(), out);
+  }
+
+  @Override
   public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
     return this;
   }

@@ -1,26 +1,16 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
-import static java.util.stream.Collectors.joining;
-import static xyz.leutgeb.lorenz.lac.util.Util.flatten;
-import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
-
-import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.io.ByteSource;
+import com.google.common.io.Files;
+import com.google.googlejavaformat.java.Formatter;
+import com.google.googlejavaformat.java.FormatterException;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.lac.module.Loader;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
@@ -37,6 +27,29 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 import xyz.leutgeb.lorenz.lac.util.Util;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.joining;
+import static xyz.leutgeb.lorenz.lac.util.Util.flatten;
+import static xyz.leutgeb.lorenz.lac.util.Util.inImageRuntimeCode;
+import static xyz.leutgeb.lorenz.lac.util.Util.output;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
+
 @Slf4j
 public class Program {
   @Getter private final Map<String, FunctionDefinition> functionDefinitions;
@@ -49,6 +62,9 @@ public class Program {
   @Getter @Setter private String name;
   @Getter private final Path basePath;
 
+  private boolean normalized;
+  private boolean inferred;
+
   public Program(
       Map<String, FunctionDefinition> functionDefinitions,
       List<List<String>> order,
@@ -60,6 +76,12 @@ public class Program {
   }
 
   public void infer() throws UnificationError, TypeError {
+    normalize();
+
+    if (inferred) {
+      return;
+    }
+
     var root = UnificationContext.root();
     for (List<String> component : order) {
       final var ctx = root.childWithNewProblem();
@@ -80,6 +102,8 @@ public class Program {
         ctx.putSignature(fqn, fd.getInferredSignature());
       }
     }
+
+    inferred = true;
   }
 
   private FunctionDefinition get(String fqn) {
@@ -308,7 +332,12 @@ public class Program {
   }
 
   public void normalize() {
+    if (normalized) {
+      return;
+    }
     forEach(FunctionDefinition::normalize);
+
+    normalized = true;
   }
 
   public void unshare() {
@@ -368,6 +397,78 @@ public class Program {
         FunctionDefinition fd = functionDefinitions.get(fqn);
         out.println(fd.getInferredSignatureString());
       }
+    }
+  }
+
+  public void dumpToJsh(Path path) {
+    try {
+      infer();
+    } catch (UnificationError | TypeError unificationError) {
+      throw new RuntimeException(unificationError);
+    }
+
+    Multimap<String, FunctionDefinition> output = ArrayListMultimap.create();
+    Multimap<String, String> imports = HashMultimap.create();
+    for (var entry : getFunctionDefinitions().entrySet()) {
+      var fd = entry.getValue();
+      output.put(fd.getModuleName(), fd);
+      imports.putAll(
+          fd.getModuleName(),
+          fd.importedFunctions().stream().map(Loader::moduleName).collect(Collectors.toSet()));
+    }
+
+    try (var baos = (new ByteArrayOutputStream())) {
+      final var stream = new PrintStream(baos);
+
+      stream.println("import java.util.Objects;");
+      stream.println("import xyz.leutgeb.lorenz.lac.Tree;");
+      stream.println("import static xyz.leutgeb.lorenz.lac.Tree.node;");
+      stream.println("import static xyz.leutgeb.lorenz.lac.Tree.leaf;");
+
+      for (var e : output.keySet()) {
+        var lastModulePart = e.substring(Math.max(0, e.lastIndexOf(".")));
+
+        try {
+          java.nio.file.Files.createDirectories(path.getParent());
+        } catch (IOException ioException) {
+          throw new RuntimeException(ioException);
+        }
+
+        final var sink = Files.asCharSink(path.toFile(), StandardCharsets.UTF_8);
+
+        // stream.println("// This file was generated automatically.");
+        stream.println();
+        // stream.println("package xyz.leutgeb.lorenz.lac;");
+        stream.println();
+        stream.println();
+        // for (String imp : imports.get(e)) {
+        //  stream.println("import xyz.leutgeb.lorenz.lac." + imp + ";");
+        // }
+        final boolean toplevel = "_".equals(lastModulePart);
+        if (!toplevel) {
+          stream.println("class " + lastModulePart + " {");
+          stream.println();
+        }
+
+        for (var fd : output.get(e)) {
+          fd.printJavaTo(stream, !toplevel);
+        }
+
+        if (!toplevel) {
+          stream.println("}");
+        }
+
+        if (inImageRuntimeCode() || true) {
+          try (var out = output(path)) {
+            out.write(baos.toByteArray());
+          }
+        } else {
+          final var source = ByteSource.wrap(baos.toByteArray());
+          new Formatter().formatSource(source.asCharSource(StandardCharsets.UTF_8), sink);
+        }
+      }
+    } catch (IOException | FormatterException ex) {
+      throw new RuntimeException(ex);
     }
   }
 }

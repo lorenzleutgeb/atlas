@@ -125,6 +125,34 @@ public class LetExpression extends Expression {
   }
 
   @Override
+  public void printJavaTo(PrintStream out, int indentation, String currentFunction) {
+    out.print("{ final var ");
+    declared.printJavaTo(out, indentation, currentFunction);
+    out.print(" = (");
+    // indent(out, indentation + 1);
+    value.printJavaTo(out, indentation + 1, currentFunction);
+    out.println(");");
+    // indent(out, indentation + 1);
+    // out.print(" in (");
+    // indent(out, indentation + 1);
+
+    indent(out, indentation);
+    if (body.isTerminal()) {
+      indent(out, indentation + 1);
+      out.println("return (");
+      body.printJavaTo(out, indentation + 1, currentFunction);
+      indent(out, indentation + 1);
+      out.println(");");
+    } else {
+      body.printJavaTo(out, indentation + 1, currentFunction);
+    }
+
+    // out.println();
+    // indent(out, indentation);
+    out.print("}");
+  }
+
+  @Override
   public Set<Identifier> freeVariables() {
     final var result = super.freeVariables();
     result.remove(declared);

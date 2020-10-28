@@ -2,7 +2,6 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 val rootPackage = "xyz.leutgeb.lorenz.lac"
 val rootPackagePath = rootPackage.replace(".", "/")
-val mainClassName = "$rootPackage.Main"
 
 fun run(command: String, workingDir: File = file("./")): String {
     val parts = command.split("\\s".toRegex())
@@ -107,6 +106,10 @@ dependencies {
     implementation("org.slf4j:slf4j-simple:1.7.30")
 
     testImplementation("tech.tablesaw:tablesaw-core:0.38.1")
+
+    implementation("com.google.googlejavaformat:google-java-format:1.9")
+
+    // compileOnly("org.graalvm.nativeimage:svm:20.2.0")
 }
 
 application {
@@ -180,4 +183,23 @@ spotless {
 
         target("build.gradle.kts")
     }
+}
+
+val lacDir = "build/generated-src/lac/main"
+
+sourceSets {
+    main {
+        java {
+            srcDir(lacDir)
+        }
+    }
+}
+
+tasks.register<JavaExec>("generateExamples")
+val generateExamples by tasks.named<JavaExec>("generateExamples") {
+    classpath = project.sourceSets["main"].runtimeClasspath
+    // System.out.println(project.sourceSets["generated"].java)
+    // classpath = main.output
+    main = "$rootPackage.Main"
+    args("java", "--home=src/test/resources/examples", ".*", lacDir)
 }

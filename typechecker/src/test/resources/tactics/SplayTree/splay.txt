@@ -1,0 +1,84 @@
+(match (* t *)
+  (w leaf)
+  Q1@(ite (* a == c *)
+    (w node)
+    (ite (* a < c *)
+      (match (* cl, zig *)
+        (w (let:tree:cf leaf node))
+        Q2zig@(ite (* a == b *)
+          (w (let:tree:cf node node))
+          (ite (* a < b *)
+            (match (* bl, zig zig *)
+              (w (let:tree:cf leaf (let:tree:cf node node)))
+              (w
+                (let:tree:cf
+                  node (* reconstruct bl *)
+                  Q3zigzig@(let:tree:cf
+                    (w app) (* splay_eq a bl *)
+                    Q4zigzig@(match
+                      (w leaf)
+                      Q5zigzig@(w (let:tree:cf node (let:tree:cf node node)))
+                    )
+                  )
+                )
+              )
+            )
+            (match (* br, zig zag *)
+              (w (let:tree:cf leaf (let:tree:cf node node)))
+              (w
+                (let:tree:cf
+                  node (* reconstruct br *)
+                  Q3zigzag@(let:tree:cf
+                    (w app) (* splay_eq a br *)
+                    Q4zigzag@(match
+                      (w leaf)
+                      Q5zigzag@(w (let:tree:cf node (let:tree:cf node node)))
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+      (match (* cr, zag *)
+        (w (let:tree:cf leaf node))
+        Q2zag@(ite (* a == b *)
+          (w (let:tree:cf node node))
+          (ite (* a < b *)
+            (match (* bl, zag zig *)
+              (w (let:tree:cf leaf (let:tree:cf node node)))
+              (w
+                (let:tree:cf
+                  node (* reconstruct bl *)
+                  Q3zagzig@(let:tree:cf
+                    (w app) (* splay_eq a bl *)
+                    Q4zagzig@(match
+                      (w leaf)
+                      Q5zagzig@(w (let:tree:cf node (let:tree:cf node node)))
+                    )
+                  )
+                )
+              )
+            )
+            (match (* br, zag zag *)
+              (w (let:tree:cf node (let:tree:cf leaf node)))
+              (w
+                (let:tree:cf
+                  node (* reconstruct br *)
+                  Q3zagzag@(let:tree:cf
+                    (w app) (* splay_eq a br *)
+                    Q4zagzag@(match
+                      (w leaf)
+                      Q5zagzag@(w (let:tree:cf node (let:tree:cf node node)))
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)

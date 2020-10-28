@@ -1,6 +1,7 @@
 package xyz.leutgeb.lorenz.lac.typing.simple.types;
 
 import static java.util.Collections.emptySet;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
@@ -13,7 +14,11 @@ import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
-import xyz.leutgeb.lorenz.lac.unification.*;
+import xyz.leutgeb.lorenz.lac.unification.Equivalence;
+import xyz.leutgeb.lorenz.lac.unification.Generalizer;
+import xyz.leutgeb.lorenz.lac.unification.Substitution;
+import xyz.leutgeb.lorenz.lac.unification.TypeMismatch;
+import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 
 @Value
 @EqualsAndHashCode(callSuper = false)
@@ -67,6 +72,11 @@ public class ProductType implements Type {
       return elements.get(0).toHaskell();
     }
     return "(" + stream().map(Type::toHaskell).collect(Collectors.joining(", ")) + ")";
+  }
+
+  @Override
+  public String toJava() {
+    throw bug();
   }
 
   public String toCurriedHaskell() {

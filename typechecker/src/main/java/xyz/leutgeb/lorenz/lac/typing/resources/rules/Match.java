@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.ast.MatchExpression;
+import xyz.leutgeb.lorenz.lac.ast.NodeExpression;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
@@ -42,8 +43,8 @@ public class Match implements Rule {
 
     final var x = (Identifier) expression.getScrut();
     final var pattern = expression.getNodePattern();
-    final var x1 = (Identifier) pattern.getLeft();
-    final var x3 = (Identifier) pattern.getRight();
+    final var x1 = (Identifier) ((NodeExpression) pattern).getLeft();
+    final var x3 = (Identifier) ((NodeExpression) pattern).getRight();
 
     final var gammaxq = obligation.getContext();
     final var gammap = pop(gammaxq.getIds(), x);

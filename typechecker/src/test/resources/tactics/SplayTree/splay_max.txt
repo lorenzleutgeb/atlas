@@ -1,0 +1,21 @@
+(match (* t *)
+  (w leaf)
+  (match (* r *)
+    (let:tree:cf leaf (w node))
+    (match (* rr *)
+      (let:tree:cf node (let:tree:cf leaf (w node)))
+      (w
+        (let:tree:cf
+          node (* reconstruct rr *)
+          (let:tree:cf
+            (w app) (* splay_max rr *)
+            (match
+              (w leaf)
+              (w (let:tree:cf node (let:tree:cf node node)))
+            )
+          )
+        )
+      )
+    )
+  )
+)

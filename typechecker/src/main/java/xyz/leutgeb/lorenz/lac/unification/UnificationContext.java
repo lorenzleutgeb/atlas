@@ -213,7 +213,8 @@ public class UnificationContext {
     }
 
     if (getTypeInternal(key) != null) {
-      throw new RuntimeException("hiding of variables not possible (affected: '" + key + "')");
+      log.debug("Hiding variable '{}' at {}", key, intro.getSource().getRoot());
+      // throw new RuntimeException("hiding of variables not possible (affected: '" + key + "')");
     }
 
     types.put(key, value);

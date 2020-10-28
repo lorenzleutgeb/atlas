@@ -20,9 +20,11 @@ import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.BETA;
 import static xyz.leutgeb.lorenz.lac.util.Util.fqnToFlatFilename;
 import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -34,6 +36,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import jdk.jshell.JShell;
 import org.jgrapht.nio.AttributeType;
 import org.jgrapht.nio.DefaultAttribute;
 import org.junit.jupiter.api.BeforeAll;
@@ -486,6 +489,10 @@ public class Tests {
     }
     program.infer();
     program.printAllSimpleSignaturesInOrder(System.out);
+
+    for (var fd : program.getFunctionDefinitions().values()) {
+      fd.printJavaTo(System.out, true);
+    }
     /*
     program.unshare(lazy);
     for (var fd : program.getFunctionDefinitions().values()) {
@@ -525,7 +532,12 @@ public class Tests {
   }
 
   @Test
-  void fiddle() throws Exception {}
+  void fiddle() throws Exception {
+    var loader = loader();
+    loader.autoload();
+    Program program = loader.loadInline("foo t = (Scratch.empty t)");
+    program.dumpToJsh(Path.of(".", "Dump.jsh"));
+  }
 
   private enum ExpectedResult {
     SAT,

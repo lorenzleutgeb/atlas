@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.lac.typing.simple.types;
 
 import static java.util.Arrays.asList;
 import static java.util.Arrays.copyOf;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
@@ -87,6 +88,11 @@ public class FunctionType implements Type {
   @Override
   public String toHaskell() {
     return (from.size() > 0 ? from.toCurriedHaskell() + " -> " : "") + to.toHaskell();
+  }
+
+  @Override
+  public String toJava() {
+    throw bug();
   }
 
   @Override

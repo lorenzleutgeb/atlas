@@ -181,6 +181,27 @@ public class CallExpression extends Expression {
   }
 
   @Override
+  public void printJavaTo(PrintStream out, int indentation, String currentFunction) {
+    if (getFullyQualifiedName().equals(currentFunction)) {
+      out.print(functionName);
+    } else if (currentFunction.startsWith(moduleName)) {
+      out.print(functionName);
+    } else {
+      out.print(moduleName + "." + functionName);
+    }
+    out.print("(");
+
+    for (int i = 0; i < parameters.size(); i++) {
+      parameters.get(i).printHaskellTo(out, indentation, currentFunction);
+      if (i < parameters.size() - 1) {
+        out.print(", ");
+      }
+    }
+
+    out.print(")");
+  }
+
+  @Override
   public Set<String> getOccurringFunctions() {
     var fqn = functionName.getName();
     if (!fqn.contains(".")) {

@@ -4,7 +4,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
-import xyz.leutgeb.lorenz.lac.unification.*;
+import xyz.leutgeb.lorenz.lac.unification.Equivalence;
+import xyz.leutgeb.lorenz.lac.unification.Generalizer;
+import xyz.leutgeb.lorenz.lac.unification.Substitution;
+import xyz.leutgeb.lorenz.lac.unification.TypeMismatch;
+import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 
 public class BoolType implements Type {
   public static final BoolType INSTANCE = new BoolType();
@@ -45,6 +49,11 @@ public class BoolType implements Type {
   @Override
   public String toHaskell() {
     return "Bool";
+  }
+
+  @Override
+  public String toJava() {
+    return "boolean";
   }
 
   @Override

@@ -1,10 +1,24 @@
 package xyz.leutgeb.lorenz.lac.module;
 
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toUnmodifiableList;
-
 import com.google.common.base.Functions;
+import lombok.Getter;
+import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
+import org.antlr.v4.runtime.CharStreams;
+import org.jgrapht.Graph;
+import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector;
+import org.jgrapht.alg.interfaces.StrongConnectivityAlgorithm;
+import org.jgrapht.graph.AsSubgraph;
+import org.jgrapht.graph.DefaultDirectedGraph;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.EdgeReversedGraph;
+import org.jgrapht.nio.ExportException;
+import org.jgrapht.nio.dot.DOTExporter;
+import org.jgrapht.traverse.BreadthFirstIterator;
+import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
+import xyz.leutgeb.lorenz.lac.ast.Program;
+import xyz.leutgeb.lorenz.lac.util.Util;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -21,23 +35,14 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import lombok.Getter;
-import lombok.Value;
-import org.antlr.v4.runtime.CharStreams;
-import org.jgrapht.Graph;
-import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector;
-import org.jgrapht.alg.interfaces.StrongConnectivityAlgorithm;
-import org.jgrapht.graph.AsSubgraph;
-import org.jgrapht.graph.DefaultDirectedGraph;
-import org.jgrapht.graph.DefaultEdge;
-import org.jgrapht.graph.EdgeReversedGraph;
-import org.jgrapht.nio.ExportException;
-import org.jgrapht.nio.dot.DOTExporter;
-import org.jgrapht.traverse.BreadthFirstIterator;
-import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
-import xyz.leutgeb.lorenz.lac.ast.Program;
+
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableList;
 
 @Value
+@Slf4j
 public class Loader {
   private static final String DOT_EXTENSION = ".ml";
 
@@ -114,9 +119,9 @@ public class Loader {
     final var stack = new Stack<String>();
     Files.find(
             home,
-            256,
+            8,
             ((path, basicFileAttributes) ->
-                path.getFileName().toString().endsWith(DOT_EXTENSION) && looksGood(path)))
+                path.getFileName().toString().endsWith(DOT_EXTENSION) && Util.goodForReading(path)))
         .flatMap(
             path -> {
               try {
@@ -136,16 +141,23 @@ public class Loader {
 
   public Program loadInline(String source) throws IOException {
     final var definitions = ModuleParser.parse(source, "_");
-    if (definitions.size() > 1) {
-      throw new IllegalArgumentException("exactly one function definition is required");
+
+    final var stack = new Stack<String>();
+
+    for (var definition : definitions) {
+      ingest(definition, stack);
     }
-    final var definition = definitions.get(0);
-    functionDefinitions.put(definition.getFullyQualifiedName(), definition);
-    return load(definitions.get(0).getOcurringFunctions());
+
+    load(stack);
+
+    return load(
+        definitions.stream()
+            .map(FunctionDefinition::getFullyQualifiedName)
+            .collect(Collectors.toSet()));
   }
 
-  public Program load(String name) throws IOException {
-    return load(Collections.singleton(name));
+  public Program load(String fqn) throws IOException {
+    return load(Collections.singleton(fqn));
   }
 
   public Program loadMatching(Pattern pattern) throws IOException {
@@ -155,17 +167,23 @@ public class Loader {
             .collect(Collectors.toSet()));
   }
 
-  public Program load(Set<String> names) throws IOException {
+  public Program load(Set<String> fqns) throws IOException {
     final var stack =
-        names.stream()
+        fqns.stream()
             .filter(Predicate.not(functionDefinitions::containsKey))
             .collect(Collectors.toCollection(Stack::new));
     load(stack);
 
+    final var dangling = fqns.stream().filter(Predicate.not(g::containsVertex)).collect(toSet());
+
+    if (!dangling.isEmpty()) {
+      throw new RuntimeException("Could not load " + dangling);
+    }
+
     final var plainSubgraph =
         new AsSubgraph<>(
             g,
-            names.stream()
+            fqns.stream()
                 .flatMap(
                     name ->
                         StreamSupport.stream(
@@ -202,7 +220,7 @@ public class Loader {
       // Actual path to module on disk.
       final var path = path(moduleName);
 
-      if (!looksGood(path)) {
+      if (!Util.goodForReading(path)) {
         throw new RuntimeException("could not resolve path for function name '" + fqn + "'");
       }
 
@@ -222,6 +240,7 @@ public class Loader {
   }
 
   private void ingest(FunctionDefinition definition, Stack<String> stack) {
+    log.debug("Loaded {}", definition.getFullyQualifiedName());
     functionDefinitions.putIfAbsent(definition.getFullyQualifiedName(), definition);
     if (!g.containsVertex(definition.getFullyQualifiedName())) {
       g.addVertex(definition.getFullyQualifiedName());
@@ -233,10 +252,6 @@ public class Loader {
       }
       g.addEdge(dependency, definition.getFullyQualifiedName());
     }
-  }
-
-  private boolean looksGood(Path path) {
-    return Files.exists(path) && Files.isReadable(path) && Files.isRegularFile(path);
   }
 
   public void exportGraph(OutputStream stream) throws ExportException {

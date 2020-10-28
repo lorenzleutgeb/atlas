@@ -6,7 +6,15 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import xyz.leutgeb.lorenz.lac.antlr.SplayParser;
-import xyz.leutgeb.lorenz.lac.ast.*;
+import xyz.leutgeb.lorenz.lac.ast.BooleanExpression;
+import xyz.leutgeb.lorenz.lac.ast.CallExpression;
+import xyz.leutgeb.lorenz.lac.ast.ComparisonOperator;
+import xyz.leutgeb.lorenz.lac.ast.Expression;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
+import xyz.leutgeb.lorenz.lac.ast.IfThenElseExpression;
+import xyz.leutgeb.lorenz.lac.ast.LetExpression;
+import xyz.leutgeb.lorenz.lac.ast.MatchExpression;
+import xyz.leutgeb.lorenz.lac.ast.NodeExpression;
 import xyz.leutgeb.lorenz.lac.ast.Number;
 
 class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
@@ -33,8 +41,8 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
     return new MatchExpression(
         getSource(ctx),
         visit(ctx.test),
-        visit(ctx.leafCase),
-        visitPattern(ctx.nodePattern),
+        ctx.leafCase != null ? visit(ctx.leafCase) : Identifier.LEAF,
+        visit(ctx.nodePattern),
         visit(ctx.nodeCase));
   }
 
@@ -75,13 +83,22 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   }
 
   @Override
-  public NodeExpression visitPattern(SplayParser.PatternContext ctx) {
+  public Expression visitDeconstructionPattern(SplayParser.DeconstructionPatternContext ctx) {
     return new NodeExpression(
-        getSource(ctx),
-        List.of(
-            Identifier.get(ctx.left.getText(), getSource(ctx)),
-            Identifier.get(ctx.middle.getText(), getSource(ctx)),
-            Identifier.get(ctx.right.getText(), getSource(ctx))));
+        getSource(ctx), List.of(visit(ctx.left), visit(ctx.middle), visit(ctx.right)));
+  }
+
+  @Override
+  public Expression visitMaybeAnonymousIdentifier(SplayParser.MaybeAnonymousIdentifierContext ctx) {
+    if (ctx.ANONYMOUS_IDENTIFIER() != null) {
+      return Identifier.anonymous(getSource(ctx));
+    }
+    return Identifier.get(ctx.IDENTIFIER().getText(), getSource(ctx));
+  }
+
+  @Override
+  public Expression visitAliasingPattern(SplayParser.AliasingPatternContext ctx) {
+    return visitMaybeAnonymousIdentifier(ctx.maybeAnonymousIdentifier());
   }
 
   @Override

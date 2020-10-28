@@ -28,6 +28,7 @@ import xyz.leutgeb.lorenz.lac.util.Util;
 public class Identifier extends Expression {
   public static final String LEAF_NAME = "leaf";
   public static final Identifier LEAF = new Identifier(Predefined.INSTANCE, LEAF_NAME);
+  public static final Identifier UNDERSCORE = new Identifier(Predefined.INSTANCE, "_");
   public static final Identifier DUMMY_TREE_ALPHA =
       new Identifier(Predefined.INSTANCE, "_", new TreeType(TypeVariable.ALPHA));
   private static final Set<String> BOOLEAN_NAMES = Set.of("true", "false");
@@ -35,6 +36,8 @@ public class Identifier extends Expression {
 
   @NonNull @Getter private final String name;
   @Getter private Intro intro;
+
+  private static int anonymousCount = 1;
 
   private Identifier(Source source, @NonNull String name) {
     super(source);
@@ -86,6 +89,10 @@ public class Identifier extends Expression {
     return CONSTANT_NAMES.contains(name);
   }
 
+  public static Expression anonymous(Source source) {
+    return get("_" + (anonymousCount++), source);
+  }
+
   @Override
   public String toString() {
     return name;
@@ -103,6 +110,9 @@ public class Identifier extends Expression {
     }
     if (BOOLEAN_NAMES.contains(name)) {
       return BoolType.INSTANCE;
+    }
+    if (name.startsWith("_")) {
+      return context.fresh();
     }
 
     if (context.hasSignature(this.name)) {
@@ -177,6 +187,15 @@ public class Identifier extends Expression {
       out.print("Leaf");
     } else if (BOOLEAN_NAMES.contains(name)) {
       out.print(Util.capitalizeFirstLetter(name));
+    } else {
+      out.print(name);
+    }
+  }
+
+  @Override
+  public void printJavaTo(PrintStream out, int indentation, String currentFunction) {
+    if (name.equals((LEAF_NAME))) {
+      out.print("Tree.<" + type.variables().iterator().next() + ">leaf()");
     } else {
       out.print(name);
     }

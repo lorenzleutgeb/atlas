@@ -165,11 +165,15 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
       }
       result = emptyList();
     } else {
-      final List<Identifier> redundant = WVar.redundantIds(obligation).collect(Collectors.toUnmodifiableList());
+      final List<Identifier> redundant =
+          WVar.redundantIds(obligation).collect(Collectors.toUnmodifiableList());
       if (obligation.getExpression().isTerminal()
           && !redundant.isEmpty()
           && Set.of("leaf", "node", "var", "app").contains(ruleNameText)) {
-        log.info("Automatically applying (w:var) to remove leftover variables {} on line {}.", redundant, start.getLine());
+        log.info(
+            "Automatically applying (w:var) to remove leftover variables {} on line {}.",
+            redundant,
+            start.getLine());
         prover.setLogApplications(true);
         obligation = prover.weakenVariables(obligation);
       }
