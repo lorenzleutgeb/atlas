@@ -34,6 +34,12 @@ locations: `/usr/java/packages/lib:/usr/lib64:/lib64:/lib:/usr/lib`.
 If there is an issue loading Z3, the program will show a
 `java.lang.UnsatisfiedLinkError` and terminate with a non-zero exit code.
 
+## Related Repositories
+
+ - [`lorenzleutgeb/lac-examples`](https://github.com/lorenzleutgeb/lac-examples)
+ - [`lorenzleutgeb/lac-thesis`](https://github.com/lorenzleutgeb/lac-thesis)
+ - [`lorenzleutgeb/lac-hs`](https://github.com/lorenzleutgeb/lac-hs)
+
 ## Reading
 
  - [Mechanically Proving Termination Using Polynomial Interpretations](https://doi.org/10.1007/s10817-005-9022-x)
