@@ -1,4 +1,4 @@
-
+import java.util.Optional
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 val rootPackage = "xyz.leutgeb.lorenz.lac"
@@ -48,8 +48,6 @@ dependencyLocking {
 }
 
 configurations {
-    create("z3")
-
     // See https://github.com/gradle/gradle/issues/820
     compile {
         setExtendsFrom(extendsFrom.filterNot { it == antlr.get() })
@@ -100,7 +98,7 @@ dependencies {
 
     // The Z3 Theorem Prover
     // See https://github.com/Z3Prover/z3#java
-    implementation(files("lib/com.microsoft.z3.jar"))
+    implementation(files(Optional.ofNullable(System.getenv("Z3_JAVA")).orElse("lib") + "/com.microsoft.z3.jar"))
 
     // Graph output
     implementation("guru.nidi:graphviz-java:0.15.0") {
