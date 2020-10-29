@@ -1,7 +1,6 @@
 package xyz.leutgeb.lorenz.lac.commands;
 
 import static com.google.common.collect.Sets.union;
-import static com.ibm.icu.impl.Assert.fail;
 import static java.util.Collections.emptyList;
 import static picocli.CommandLine.Help.Visibility.ALWAYS;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
@@ -53,12 +52,6 @@ public class Run implements Runnable {
   private Pattern pattern;
 
   @CommandLine.Option(
-      defaultValue = ".",
-      names = "--home",
-      description = "Where to search for *.ml files containing function definitions.")
-  private Path home;
-
-  @CommandLine.Option(
       defaultValue = "false",
       names = "--infer",
       description =
@@ -87,9 +80,12 @@ public class Run implements Runnable {
       description = "When present, tactics will be loaded from this directory.")
   private Path tactics;
 
+  @CommandLine.Spec(CommandLine.Spec.Target.SELF)
+  private CommandLine.Model.CommandSpec selfSpec;
+
   @Override
   public void run() {
-    Loader loader = new Loader(home);
+    Loader loader = Loader.atDefaultHome();
     try {
       loader.autoload();
     } catch (IOException e) {
@@ -210,7 +206,7 @@ public class Run implements Runnable {
 
       for (final var fqn : program.getFunctionDefinitions().keySet()) {
         if (!program.getFunctionDefinitions().containsKey(fqn)) {
-          fail("Could not find function definition for '" + fqn + "'.");
+          throw new RuntimeException("Could not find function definition for '" + fqn + "'.");
         }
 
         final var fd = program.getFunctionDefinitions().get(fqn);

@@ -1,67 +1,59 @@
 package xyz.leutgeb.lorenz.lac.commands;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.IOException;
-import java.io.PipedOutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Scanner;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import picocli.CommandLine;
+import static picocli.CommandLine.Help.Visibility.ALWAYS;
+import static xyz.leutgeb.lorenz.lac.commands.REPL.NAME;
+import static xyz.leutgeb.lorenz.lac.util.Util.append;
 
-@CommandLine.Command(name = "repl")
+import io.github.classgraph.ClassGraph;
+import java.util.Collections;
+import java.util.List;
+import jdk.jshell.tool.JavaShellToolBuilder;
+import picocli.CommandLine;
+import xyz.leutgeb.lorenz.lac.module.Loader;
+
+/** See also {@link REPLSubstitute}. */
+@CommandLine.Command(
+    name = NAME,
+    showEndOfOptionsDelimiterInUsageHelp = true,
+    description = {
+      "A Wrapper around JShell preloaded with utilities.",
+      "The underlying JShell instance can be freely configured by specifying parameters.",
+      "To get a list of parameters available, pass `--help` as a positional parameter, not an option, i.e. use `... -- --help`.",
+      "See http://openjdk.java.net/jeps/222"
+    })
 public class REPL implements Runnable {
+  public static final String NAME = "repl";
+
+  @CommandLine.Parameters(description = "Parameters for JShell.", showDefaultValue = ALWAYS)
+  private List<String> args =
+      List.of(
+          "--feedback",
+          "verbose",
+          "--class-path",
+          new ClassGraph().getClasspath(),
+          "--startup",
+          "DEFAULT",
+          "--startup",
+          "PRINTING",
+          "--startup",
+          "lac.jsh");
+
   @Override
   public void run() {
-    ExecutorService executorService = Executors.newFixedThreadPool(2);
+    final JavaShellToolBuilder builder = JavaShellToolBuilder.builder();
 
-    final PipedOutputStream output = new PipedOutputStream();
-    final BufferedOutputStream bufferedOutput = new BufferedOutputStream(output);
+    final var args =
+        append(
+            this.args,
+            Collections.singletonList(
+                "-R-D" + Loader.class.getName() + ".defaultHome=" + Loader.getDefaultHome()));
 
-    executorService.submit(
-        () -> {
-          try (final var scanner = new Scanner(new BufferedInputStream(System.in))) {
-            System.out.println("Reader is starting.");
-            while (scanner.hasNextLine()) {
-              final String input = scanner.nextLine() + "\n";
-
-              if (input.trim().equals("stop")) {
-                break;
-              }
-
-              System.out.println("Read line: " + input);
-              bufferedOutput.write(input.getBytes(StandardCharsets.UTF_8));
-              bufferedOutput.flush();
-            }
-
-            bufferedOutput.close();
-          } catch (IOException ioException) {
-            ioException.printStackTrace();
-          }
-        });
-
-    /*
-    executorService.submit(
-        () -> {
-          System.out.println("tool thread started");
-          try (final PipedInputStream input = new PipedInputStream(output)) {
-            final JavaShellToolBuilder builder =
-                JavaShellToolBuilder.builder().in(input, null).promptCapture(false);
-            System.out.println("Tool will run now!");
-            builder.run();
-          } catch (Exception exception) {
-            exception.printStackTrace();
-          }
-        });
-    */
-
-    System.out.println("main thread will await termination.");
+    System.out.println(args);
     try {
-      executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.HOURS);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
+      System.exit(builder.start(args.toArray(new String[args.size()])));
+    } catch (Exception exception) {
+      exception.printStackTrace();
+      System.exit(1);
     }
   }
 }

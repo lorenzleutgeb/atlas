@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.lac.module;
 
+import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.CharStreams;
@@ -47,6 +49,8 @@ public class Loader {
 
   @Getter private final Map<String, FunctionDefinition> functionDefinitions = new HashMap<>();
 
+  @Setter private static Path defaultHome;
+
   Path home;
 
   private final Graph<String, DefaultEdge> g =
@@ -66,6 +70,19 @@ public class Loader {
 
   public static Loader atCurrentWorkingDirectory() {
     return new Loader(currentWorkingDirectory());
+  }
+
+  public static Path getDefaultHome() {
+    return ofNullable(defaultHome)
+        .or(
+            () ->
+                ofNullable(System.getProperty(Loader.class.getName() + ".defaultHome"))
+                    .map(Path::of))
+        .orElse(Path.of("."));
+  }
+
+  public static Loader atDefaultHome() {
+    return new Loader(getDefaultHome());
   }
 
   private static Path currentWorkingDirectory() {

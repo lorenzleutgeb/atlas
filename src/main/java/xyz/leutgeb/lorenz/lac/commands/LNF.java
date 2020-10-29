@@ -16,21 +16,18 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 @CommandLine.Command(name = "lnf")
 public class LNF implements Runnable {
   @CommandLine.Option(
-      defaultValue = ".",
-      names = "--home",
-      description = "Where to search for *.ml files containing function definitions.")
-  private Path home;
-
-  @CommandLine.Option(
       defaultValue = "out",
       names = "--out",
       description =
           "Where to write loaded and normalized output to. Must be an existing, writable directory.")
   private Path out;
 
+  @CommandLine.Spec(CommandLine.Spec.Target.SELF)
+  private CommandLine.Model.CommandSpec selfSpec;
+
   @Override
   public void run() {
-    Loader loader = new Loader(home);
+    Loader loader = Loader.atDefaultHome();
     try {
       loader.autoload();
     } catch (IOException e) {

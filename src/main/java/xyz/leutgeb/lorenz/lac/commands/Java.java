@@ -1,17 +1,12 @@
 package xyz.leutgeb.lorenz.lac.commands;
 
 import static picocli.CommandLine.Help.Visibility.ALWAYS;
-import static xyz.leutgeb.lorenz.lac.util.Util.inImageRuntimeCode;
 import static xyz.leutgeb.lorenz.lac.util.Util.output;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
-import com.google.googlejavaformat.java.Formatter;
-import com.google.googlejavaformat.java.FormatterException;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
@@ -39,8 +34,8 @@ public class Java implements Runnable {
       showDefaultValue = ALWAYS)
   private Pattern pattern;
 
-  @CommandLine.Option(defaultValue = ".", names = "--home")
-  private Path home;
+  @CommandLine.Spec(CommandLine.Spec.Target.SELF)
+  private CommandLine.Model.CommandSpec selfSpec;
 
   @CommandLine.Parameters(
       index = "1",
@@ -53,7 +48,7 @@ public class Java implements Runnable {
 
   @Override
   public void run() {
-    Loader loader = new Loader(home);
+    final var loader = Loader.atDefaultHome();
     try {
       loader.autoload();
     } catch (IOException e) {
@@ -95,9 +90,7 @@ public class Java implements Runnable {
 
       final var sink = Files.asCharSink(path.toFile(), StandardCharsets.UTF_8);
 
-      try (var baos = (new ByteArrayOutputStream())) {
-        final var stream = new PrintStream(baos);
-
+      try (var stream = new PrintStream(output(path))) {
         stream.println("// This file was generated automatically.");
         stream.println();
         stream.println("package xyz.leutgeb.lorenz.lac;");
@@ -116,16 +109,7 @@ public class Java implements Runnable {
           fd.printJavaTo(stream, true);
         }
         stream.println("}");
-
-        if (inImageRuntimeCode()) {
-          try (var out = output(path)) {
-            out.write(baos.toByteArray());
-          }
-        } else {
-          final var source = ByteSource.wrap(baos.toByteArray());
-          new Formatter().formatSource(source.asCharSource(StandardCharsets.UTF_8), sink);
-        }
-      } catch (IOException | FormatterException ex) {
+      } catch (IOException ex) {
         throw new RuntimeException(ex);
       }
       log.info("{}", path);

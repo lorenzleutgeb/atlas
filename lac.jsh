@@ -1,18 +1,15 @@
 import xyz.leutgeb.lorenz.lac.*;
 import xyz.leutgeb.lorenz.lac.ast.*;
+import xyz.leutgeb.lorenz.lac.module.Loader;
 import xyz.leutgeb.lorenz.lac.util.*;
 
 import static xyz.leutgeb.lorenz.lac.Tree.leaf;
 import static xyz.leutgeb.lorenz.lac.Tree.node;
 import static xyz.leutgeb.lorenz.lac.util.Util.readProperties;
 
-import xyz.leutgeb.lorenz.lac.module.Loader;
-
-// Load configuration from `lac.properties`.
 readProperties(Path.of("lac.properties"));
 
-Path home = Path.of("src", "test", "resources", "examples");
-Loader loader = new Loader(home);
+Loader loader = Loader.atDefaultHome();
 loader.autoload();
 
 Path compile(String source) {

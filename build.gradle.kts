@@ -1,3 +1,4 @@
+
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 val rootPackage = "xyz.leutgeb.lorenz.lac"
@@ -29,21 +30,11 @@ plugins {
     id("com.diffplug.spotless") version "5.2.0"
     id("com.github.jk1.dependency-license-report") version "1.13"
     id("com.github.johnrengelman.shadow") version "5.2.0"
-    id("org.mikeneck.graalvm-native-image") version "0.8.0"
 }
 
 repositories {
     jcenter()
     mavenCentral()
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-}
-
-configurations {
-    create("z3")
 }
 
 buildscript {
@@ -56,20 +47,31 @@ dependencyLocking {
     lockAllConfigurations()
 }
 
+configurations {
+    create("z3")
+
+    // See https://github.com/gradle/gradle/issues/820
+    compile {
+        setExtendsFrom(extendsFrom.filterNot { it == antlr.get() })
+    }
+
+    create("nativeRuntimeClasspath") {
+        extendsFrom(runtimeClasspath.get())
+
+        dependencies {
+            exclude(group = "io.github.classgraph")
+            exclude(group = "com.google.javaformat")
+        }
+    }
+}
+
 dependencies {
-    // We need to give the ANTLR Plugin a hint.
-    val antlrDependency = "org.antlr:antlr4:4.8-1"
-    antlr(antlrDependency)
-    implementation(antlrDependency)
+    val antlrVersion = "4.8-1"
+    antlr("org.antlr:antlr4:$antlrVersion")
+    compileOnly("org.antlr:antlr4:$antlrVersion")
+    runtimeOnly("org.antlr:antlr4-runtime:$antlrVersion")
 
     implementation("com.google.guava:guava:28.2-jre")
-
-    // Logging
-    // fun log4j(x: String): String {
-    //     return "org.apache.logging.log4j:log4j-$x:2.13.1"
-    // }
-    // implementation(log4j("api"))
-    // implementation(log4j("core"))
 
     // Lombok
     val lombok = "org.projectlombok:lombok:1.18.12"
@@ -85,8 +87,8 @@ dependencies {
     implementation(jgrapht("io"))
 
     // Commandline Parameters
-    implementation("info.picocli:picocli:4.2.0")
-    annotationProcessor("info.picocli:picocli-codegen:4.2.0")
+    implementation("info.picocli:picocli:4.5.2")
+    annotationProcessor("info.picocli:picocli-codegen:4.5.2")
 
     // Testing
     fun jupiter(x: String): String {
@@ -94,55 +96,34 @@ dependencies {
     }
     testImplementation(jupiter("-params"))
     testRuntimeOnly(jupiter(""))
+    testImplementation("tech.tablesaw:tablesaw-core:0.38.1")
 
     // The Z3 Theorem Prover
     // See https://github.com/Z3Prover/z3#java
     implementation(files("lib/com.microsoft.z3.jar"))
 
     // Graph output
-    implementation("guru.nidi:graphviz-java:0.15.0")
+    implementation("guru.nidi:graphviz-java:0.15.0") {
+        // NOTE: Somehow JUnit ends up on the classpath...
+        exclude("org.junit.platform")
+        exclude(group = "net.arnx", module = "nashorn-promise")
+        exclude(group = "org.webjars.npm", module = "viz.js-for-graphviz-java")
+    }
 
     // Logging
     implementation("org.slf4j:slf4j-simple:1.7.30")
 
-    testImplementation("tech.tablesaw:tablesaw-core:0.38.1")
+    // Native Image
+    compileOnly("org.graalvm.nativeimage:svm:20.2.0")
 
     implementation("com.google.googlejavaformat:google-java-format:1.9")
-
-    // compileOnly("org.graalvm.nativeimage:svm:20.2.0")
+    implementation("io.github.classgraph:classgraph:4.8.90")
 }
 
-application {
-    mainClassName = "$rootPackage.Main"
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
-
-tasks.shadowJar {
-    archiveClassifier.set("shadow")
-}
-
-tasks.withType<JavaCompile> {
-    options.compilerArgs.addAll(arrayOf("-Xlint:unchecked", "-Xlint:deprecation"))
-}
-
-tasks.nativeImage {
-    setGraalVmHome(System.getenv("GRAAL_HOME"))
-    mainClass = "$rootPackage.Main"
-    executableName = project.name + "-" + project.version
-    jarTask = tasks.shadowJar.get()
-    arguments(
-            "--no-fallback",
-            // "--enable-all-security-services",
-            "--initialize-at-build-time=com.microsoft.z3.Native",
-            "--report-unsupported-elements-at-runtime",
-            "-H:+ReportExceptionStackTraces"
-            // "--static",
-            // "--libc=musl",
-            // "-H:+JNI"
-            // "-H:+StaticExecutableWithDynamicLibC"
-    )
-}
-
-tasks["build"].dependsOn("nativeImage")
 
 tasks.withType<AntlrTask> {
     // See https://github.com/antlr/antlr4/blob/master/doc/tool-options.md
@@ -157,34 +138,6 @@ tasks.withType<AntlrTask> {
     ))
 }
 
-tasks.test {
-    useJUnitPlatform()
-    testLogging {
-        events("failed")
-        showStackTraces = true
-        exceptionFormat = TestExceptionFormat.FULL
-    }
-}
-
-// Aggressively format code when building.
-tasks["build"].dependsOn("spotlessJavaApply")
-
-spotless {
-    java {
-        // Please do not add any custom configuration here.
-        // We just bow and abide to Google's rules,
-        // trading off individualism for simplicity.
-        googleJavaFormat("1.9")
-        // Explicitly point gjf at src, otherwise it will also check build and find ANTLR generated code.
-        target("src/**/*.java")
-    }
-    kotlinGradle {
-        ktlint()
-
-        target("build.gradle.kts")
-    }
-}
-
 val lacDir = "build/generated-src/lac/main"
 
 sourceSets {
@@ -195,11 +148,69 @@ sourceSets {
     }
 }
 
-tasks.register<JavaExec>("generateExamples")
-val generateExamples by tasks.named<JavaExec>("generateExamples") {
+tasks.create<JavaExec>("generateExamples") {
+    dependsOn("compileJava")
     classpath = project.sourceSets["main"].runtimeClasspath
-    // System.out.println(project.sourceSets["generated"].java)
-    // classpath = main.output
     main = "$rootPackage.Main"
-    args("java", "--home=src/test/resources/examples", ".*", lacDir)
+    args("--home=src/test/resources/examples", "java", ".*", lacDir)
+}
+
+tasks.withType<JavaCompile> {
+    options.compilerArgs.addAll(arrayOf("-Xlint:unchecked", "-Xlint:deprecation", "-Aproject=lac", "-Averbose=true"))
+}
+
+tasks.test {
+    useJUnitPlatform()
+    testLogging {
+        events("failed")
+        showStackTraces = true
+        exceptionFormat = TestExceptionFormat.FULL
+    }
+}
+
+application {
+    mainClassName = "$rootPackage.Main"
+}
+
+tasks.create<JavaCompile>("compileGeneratedJava") {
+    dependsOn("generateExamples")
+    source = fileTree(buildDir.resolve("generated-src/lac/main"))
+    classpath = project.configurations.compileClasspath.get() + sourceSets.main.get().output
+    destinationDir = sourceSets.main.get().output.classesDirs.singleFile
+}
+
+tasks.shadowJar {
+    dependsOn("compileGeneratedJava")
+    archiveClassifier.set("shadow")
+    minimize()
+}
+
+tasks.create<Exec>("nativeImage") {
+    commandLine(
+            "native-image",
+            "--class-path=${project.configurations["nativeRuntimeClasspath"].asPath}:${sourceSets.main.get().output.asPath}",
+            "--no-fallback",
+            // "--enable-all-security-services",
+            "--initialize-at-build-time=com.microsoft.z3.Native",
+            "--report-unsupported-elements-at-runtime",
+            "-H:+ReportExceptionStackTraces",
+            "-H:+TraceClassInitialization",
+            "$rootPackage.Main",
+            "${project.buildDir}/native-image/${project.name}-${project.version}"
+    )
+}
+
+tasks.build.get().dependsOn(tasks.get("nativeImage"))
+
+tasks.compileJava.get().dependsOn(tasks.spotlessApply.get())
+
+spotless {
+    java {
+        googleJavaFormat("1.9")
+        target("src/**/*.java")
+    }
+    kotlinGradle {
+        ktlint()
+        target("build.gradle.kts")
+    }
 }

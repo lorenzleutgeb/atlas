@@ -32,9 +32,6 @@ public class Haskell implements Runnable {
       showDefaultValue = ALWAYS)
   private Pattern pattern;
 
-  @CommandLine.Option(defaultValue = ".", names = "--home")
-  private Path home;
-
   @CommandLine.Parameters(
       index = "1",
       arity = "1",
@@ -46,7 +43,7 @@ public class Haskell implements Runnable {
 
   @Override
   public void run() {
-    Loader loader = new Loader(home);
+    Loader loader = Loader.atDefaultHome();
     try {
       loader.autoload();
     } catch (IOException e) {

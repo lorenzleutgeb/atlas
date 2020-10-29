@@ -346,7 +346,6 @@ public class Util {
         if (!(property.getKey() instanceof String && property.getValue() instanceof String)) {
           continue;
         }
-        System.out.println(property);
         System.setProperty((String) property.getKey(), (String) property.getValue());
       }
     } catch (IOException ioException) {

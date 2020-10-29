@@ -2,21 +2,13 @@ package xyz.leutgeb.lorenz.lac.ast;
 
 import static java.util.stream.Collectors.joining;
 import static xyz.leutgeb.lorenz.lac.util.Util.flatten;
-import static xyz.leutgeb.lorenz.lac.util.Util.inImageRuntimeCode;
 import static xyz.leutgeb.lorenz.lac.util.Util.output;
 import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.io.ByteSource;
-import com.google.common.io.Files;
-import com.google.googlejavaformat.java.Formatter;
-import com.google.googlejavaformat.java.FormatterException;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,7 +24,6 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.lac.module.Loader;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
@@ -407,18 +398,12 @@ public class Program {
     }
 
     Multimap<String, FunctionDefinition> output = ArrayListMultimap.create();
-    Multimap<String, String> imports = HashMultimap.create();
     for (var entry : getFunctionDefinitions().entrySet()) {
       var fd = entry.getValue();
       output.put(fd.getModuleName(), fd);
-      imports.putAll(
-          fd.getModuleName(),
-          fd.importedFunctions().stream().map(Loader::moduleName).collect(Collectors.toSet()));
     }
 
-    try (var baos = (new ByteArrayOutputStream())) {
-      final var stream = new PrintStream(baos);
-
+    try (final var stream = new PrintStream(output(path))) {
       stream.println("import java.util.Objects;");
       stream.println("import xyz.leutgeb.lorenz.lac.Tree;");
       stream.println("import static xyz.leutgeb.lorenz.lac.Tree.node;");
@@ -427,23 +412,9 @@ public class Program {
       for (var e : output.keySet()) {
         var lastModulePart = e.substring(Math.max(0, e.lastIndexOf(".")));
 
-        try {
-          java.nio.file.Files.createDirectories(path.getParent());
-        } catch (IOException ioException) {
-          throw new RuntimeException(ioException);
-        }
-
-        final var sink = Files.asCharSink(path.toFile(), StandardCharsets.UTF_8);
-
-        // stream.println("// This file was generated automatically.");
-        stream.println();
-        // stream.println("package xyz.leutgeb.lorenz.lac;");
-        stream.println();
-        stream.println();
-        // for (String imp : imports.get(e)) {
-        //  stream.println("import xyz.leutgeb.lorenz.lac." + imp + ";");
-        // }
+        stream.println("// This file was generated automatically.");
         final boolean toplevel = "_".equals(lastModulePart);
+
         if (!toplevel) {
           stream.println("class " + lastModulePart + " {");
           stream.println();
@@ -456,17 +427,8 @@ public class Program {
         if (!toplevel) {
           stream.println("}");
         }
-
-        if (inImageRuntimeCode() || true) {
-          try (var out = output(path)) {
-            out.write(baos.toByteArray());
-          }
-        } else {
-          final var source = ByteSource.wrap(baos.toByteArray());
-          new Formatter().formatSource(source.asCharSource(StandardCharsets.UTF_8), sink);
-        }
       }
-    } catch (IOException | FormatterException ex) {
+    } catch (IOException ex) {
       throw new RuntimeException(ex);
     }
   }
