@@ -14,6 +14,6 @@ public class SourceNameAwareVisitor<T> extends SplayBaseVisitor<T> {
   @Getter private final Path path;
 
   Source getSource(ParserRuleContext context) {
-    return new Parsed(context, path.toString());
+    return new Parsed(context, path);
   }
 }

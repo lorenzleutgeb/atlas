@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import picocli.CommandLine;
 import xyz.leutgeb.lorenz.lac.commands.Haskell;
 import xyz.leutgeb.lorenz.lac.commands.HomeMixin;
+import xyz.leutgeb.lorenz.lac.commands.Index;
 import xyz.leutgeb.lorenz.lac.commands.Java;
 import xyz.leutgeb.lorenz.lac.commands.LNF;
 import xyz.leutgeb.lorenz.lac.commands.LogLevelMixin;
@@ -13,7 +14,7 @@ import xyz.leutgeb.lorenz.lac.util.Util;
 
 @CommandLine.Command(
     mixinStandardHelpOptions = true,
-    subcommands = {LNF.class, Haskell.class, Run.class, Java.class, REPL.class})
+    subcommands = {LNF.class, Haskell.class, Run.class, Java.class, REPL.class, Index.class})
 public class Main implements Runnable {
   @CommandLine.Mixin public LogLevelMixin logLevelMixin;
 
