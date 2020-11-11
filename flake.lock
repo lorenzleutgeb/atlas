@@ -16,6 +16,22 @@
         "type": "github"
       }
     },
+    "gradle2nix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1603437370,
+        "narHash": "sha256-tEPe6/AvT4XYJAhnBV+Z8NW1JQPMi/A786HDZTioDZw=",
+        "owner": "tadfisher",
+        "repo": "gradle2nix",
+        "rev": "2ad217b878225d0c85cf3c28ec1a718cb345f2e8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tadfisher",
+        "repo": "gradle2nix",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1602230526,
@@ -34,6 +50,7 @@
     "root": {
       "inputs": {
         "glittershark": "glittershark",
+        "gradle2nix": "gradle2nix",
         "nixpkgs": "nixpkgs"
       }
     }
