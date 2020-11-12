@@ -1,14 +1,14 @@
 {
   "": {
     "name": "lac",
-    "version": "v0.0.2-12-gada2716-dirty",
+    "version": "v0.0.2-13-g6229cc7-dirty",
     "path": "",
     "gradle": {
-      "version": "6.3",
+      "version": "6.6",
       "type": "bin",
-      "url": "https://services.gradle.org/distributions/gradle-6.3-bin.zip",
-      "sha256": "038794feef1f4745c6347107b6726279d1c824f3fc634b60f86ace1e9fbd1768",
-      "nativeVersion": "0.22-milestone-1"
+      "url": "https://services.gradle.org/distributions/gradle-6.6-bin.zip",
+      "sha256": "e6f83508f0970452f56197f610d13c5f593baaf43c0e3c6a571e5967be754025",
+      "nativeVersion": "0.22-milestone-4"
     },
     "dependencies": {
       "plugin": [

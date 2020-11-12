@@ -17,6 +17,7 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
       glittersharkPkgs = import glittershark { inherit system; };
+      gradleGen = pkgs.gradleGen.override { java = glittersharkPkgs.graalvm11-ce; };
     in rec {
       devShell."${system}" =
         with pkgs;
@@ -24,7 +25,7 @@
           buildInputs = [
             dot2tex
             glittersharkPkgs.graalvm11-ce
-            gradle
+            packages."${system}".gradle
             packages."${system}".z3
             gradle2nix
           ];
@@ -35,7 +36,6 @@
             export GRAAL_HOME="${glittersharkPkgs.graalvm11-ce}"
             export JAVA_HOME="$GRAAL_HOME"
             export GRADLE_HOME="${pkgs.gradle}"
-            echo "org.gradle.java.home=$JAVA_HOME" > gradle.properties
 
             $JAVA_HOME/bin/java -version
             $GRAAL_HOME/bin/gu --version
@@ -52,7 +52,10 @@
             fi
           '';
       };
-      packages."${system}" = {
+      defaultPackage."${system}" = packages."${system}".lac;
+      packages."${system}" = rec {
+        gradle = gradleGen.gradle_latest;
+
         z3 = (pkgs.z3.override { javaBindings = true; jdk = glittersharkPkgs.graalvm11-ce; }).overrideAttrs(old: rec {
         outputs = old.outputs ++ [ "java" ];
         postInstall = old.postInstall + ''
@@ -62,16 +65,30 @@
         '';
       });
 
-        defaultPackage = 
-        let
-          buildGradle = pkgs.callPackage ./gradle-env.nix {};
-        in
-          buildGradle {
+        lac = (pkgs.callPackage ./gradle-env.nix {
+            inherit gradleGen;
+          }) {
             envSpec = ./gradle-env.json;
             src = ./.;
-            gradleFlags = [ "native" "-x" "test" ];
+            nativeBuildInputs = [
+              pkgs.bash
+              pkgs.git
+              glittersharkPkgs.graalvm11-ce
+              z3
+            ];
+            Z3_JAVA = "${z3.java}";
+            LD_LIBRARY_PATH = "${z3.java}";
+            gradleFlags = [ "nativeImage" "-x" "test" ];
+            configurePhase = ''
+              patchShebangs version.sh
+            '';
             installPhase = ''
-              cp -v build/native/lac-* $out
+              echo "OUT IS"
+              echo $out
+              ls -la build/native-image
+              touch $out
+              stat $out
+              mv build/native-image/lac $out
             '';
           };
         }; 

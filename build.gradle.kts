@@ -130,7 +130,7 @@ tasks.withType<AntlrTask> {
             "-no-listener",
             "-long-messages",
             "-package", "$rootPackage.antlr",
-            "-Werror",
+            // "-Werror",
             "-Xlog",
             "-lib", "src/main/antlr/$rootPackagePath/antlr"
     ))
@@ -184,6 +184,10 @@ tasks.shadowJar {
 }
 
 tasks.create<Exec>("nativeImage") {
+    dependsOn("compileGeneratedJava")
+
+    val outputSuffix = if ("".equals(project.version)) "" else "-" + project.version
+
     commandLine(
             "native-image",
             "--class-path=${project.configurations["nativeRuntimeClasspath"].asPath}:${sourceSets.main.get().output.asPath}",
@@ -194,13 +198,13 @@ tasks.create<Exec>("nativeImage") {
             "-H:+ReportExceptionStackTraces",
             "-H:+TraceClassInitialization",
             "$rootPackage.Main",
-            "${project.buildDir}/native-image/${project.name}-${project.version}"
+            "${project.buildDir}/native-image/${project.name}${outputSuffix}"
     )
 }
 
 tasks.build.get().dependsOn(tasks.get("nativeImage"))
 
-tasks.compileJava.get().dependsOn(tasks.spotlessApply.get())
+// tasks.compileJava.get().dependsOn(tasks.spotlessApply.get())
 
 spotless {
     java {
