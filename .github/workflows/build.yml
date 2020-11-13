@@ -45,7 +45,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.CR_PAT }}
     - name: Load Docker Image from Nix Store
-      run: docker load < $(nix path-info .#packages.linux-x86_64.docker-lac)
+      run: docker load < $(nix path-info .#packages.x86_64-linux.docker-lac)
     - name: Tag Docker Imae for Docker Hub
       run: docker tag lac:latest lorenzleutgeb/lac:${{ github.sha }}
     - name: Push Docker Image to Docker Hub

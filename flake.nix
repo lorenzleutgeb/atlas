@@ -2,7 +2,7 @@
   description = "lac";
 
   inputs = {
-    nixpkgs = { url = "nixpkgs/nixos-20.09"; };
+    nixpkgs = { url = "nixpkgs/nixos-unstable"; };
     examples = {
       url = "github:lorenzleutgeb/lac-examples";
       flake = false;
@@ -13,21 +13,17 @@
     };
   };
 
-  # This flake has a more recent version of Graal that supports Java 11.
-  inputs.glittershark = { url = "github:glittershark/nixpkgs/graalvm-ce"; };
-
-  outputs = { self, nixpkgs, glittershark, gradle2nix, examples }:
+  outputs = { self, nixpkgs, gradle2nix, examples }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
-      glittersharkPkgs = import glittershark { inherit system; };
       gradleGen =
-        pkgs.gradleGen.override { java = glittersharkPkgs.graalvm11-ce; };
+        pkgs.gradleGen.override { java = pkgs.graalvm11-ce; };
       lacEnv = pkgs.buildEnv {
         name = "lac-env";
         paths = with pkgs; [
             dot2tex
-            glittersharkPkgs.graalvm11-ce
+            graalvm11-ce
             self.packages."${system}".gradle
             self.packages."${system}".z3
             gradle2nix
@@ -41,7 +37,7 @@
             export Z3_JAVA=$(nix path-info .#packages.x86_64-linux.z3.java)
 
             export LD_LIBRARY_PATH=$Z3_JAVA:$LD_LIBRARY_PATH
-            export GRAAL_HOME="${glittersharkPkgs.graalvm11-ce}"
+            export GRAAL_HOME="${pkgs.graalvm11-ce}"
             export JAVA_HOME="$GRAAL_HOME"
             export GRADLE_HOME="${pkgs.gradle}"
 
@@ -67,7 +63,7 @@
 
         z3 = (pkgs.z3.override {
           javaBindings = true;
-          jdk = glittersharkPkgs.graalvm11-ce;
+          jdk = pkgs.graalvm11-ce;
         }).overrideAttrs (old: rec {
           outputs = old.outputs ++ [ "java" ];
           postInstall = old.postInstall + ''
@@ -83,7 +79,7 @@
           nativeBuildInputs = [
             pkgs.bash
             pkgs.git
-            glittersharkPkgs.graalvm11-ce
+            pkgs.graalvm11-ce
             z3
             examples
           ];

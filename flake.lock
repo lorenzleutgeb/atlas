@@ -16,22 +16,6 @@
         "type": "github"
       }
     },
-    "glittershark": {
-      "locked": {
-        "lastModified": 1601913964,
-        "narHash": "sha256-7h0sAx9MRa4EN6DkaaEIh1G/5s834l19hpNhIf1Sx+M=",
-        "owner": "glittershark",
-        "repo": "nixpkgs",
-        "rev": "674c9afb727e4558e3b6162bb164e847606b105c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "glittershark",
-        "ref": "graalvm-ce",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "gradle2nix": {
       "flake": false,
       "locked": {
@@ -50,23 +34,22 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1602230526,
-        "narHash": "sha256-3/ucBPYg42P+1ji5/7q227Ek/Eq2C7zeiB9sZl5UpIY=",
+        "lastModified": 1605171959,
+        "narHash": "sha256-JIM7QrQ2jpnA6qRfP8MzXD8USiWYStfL9Cssz01QvMw=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "0b8799ecaaf0dc6b4c11583a3c96ca5b40fcfdfb",
+        "rev": "a371c1071161104d329f6a85d922fd92b7cbab63",
         "type": "github"
       },
       "original": {
         "id": "nixpkgs",
-        "ref": "nixos-20.09",
+        "ref": "nixos-unstable",
         "type": "indirect"
       }
     },
     "root": {
       "inputs": {
         "examples": "examples",
-        "glittershark": "glittershark",
         "gradle2nix": "gradle2nix",
         "nixpkgs": "nixpkgs"
       }
