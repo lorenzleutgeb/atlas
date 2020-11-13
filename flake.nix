@@ -3,32 +3,40 @@
 
   inputs = {
     nixpkgs = { url = "nixpkgs/nixos-20.09"; };
+    examples = {
+      url = "github:lorenzleutgeb/lac-examples";
+      flake = false;
+    };
     gradle2nix = {
       url = "github:tadfisher/gradle2nix";
       flake = false;
     };
   };
 
-  /* This flake has a more recent version of Graal that supports Java 11. */
+  # This flake has a more recent version of Graal that supports Java 11.
   inputs.glittershark = { url = "github:glittershark/nixpkgs/graalvm-ce"; };
 
-  outputs = { self, nixpkgs, glittershark, gradle2nix }:
+  outputs = { self, nixpkgs, glittershark, gradle2nix, examples }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
       glittersharkPkgs = import glittershark { inherit system; };
-      gradleGen = pkgs.gradleGen.override { java = glittersharkPkgs.graalvm11-ce; };
-    in rec {
-      devShell."${system}" =
-        with pkgs;
-        mkShell {
-          buildInputs = [
+      gradleGen =
+        pkgs.gradleGen.override { java = glittersharkPkgs.graalvm11-ce; };
+      lacEnv = pkgs.buildEnv {
+        name = "lac-env";
+        paths = with pkgs; [
             dot2tex
             glittersharkPkgs.graalvm11-ce
-            packages."${system}".gradle
-            packages."${system}".z3
+            self.packages."${system}".gradle
+            self.packages."${system}".z3
             gradle2nix
           ];
+        };
+    in rec {
+      devShell."${system}" = with pkgs;
+        mkShell {
+          buildInputs = [ lacEnv ];
           shellHook = ''
             export Z3_JAVA=$(nix path-info .#packages.x86_64-linux.z3.java)
 
@@ -51,46 +59,66 @@
               env | grep -E "^((GRAAL|GRADLE|JAVA)_HOME|LD_LIBRARY_PATH|Z3_JAVA)=" | tee -a $GITHUB_ENV
             fi
           '';
-      };
+        };
       defaultPackage."${system}" = packages."${system}".lac;
+
       packages."${system}" = rec {
         gradle = gradleGen.gradle_latest;
 
-        z3 = (pkgs.z3.override { javaBindings = true; jdk = glittersharkPkgs.graalvm11-ce; }).overrideAttrs(old: rec {
-        outputs = old.outputs ++ [ "java" ];
-        postInstall = old.postInstall + ''
-          mkdir $java
-          mv com.microsoft.z3.jar $java
-          mv libz3java.so $java
-        '';
-      });
+        z3 = (pkgs.z3.override {
+          javaBindings = true;
+          jdk = glittersharkPkgs.graalvm11-ce;
+        }).overrideAttrs (old: rec {
+          outputs = old.outputs ++ [ "java" ];
+          postInstall = old.postInstall + ''
+            mkdir $java
+            mv com.microsoft.z3.jar $java
+            mv libz3java.so $java
+          '';
+        });
 
-        lac = (pkgs.callPackage ./gradle-env.nix {
-            inherit gradleGen;
-          }) {
-            envSpec = ./gradle-env.json;
-            src = ./.;
-            nativeBuildInputs = [
-              pkgs.bash
-              pkgs.git
-              glittersharkPkgs.graalvm11-ce
-              z3
-            ];
-            Z3_JAVA = "${z3.java}";
-            LD_LIBRARY_PATH = "${z3.java}";
-            gradleFlags = [ "nativeImage" "-x" "test" ];
-            configurePhase = ''
-              patchShebangs version.sh
-            '';
-            installPhase = ''
-              echo "OUT IS"
-              echo $out
-              ls -la build/native-image
-              touch $out
-              stat $out
-              mv build/native-image/lac $out
-            '';
+        lac = (pkgs.callPackage ./gradle-env.nix { inherit gradleGen; }) {
+          envSpec = ./gradle-env.json;
+          src = ./.;
+          nativeBuildInputs = [
+            pkgs.bash
+            pkgs.git
+            glittersharkPkgs.graalvm11-ce
+            z3
+            examples
+          ];
+          Z3_JAVA = "${z3.java}";
+          LD_LIBRARY_PATH = "${z3.java}";
+          gradleFlags = [ "nativeImage" "-x" "test" ];
+          configurePhase = ''
+            patchShebangs version.sh
+          '';
+          installPhase = ''
+            mkdir $out
+            mv lac.jsh $out
+            mv lac.properties $out
+            echo "xyz.leutgeb.lorenz.lac.module.Loader.defaultHome=$out/examples" >> $out/lac.properties
+            cp -Rv ${examples} $out/examples
+            mv src/test/resources/tactics $out
+            mv build/native-image/lac $out/lac
+          '';
+        };
+
+        docker-lac-shell = pkgs.dockerTools.buildLayeredImage {
+          name = "lac-shell";
+          tag = "latest";
+          contents = [ lacEnv packages."${system}".lac ];
+          config = {
+            Entrypoint = pkgs.bash + "/bin/bash";
+            Env = [ "PATH=${lacEnv}/bin" ];
           };
-        }; 
-  };
+        };
+
+        docker-lac = pkgs.dockerTools.buildLayeredImage {
+          name = "lac";
+          tag = "latest";
+          config.Entrypoint = packages."${system}".lac + "/lac";
+        };
+      };
+    };
 }

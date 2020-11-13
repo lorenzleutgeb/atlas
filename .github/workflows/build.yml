@@ -31,10 +31,8 @@ jobs:
       run: nix-store --query --references $(nix eval --raw .#defaultPackage.x86_64-linux.drvPath) | xargs nix-store --realise | xargs nix-store --query --requisites | tee closure.txt
     - name: Export Nix Store
       run: xargs --arg-file=closure.txt nix-store --export > nix-store.nar
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
-    - name: Copy Z3 library out of Nix Store
-      run: "mkdir lib && cp $Z3_JAVA/libz3java.so lib"
+   #- name: Set up Docker Buildx
+   #  uses: docker/setup-buildx-action@v1
     - name: Login to Docker Hub
       uses: docker/login-action@v1.6.0
       with:
@@ -46,24 +44,22 @@ jobs:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.CR_PAT }}
+    - name: Load Docker Image from Nix Store
+      run: docker load < $(nix path-info .#packages.linux-x86_64.docker-lac)
+    - name: Tag Docker Imae for Docker Hub
+      run: docker tag lac:latest lorenzleutgeb/lac:${{ github.sha }}
     - name: Push Docker Image to Docker Hub
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        push: true
-        tags: lorenzleutgeb/lac:${{ github.sha }}
+      run: docker push lorenzleutgeb/lac:${{ github.sha }}
+    - name: Tag Docker image for GitHub Packages
+      run: docker tag lac:latest ghcr.io/lorenzleutgeb/lac/lac:${{ github.sha }}
     - name: Push Docker Image to GitHub Packages
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        push: true
-        tags: ghcr.io/lorenzleutgeb/lac/lac:${{ github.sha }}
-    - name: Package TACAS Artifact
-      run: ./tacas.sh
-    - uses: actions/upload-artifact@v2
-      with:
-        name: tacas
-        path: build/distributions/tacas.zip
+      run: docker push ghcr.io/lorenzleutgeb/lac/lac:${{ github.sha }}
+   #- name: Package TACAS Artifact
+   #  run: ./tacas.sh
+   #- uses: actions/upload-artifact@v2
+   #  with:
+   #    name: tacas
+   #    path: build/distributions/tacas.zip
     - uses: actions/upload-artifact@v2
       with:
         name: nix

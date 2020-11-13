@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "examples": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1603905712,
+        "narHash": "sha256-B3zYmWNrjM/dcchyRwFnZnjo85vWxmG5lLAg0S8uH3I=",
+        "owner": "lorenzleutgeb",
+        "repo": "lac-examples",
+        "rev": "5a2bfb381d3f35182e45c322f5e73ee7acdb2ea2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lorenzleutgeb",
+        "repo": "lac-examples",
+        "type": "github"
+      }
+    },
     "glittershark": {
       "locked": {
         "lastModified": 1601913964,
@@ -49,6 +65,7 @@
     },
     "root": {
       "inputs": {
+        "examples": "examples",
         "glittershark": "glittershark",
         "gradle2nix": "gradle2nix",
         "nixpkgs": "nixpkgs"
