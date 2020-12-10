@@ -63,8 +63,15 @@ configurations {
     }
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("org.antlr:antlr4-runtime:4.9")
+        force("org.antlr:antlr4-tool:4.9")
+    }
+}
+
 dependencies {
-    val antlrVersion = "4.8-1"
+    val antlrVersion = "4.9"
     antlr("org.antlr:antlr4:$antlrVersion")
     compileOnly("org.antlr:antlr4:$antlrVersion")
     runtimeOnly("org.antlr:antlr4-runtime:$antlrVersion")
