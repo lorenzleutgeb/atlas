@@ -27,6 +27,7 @@ jobs:
       run: nix-store --import < nix-store.nar
     - run: nix flake check
     - run: "eval \"$(nix print-dev-env)\""
+    - run: nix build .#packages.x86_64-linux.lac .#packages.x86_64-linux.docker-lac
     - name: Compute Closure
       run: nix-store --query --references $(nix eval --raw .#defaultPackage.x86_64-linux.drvPath) | xargs nix-store --realise | xargs nix-store --query --requisites | tee closure.txt
     - name: Export Nix Store
