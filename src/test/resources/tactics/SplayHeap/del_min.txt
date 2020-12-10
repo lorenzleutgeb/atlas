@@ -1,0 +1,19 @@
+(match (* t *)
+  (w leaf)
+  (match (* tab *)
+    (w var)
+    (match (* ta *)
+      (w node)
+      (let:tree:cf (* reconstruct ta as ta1 *)
+        (w node)
+        (let:tree:cf
+          app
+          (let:tree:cf
+            node
+            (w node)
+          )
+        )
+      )
+    )
+  )
+)
