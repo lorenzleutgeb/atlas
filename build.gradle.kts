@@ -123,6 +123,17 @@ dependencies {
 
     implementation("com.google.googlejavaformat:google-java-format:1.9")
     implementation("io.github.classgraph:classgraph:4.8.90")
+
+    // JSON Binding
+    // See https://javaee.github.io/jsonb-spec/getting-started.html
+    // implementation("javax.json.bind:javax.json.bind-api:1.0")
+    // implementation("org.eclipse:yasson:1.0")
+
+    // JSON Processing
+    // See https://javaee.github.io/jsonp/getting-started.html
+    implementation("jakarta.json:jakarta.json-api:2.0.0")
+
+    implementation("org.glassfish:jakarta.json:2.0.0")
 }
 
 java {
@@ -187,7 +198,12 @@ tasks.create<JavaCompile>("compileGeneratedJava") {
 tasks.shadowJar {
     dependsOn("compileGeneratedJava")
     archiveClassifier.set("shadow")
-    minimize()
+
+    /* TODO: Minimization removes too many classes, like those related to JSON.
+    minimize {
+        exclude(dependency("org.glassfish:jakarta.json:.*"))
+    }
+     */
 }
 
 tasks.create<Exec>("nativeImage") {
@@ -205,7 +221,7 @@ tasks.create<Exec>("nativeImage") {
             "-H:+ReportExceptionStackTraces",
             "-H:+TraceClassInitialization",
             "$rootPackage.Main",
-            "${project.buildDir}/native-image/${project.name}${outputSuffix}"
+            "${project.buildDir}/native-image/${project.name}$outputSuffix"
     )
 }
 
