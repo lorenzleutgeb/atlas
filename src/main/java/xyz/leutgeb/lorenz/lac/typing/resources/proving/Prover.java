@@ -27,7 +27,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.Stack;
 import java.util.function.Predicate;
@@ -158,7 +157,7 @@ public class Prover {
   }
 
   public Prover(String name, AnnotatingGlobals globals, Path basePath) {
-    load();
+    load(basePath.resolve("z3.log"));
     this.name = name;
     this.globals = globals;
     this.basePath = basePath;
@@ -475,15 +474,15 @@ public class Prover {
     }
   }
 
-  public Optional<Map<Coefficient, KnownCoefficient>> solve() {
+  public ConstraintSystemSolver.Result solve() {
     return solve(emptySet(), emptyList());
   }
 
-  public Optional<Map<Coefficient, KnownCoefficient>> solve(Set<Constraint> outsideConstraints) {
+  public ConstraintSystemSolver.Result solve(Set<Constraint> outsideConstraints) {
     return solve(outsideConstraints, emptyList());
   }
 
-  public Optional<Map<Coefficient, KnownCoefficient>> solve(
+  public ConstraintSystemSolver.Result solve(
       Set<Constraint> outsideConstraints, List<UnknownCoefficient> target) {
     return ConstraintSystemSolver.solve(
         Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
@@ -491,7 +490,7 @@ public class Prover {
         target);
   }
 
-  public Optional<Map<Coefficient, KnownCoefficient>> solve(
+  public ConstraintSystemSolver.Result solve(
       Set<Constraint> outsideConstraints, List<UnknownCoefficient> target, String suffix) {
     return ConstraintSystemSolver.solve(
         Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
@@ -499,7 +498,7 @@ public class Prover {
         target);
   }
 
-  public Optional<Map<Coefficient, KnownCoefficient>> solve(
+  public ConstraintSystemSolver.Result solve(
       Set<Constraint> outsideConstraints,
       List<UnknownCoefficient> target,
       String suffix,

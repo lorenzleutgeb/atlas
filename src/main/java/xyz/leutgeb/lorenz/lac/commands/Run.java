@@ -5,13 +5,18 @@ import static java.util.Collections.emptyList;
 import static picocli.CommandLine.Help.Visibility.ALWAYS;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.lac.util.Util.append;
+import static xyz.leutgeb.lorenz.lac.util.Util.output;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import jakarta.json.Json;
+import jakarta.json.JsonObjectBuilder;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -27,8 +32,6 @@ import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.lac.ast.Program;
 import xyz.leutgeb.lorenz.lac.module.Loader;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.LessThanOrEqualConstraint;
@@ -80,11 +83,18 @@ public class Run implements Runnable {
       description = "When present, tactics will be loaded from this directory.")
   private Path tactics;
 
+  @CommandLine.Option(
+      names = "--json",
+      paramLabel = "FILE",
+      description = "If present, detailled output in JSON format will be written to this file.")
+  private Path json;
+
   @CommandLine.Spec(CommandLine.Spec.Target.SELF)
   private CommandLine.Model.CommandSpec selfSpec;
 
   @Override
   public void run() {
+    final var start = Instant.now();
     Loader loader = Loader.atDefaultHome();
     try {
       loader.autoload();
@@ -159,102 +169,130 @@ public class Run implements Runnable {
     Optional<Prover> optionalProver = program.proveWithTactics(new HashMap<>(), tacticsMap, infer);
     log.info("Done.");
 
+    ConstraintSystemSolver.Result result = ConstraintSystemSolver.Result.unknown();
+
     if (optionalProver.isEmpty()) {
+      result = ConstraintSystemSolver.Result.unsat();
       log.info("Nonterminating function definition detected. Aborting.");
-      System.exit(1);
-      return;
-    }
+    } else {
+      final var prover = optionalProver.get();
 
-    final var prover = optionalProver.get();
-
-    final Set<Constraint> outsideConstraints = new HashSet<>();
-
-    for (final var fqn : program.getFunctionDefinitions().keySet()) {
-      final var fd = program.getFunctionDefinitions().get(fqn);
-      if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1 && !relaxRank) {
-        outsideConstraints.add(
-            new LessThanOrEqualConstraint(
-                ONE,
-                fd.getInferredSignature().getAnnotation().get().withCost.to.getRankCoefficient(),
-                "(outside) force rank"));
-      }
-    }
-
-    // TODO: Autodetect rational domain in case we find rational annotation.
-    ConstraintSystemSolver.Domain domain =
-        rational ? ConstraintSystemSolver.Domain.RATIONAL : ConstraintSystemSolver.Domain.INTEGER;
-
-    Optional<Map<Coefficient, KnownCoefficient>> solution = Optional.empty();
-
-    log.info("Solving constraints...");
-    if (infer) {
-      final List<UnknownCoefficient> setCountingRankCoefficients = new ArrayList<>();
-      final List<UnknownCoefficient> setCountingNonRankCoefficients = new ArrayList<>();
-
-      final List<UnknownCoefficient> pairwiseDiffRankCoefficients = new ArrayList<>();
-      final List<UnknownCoefficient> pairwiseDiffNonRankCoefficients = new ArrayList<>();
-
-      final Set<Constraint> setCountingConstraints = new HashSet<>();
-      final Set<Constraint> pairwiseDiffConstraints = new HashSet<>();
-
-      /*
-      ConstraintSystemSolver.Domain domain =
-              annotations.values().stream().noneMatch(CombinedFunctionAnnotation::isNonInteger)
-                      ? ConstraintSystemSolver.Domain.INTEGER
-                      : ConstraintSystemSolver.Domain.RATIONAL;
-       */
+      final Set<Constraint> outsideConstraints = new HashSet<>();
 
       for (final var fqn : program.getFunctionDefinitions().keySet()) {
-        if (!program.getFunctionDefinitions().containsKey(fqn)) {
-          throw new RuntimeException("Could not find function definition for '" + fqn + "'.");
-        }
-
         final var fd = program.getFunctionDefinitions().get(fqn);
-
-        FunctionAnnotation inferredAnnotation =
-            fd.getInferredSignature().getAnnotation().get().withCost;
-        final var setCounting = Optimization.setCounting(inferredAnnotation);
-        if (setCounting.isPresent()) {
-          setCountingRankCoefficients.addAll(setCounting.get().rankCoefficients);
-          setCountingNonRankCoefficients.addAll(setCounting.get().nonRankCoefficients);
-          setCountingConstraints.addAll(setCounting.get().constraints);
-        }
-
-        final var pairwiseDiff = Optimization.pairwiseDiff(inferredAnnotation);
-        if (pairwiseDiff.isPresent()) {
-          pairwiseDiffRankCoefficients.addAll(pairwiseDiff.get().rankCoefficients);
-          pairwiseDiffNonRankCoefficients.addAll(pairwiseDiff.get().nonRankCoefficients);
-          pairwiseDiffConstraints.addAll(pairwiseDiff.get().constraints);
+        if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1 && !relaxRank) {
+          outsideConstraints.add(
+              new LessThanOrEqualConstraint(
+                  ONE,
+                  fd.getInferredSignature().getAnnotation().get().withCost.to.getRankCoefficient(),
+                  "(outside) force rank"));
         }
       }
 
-      final var minimizationConstraints =
-          union(union(setCountingConstraints, pairwiseDiffConstraints), outsideConstraints);
+      // TODO: Autodetect rational domain in case we find rational annotation.
+      ConstraintSystemSolver.Domain domain =
+          rational ? ConstraintSystemSolver.Domain.RATIONAL : ConstraintSystemSolver.Domain.INTEGER;
 
-      final var minimizationTargets =
-          append(
-              append(pairwiseDiffRankCoefficients, setCountingRankCoefficients),
-              append(pairwiseDiffNonRankCoefficients, setCountingNonRankCoefficients));
+      log.info("Solving constraints...");
+      if (infer) {
+        final List<UnknownCoefficient> setCountingRankCoefficients = new ArrayList<>();
+        final List<UnknownCoefficient> setCountingNonRankCoefficients = new ArrayList<>();
 
-      /*
-      final var minimizationTargets =
-              append(
-                      append(setCountingRankCoefficients, pairwiseDiffRankCoefficients),
-                      append(setCountingNonRankCoefficients, pairwiseDiffNonRankCoefficients));
-       */
+        final List<UnknownCoefficient> pairwiseDiffRankCoefficients = new ArrayList<>();
+        final List<UnknownCoefficient> pairwiseDiffNonRankCoefficients = new ArrayList<>();
 
-      solution = prover.solve(minimizationConstraints, minimizationTargets, "min", domain);
-    } else {
-      solution = prover.solve(outsideConstraints, emptyList(), "sat", domain);
+        final Set<Constraint> setCountingConstraints = new HashSet<>();
+        final Set<Constraint> pairwiseDiffConstraints = new HashSet<>();
+
+        /*
+        ConstraintSystemSolver.Domain domain =
+                annotations.values().stream().noneMatch(CombinedFunctionAnnotation::isNonInteger)
+                        ? ConstraintSystemSolver.Domain.INTEGER
+                        : ConstraintSystemSolver.Domain.RATIONAL;
+         */
+
+        for (final var fqn : program.getFunctionDefinitions().keySet()) {
+          if (!program.getFunctionDefinitions().containsKey(fqn)) {
+            throw new RuntimeException("Could not find function definition for '" + fqn + "'.");
+          }
+
+          final var fd = program.getFunctionDefinitions().get(fqn);
+
+          FunctionAnnotation inferredAnnotation =
+              fd.getInferredSignature().getAnnotation().get().withCost;
+          final var setCounting = Optimization.setCounting(inferredAnnotation);
+          if (setCounting.isPresent()) {
+            setCountingRankCoefficients.addAll(setCounting.get().rankCoefficients);
+            setCountingNonRankCoefficients.addAll(setCounting.get().nonRankCoefficients);
+            setCountingConstraints.addAll(setCounting.get().constraints);
+          }
+
+          final var pairwiseDiff = Optimization.pairwiseDiff(inferredAnnotation);
+          if (pairwiseDiff.isPresent()) {
+            pairwiseDiffRankCoefficients.addAll(pairwiseDiff.get().rankCoefficients);
+            pairwiseDiffNonRankCoefficients.addAll(pairwiseDiff.get().nonRankCoefficients);
+            pairwiseDiffConstraints.addAll(pairwiseDiff.get().constraints);
+          }
+        }
+
+        final var minimizationConstraints =
+            union(union(setCountingConstraints, pairwiseDiffConstraints), outsideConstraints);
+
+        final var minimizationTargets =
+            append(
+                append(pairwiseDiffRankCoefficients, setCountingRankCoefficients),
+                append(pairwiseDiffNonRankCoefficients, setCountingNonRankCoefficients));
+
+        /*
+        final var minimizationTargets =
+                append(
+                        append(setCountingRankCoefficients, pairwiseDiffRankCoefficients),
+                        append(setCountingNonRankCoefficients, pairwiseDiffNonRankCoefficients));
+         */
+
+        result = prover.solve(minimizationConstraints, minimizationTargets, "min", domain);
+      } else {
+        result = prover.solve(outsideConstraints, emptyList(), "sat", domain);
+      }
+
+      log.info("Done. Result(s): ");
+      if (!result.hasSolution()) {
+        log.info(result.getStatus().toString());
+      }
+      program.ingest(result.getSolution());
+      program.printAllInferredSignaturesInOrder(System.out);
     }
 
-    log.info("Done. Result(s): ");
-    if (solution.isEmpty()) {
-      log.info("UNSAT");
-      System.exit(1);
-      return;
+    final var stop = Instant.now();
+
+    if (json != null) {
+      JsonObjectBuilder builder = Json.createObjectBuilder();
+
+      builder.add("result", program.inferredSignaturesToJson());
+      builder.add("duration", Json.createValue(Duration.between(start, stop).toString()));
+
+      JsonObjectBuilder z3ObjectBuilder = Json.createObjectBuilder();
+      z3ObjectBuilder.add("status", Json.createValue(result.getStatus().toString()));
+
+      JsonObjectBuilder z3StatisticsBuilder = Json.createObjectBuilder();
+      result.getStatistics().forEach(z3StatisticsBuilder::add);
+      z3ObjectBuilder.add("statistics", z3StatisticsBuilder.build());
+
+      if (result.getSmtFile().isPresent()) {
+        z3ObjectBuilder.add("file", Json.createValue(result.getSmtFile().get().toString()));
+      }
+
+      builder.add("z3", z3ObjectBuilder.build());
+
+      log.info("Writing JSON output to {}", json);
+      try (final var out = output(json)) {
+        Json.createWriter(out).writeObject(builder.build());
+      } catch (IOException ioException) {
+        log.error("Failed to write JSON output.", ioException);
+      }
     }
-    program.ingest(solution);
-    program.printAllInferredSignaturesInOrder(System.out);
+
+    System.exit(result.toExitCode());
   }
 }

@@ -56,8 +56,8 @@ public class WTest {
             Annotation.constant(1, "expected", ONE),
             "test"));
 
-    final var solution = ConstraintSystemSolver.solve(constraints);
-    assertTrue(solution.isPresent());
+    final var solverResult = ConstraintSystemSolver.solve(constraints);
+    assertTrue(solverResult.hasSolution());
   }
 
   @CsvSource({
@@ -98,7 +98,7 @@ public class WTest {
                 ),
             "biggerPotential");
 
-    final var solution =
+    final var solverResult =
         ConstraintSystemSolver.solve(
             new HashSet<>(
                 W.compareCoefficientsLessOrEqualUsingFarkas(
@@ -107,7 +107,7 @@ public class WTest {
                     biggerPotential,
                     sizeAnalysis)));
 
-    assertEquals(expectedSolution, solution.isPresent());
+    assertEquals(expectedSolution, solverResult.hasSolution());
   }
 
   @Test
@@ -126,14 +126,13 @@ public class WTest {
     final Annotation P = S62.Q3;
     final Annotation Q = S62.Q2;
 
-    final var solution =
+    final var solverResult =
         ConstraintSystemSolver.solve(
             new HashSet<>(
                 W.compareCoefficientsLessOrEqualUsingFarkas(
                     List.of(cr, bl, br), P, Q, sizeAnalysis)));
 
-    assertTrue(solution.isPresent());
-    System.out.println(solution.get());
+    assertTrue(solverResult.hasSolution());
   }
 
   @Test
@@ -153,13 +152,12 @@ public class WTest {
             "P");
     final Annotation Q = new Annotation(List.of(ZERO, ZERO), Map.of(List.of(1, 1, 0), TWO), "Q");
 
-    final var solution =
+    final var solverResult =
         ConstraintSystemSolver.solve(
             Set.copyOf(
                 W.compareCoefficientsLessOrEqualUsingFarkas(List.of(x, y), P, Q, sizeAnalysis)));
 
-    assertTrue(solution.isPresent());
-    System.out.println(solution.get());
+    assertTrue(solverResult.hasSolution());
   }
 
   @Test
@@ -177,12 +175,12 @@ public class WTest {
     final Annotation Q =
         new Annotation(List.of(ZERO, ZERO), Map.of(List.of(1, 0, 0), ONE, unitIndex(2), ONE), "Q");
 
-    final var solution =
+    final var solverResult =
         ConstraintSystemSolver.solve(
             Set.copyOf(
                 W.compareCoefficientsLessOrEqualUsingFarkas(List.of(x, y), P, Q, sizeAnalysis)));
 
-    assertTrue(solution.isPresent());
+    assertTrue(solverResult.hasSolution());
   }
 
   @Test
@@ -206,12 +204,12 @@ public class WTest {
     final Annotation Q =
         new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE, unitIndex(1), ONE), "Q");
 
-    final var solution =
+    final var solverResult =
         ConstraintSystemSolver.solve(
             Set.copyOf(
                 W.compareCoefficientsLessOrEqualUsingFarkas(List.of(x), P, Q, sizeAnalysis)));
 
-    assertTrue(solution.isPresent());
+    assertTrue(solverResult.hasSolution());
   }
 
   private static Stream<Arguments> pairs() {
@@ -232,7 +230,7 @@ public class WTest {
   @MethodSource("pairs")
   void bug(Annotation p, Annotation q) {
     // P <= Q
-    final var solution =
+    final var solverResult =
         ConstraintSystemSolver.solve(
             new HashSet<>(
                 W.compareCoefficientsLessOrEqualUsingFarkas(
@@ -241,6 +239,6 @@ public class WTest {
                     q,
                     new DirectedMultigraph<>(SizeEdge.class))));
 
-    assertTrue(solution.isPresent());
+    assertTrue(solverResult.hasSolution());
   }
 }

@@ -19,6 +19,8 @@ import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -329,6 +331,15 @@ public class FunctionDefinition {
         + " ∷ "
         + inferredSignature.getType()
         + inferredSignature.getAnnotation().map(Objects::toString).map(x -> " | " + x).orElse("");
+  }
+
+  public JsonObject inferredSignatureToJson() {
+    final var builder = Json.createObjectBuilder();
+
+    builder.add("module", moduleName);
+    builder.add("name", name);
+    builder.add("signature", inferredSignature.toJson());
+    return builder.build();
   }
 
   public String getAnnotatedSignatureString() {

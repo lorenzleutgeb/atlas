@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
+import static java.util.Optional.empty;
 import static java.util.stream.Collectors.joining;
 import static xyz.leutgeb.lorenz.lac.util.Util.flatten;
 import static xyz.leutgeb.lorenz.lac.util.Util.output;
@@ -7,6 +8,9 @@ import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import com.microsoft.z3.Status;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
@@ -100,14 +104,14 @@ public class Program {
     return functionDefinitions.get(fqn);
   }
 
-  public Optional<Map<Coefficient, KnownCoefficient>> solve() {
+  public ConstraintSystemSolver.Result solve() {
     return solve(
         new HashMap<>(),
         new HashSet<>(),
         (program, constraints) -> ConstraintSystemSolver.solve(constraints, basePath));
   }
 
-  public Optional<Map<Coefficient, KnownCoefficient>> solve(
+  public ConstraintSystemSolver.Result solve(
       Map<String, CombinedFunctionAnnotation> functionAnnotations) {
     return solve(
         functionAnnotations,
@@ -115,7 +119,7 @@ public class Program {
         (program, constraints) -> ConstraintSystemSolver.solve(constraints, basePath));
   }
 
-  public Optional<Map<Coefficient, KnownCoefficient>> solve(
+  public ConstraintSystemSolver.Result solve(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       Set<Constraint> outsideConstraints) {
     return solve(
@@ -139,7 +143,7 @@ public class Program {
     if (functionDefinitions.values().stream()
         .map(FunctionDefinition::runaway)
         .anyMatch(Predicate.not(Set::isEmpty))) {
-      return Optional.empty();
+      return empty();
     }
 
     final var called = calledFunctionNames();
@@ -228,14 +232,15 @@ public class Program {
     return Optional.of(prover);
   }
 
-  public Optional<Map<Coefficient, KnownCoefficient>> solve(
+  public ConstraintSystemSolver.Result solve(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       Set<Constraint> outsideConstraints,
-      BiFunction<Program, Set<Constraint>, Optional<Map<Coefficient, KnownCoefficient>>> solving) {
+      BiFunction<Program, Set<Constraint>, ConstraintSystemSolver.Result> solving) {
 
     final var optionalProver = prove(functionAnnotations, true);
     if (optionalProver.isEmpty()) {
-      return Optional.empty();
+      return new ConstraintSystemSolver.Result(
+          Status.UNSATISFIABLE, empty(), Collections.emptyMap(), empty());
     }
     final var prover = optionalProver.get();
     final var accumulatedConstraints = prover.getAccumulatedConstraints();
@@ -245,18 +250,17 @@ public class Program {
 
     // This is the entrypoint of new-style solving. We get a bunch of constraints
     // that need to be fulfilled in order to typecheck the program.
-    Optional<Map<Coefficient, KnownCoefficient>> solution =
-        solving.apply(this, accumulatedConstraints);
+    final var result = solving.apply(this, accumulatedConstraints);
 
     if (accumulatedConstraints.size() < 50) {
       Constraint.plot(name, accumulatedConstraints, basePath);
     }
 
-    if (solution.isPresent()) {
-      prover.plotWithSolution(solution.get());
+    if (result.hasSolution()) {
+      prover.plotWithSolution(result.getSolution().get());
     }
 
-    return solution;
+    return result;
   }
 
   public void ingest(Optional<Map<Coefficient, KnownCoefficient>> solution) {
@@ -388,6 +392,22 @@ public class Program {
         out.println(fd.getInferredSignatureString());
       }
     }
+  }
+
+  public JsonArray inferredSignaturesToJson() {
+    var builder = Json.createArrayBuilder();
+
+    for (int i = 0; i < order.size(); i++) {
+      final var stratumBuilder = Json.createArrayBuilder();
+      final var stratum = order.get(i);
+      for (var fqn : stratum) {
+        FunctionDefinition fd = functionDefinitions.get(fqn);
+        stratumBuilder.add(fd.inferredSignatureToJson());
+      }
+      builder.add(stratumBuilder.build());
+    }
+
+    return builder.build();
   }
 
   public void dumpToJsh(Path path) {

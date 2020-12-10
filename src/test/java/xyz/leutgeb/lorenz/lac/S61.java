@@ -14,7 +14,6 @@ import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.ALPHA;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.Test;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
@@ -184,12 +183,11 @@ public class S61 {
     nodeArBTPrimePrimePrimeResult.collectInto(constraints);
 
     constraints.addAll(sumConstraints);
-    Optional<Map<Coefficient, KnownCoefficient>> optionalSolution =
-        ConstraintSystemSolver.solve(constraints /*, singletonList(target)*/);
+    var optionalSolution = ConstraintSystemSolver.solve(constraints /*, singletonList(target)*/);
 
-    assertTrue(optionalSolution.isPresent());
+    assertTrue(optionalSolution.getSolution().isPresent());
 
-    final Map<Coefficient, KnownCoefficient> solution = optionalSolution.get();
+    final Map<Coefficient, KnownCoefficient> solution = optionalSolution.getSolution().get();
 
     final var q = rootObligation.getContext().substitute(solution);
     final var qp = rootObligation.getAnnotation().substitute(solution);

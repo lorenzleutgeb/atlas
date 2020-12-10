@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources.solving;
 import static com.microsoft.z3.Status.SATISFIABLE;
 import static com.microsoft.z3.Status.UNKNOWN;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.Optional.empty;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import static xyz.leutgeb.lorenz.lac.util.Util.output;
@@ -18,8 +19,10 @@ import com.microsoft.z3.IntNum;
 import com.microsoft.z3.Model;
 import com.microsoft.z3.Optimize;
 import com.microsoft.z3.RatNum;
+import com.microsoft.z3.Solver;
 import com.microsoft.z3.Statistics;
 import com.microsoft.z3.Status;
+import com.microsoft.z3.Z3Exception;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -34,47 +37,96 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.util.Fraction;
+import xyz.leutgeb.lorenz.lac.util.Pair;
 import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Slf4j
 public class ConstraintSystemSolver {
-  private static Map<String, String> z3Config(boolean unsatCore) {
-    // Execute `z3 -p` to get a list of parameters.
-    return Map.of("unsat_core", String.valueOf(unsatCore));
+
+  @Value
+  public static class Result {
+    Status status;
+    Optional<Map<Coefficient, KnownCoefficient>> solution;
+    Map<String, String> statistics;
+    Optional<Path> smtFile;
+
+    public Result(
+        Status status,
+        Optional<Map<Coefficient, KnownCoefficient>> solution,
+        Map<String, String> statistics,
+        Optional<Path> smtFile) {
+      if (status.equals(SATISFIABLE) != solution.isPresent()) {
+        throw new IllegalArgumentException();
+      }
+      this.status = status;
+      this.solution = solution;
+      this.statistics = statistics;
+      this.smtFile = smtFile;
+    }
+
+    public boolean hasSolution() {
+      return status.equals(SATISFIABLE);
+    }
+
+    public int toExitCode() {
+      switch (status) {
+        case SATISFIABLE:
+          return 0;
+        case UNSATISFIABLE:
+          return 1;
+        case UNKNOWN:
+          return 2;
+        default:
+          throw bug("unexpected status: " + status);
+      }
+    }
+
+    public static Result unsat() {
+      return new Result(Status.UNSATISFIABLE, empty(), emptyMap(), empty());
+    }
+
+    public static Result unknown() {
+      return new Result(UNKNOWN, empty(), emptyMap(), empty());
+    }
   }
 
-  public static Optional<Map<Coefficient, KnownCoefficient>> solve(Set<Constraint> constraints) {
+  private static Map<String, String> z3Config(boolean unsatCore) {
+    // Execute `z3 -p` to get a list of parameters.
+    return emptyMap();
+    // return Map.of("unsat_core", String.valueOf(unsatCore));
+  }
+
+  public static Result solve(Set<Constraint> constraints) {
     return solve(constraints, Paths.get("out", randomHex()), emptyList(), Domain.INTEGER);
   }
 
-  public static Optional<Map<Coefficient, KnownCoefficient>> solve(
-      Set<Constraint> constraints, Path outPath) {
+  public static Result solve(Set<Constraint> constraints, Path outPath) {
     return solve(constraints, outPath, emptyList(), Domain.INTEGER);
   }
 
-  public static Optional<Map<Coefficient, KnownCoefficient>> solve(
+  public static Result solve(
       Set<Constraint> constraints, Path outPath, List<UnknownCoefficient> target) {
     return solve(constraints, outPath, target, Domain.INTEGER);
   }
 
-  public static Optional<Map<Coefficient, KnownCoefficient>> solve(
+  public static Result solve(
       Set<Constraint> constraints, Path outPath, List<UnknownCoefficient> target, Domain domain) {
-    load();
+    load(outPath.resolve("z3.log"));
 
     final var unsatCore = target.isEmpty();
 
     try (final var ctx = new Context(z3Config(unsatCore))) {
-      final var solver = ctx.mkSolver();
+      final Solver solver = domain.getLogic().map(ctx::mkSolver).orElseGet(ctx::mkSolver);
 
       var optimize = !target.isEmpty();
       final Optimize opt = optimize ? ctx.mkOptimize() : null;
@@ -143,7 +195,7 @@ public class ConstraintSystemSolver {
       log.trace("lac Coefficients: " + generatedCoefficients.keySet().size());
       log.trace("lac Constraints:  " + constraints.size());
       log.trace("Z3  Scopes:       " + (optimize ? "?" : solver.getNumScopes()));
-      log.trace("Z3  Assertions:   " + (optimize ? "?" : solver.getAssertions().length));
+      log.trace("Z3  Assertions:   " + (optimize ? "?" : solver.getNumAssertions()));
 
       final Path smtFile = outPath.resolve("instance.smt");
 
@@ -155,33 +207,28 @@ public class ConstraintSystemSolver {
         ioException.printStackTrace();
       }
 
-      Optional<Model> optionalModel = Optional.empty();
+      var result =
+          optimize
+              ? check(opt::Check, opt::getModel, opt::getUnsatCore, unsatCore, opt::toString)
+              : check(
+                  solver::check,
+                  solver::getModel,
+                  solver::getUnsatCore,
+                  unsatCore,
+                  solver::toString);
 
-      if (optimize) {
-        optionalModel =
-            check(
-                opt::Check,
-                opt::getModel,
-                opt::getUnsatCore,
-                unsatCore,
-                opt::toString,
-                opt::getStatistics,
-                outPath);
-      } else {
-        optionalModel =
-            check(
-                solver::check,
-                solver::getModel,
-                solver::getUnsatCore,
-                unsatCore,
-                solver::toString,
-                solver::getStatistics,
-                outPath);
+      var stats =
+          statisticsToMapAndFile(optimize ? opt.getStatistics() : solver.getStatistics(), outPath);
+
+      if (!optimize) {
+        stats.put("num scopes", String.valueOf(solver.getNumScopes()));
+        stats.put("num assertions", String.valueOf(solver.getNumAssertions()));
       }
-      if (optionalModel.isEmpty()) {
-        return empty();
+
+      if (!result.getLeft().equals(SATISFIABLE)) {
+        return new Result(result.getLeft(), empty(), stats, Optional.of(smtFile));
       }
-      final Model model = optionalModel.get();
+      final Model model = result.getRight().get();
       final var solution = new HashMap<Coefficient, KnownCoefficient>();
       for (final var e : generatedCoefficients.entrySet()) {
         var x = model.getConstInterp(e.getKey());
@@ -217,44 +264,57 @@ public class ConstraintSystemSolver {
         log.warn("Partial solution!");
       }
 
-      return Optional.of(solution);
+      return new Result(result.getLeft(), Optional.of(solution), stats, Optional.of(smtFile));
     }
   }
 
-  private static Optional<Model> check(
+  private static Map<String, String> statisticsToMapAndFile(Statistics statistics, Path outPath) {
+    final Map<String, String> result = new HashMap<>();
+    try {
+      try (final var out = output(outPath.resolve("z3-statistics.txt"))) {
+        final var printer = new PrintStream(out);
+        for (var entry : statistics.getEntries()) {
+          final var value = entry.getValueString();
+          result.put(entry.Key, value);
+          log.trace("{}={}", entry.Key, value);
+          printer.println(entry.Key + "=" + value);
+        }
+      }
+    } catch (Exception exception) {
+      // ignored
+    }
+    return result;
+  }
+
+  private static Pair<Status, Optional<Model>> check(
       Supplier<Status> check,
       Supplier<Model> getModel,
       Supplier<BoolExpr[]> getUnsatCore,
       boolean unsatCore,
-      Supplier<String> program,
-      Supplier<Statistics> statistics,
-      Path outPath) {
+      Supplier<String> program) {
     final var start = Instant.now();
     log.debug("Solving start: " + start);
-    var status = check.get();
+    Status status = UNKNOWN;
+    try {
+      status = check.get();
+    } catch (Z3Exception e) {
+      if (e.getMessage().equals("maximization suspended")) {
+        return Pair.of(UNKNOWN, empty());
+      }
+      throw e;
+    }
     final var stop = Instant.now();
     log.debug("Solving duration: " + (Duration.between(start, stop)));
     if (SATISFIABLE.equals(status)) {
-      try {
-        try (final var out = output(outPath.resolve("z3-statistics.txt"))) {
-          final var printer = new PrintStream(out);
-          for (var entry : statistics.get().getEntries()) {
-            log.trace("{}={}", entry.Key, entry.getValueString());
-            printer.println(entry.Key + "=" + entry.getValueString());
-          }
-        }
-      } catch (Exception exception) {
-        // ignored
-      }
-      return Optional.of(getModel.get());
+      return Pair.of(status, Optional.of(getModel.get()));
     } else if (UNKNOWN.equals(status)) {
       log.error("Attempt to solve constraint system yielded unknown result.");
-      throw new RuntimeException(new TimeoutException("satisfiability of constraints unknown"));
+      return Pair.of(status, empty());
     }
     log.error("Constraint system is unsatisfiable!");
     if (!unsatCore) {
       log.error("Got no unsat core");
-      return Optional.empty();
+      return Pair.of(status, Optional.empty());
     }
     Set<String> coreSet =
         Arrays.stream(getUnsatCore.get())
@@ -269,11 +329,21 @@ public class ConstraintSystemSolver {
             .filter(line -> coreSet.stream().anyMatch(line::contains))
             .collect(Collectors.joining("\n")));
 
-    return empty();
+    return Pair.of(status, empty());
   }
 
   public enum Domain {
-    RATIONAL,
-    INTEGER
+    RATIONAL(empty()),
+    INTEGER(Optional.of("QF_LIA"));
+
+    private final Optional<String> logic;
+
+    Domain(Optional<String> logic) {
+      this.logic = logic;
+    }
+
+    public Optional<String> getLogic() {
+      return logic;
+    }
   }
 }

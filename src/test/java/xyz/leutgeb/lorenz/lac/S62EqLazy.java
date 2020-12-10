@@ -205,20 +205,21 @@ public class S62EqLazy extends S62 {
             "fix Q4");
 
     final var solution = prover.solve();
-    assertTrue(solution.isPresent());
+    assertTrue(solution.getSolution().isPresent());
     // Constraint.plot(FQN, prover.getAccumulatedConstraints(), Paths.get("out"));
     final var minimizedSolution = prover.solve(sumConstraints, singletonList(target));
 
     System.out.println(
         "splay_eq above w/out minimization: "
-            + Qvar.substitute(solution.get())
+            + Qvar.substitute(solution.getSolution().get())
             + " -> "
-            + Qpvar.substitute(solution.get())
+            + Qpvar.substitute(solution.getSolution().get())
             + " with Q3 = "
-            + Q3var.substitute(solution.get()));
+            + Q3var.substitute(solution.getSolution().get()));
     System.out.println(
         "splay_eq above w/    minimization: "
             + (minimizedSolution
+                .getSolution()
                 .map(
                     sol ->
                         Qvar.substitute(sol)
@@ -229,13 +230,15 @@ public class S62EqLazy extends S62 {
                 .orElse("UNSAT")));
 
     assertAll(
-        () -> assertContextEquals(q3v, Q3, rootObligation.getContext().substitute(solution.get())),
+        () ->
+            assertContextEquals(
+                q3v, Q3, rootObligation.getContext().substitute(solution.getSolution().get())),
         () ->
             assertContextEquals(
                 q3v,
                 Q3,
                 fromProver(prover, obligation -> E3.getFalsy().equals(obligation.getExpression()))
-                    .substitute(solution.get())),
+                    .substitute(solution.getSolution().get())),
         () ->
             assertContextEquals(
                 q3v,
@@ -243,30 +246,32 @@ public class S62EqLazy extends S62 {
                 fromProver(
                         prover,
                         obligation -> INTERMEDIATE.getTruthy().equals(obligation.getExpression()))
-                    .substitute(solution.get())),
+                    .substitute(solution.getSolution().get())),
         () ->
             assertContextEqualsByPrefixes(
                 List.of("cr", "bl", "br"),
                 Q3,
-                e4obligation.getContext().substitute(solution.get())),
+                e4obligation.getContext().substitute(solution.getSolution().get())),
         () ->
             assertContextEqualsByPrefixes(
                 List.of("cr", "br", "z"),
                 Q4,
-                e4result.get(1).getContext().substitute(solution.get())),
+                e4result.get(1).getContext().substitute(solution.getSolution().get())),
         () ->
             assertContextEqualsByPrefixes(
                 singletonList(""),
                 Annotation.zero(1),
-                e4result.get(2).getContext().substitute(solution.get())),
+                e4result.get(2).getContext().substitute(solution.getSolution().get())),
         () ->
             assertContextEqualsByPrefixes(
-                singletonList(""), P1110, e4result.get(3).getContext().substitute(solution.get())),
+                singletonList(""),
+                P1110,
+                e4result.get(3).getContext().substitute(solution.getSolution().get())),
         () ->
             assertContextEqualsByPrefixes(
                 singletonList(""),
                 Annotation.zero(1),
-                e4result.get(4).getContext().substitute(solution.get())));
+                e4result.get(4).getContext().substitute(solution.getSolution().get())));
   }
 
   @Test
@@ -327,17 +332,18 @@ public class S62EqLazy extends S62 {
     // Solve, and assert that there is a solution.
     prover.plot();
     final var solution = prover.solve(fixQ2);
-    assertTrue(solution.isPresent());
+    assertTrue(solution.getSolution().isPresent());
     final var minimizedSolution = prover.solve(union(sumConstraints, fixQ2), singletonList(target));
 
     System.out.println(
         "splay_eq w/out minimization: "
-            + Qvar.substitute(solution.get())
+            + Qvar.substitute(solution.getSolution().get())
             + " -> "
-            + Qpvar.substitute(solution.get()));
+            + Qpvar.substitute(solution.getSolution().get()));
     System.out.println(
         "splay_eq w/    minimization: "
             + (minimizedSolution
+                .getSolution()
                 .map(sol -> Qvar.substitute(sol) + " -> " + Qpvar.substitute(sol))
                 .orElse("UNSAT")));
 
@@ -353,7 +359,7 @@ public class S62EqLazy extends S62 {
                                 AnnotatingContext.reorderByName(
                                     o.getExpression().freeVariables(), List.of("cl", "cr")),
                                 Q1,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   if (o.getExpression().equals(E3)) {
                     return (Executable)
@@ -362,7 +368,7 @@ public class S62EqLazy extends S62 {
                                 AnnotatingContext.reorderByName(
                                     o.getExpression().freeVariables(), List.of("cr", "bl", "br")),
                                 Q2,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   return null;
                 })
@@ -397,7 +403,7 @@ public class S62EqLazy extends S62 {
     prover.prove(new Obligation(SPLAY.treeLikeArguments(), Pvar, SPLAY.getBody(), Ppvar, 0));
 
     final var solution = prover.solve();
-    assertTrue(solution.isPresent());
+    assertTrue(solution.getSolution().isPresent());
 
     assertAll(
         StreamSupport.stream(prover.getProof().spliterator(), false)
@@ -408,15 +414,20 @@ public class S62EqLazy extends S62 {
                     return (Executable)
                         () -> {
                           assertContextEqualsByPrefixes(
-                              List.of("t"), P, o.getContext().substitute(solution.get()));
-                          assertAnnotationEquals(Pp, o.getAnnotation().substitute(solution.get()));
+                              List.of("t"),
+                              P,
+                              o.getContext().substitute(solution.getSolution().get()));
+                          assertAnnotationEquals(
+                              Pp, o.getAnnotation().substitute(solution.getSolution().get()));
                         };
                   }
                   if (o.getExpression().equals(E1)) {
                     return (Executable)
                         () ->
                             assertContextEqualsByPrefixes(
-                                List.of("cl", "cr"), P1, o.getContext().substitute(solution.get()));
+                                List.of("cl", "cr"),
+                                P1,
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   if (o.getExpression().equals(E3)) {
                     return (Executable)
@@ -424,7 +435,7 @@ public class S62EqLazy extends S62 {
                             assertContextEqualsByPrefixes(
                                 List.of("cr", "bl", "br"),
                                 P2,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   if (o.getExpression().equals(E4)) {
                     return (Executable)
@@ -432,7 +443,7 @@ public class S62EqLazy extends S62 {
                             assertContextEqualsByPrefixes(
                                 List.of("cr", "bl", "br"),
                                 P2,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   if (o.getExpression().equals(E5)) {
                     return (Executable)
@@ -440,7 +451,7 @@ public class S62EqLazy extends S62 {
                             assertContextEqualsByPrefixes(
                                 List.of("cr", "br", "z"),
                                 P3,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   if (o.getExpression().equals(Tp)) {
                     return (Executable)
@@ -448,7 +459,7 @@ public class S62EqLazy extends S62 {
                             assertContextEqualsByPrefixes(
                                 List.of("cr", "br", "al", "ar"),
                                 P4,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   return null;
                 })
@@ -480,7 +491,7 @@ public class S62EqLazy extends S62 {
     prover.plot();
 
     final var solution = prover.solve();
-    assertTrue(solution.isPresent());
+    assertTrue(solution.getSolution().isPresent());
 
     assertAll(
         StreamSupport.stream(prover.getProof().spliterator(), false)
@@ -491,15 +502,20 @@ public class S62EqLazy extends S62 {
                     return (Executable)
                         () -> {
                           assertContextEqualsByPrefixes(
-                              List.of("t"), P, o.getContext().substitute(solution.get()));
-                          assertAnnotationEquals(Pp, o.getAnnotation().substitute(solution.get()));
+                              List.of("t"),
+                              P,
+                              o.getContext().substitute(solution.getSolution().get()));
+                          assertAnnotationEquals(
+                              Pp, o.getAnnotation().substitute(solution.getSolution().get()));
                         };
                   }
                   if (o.getExpression().equals(E1)) {
                     return (Executable)
                         () ->
                             assertContextEqualsByPrefixes(
-                                List.of("cl", "cr"), P1, o.getContext().substitute(solution.get()));
+                                List.of("cl", "cr"),
+                                P1,
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   if (o.getExpression().equals(E3)) {
                     return (Executable)
@@ -507,7 +523,7 @@ public class S62EqLazy extends S62 {
                             assertContextEqualsByPrefixes(
                                 List.of("cr", "bl", "br"),
                                 P2,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   if (o.getExpression().equals(E4)) {
                     return (Executable)
@@ -515,7 +531,7 @@ public class S62EqLazy extends S62 {
                             assertContextEqualsByPrefixes(
                                 List.of("cr", "bl", "br"),
                                 P2,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   if (o.getExpression().equals(E5)) {
                     return (Executable)
@@ -523,7 +539,7 @@ public class S62EqLazy extends S62 {
                             assertContextEqualsByPrefixes(
                                 List.of("cr", "br", "z"),
                                 P3,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   if (o.getExpression().equals(Tp)) {
                     return (Executable)
@@ -531,7 +547,7 @@ public class S62EqLazy extends S62 {
                             assertContextEqualsByPrefixes(
                                 List.of("cr", "br", "al", "ar"),
                                 P4,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   return null;
                 })
@@ -744,7 +760,7 @@ public class S62EqLazy extends S62 {
     final var minimizationTargets = List.of(rankCoefficientSum, coefficientSum);
 
     final var solution = prover.solve(fixing);
-    assertTrue(solution.isPresent());
+    assertTrue(solution.getSolution().isPresent());
     final var minSolution = prover.solve(minimization, minimizationTargets);
     final var minSolutionWithRank =
         prover.solve(union(minimization, haveRank), minimizationTargets);
@@ -755,22 +771,25 @@ public class S62EqLazy extends S62 {
 
     System.out.println(
         "splay_eq w/out minimization: "
-            + Qvar.substitute(solution.get())
+            + Qvar.substitute(solution.getSolution().get())
             + " -> "
-            + Qpvar.substitute(solution.get()));
+            + Qpvar.substitute(solution.getSolution().get()));
     System.out.println(
         "splay_eq w/    minimization: "
             + (minSolution
+                .getSolution()
                 .map(sol -> Qvar.substitute(sol) + " -> " + Qpvar.substitute(sol))
                 .orElse("UNSAT")));
     System.out.println(
         "splay_eq rank  minimization: "
             + (minSolutionWithRank
+                .getSolution()
                 .map(sol -> Qvar.substitute(sol) + " -> " + Qpvar.substitute(sol))
                 .orElse("UNSAT")));
     System.out.println(
         "splay_eq w/ fixed Q        : "
             + (minSolutionWithRankAndFixedQ
+                .getSolution()
                 .map(sol -> Qvar.substitute(sol) + " -> " + Qpvar.substitute(sol))
                 .orElse("UNSAT")));
     System.out.println("splay_eq expected          : " + Q + " -> " + Qp);
@@ -778,22 +797,24 @@ public class S62EqLazy extends S62 {
     System.out.println(
         printTable(
             List.of(
-                q2.substitute(minSolutionWithRank.get()).rename("Q2"),
-                q3.substitute(minSolutionWithRank.get()).rename("Q3"),
-                q4.substitute(minSolutionWithRank.get()).rename("Q4"),
-                e4result.get(2).substitute(minSolutionWithRank.get()).getContext(),
-                e4result.get(3).substitute(minSolutionWithRank.get()).getContext(),
-                e4result.get(4).substitute(minSolutionWithRank.get()).getContext()),
+                q2.substitute(minSolutionWithRank.getSolution().get()).rename("Q2"),
+                q3.substitute(minSolutionWithRank.getSolution().get()).rename("Q3"),
+                q4.substitute(minSolutionWithRank.getSolution().get()).rename("Q4"),
+                e4result.get(2).substitute(minSolutionWithRank.getSolution().get()).getContext(),
+                e4result.get(3).substitute(minSolutionWithRank.getSolution().get()).getContext(),
+                e4result.get(4).substitute(minSolutionWithRank.getSolution().get()).getContext()),
             List.of(
-                Qvar.substitute(minSolutionWithRank.get()).rename("Q"),
-                Qpvar.substitute(minSolutionWithRank.get()).rename("Q'"))));
+                Qvar.substitute(minSolutionWithRank.getSolution().get()).rename("Q"),
+                Qpvar.substitute(minSolutionWithRank.getSolution().get()).rename("Q'"))));
 
     assertAll(
         union(
             Set.of(
                 () ->
                     assertContextEquals(
-                        q3v, Q3, aboveRootObligation.getContext().substitute(solution.get())),
+                        q3v,
+                        Q3,
+                        aboveRootObligation.getContext().substitute(solution.getSolution().get())),
                 () ->
                     assertContextEquals(
                         q3v,
@@ -801,7 +822,7 @@ public class S62EqLazy extends S62 {
                         fromProver(
                                 prover,
                                 obligation -> E3.getFalsy().equals(obligation.getExpression()))
-                            .substitute(solution.get())),
+                            .substitute(solution.getSolution().get())),
                 () ->
                     assertContextEquals(
                         q3v,
@@ -810,32 +831,32 @@ public class S62EqLazy extends S62 {
                                 prover,
                                 obligation ->
                                     INTERMEDIATE.getTruthy().equals(obligation.getExpression()))
-                            .substitute(solution.get())),
+                            .substitute(solution.getSolution().get())),
                 () ->
                     assertContextEqualsByPrefixes(
                         List.of("cr", "bl", "br"),
                         Q3,
-                        e4obligation.getContext().substitute(solution.get())),
+                        e4obligation.getContext().substitute(solution.getSolution().get())),
                 () ->
                     assertContextEqualsByPrefixes(
                         List.of("cr", "br", "z"),
                         Q4,
-                        e4result.get(1).getContext().substitute(solution.get())),
+                        e4result.get(1).getContext().substitute(solution.getSolution().get())),
                 () ->
                     assertContextEqualsByPrefixes(
                         singletonList(""),
                         P1110,
-                        e4result.get(2).getContext().substitute(solution.get())),
+                        e4result.get(2).getContext().substitute(solution.getSolution().get())),
                 () ->
                     assertContextEqualsByPrefixes(
                         singletonList(""),
                         P1110,
-                        e4result.get(3).getContext().substitute(solution.get())),
+                        e4result.get(3).getContext().substitute(solution.getSolution().get())),
                 () ->
                     assertContextEqualsByPrefixes(
                         singletonList(""),
                         P1110,
-                        e4result.get(4).getContext().substitute(solution.get()))),
+                        e4result.get(4).getContext().substitute(solution.getSolution().get()))),
             StreamSupport.stream(prover.getProof().spliterator(), false)
                 .filter(o -> Objects.nonNull(o.getExpression()))
                 .map(
@@ -847,7 +868,7 @@ public class S62EqLazy extends S62 {
                                     AnnotatingContext.reorderByName(
                                         o.getExpression().freeVariables(), List.of("cl", "cr")),
                                     Q1,
-                                    o.getContext().substitute(solution.get()));
+                                    o.getContext().substitute(solution.getSolution().get()));
                       }
                       if (o.getExpression().equals(E3)
                           && !o.getContext().getAnnotation().getNameAndId().startsWith("weaken")) {
@@ -858,7 +879,7 @@ public class S62EqLazy extends S62 {
                                         o.getExpression().freeVariables(),
                                         List.of("cr", "bl", "br")),
                                     Q2,
-                                    o.getContext().substitute(solution.get()));
+                                    o.getContext().substitute(solution.getSolution().get()));
                       }
                       return null;
                     })
@@ -1062,19 +1083,20 @@ public class S62EqLazy extends S62 {
     // final var solution =
     //    prover.solve(); // (Sets.union(fixQ3, fixQ2)); // ;Sets.union(sumConstraints, fixQ2));
     // Constraint.plot(FQN, prover.getAccumulatedConstraints(), Paths.get("out"));
-    assertTrue(solution.isPresent());
+    assertTrue(solution.getSolution().isPresent());
     final var minSolution =
         ConstraintSystemSolver.solve(
             sumConstraints, Paths.get("TODO"), List.of(rankCoefficientSum, coefficientSum));
 
     System.out.println(
         "splay_eq w/out minimization: "
-            + Qvar.substitute(solution.get())
+            + Qvar.substitute(solution.getSolution().get())
             + " -> "
-            + Qpvar.substitute(solution.get()));
+            + Qpvar.substitute(solution.getSolution().get()));
     System.out.println(
         "splay_eq w/    minimization: "
             + (minSolution
+                .getSolution()
                 .map(sol -> Qvar.substitute(sol) + " -> " + Qpvar.substitute(sol))
                 .orElse("UNSAT")));
     System.out.println("splay_eq ideal             : " + Q + " -> " + Qp);
@@ -1084,7 +1106,9 @@ public class S62EqLazy extends S62 {
             Set.of(
                 () ->
                     assertContextEquals(
-                        q3v, Q3, aboveRootObligation.getContext().substitute(solution.get())),
+                        q3v,
+                        Q3,
+                        aboveRootObligation.getContext().substitute(solution.getSolution().get())),
                 () ->
                     assertContextEquals(
                         q3v,
@@ -1092,7 +1116,7 @@ public class S62EqLazy extends S62 {
                         fromProver(
                                 prover,
                                 obligation -> E3.getFalsy().equals(obligation.getExpression()))
-                            .substitute(solution.get())),
+                            .substitute(solution.getSolution().get())),
                 () ->
                     assertContextEquals(
                         q3v,
@@ -1101,32 +1125,32 @@ public class S62EqLazy extends S62 {
                                 prover,
                                 obligation ->
                                     INTERMEDIATE.getTruthy().equals(obligation.getExpression()))
-                            .substitute(solution.get())),
+                            .substitute(solution.getSolution().get())),
                 () ->
                     assertContextEqualsByPrefixes(
                         List.of("cr", "bl", "br"),
                         Q3,
-                        e4obligation.getContext().substitute(solution.get())),
+                        e4obligation.getContext().substitute(solution.getSolution().get())),
                 () ->
                     assertContextEqualsByPrefixes(
                         List.of("cr", "br", "z"),
                         Q4,
-                        e4result.get(1).getContext().substitute(solution.get())),
+                        e4result.get(1).getContext().substitute(solution.getSolution().get())),
                 () ->
                     assertContextEqualsByPrefixes(
                         singletonList(""),
                         P1110,
-                        e4result.get(2).getContext().substitute(solution.get())),
+                        e4result.get(2).getContext().substitute(solution.getSolution().get())),
                 () ->
                     assertContextEqualsByPrefixes(
                         singletonList(""),
                         P1110,
-                        e4result.get(3).getContext().substitute(solution.get())),
+                        e4result.get(3).getContext().substitute(solution.getSolution().get())),
                 () ->
                     assertContextEqualsByPrefixes(
                         singletonList(""),
                         P1110,
-                        e4result.get(4).getContext().substitute(solution.get()))),
+                        e4result.get(4).getContext().substitute(solution.getSolution().get()))),
             StreamSupport.stream(prover.getProof().spliterator(), false)
                 .filter(o -> Objects.nonNull(o.getExpression()))
                 .map(
@@ -1138,7 +1162,7 @@ public class S62EqLazy extends S62 {
                                     AnnotatingContext.reorderByName(
                                         o.getExpression().freeVariables(), List.of("cl", "cr")),
                                     Q1,
-                                    o.getContext().substitute(solution.get()));
+                                    o.getContext().substitute(solution.getSolution().get()));
                       }
                       if (o.getExpression().equals(E3)
                           && !o.getContext().getAnnotation().getNameAndId().startsWith("weaken")) {
@@ -1149,7 +1173,7 @@ public class S62EqLazy extends S62 {
                                         o.getExpression().freeVariables(),
                                         List.of("cr", "bl", "br")),
                                     Q2,
-                                    o.getContext().substitute(solution.get()));
+                                    o.getContext().substitute(solution.getSolution().get()));
                       }
                       return null;
                     })
@@ -1238,7 +1262,7 @@ public class S62EqLazy extends S62 {
     final var minimizationTargets = List.of(rankCoefficientSum, coefficientSum);
 
     final var solution = prover.solve(fixing);
-    assertTrue(solution.isPresent());
+    assertTrue(solution.getSolution().isPresent());
     final var minSolution = prover.solve(minimization, minimizationTargets);
     final var minSolutionWithRank =
         prover.solve(union(minimization, haveRank), minimizationTargets);
@@ -1249,22 +1273,25 @@ public class S62EqLazy extends S62 {
 
     System.out.println(
         "splay_eq w/out minimization: "
-            + Qvar.substitute(solution.get())
+            + Qvar.substitute(solution.getSolution().get())
             + " -> "
-            + Qpvar.substitute(solution.get()));
+            + Qpvar.substitute(solution.getSolution().get()));
     System.out.println(
         "splay_eq w/    minimization: "
             + (minSolution
+                .getSolution()
                 .map(sol -> Qvar.substitute(sol) + " -> " + Qpvar.substitute(sol))
                 .orElse("UNSAT")));
     System.out.println(
         "splay_eq rank  minimization: "
             + (minSolutionWithRank
+                .getSolution()
                 .map(sol -> Qvar.substitute(sol) + " -> " + Qpvar.substitute(sol))
                 .orElse("UNSAT")));
     System.out.println(
         "splay_eq w/ fixed Q        : "
             + (minSolutionWithRankAndFixedQ
+                .getSolution()
                 .map(sol -> Qvar.substitute(sol) + " -> " + Qpvar.substitute(sol))
                 .orElse("UNSAT")));
     System.out.println("splay_eq expected          : " + Q + " -> " + Qp);
@@ -1381,22 +1408,24 @@ public class S62EqLazy extends S62 {
     final var minimizationTargets = List.of(rankCoefficientSum, coefficientSum);
 
     final var solution = prover.solve(fixing);
-    assertTrue(solution.isPresent());
+    assertTrue(solution.getSolution().isPresent());
     final var minSolution = prover.solve(minimization, minimizationTargets);
 
     System.out.println(
         "insert_eq w/out minimization: "
-            + Rvar.substitute(solution.get())
+            + Rvar.substitute(solution.getSolution().get())
             + " -> "
-            + Rpvar.substitute(solution.get()));
+            + Rpvar.substitute(solution.getSolution().get()));
     System.out.println(
         "insert_eq w/    minimization: "
             + (minSolution
+                .getSolution()
                 .map(sol -> Rvar.substitute(sol) + " -> " + Rpvar.substitute(sol))
                 .orElse("UNSAT")));
     System.out.println(
         "insert_eq cf w/ minimization: "
             + (minSolution
+                .getSolution()
                 .map(sol -> Rcfvar.substitute(sol) + " -> " + Rpcfvar.substitute(sol))
                 .orElse("UNSAT")));
   }

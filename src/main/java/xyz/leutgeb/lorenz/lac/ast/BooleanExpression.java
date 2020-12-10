@@ -112,6 +112,23 @@ public class BooleanExpression extends Expression {
 
   @Override
   public void printJavaTo(PrintStream out, int indentation, String currentFunction) {
+    // Special comparison with leaf.
+
+    if (operator.equals(ComparisonOperator.EQ)) {
+      if (Identifier.LEAF.equals(left) && Identifier.LEAF.equals(right)) {
+        out.print("true");
+        return;
+      }
+      if (Identifier.LEAF.equals(left) && !Identifier.LEAF.equals(right)) {
+        out.print(((Identifier) right).getName() + ".isLeaf()");
+        return;
+      }
+      if (!Identifier.LEAF.equals(left) && Identifier.LEAF.equals(right)) {
+        out.print(((Identifier) left).getName() + ".isLeaf()");
+        return;
+      }
+    }
+
     operator.printJavaTo(((Identifier) left).getName(), ((Identifier) right).getName(), out);
   }
 

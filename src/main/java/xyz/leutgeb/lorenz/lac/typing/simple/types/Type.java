@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.lac.typing.simple.types;
 
+import jakarta.json.JsonValue;
 import java.util.Collection;
 import java.util.Set;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
@@ -25,4 +26,6 @@ public interface Type {
   String toHaskell();
 
   String toJava();
+
+  JsonValue toJson();
 }
