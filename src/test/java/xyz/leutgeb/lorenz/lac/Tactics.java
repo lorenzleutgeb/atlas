@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -893,7 +892,7 @@ public class Tactics {
   }
 
   @ParameterizedTest
-  @MethodSource("splayTest")
+  @MethodSource("tacas")
   public void all(Map<String, Config> immutableAnnotations) {
     final var loader = Tests.loader();
 
@@ -1004,13 +1003,12 @@ public class Tactics {
     }
 
     // prover.plot();
-    Optional<Map<Coefficient, KnownCoefficient>> solution =
-        prover.solve(hackingConstraints, emptyList(), "sat", domain);
+    var solverResult = prover.solve(hackingConstraints, emptyList(), "sat", domain);
 
-    assertTrue(solution.isPresent());
-    System.out.println(printTable(prover, solution));
-    program.mockIngest(solution);
-    prover.plotWithSolution(solution.get());
+    assertTrue(solverResult.getSolution().isPresent());
+    System.out.println(printTable(prover, solverResult.getSolution()));
+    program.mockIngest(solverResult.getSolution());
+    // prover.plotWithSolution(solution.get());
 
     if (immutableAnnotations.values().stream().anyMatch(Config::isUnknown)) {
       final var minimizationConstraints =
@@ -1022,7 +1020,7 @@ public class Tactics {
               append(pairwiseDiffNonRankCoefficients, setCountingNonRankCoefficients));
       final var minSolution =
           prover.solve(minimizationConstraints, minimizationTargets, "min1", domain);
-      program.mockIngest(minSolution);
+      program.mockIngest(minSolution.getSolution());
 
       final var minimizationTargetsWithSets =
           append(
@@ -1030,10 +1028,10 @@ public class Tactics {
               append(setCountingNonRankCoefficients, pairwiseDiffNonRankCoefficients));
       final var minSetSolution =
           prover.solve(minimizationConstraints, minimizationTargetsWithSets, "min2", domain);
-      program.mockIngest(minSetSolution);
+      program.mockIngest(minSetSolution.getSolution());
 
-      System.out.println(printTable(prover, minSolution));
-      System.out.println(printTable(prover, minSetSolution));
+      System.out.println(printTable(prover, minSolution.getSolution()));
+      System.out.println(printTable(prover, minSetSolution.getSolution()));
 
       if (!domain.equals(ConstraintSystemSolver.Domain.RATIONAL)) {
         final var minSetSolutionRat =
@@ -1042,7 +1040,7 @@ public class Tactics {
                 minimizationTargetsWithSets,
                 "min2r",
                 ConstraintSystemSolver.Domain.RATIONAL);
-        program.mockIngest(minSetSolutionRat);
+        program.mockIngest(minSetSolutionRat.getSolution());
 
         final var minSetSolutionRat2 =
             prover.solve(
@@ -1050,9 +1048,9 @@ public class Tactics {
                 minimizationTargets,
                 "min1r",
                 ConstraintSystemSolver.Domain.RATIONAL);
-        program.mockIngest(minSetSolutionRat2);
+        program.mockIngest(minSetSolutionRat2.getSolution());
 
-        System.out.println(printTable(prover, minSetSolutionRat));
+        System.out.println(printTable(prover, minSetSolutionRat.getSolution()));
       }
       // prover.plotWithSolution(minSetSolutionRat.get());
       /*

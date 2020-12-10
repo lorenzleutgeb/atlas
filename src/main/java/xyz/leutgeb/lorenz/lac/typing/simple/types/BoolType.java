@@ -1,7 +1,10 @@
 package xyz.leutgeb.lorenz.lac.typing.simple.types;
 
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.lac.unification.Equivalence;
@@ -54,6 +57,11 @@ public class BoolType implements Type {
   @Override
   public String toJava() {
     return "boolean";
+  }
+
+  @Override
+  public JsonObject toJson() {
+    return Json.createObjectBuilder(Map.of("name", "Bool")).build();
   }
 
   @Override

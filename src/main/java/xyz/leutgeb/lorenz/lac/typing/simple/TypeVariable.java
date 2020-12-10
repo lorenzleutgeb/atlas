@@ -2,6 +2,8 @@ package xyz.leutgeb.lorenz.lac.typing.simple;
 
 import static java.util.Collections.singleton;
 
+import jakarta.json.Json;
+import jakarta.json.JsonString;
 import java.util.Collection;
 import java.util.Set;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
@@ -62,6 +64,11 @@ public class TypeVariable implements Type {
   @Override
   public String toJava() {
     return name;
+  }
+
+  @Override
+  public JsonString toJson() {
+    return Json.createValue(name);
   }
 
   @Override

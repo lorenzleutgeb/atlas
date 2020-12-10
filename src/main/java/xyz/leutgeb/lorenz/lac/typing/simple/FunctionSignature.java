@@ -1,5 +1,7 @@
 package xyz.leutgeb.lorenz.lac.typing.simple;
 
+import jakarta.json.Json;
+import jakarta.json.JsonValue;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
@@ -47,6 +49,19 @@ public final class FunctionSignature {
     this.type = type;
     this.constraints = constraints;
     this.annotation = annotation;
+  }
+
+  public JsonValue toJson() {
+    return Json.createValue(toString());
+    /*
+    final var builder = Json.createObjectBuilder();
+    builder.add("type", type.toJson());
+    final var constraintBuilder = Json.createArrayBuilder();
+    constraints.stream().map(TypeConstraint::toJson).forEach(constraintBuilder::add);
+    builder.add("constraints", constraintBuilder.build());
+    annotation.ifPresent(combinedFunctionAnnotation -> builder.add("annotation", combinedFunctionAnnotation.toJson()));
+    return builder.build();
+     */
   }
 
   public FunctionSignature wiggle(Substitution wiggled, UnificationContext problem) {

@@ -1,5 +1,7 @@
 package xyz.leutgeb.lorenz.lac.typing.simple.types;
 
+import jakarta.json.Json;
+import jakarta.json.JsonValue;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
@@ -67,6 +69,18 @@ public class TreeType implements Type {
   @Override
   public String toJava() {
     return "Tree<" + elementType.toJava() + ">";
+  }
+
+  @Override
+  public JsonValue toJson() {
+    final var builder = Json.createObjectBuilder();
+    builder.add("name", "Tree");
+
+    final var argumentsBuilder = Json.createArrayBuilder();
+    argumentsBuilder.add(elementType.toJson());
+    builder.add("arguments", argumentsBuilder.build());
+
+    return builder.build();
   }
 
   @Override

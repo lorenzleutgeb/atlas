@@ -5,6 +5,8 @@ import static java.util.Arrays.copyOf;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import com.google.common.collect.Sets;
+import jakarta.json.Json;
+import jakarta.json.JsonValue;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -93,6 +95,14 @@ public class FunctionType implements Type {
   @Override
   public String toJava() {
     throw bug();
+  }
+
+  @Override
+  public JsonValue toJson() {
+    final var builder = Json.createObjectBuilder();
+    builder.add("from", from.toJson());
+    builder.add("to", to.toJson());
+    return builder.build();
   }
 
   @Override

@@ -167,7 +167,7 @@ public class S62LazyFull extends S62 {
     // prover.plot();
 
     final var solution = prover.solve();
-    assertTrue(solution.isPresent());
+    assertTrue(solution.getSolution().isPresent());
 
     assertAll(
         StreamSupport.stream(prover.getProof().spliterator(), false)
@@ -181,7 +181,7 @@ public class S62LazyFull extends S62 {
                                 AnnotatingContext.reorderByName(
                                     o.getExpression().freeVariables(), List.of("cl", "cr")),
                                 Q1,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   if (o.getExpression().equals(E3)) {
                     return (Executable)
@@ -190,7 +190,7 @@ public class S62LazyFull extends S62 {
                                 AnnotatingContext.reorderByName(
                                     o.getExpression().freeVariables(), List.of("cr", "bl", "br")),
                                 Q2,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   return null;
                 })
@@ -198,16 +198,22 @@ public class S62LazyFull extends S62 {
     assertAll(
         () ->
             assertContextEqualsByPrefixes(
-                List.of("cr", "br", "z"), Q4, q4.substitute(solution.get())),
+                List.of("cr", "br", "z"), Q4, q4.substitute(solution.getSolution().get())),
         () ->
             assertContextEqualsByPrefixes(
-                List.of(""), P1110, e4result.get(2).getContext().substitute(solution.get())),
+                List.of(""),
+                P1110,
+                e4result.get(2).getContext().substitute(solution.getSolution().get())),
         () ->
             assertContextEqualsByPrefixes(
-                List.of(""), P1110, e4result.get(3).getContext().substitute(solution.get())),
+                List.of(""),
+                P1110,
+                e4result.get(3).getContext().substitute(solution.getSolution().get())),
         () ->
             assertContextEqualsByPrefixes(
-                List.of(""), P1110, e4result.get(4).getContext().substitute(solution.get())));
+                List.of(""),
+                P1110,
+                e4result.get(4).getContext().substitute(solution.getSolution().get())));
   }
 
   @Test
@@ -232,7 +238,7 @@ public class S62LazyFull extends S62 {
             SPLAY.treeLikeArguments(), P, SPLAY.getBody(), HEURISTIC.generate("unknown P'", 1), 0));
 
     final var solution = prover.solve();
-    assertTrue(solution.isPresent());
+    assertTrue(solution.getSolution().isPresent());
 
     assertAll(
         StreamSupport.stream(prover.getProof().spliterator(), false)
@@ -243,15 +249,20 @@ public class S62LazyFull extends S62 {
                     return (Executable)
                         () -> {
                           assertContextEqualsByPrefixes(
-                              List.of("t"), P, o.getContext().substitute(solution.get()));
-                          assertAnnotationEquals(Pp, o.getAnnotation().substitute(solution.get()));
+                              List.of("t"),
+                              P,
+                              o.getContext().substitute(solution.getSolution().get()));
+                          assertAnnotationEquals(
+                              Pp, o.getAnnotation().substitute(solution.getSolution().get()));
                         };
                   }
                   if (o.getExpression().equals(E1)) {
                     return (Executable)
                         () ->
                             assertContextEqualsByPrefixes(
-                                List.of("cl", "cr"), P1, o.getContext().substitute(solution.get()));
+                                List.of("cl", "cr"),
+                                P1,
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   if (o.getExpression().equals(E3)) {
                     return (Executable)
@@ -259,7 +270,7 @@ public class S62LazyFull extends S62 {
                             assertContextEqualsByPrefixes(
                                 List.of("cr", "bl", "br"),
                                 P2,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   if (o.getExpression().equals(E4)) {
                     return (Executable)
@@ -267,7 +278,7 @@ public class S62LazyFull extends S62 {
                             assertContextEqualsByPrefixes(
                                 List.of("cr", "z", "br"),
                                 P2,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   if (o.getExpression().equals(E5)) {
                     return (Executable)
@@ -275,7 +286,7 @@ public class S62LazyFull extends S62 {
                             assertContextEqualsByPrefixes(
                                 List.of("cr", "br", "z"),
                                 P3,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   if (o.getExpression().equals(Tp)) {
                     return (Executable)
@@ -283,7 +294,7 @@ public class S62LazyFull extends S62 {
                             assertContextEqualsByPrefixes(
                                 List.of("cr", "br", "al", "ar"),
                                 P4,
-                                o.getContext().substitute(solution.get()));
+                                o.getContext().substitute(solution.getSolution().get()));
                   }
                   return null;
                 })

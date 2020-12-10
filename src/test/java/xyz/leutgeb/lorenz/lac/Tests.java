@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -261,7 +260,7 @@ public class Tests {
                 new Annotation(resultRankCoefficients, emptyMap(), "predefined")),
             emptySet()));
 
-    assertTrue(program.solve(predefinedAnnotations).isPresent());
+    assertTrue(program.solve(predefinedAnnotations).hasSolution());
   }
 
   @ParameterizedTest
@@ -269,9 +268,9 @@ public class Tests {
   void infiniteCost(String fqn) throws Exception {
     final var program = loadAndNormalizeAndInferAndUnshare(fqn);
     final var solution = program.solve();
-    program.ingest(solution);
+    program.ingest(solution.getSolution());
     program.printAllInferredSignaturesInOrder(System.out);
-    assertTrue(solution.isEmpty());
+    assertTrue(solution.getSolution().isEmpty());
   }
 
   @Test
@@ -284,8 +283,8 @@ public class Tests {
     assertEquals(expectedSignature, definition.getInferredSignature());
 
     final var solution = program.solve();
-    program.ingest(solution);
-    assertTrue(solution.isEmpty());
+    program.ingest(solution.getSolution());
+    assertTrue(solution.getSolution().isEmpty());
   }
 
   @Test
@@ -317,7 +316,7 @@ public class Tests {
                 new Annotation(resultRankCoefficients, emptyMap(), "predefined")),
             emptySet()));
 
-    assertTrue(program.solve(predefinedAnnotations).isPresent());
+    assertTrue(program.solve(predefinedAnnotations).getSolution().isPresent());
   }
 
   @ParameterizedTest
@@ -358,9 +357,9 @@ public class Tests {
                     "inferredReturn")),
             emptySet()));
 
-    Optional<Map<Coefficient, KnownCoefficient>> inferredSolution = program.solve(inferred);
-    program.mockIngest(inferredSolution);
-    assertTrue(inferredSolution.isPresent());
+    final var inferredSolution = program.solve(inferred);
+    program.mockIngest(inferredSolution.getSolution());
+    assertTrue(inferredSolution.getSolution().isPresent());
 
     // We show that it is possible to type the function in such a way that the difference between
     // the potential of the arguments and the potential of the result is exactly the cost that we
@@ -389,6 +388,7 @@ public class Tests {
                 singleton(
                     new OffsetConstraint(
                         tightInput, tightResult, new Fraction(constantCost), "outside")))
+            .getSolution()
             .isPresent());
 
     if (constantCost > 0) {
@@ -420,6 +420,7 @@ public class Tests {
                   singleton(
                       new LessThanOrEqualConstraint(
                           tooSmallInput, costKnownCoefficient, "outside constraint")))
+              .getSolution()
               .isEmpty(),
           "No solution is expected, since it should not be possible to type the program with a cost of "
               + (constantCost - 1));
@@ -458,10 +459,10 @@ public class Tests {
                     generatorInput, generatorResult, "outside constraint"),
                 new InequalityConstraint(generatorInput, generatorResult, "outside constraint")));
 
-    if (perpetuumMobile.isPresent()) {
-      program.mockIngest(perpetuumMobile);
+    if (perpetuumMobile.getSolution().isPresent()) {
+      program.mockIngest(perpetuumMobile.getSolution());
     }
-    assertTrue(perpetuumMobile.isEmpty(), "Perpetuum mobile!");
+    assertTrue(perpetuumMobile.getSolution().isEmpty(), "Perpetuum mobile!");
   }
 
   @ParameterizedTest

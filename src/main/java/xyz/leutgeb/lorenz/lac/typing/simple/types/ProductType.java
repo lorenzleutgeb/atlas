@@ -4,6 +4,8 @@ import static java.util.Collections.emptySet;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import com.google.common.collect.Sets;
+import jakarta.json.Json;
+import jakarta.json.JsonValue;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -77,6 +79,18 @@ public class ProductType implements Type {
   @Override
   public String toJava() {
     throw bug();
+  }
+
+  @Override
+  public JsonValue toJson() {
+    final var builder = Json.createObjectBuilder();
+    builder.add("name", "Product");
+
+    final var argumentsBuilder = Json.createArrayBuilder();
+    elements.stream().map(Type::toJson).forEach(argumentsBuilder::add);
+    builder.add("arguments", argumentsBuilder.build());
+
+    return builder.build();
   }
 
   public String toCurriedHaskell() {

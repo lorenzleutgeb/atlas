@@ -193,8 +193,9 @@ public class S62Eager extends S62 {
       e.printStackTrace();
     }
 
-    assertTrue(solution.isPresent());
-    assertContextEqualsByPrefixes(List.of("cr", "br", "z"), Q4, q4.substitute(solution.get()));
+    assertTrue(solution.getSolution().isPresent());
+    assertContextEqualsByPrefixes(
+        List.of("cr", "br", "z"), Q4, q4.substitute(solution.getSolution().get()));
   }
 
   @Test
@@ -241,7 +242,7 @@ public class S62Eager extends S62 {
 
     final var constraints = prover.getAccumulatedConstraints();
     final var solution = ConstraintSystemSolver.solve(constraints);
-    assertTrue(solution.isPresent());
+    assertTrue(solution.getSolution().isPresent());
     final var assertions = new ArrayList<Executable>();
     for (Obligation o : prover.getProof()) {
       if (o.getExpression() == null) {
@@ -252,13 +253,17 @@ public class S62Eager extends S62 {
             () ->
                 // Does not work because br cl br are shared.
                 assertContextEqualsByPrefixes(
-                    List.of("cl", "cr"), Q1, o.getContext().substitute(solution.get())));
+                    List.of("cl", "cr"),
+                    Q1,
+                    o.getContext().substitute(solution.getSolution().get())));
       } else if (o.getExpression().equals(E3)) {
         assertions.add(
             () ->
                 // Does not work because br cr bl are shared.
                 assertContextEqualsByPrefixes(
-                    List.of("cr", "bl", "br"), Q2, o.getContext().substitute(solution.get())));
+                    List.of("cr", "bl", "br"),
+                    Q2,
+                    o.getContext().substitute(solution.getSolution().get())));
       }
     }
     assertAll(assertions);
@@ -289,7 +294,7 @@ public class S62Eager extends S62 {
     prover.plot();
     final var constraints = prover.getAccumulatedConstraints();
     final var solution = ConstraintSystemSolver.solve(constraints);
-    assertTrue(solution.isPresent());
+    assertTrue(solution.getSolution().isPresent());
 
     final var assertions = new ArrayList<Executable>();
     for (Obligation o : prover.getProof()) {
@@ -326,14 +331,16 @@ public class S62Eager extends S62 {
         assertions.add(
             () ->
                 assertContextEqualsByPrefixes(
-                    List.of("cr", "z", "br"), P2, o.getContext().substitute(solution.get())));
+                    List.of("cr", "z", "br"),
+                    P2,
+                    o.getContext().substitute(solution.getSolution().get())));
       } else if (o.getExpression().equals(Tp)) {
         assertions.add(
             () ->
                 assertContextEqualsByPrefixes(
                     List.of("cr", "br", "al", "ar"),
                     P4,
-                    o.getContext().substitute(solution.get())));
+                    o.getContext().substitute(solution.getSolution().get())));
       }
     }
     assertAll(assertions);
