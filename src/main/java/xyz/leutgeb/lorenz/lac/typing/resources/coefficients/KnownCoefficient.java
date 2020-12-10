@@ -29,9 +29,9 @@ public class KnownCoefficient implements Coefficient {
   }
 
   public ArithExpr encode(Context context, Map<UnknownCoefficient, ArithExpr> coefficients) {
-    // if (value.getDenominator() != 1) {
-    //  throw bug("oops");
-    // }
+    if (!value.isNonInteger()) {
+      return context.mkInt(value.getNumerator());
+    }
     return context.mkReal(value.getNumerator(), value.getDenominator());
   }
 
