@@ -199,6 +199,10 @@ tasks.shadowJar {
     dependsOn("compileGeneratedJava")
     archiveClassifier.set("shadow")
 
+    manifest {
+        attributes["Main-Class"] = "$rootPackage.Main"
+    }
+
     /* TODO: Minimization removes too many classes, like those related to JSON.
     minimize {
         exclude(dependency("org.glassfish:jakarta.json:.*"))
