@@ -5,6 +5,7 @@ import static java.util.Collections.emptyList;
 import static picocli.CommandLine.Help.Visibility.ALWAYS;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.lac.util.Util.append;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import static xyz.leutgeb.lorenz.lac.util.Util.output;
 
 import com.google.common.collect.ArrayListMultimap;
@@ -69,11 +70,25 @@ public class Run implements Runnable {
   private Boolean relaxRank;
 
   @CommandLine.Option(
-      defaultValue = "false",
-      names = "--rational",
+      names = "--domain",
       description =
-          "When present, coefficients will not be searched over the integers but over the rationals.")
-  private Boolean rational;
+          "When present, coefficients will not be searched in the given domain. Use 'N' for natural numbers, 'Q' for rational numbers and omit the option for automatic selection.")
+  private DomainSelection domainSelection;
+
+  private enum DomainSelection {
+    N,
+    Q;
+
+    public static ConstraintSystemSolver.Domain toDomain(DomainSelection value) {
+      switch (value) {
+        case N:
+          return ConstraintSystemSolver.Domain.INTEGER;
+        case Q:
+          return ConstraintSystemSolver.Domain.RATIONAL;
+      }
+      throw bug("unknown domain selection");
+    }
+  }
 
   @CommandLine.Option(names = "--name", description = "Name of the run.")
   private String name;
@@ -110,7 +125,14 @@ public class Run implements Runnable {
     if (name != null && !name.isBlank()) {
       program.setName(name);
     }
+
+    if (program.isEmpty()) {
+      log.error("Program to analyze is empty, nothing to do!");
+      System.exit(3);
+    }
+
     program.normalize();
+
     try {
       program.infer();
     } catch (UnificationError | TypeError unificationError) {
@@ -179,20 +201,37 @@ public class Run implements Runnable {
 
       final Set<Constraint> outsideConstraints = new HashSet<>();
 
-      for (final var fqn : program.getFunctionDefinitions().keySet()) {
-        final var fd = program.getFunctionDefinitions().get(fqn);
-        if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1 && !relaxRank) {
-          outsideConstraints.add(
-              new LessThanOrEqualConstraint(
-                  ONE,
-                  fd.getInferredSignature().getAnnotation().get().withCost.to.getRankCoefficient(),
-                  "(outside) force rank"));
+      if (!relaxRank && infer) {
+        for (final var fqn : program.getFunctionDefinitions().keySet()) {
+          final var fd = program.getFunctionDefinitions().get(fqn);
+          if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1) {
+            outsideConstraints.add(
+                new LessThanOrEqualConstraint(
+                    ONE,
+                    fd.getInferredSignature()
+                        .getAnnotation()
+                        .get()
+                        .withCost
+                        .to
+                        .getRankCoefficient(),
+                    "(outside) force rank"));
+          }
         }
       }
 
-      // TODO: Autodetect rational domain in case we find rational annotation.
-      ConstraintSystemSolver.Domain domain =
-          rational ? ConstraintSystemSolver.Domain.RATIONAL : ConstraintSystemSolver.Domain.INTEGER;
+      final var autoDomain = program.autoDomain();
+
+      final var domain =
+          domainSelection != null ? DomainSelection.toDomain(domainSelection) : autoDomain;
+
+      if (domainSelection != null && autoDomain != domain) {
+        log.warn(
+            "Chosen domain '{}' is different from automatic selection '{}'. This might not be what you want"
+                + (!infer ? ", especially since we are checking, not inferring types" : "")
+                + ".",
+            domain,
+            autoDomain);
+      }
 
       log.info("Solving constraints...");
       if (infer) {

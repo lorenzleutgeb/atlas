@@ -38,6 +38,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
+import xyz.leutgeb.lorenz.lac.typing.simple.FunctionSignature;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.Equivalence;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
@@ -277,6 +278,20 @@ public class Program {
     } else {
       // log.info(namesAsSet() + " | UNSAT");
     }
+  }
+
+  public boolean isEmpty() {
+    return order.isEmpty() && functionDefinitions.isEmpty();
+  }
+
+  public ConstraintSystemSolver.Domain autoDomain() {
+    return functionDefinitions.values().stream()
+            .map(FunctionDefinition::getAnnotatedSignature)
+            .map(FunctionSignature::getAnnotation)
+            .flatMap(Optional::stream)
+            .noneMatch(CombinedFunctionAnnotation::isNonInteger)
+        ? ConstraintSystemSolver.Domain.INTEGER
+        : ConstraintSystemSolver.Domain.RATIONAL;
   }
 
   @Deprecated

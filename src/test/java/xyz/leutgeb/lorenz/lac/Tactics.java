@@ -948,10 +948,7 @@ public class Tactics {
     final Set<Constraint> setCountingConstraints = new HashSet<>();
     final Set<Constraint> pairwiseDiffConstraints = new HashSet<>();
 
-    ConstraintSystemSolver.Domain domain =
-        annotations.values().stream().noneMatch(CombinedFunctionAnnotation::isNonInteger)
-            ? ConstraintSystemSolver.Domain.INTEGER
-            : ConstraintSystemSolver.Domain.RATIONAL;
+    ConstraintSystemSolver.Domain domain = program.autoDomain();
 
     for (final var fqn : immutableAnnotations.keySet()) {
       if (!program.getFunctionDefinitions().containsKey(fqn)) {
