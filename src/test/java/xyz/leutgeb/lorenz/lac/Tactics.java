@@ -250,6 +250,16 @@ public class Tactics {
         );
   }
 
+  private static Stream<Arguments> cav() {
+    return Stream.of(
+        Arguments.of(
+            Map.of("SplayTree.splay_eq", Config.of("SplayTree/splay_eq-fiddle", SPLAY_TIGHT))),
+        Arguments.of(
+            Map.of("SplayTree.splay_eq_min", Config.of("SplayTree/splay_eq-fiddle", SPLAY_TIGHT))),
+        Arguments.of(
+            Map.of("SplayTree.splay_eq_min", Config.of("SplayTree/splay_eq_min", SPLAY_TIGHT))));
+  }
+
   private static Stream<Arguments> tacas() {
     return Stream.of(
         // 1
@@ -892,7 +902,7 @@ public class Tactics {
   }
 
   @ParameterizedTest
-  @MethodSource("tacas")
+  @MethodSource("cav")
   public void all(Map<String, Config> immutableAnnotations) {
     final var loader = Tests.loader();
 
