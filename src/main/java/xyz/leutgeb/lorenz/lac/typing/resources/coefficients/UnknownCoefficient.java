@@ -1,15 +1,16 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.coefficients;
 
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
-
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.Context;
-import java.util.Map;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+
+import java.util.Map;
+
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
 @Value
 @EqualsAndHashCode
@@ -38,13 +39,17 @@ public class UnknownCoefficient implements Coefficient {
     return new UnknownCoefficient(name, false, true);
   }
 
+  public static UnknownCoefficient maybeNegativeUnknown(String namePrefix) {
+    return new UnknownCoefficient(namePrefix + randomHex(), false, true);
+  }
+
   public static UnknownCoefficient unknown(String namePrefix) {
     return new UnknownCoefficient(namePrefix + randomHex());
   }
 
   @Override
   public UnknownCoefficient negate() {
-    return new UnknownCoefficient(name, !negated);
+    return new UnknownCoefficient(name, !negated, maybeNegative);
   }
 
   @Override
@@ -72,7 +77,7 @@ public class UnknownCoefficient implements Coefficient {
   }
 
   @Override
-  public Coefficient canonical() {
+  public UnknownCoefficient canonical() {
     return negated ? negate() : this;
   }
 }

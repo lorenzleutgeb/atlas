@@ -7,6 +7,7 @@ import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toSet;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 import static xyz.leutgeb.lorenz.lac.util.Util.objectNode;
+import static xyz.leutgeb.lorenz.lac.util.Util.pick;
 
 import com.google.common.collect.BiMap;
 import com.microsoft.z3.ArithExpr;
@@ -49,6 +50,10 @@ public class EqualsSumConstraint extends Constraint {
 
   @Override
   public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
+    if (sum.size() == 1) {
+      return ctx.mkEq(left.encode(ctx, coefficients), pick(sum).encode(ctx, coefficients));
+    }
+
     final ArithExpr[] encodedSum =
         sum.stream().map(c -> c.encode(ctx, coefficients)).toArray(ArithExpr[]::new);
 

@@ -969,14 +969,16 @@ public class Tactics {
 
       FunctionAnnotation functionAnnotation =
           fd.getInferredSignature().getAnnotation().get().withCost;
+      /*
       final var setCounting = Optimization.setCounting(functionAnnotation);
       if (setCounting.isPresent()) {
         setCountingRankCoefficients.addAll(setCounting.get().rankCoefficients);
         setCountingNonRankCoefficients.addAll(setCounting.get().nonRankCoefficients);
         setCountingConstraints.addAll(setCounting.get().constraints);
       }
+       */
 
-      final var pairwiseDiff = Optimization.pairwiseDiff(functionAnnotation);
+      final var pairwiseDiff = Optimization.ng(functionAnnotation);
       if (pairwiseDiff.isPresent()) {
         pairwiseDiffRankCoefficients.addAll(pairwiseDiff.get().rankCoefficients);
         pairwiseDiffNonRankCoefficients.addAll(pairwiseDiff.get().nonRankCoefficients);

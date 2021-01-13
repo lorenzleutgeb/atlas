@@ -1,32 +1,10 @@
 package xyz.leutgeb.lorenz.lac.commands;
 
-import static com.google.common.collect.Sets.union;
-import static java.util.Collections.emptyList;
-import static picocli.CommandLine.Help.Visibility.ALWAYS;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.util.Util.append;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.output;
-
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import jakarta.json.Json;
 import jakarta.json.JsonObjectBuilder;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
@@ -41,6 +19,28 @@ import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import static com.google.common.collect.Sets.union;
+import static java.util.Collections.emptyList;
+import static picocli.CommandLine.Help.Visibility.ALWAYS;
+import static xyz.leutgeb.lorenz.lac.util.Util.append;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.output;
 
 @CommandLine.Command(name = "run")
 @Slf4j
@@ -66,7 +66,7 @@ public class Run implements Runnable {
       defaultValue = "false",
       names = "--relax-rank",
       description =
-          "When present relaxes constraints that force the rank coefficient of result annotations to be non-zero.")
+          "When present relaxes constraints that force the rank coefficient of result to equal the rank coefficient of the input. Only works on functions that take exactly one tree and return a tree.")
   private Boolean relaxRank;
 
   @CommandLine.Option(
@@ -189,7 +189,6 @@ public class Run implements Runnable {
 
     log.info("Generating constraints...");
     Optional<Prover> optionalProver = program.proveWithTactics(new HashMap<>(), tacticsMap, infer);
-    log.info("Done.");
 
     ConstraintSystemSolver.Result result = ConstraintSystemSolver.Result.unknown();
 
@@ -204,20 +203,20 @@ public class Run implements Runnable {
       if (!relaxRank && infer) {
         for (final var fqn : program.getFunctionDefinitions().keySet()) {
           final var fd = program.getFunctionDefinitions().get(fqn);
-          if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1) {
+          final var ann = fd.getInferredSignature().getAnnotation().get().withCost;
+          if (ann.from.size() == 1 && ann.to.size() == 1) {
+            log.warn("Forcing rank on '{}'!", fd.getFullyQualifiedName());
             outsideConstraints.add(
                 new LessThanOrEqualConstraint(
-                    ONE,
-                    fd.getInferredSignature()
-                        .getAnnotation()
-                        .get()
-                        .withCost
-                        .to
-                        .getRankCoefficient(),
+                    ann.from.getRankCoefficient(),
+                    ann.to.getRankCoefficient(),
                     "(outside) force rank"));
           }
         }
       }
+
+
+      log.info("Done generating constraints.");
 
       final var autoDomain = program.autoDomain();
 
@@ -260,14 +259,16 @@ public class Run implements Runnable {
 
           FunctionAnnotation inferredAnnotation =
               fd.getInferredSignature().getAnnotation().get().withCost;
+          /*
           final var setCounting = Optimization.setCounting(inferredAnnotation);
           if (setCounting.isPresent()) {
             setCountingRankCoefficients.addAll(setCounting.get().rankCoefficients);
             setCountingNonRankCoefficients.addAll(setCounting.get().nonRankCoefficients);
             setCountingConstraints.addAll(setCounting.get().constraints);
           }
+           */
 
-          final var pairwiseDiff = Optimization.pairwiseDiff(inferredAnnotation);
+          final var pairwiseDiff = Optimization.simple(inferredAnnotation);
           if (pairwiseDiff.isPresent()) {
             pairwiseDiffRankCoefficients.addAll(pairwiseDiff.get().rankCoefficients);
             pairwiseDiffNonRankCoefficients.addAll(pairwiseDiff.get().nonRankCoefficients);

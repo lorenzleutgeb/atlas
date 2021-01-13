@@ -67,4 +67,9 @@ public class IfThenElseConstraint extends Constraint {
   public Set<Coefficient> occurringCoefficients() {
     return Sets.union(Set.of(thenBranch, elseBranch, target), condition.occurringCoefficients());
   }
+
+  @Override
+  public String toString() {
+    return "(assert (= " + target + " (ite (" + condition + ") (" + thenBranch + ") (" + elseBranch + ")))";
+  }
 }

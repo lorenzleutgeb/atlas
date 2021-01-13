@@ -7,6 +7,7 @@ import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toSet;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.lac.util.Util.objectNode;
+import static xyz.leutgeb.lorenz.lac.util.Util.pick;
 
 import com.google.common.collect.BiMap;
 import com.microsoft.z3.ArithExpr;
@@ -48,6 +49,10 @@ public class EqualsProductConstraint extends Constraint {
 
   @Override
   public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
+    if (product.size() == 1) {
+      return ctx.mkEq(left.encode(ctx, coefficients), pick(product).encode(ctx, coefficients));
+    }
+
     final ArithExpr[] encodedSum =
         product.stream().map(c -> c.encode(ctx, coefficients)).toArray(ArithExpr[]::new);
 

@@ -1,23 +1,30 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.optimiziation;
 
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+import lombok.AllArgsConstructor;
+import lombok.Value;
+import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsProductConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.ExclusiveDisjunctiveConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.GreaterThanOrEqualConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.IfThenElseConstraint;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import lombok.AllArgsConstructor;
-import lombok.Value;
-import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.ExclusiveDisjunctiveConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.IfThenElseConstraint;
+
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.indexWeight;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 
 public class Optimization {
   @Value
@@ -113,7 +120,7 @@ public class Optimization {
     return Optional.of(new MultiTarget(rankCoefficients, nonRankCoefficients, constraints));
   }
 
-  public static Optional<MultiTarget> pairwiseDiff(FunctionAnnotation annotation) {
+  public static Optional<MultiTarget> pairwiseDiffOld(FunctionAnnotation annotation) {
     final var from = annotation.from;
     final var to = annotation.to;
 
@@ -149,5 +156,351 @@ public class Optimization {
 
     return Optional.of(
         new Optimization.MultiTarget(rankCoefficients, nonRankCoefficients, constraints));
+  }
+
+  public static Optional<MultiTarget> ng(FunctionAnnotation annotation) {
+    final var from = annotation.from;
+    final var to = annotation.to;
+
+    if (to.size() != from.size()) {
+      return Optional.empty();
+    }
+
+    int size = to.size();
+
+    final Set<Constraint> constraints = new HashSet<>();
+
+    final List<UnknownCoefficient> goals = new ArrayList<>();
+
+    final var rankSlotSum = new ArrayList<Coefficient>();
+    for (int i = 0; i < size; i++) {
+      final var x = UnknownCoefficient.unknown("x");
+      constraints.add(
+          new IfThenElseConstraint(
+              new ExclusiveDisjunctiveConstraint(
+                  new EqualityConstraint(from.getRankCoefficient(i), ZERO, "(opt)"),
+                  new EqualityConstraint(to.getRankCoefficient(i), ZERO, "(opt)"),
+                  "(opt)"),
+              ONE,
+              ZERO,
+              x,
+              "(opt)"));
+      rankSlotSum.add(x);
+    }
+
+    final var rankSlots = UnknownCoefficient.unknown("slots");
+    constraints.add(new EqualsSumConstraint(rankSlots, rankSlotSum, "(opt)"));
+
+    final var slotSum = new ArrayList<Coefficient>();
+    from.union(to)
+        .forEach(
+            e -> {
+              var pair = e.getValue();
+
+              int weight = 1;
+              for (int i = 0; i < e.getKey().size() - 1; i++) {
+                weight += Math.pow(e.getKey().get(i) + 1, 2);
+              }
+              weight += e.getKey().get(e.getKey().size() - 1);
+
+              final var x = UnknownCoefficient.unknown("x");
+              constraints.add(
+                  new IfThenElseConstraint(
+                      new ExclusiveDisjunctiveConstraint(
+                          new EqualityConstraint(pair.getLeft(), ZERO, "(opt)"),
+                          new EqualityConstraint(pair.getRight(), ZERO, "(opt)"),
+                          "(opt)"),
+                      Coefficient.of(weight),
+                      ZERO,
+                      x,
+                      "(opt)"));
+              slotSum.add(x);
+            });
+
+    final var slots = UnknownCoefficient.unknown("slots");
+    constraints.add(new EqualsSumConstraint(slots, slotSum, "(opt)"));
+    goals.add(slots);
+
+    // Then we optimize for difference over those slots.
+    for (int i = 0; i < size; i++) {
+      final var x = UnknownCoefficient.unknown("x");
+      constraints.add(
+          new EqualsSumConstraint(
+              x, List.of(from.getRankCoefficient(i), to.getRankCoefficient(i).negate()), "(opt)"));
+      goals.add(x);
+    }
+
+    final var diffSum = new ArrayList<Coefficient>();
+    from.union(to)
+        .forEach(
+            e -> {
+              var pair = e.getValue();
+
+              if (pair.getLeft() instanceof KnownCoefficient
+                  && pair.getRight() instanceof KnownCoefficient) {
+                return;
+              }
+
+              int weight = 1;
+              for (int i = 0; i < e.getKey().size() - 1; i++) {
+                weight += Math.pow(e.getKey().get(i) + 1, 2);
+              }
+              weight += e.getKey().get(e.getKey().size() - 1);
+
+              final var diff = UnknownCoefficient.unknown("x");
+              constraints.add(
+                  new EqualsSumConstraint(
+                      diff, List.of(pair.getLeft(), pair.getRight().negate()), "(opt)"));
+              goals.add(diff);
+
+              final var x = UnknownCoefficient.unknown("x");
+              constraints.add(
+                  new EqualsProductConstraint(x, List.of(diff, Coefficient.of(weight)), "(opt)"));
+              diffSum.add(x);
+            });
+
+    UnknownCoefficient diffsumVar = UnknownCoefficient.unknown("x");
+    constraints.add(new EqualsSumConstraint(diffsumVar, diffSum, "(opt)"));
+    goals.add(diffsumVar);
+
+    for (int i = 0; i < size; i++) {
+      if (from.getRankCoefficient(i) instanceof UnknownCoefficient) {
+        goals.add((UnknownCoefficient) from.getRankCoefficient(i));
+      }
+    }
+
+    final var sum = new ArrayList<Coefficient>();
+    from.streamNonRankCoefficients()
+        .forEach(
+            e -> {
+              if (e.getValue() instanceof KnownCoefficient) {
+                return;
+              }
+
+              int weight = 1;
+              for (int i = 0; i < e.getKey().size() - 1; i++) {
+                weight += Math.pow(e.getKey().get(i) + 1, 2);
+              }
+              weight += e.getKey().get(e.getKey().size() - 1);
+              final var x = UnknownCoefficient.unknown("x");
+              constraints.add(
+                  new EqualsProductConstraint(
+                      x, List.of(e.getValue(), Coefficient.of(weight)), "(opt)"));
+              sum.add(x);
+            });
+
+    UnknownCoefficient sumVar = UnknownCoefficient.unknown("x");
+    constraints.add(new EqualsSumConstraint(sumVar, sum, "(opt)"));
+    goals.add(sumVar);
+
+    return Optional.of(new Optimization.MultiTarget(goals, Collections.emptyList(), constraints));
+  }
+
+  public static Optional<MultiTarget> simple(FunctionAnnotation annotation) {
+    final var from = annotation.from;
+    final var to = annotation.to;
+
+    if (to.size() != from.size()) {
+      return Optional.empty();
+    }
+
+    final Set<Constraint> constraints = new HashSet<>();
+
+    final var diffSum = new ArrayList<Coefficient>();
+    from.union(to)
+        .forEach(
+            e -> {
+              var pair = e.getValue();
+
+              if (pair.getLeft() instanceof KnownCoefficient
+                  && pair.getRight() instanceof KnownCoefficient) {
+                return;
+              }
+
+              final var diff = UnknownCoefficient.unknown("x");
+              constraints.add(
+                  new EqualsSumConstraint(
+                      diff, List.of(pair.getLeft(), pair.getRight().negate()), "(opt)"));
+
+              final var weightedDiff = UnknownCoefficient.unknown("x");
+              constraints.add(
+                  new EqualsProductConstraint(
+                      weightedDiff,
+                      List.of(diff, Coefficient.of(indexWeight(e.getKey()))),
+                      "(opt)"));
+              diffSum.add(weightedDiff);
+            });
+
+    UnknownCoefficient diffsumVar = UnknownCoefficient.unknown("x");
+    constraints.add(new EqualsSumConstraint(diffsumVar, diffSum, "(opt)"));
+    return Optional.of(
+        new Optimization.MultiTarget(List.of(diffsumVar), Collections.emptyList(), constraints));
+  }
+
+  public static Optional<MultiTarget> foo(FunctionAnnotation annotation) {
+    final var from = annotation.from;
+    final var to = annotation.to;
+
+    if (to.size() != from.size()) {
+      return Optional.empty();
+    }
+
+    int size = to.size();
+
+    final Set<Constraint> constraints = new HashSet<>();
+
+    final List<UnknownCoefficient> goals = new ArrayList<>();
+
+    /*
+    final var rankSlotSum = new ArrayList<Coefficient>();
+    for (int i = 0; i < size; i++) {
+      final var x = UnknownCoefficient.unknown("x");
+      constraints.add(
+          new IfThenElseConstraint(
+              new ExclusiveDisjunctiveConstraint(
+                  new EqualityConstraint(from.getRankCoefficient(i), ZERO, "(opt)"),
+                  new EqualityConstraint(to.getRankCoefficient(i), ZERO, "(opt)"),
+                  "(opt)"),
+              ONE,
+              ZERO,
+              x,
+              "(opt)"));
+      rankSlotSum.add(x);
+    }
+    final var rankSlots = UnknownCoefficient.unknown("slots");
+    constraints.add(new EqualsSumConstraint(rankSlots, rankSlotSum, "(opt)"));
+     */
+
+    /*
+    final var slotSum = new ArrayList<Coefficient>();
+    from.union(to)
+        .forEach(
+            e -> {
+              var pair = e.getValue();
+
+              int weight = 1;
+              for (int i = 0; i < e.getKey().size() - 1; i++) {
+                weight += Math.pow(e.getKey().get(i) + 1, 2);
+              }
+              weight += e.getKey().get(e.getKey().size() - 1);
+
+              final var diff = UnknownCoefficient.maybeNegativeUnknown("x");
+              constraints.add(
+                  new EqualsSumConstraint(
+                      diff, List.of(pair.getLeft(), pair.getRight().negate()), "(opt)"));
+
+              final var absDiff = UnknownCoefficient.unknown("x");
+              constraints.add(abs(absDiff, diff));
+
+              final var x = UnknownCoefficient.unknown("x");
+              constraints.add(
+                  new EqualsProductConstraint(
+                      x, List.of(absDiff, Coefficient.of(weight)), "(opt)"));
+
+              slotSum.add(x);
+            });
+
+    final var slots = UnknownCoefficient.unknown("slots");
+    constraints.add(new EqualsSumConstraint(slots, slotSum, "(opt)"));
+    goals.add(slots);
+           */
+
+    // Then we optimize for difference over those slots.
+    /*
+    for (int i = 0; i < size; i++) {
+      final var x = UnknownCoefficient.unknown("x");
+      constraints.add(
+          new EqualsSumConstraint(
+              x, List.of(from.getRankCoefficient(i), to.getRankCoefficient(i).negate()), "(opt)"));
+      goals.add(x);
+    }
+    */
+
+    final var diffSum = new ArrayList<Coefficient>();
+    from.union(to)
+        .forEach(
+            e -> {
+              var pair = e.getValue();
+
+              if (pair.getLeft() instanceof KnownCoefficient
+                  && pair.getRight() instanceof KnownCoefficient) {
+                return;
+              }
+
+              int weight = 1;
+              for (int i = 0; i < e.getKey().size() - 1; i++) {
+                weight += Math.pow(e.getKey().get(i) + 1, 2);
+                // weight += e.getKey().get(i);
+              }
+              weight += e.getKey().get(e.getKey().size() - 1);
+
+              final var diff = UnknownCoefficient.unknown("x");
+              constraints.add(
+                  new EqualsSumConstraint(
+                      diff, List.of(pair.getLeft(), pair.getRight().negate()), "(opt)"));
+              // sum.add(diff);
+
+              final var x = UnknownCoefficient.unknown("x");
+              constraints.add(
+                  new EqualsProductConstraint(x, List.of(diff, Coefficient.of(weight)), "(opt)"));
+              diffSum.add(x);
+            });
+
+    UnknownCoefficient diffsumVar = UnknownCoefficient.unknown("x");
+    constraints.add(new EqualsSumConstraint(diffsumVar, diffSum, "(opt)"));
+    goals.add(diffsumVar);
+
+    /*
+    for (int i = 0; i < size; i++) {
+      if (from.getRankCoefficient(i) instanceof UnknownCoefficient) {
+        goals.add((UnknownCoefficient) from.getRankCoefficient(i));
+      }
+    }
+     */
+
+    /*
+    final var absSum = new ArrayList<Coefficient>();
+    from.streamNonRankCoefficients()
+        .forEach(
+            e -> {
+              if (e.getValue() instanceof KnownCoefficient) {
+                return;
+              }
+
+              int weight = 1;
+              for (int i = 0; i < e.getKey().size() - 1; i++) {
+                weight += Math.pow(e.getKey().get(i) + 1, 2);
+              }
+              weight += e.getKey().get(e.getKey().size() - 1);
+              final var x = UnknownCoefficient.unknown("x");
+              constraints.add(
+                  new EqualsProductConstraint(
+                      x, List.of(e.getValue(), Coefficient.of(weight)), "(opt)"));
+              absSum.add(x);
+            });
+
+    UnknownCoefficient sumVar = UnknownCoefficient.unknown("x");
+    constraints.add(new EqualsSumConstraint(sumVar, absSum, "(opt)"));
+    goals.add(sumVar);
+    */
+
+    return Optional.of(new Optimization.MultiTarget(goals, Collections.emptyList(), constraints));
+  }
+
+  private static Constraint active(Coefficient x, Coefficient left, Coefficient right) {
+    return new IfThenElseConstraint(
+        new ExclusiveDisjunctiveConstraint(
+            new EqualityConstraint(left, ZERO, "(opt)"),
+            new EqualityConstraint(right, ZERO, "(opt)"),
+            "(opt)"),
+        ONE,
+        ZERO,
+        x,
+        "(opt)");
+  }
+
+  private static Constraint abs(Coefficient y, Coefficient x) {
+    return new IfThenElseConstraint(
+        new GreaterThanOrEqualConstraint(x, ZERO, "(abs)"), x, x.negate(), y, "(abs)");
   }
 }

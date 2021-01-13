@@ -1,16 +1,5 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.solving;
 
-import static com.microsoft.z3.Status.SATISFIABLE;
-import static com.microsoft.z3.Status.UNKNOWN;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptyMap;
-import static java.util.Optional.empty;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.output;
-import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
-import static xyz.leutgeb.lorenz.lac.util.Util.signum;
-import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
-
 import com.google.common.collect.HashBiMap;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
@@ -23,6 +12,16 @@ import com.microsoft.z3.Solver;
 import com.microsoft.z3.Statistics;
 import com.microsoft.z3.Status;
 import com.microsoft.z3.Z3Exception;
+import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.util.Fraction;
+import xyz.leutgeb.lorenz.lac.util.Pair;
+import xyz.leutgeb.lorenz.lac.util.Util;
+
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -40,15 +39,17 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.Value;
-import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.util.Fraction;
-import xyz.leutgeb.lorenz.lac.util.Pair;
-import xyz.leutgeb.lorenz.lac.util.Util;
+
+import static com.microsoft.z3.Status.SATISFIABLE;
+import static com.microsoft.z3.Status.UNKNOWN;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
+import static java.util.Optional.empty;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.output;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
+import static xyz.leutgeb.lorenz.lac.util.Util.signum;
+import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
 
 @Slf4j
 public class ConstraintSystemSolver {
@@ -104,6 +105,7 @@ public class ConstraintSystemSolver {
     // Execute `z3 -p` to get a list of parameters.
     return emptyMap();
     // return Map.of("unsat_core", String.valueOf(unsatCore));
+    // return Map.of("parallel.enable", "true");
   }
 
   public static Result solve(Set<Constraint> constraints) {
@@ -123,10 +125,23 @@ public class ConstraintSystemSolver {
       Set<Constraint> constraints, Path outPath, List<UnknownCoefficient> target, Domain domain) {
     load(outPath.resolve("z3.log"));
 
-    final var unsatCore = target.isEmpty();
+    final var unsatCore = target.isEmpty() && false;
 
     try (final var ctx = new Context(z3Config(unsatCore))) {
-      final Solver solver = domain.getLogic().map(ctx::mkSolver).orElseGet(ctx::mkSolver);
+      final Solver solver = ctx.mkTactic("qflia").getSolver();
+      // final Solver solver =
+      // /*domain.getLogic()*/Optional.of("LIA").map(ctx::mkSolver).orElseGet(ctx::mkSolver);
+
+      final var params = ctx.mkParams();
+      // params.add("?", false);
+      // params.add("threads", Runtime.getRuntime().availableProcessors());
+
+      // PT2M34.378834S
+
+      // params.add("opt.priority", "pareto");
+      // params.add("opt.enable_sat", "true");
+      // params.add("smt.pb.enable_simplex", "true");
+      solver.setParameters(params);
 
       var optimize = !target.isEmpty();
       final Optimize opt = optimize ? ctx.mkOptimize() : null;
@@ -142,11 +157,11 @@ public class ConstraintSystemSolver {
         if (!(coefficient instanceof UnknownCoefficient)) {
           continue;
         }
-        final var unknownCoefficient = (UnknownCoefficient) coefficient;
-        if (generatedCoefficients.inverse().containsKey(coefficient)) {
+        final var unknownCoefficient = ((UnknownCoefficient) coefficient).canonical();
+        if (generatedCoefficients.inverse().containsKey(unknownCoefficient)) {
           continue;
         }
-        if (!generatedCoefficients.inverse().containsKey(coefficient)) {
+        if (!generatedCoefficients.inverse().containsKey(unknownCoefficient)) {
           final var it =
               Domain.INTEGER.equals(domain)
                   ? ctx.mkIntConst(unknownCoefficient.getName())
@@ -164,7 +179,7 @@ public class ConstraintSystemSolver {
               }
             }
           }
-          generatedCoefficients.inverse().put((UnknownCoefficient) coefficient, it);
+          generatedCoefficients.inverse().put(unknownCoefficient, it);
         }
       }
 
@@ -304,6 +319,7 @@ public class ConstraintSystemSolver {
       throw e;
     }
     final var stop = Instant.now();
+    System.out.println("Solving duration: " + (Duration.between(start, stop)));
     log.debug("Solving duration: " + (Duration.between(start, stop)));
     if (SATISFIABLE.equals(status)) {
       return Pair.of(status, Optional.of(getModel.get()));
