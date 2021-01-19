@@ -39,12 +39,14 @@ final class Config {
     var result = "";
     if (tactic.isPresent()) {
       result += tactic.get();
+    } else {
+      result += "auto";
     }
-    if (tactic.isPresent() && annotation.isPresent()) {
-      result += " ";
-    }
+    result += " ";
     if (annotation.isPresent()) {
-      result += annotation.get();
+      result += annotation.get().withCost;
+    } else {
+      result += "infer";
     }
     return result;
   }

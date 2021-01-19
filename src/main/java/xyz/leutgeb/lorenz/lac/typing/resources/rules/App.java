@@ -4,6 +4,7 @@ import static java.util.Collections.singletonList;
 import static xyz.leutgeb.lorenz.lac.util.Util.append;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -81,7 +82,7 @@ public class App implements Rule {
             signature.to, obligation.getAnnotation(), ruleName(obligation.getCost()) + " Q'"));
   }
 
-  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = (CallExpression) obligation.getExpression();
 
     // Look up global annotation for this function.

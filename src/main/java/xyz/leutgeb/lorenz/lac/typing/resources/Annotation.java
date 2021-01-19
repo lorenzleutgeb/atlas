@@ -210,9 +210,13 @@ public class Annotation {
   }
 
   public static int indexWeight(List<Integer> e) {
+    return indexWeight(e, 2);
+  }
+
+  public static int indexWeight(List<Integer> e, int exponent) {
     int weight = e.get(e.size() - 1) + 1;
     for (int i = 0; i < e.size() - 1; i++) {
-      weight += Math.pow(e.get(i) + 1, 2);
+      weight += Math.pow(e.get(i) + 1, exponent);
     }
     return weight;
   }
@@ -669,11 +673,16 @@ public class Annotation {
         .sorted(INDEX_COMPARATOR);
   }
 
-  public Stream<Map.Entry<List<Integer>, Pair<Coefficient, Coefficient>>> union(Annotation other) {
-    return Stream.concat(streamNonRankCoefficients(), other.streamNonRankCoefficients())
+  public static Stream<List<Integer>> indexUnion(Annotation... annotations) {
+    return Stream.of(annotations)
+        .flatMap(Annotation::streamNonRankCoefficients)
         .map(Map.Entry::getKey)
         .distinct()
-        .sorted(INDEX_COMPARATOR)
+        .sorted(INDEX_COMPARATOR);
+  }
+
+  public Stream<Map.Entry<List<Integer>, Pair<Coefficient, Coefficient>>> union(Annotation other) {
+    return indexUnion(this, other)
         .map(
             potentialFunction ->
                 new AbstractMap.SimpleEntry<>(

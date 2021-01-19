@@ -1,10 +1,10 @@
  (let:tree:cf
-  leaf
-  (w (let:tree:cf
+  (w{mono l2xy} leaf)
+  (w{mono l2xy} (let:tree:cf
     leaf
-    (let:tree:cf
+    (w{mono l2xy} (let:tree:cf
       node
       (w node)
-    )
+    ))
   ))
 )

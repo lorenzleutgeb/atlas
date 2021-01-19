@@ -44,7 +44,7 @@ import xyz.leutgeb.lorenz.lac.util.Util;
 public class LetTreeCfFlorian implements Rule {
   public static final LetTreeCfFlorian INSTANCE = new LetTreeCfFlorian();
 
-  public ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+  public ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = (LetExpression) obligation.getExpression();
     final var x = expression.getDeclared();
     final var value = expression.getValue();

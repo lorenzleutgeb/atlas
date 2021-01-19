@@ -9,6 +9,7 @@ import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -41,7 +42,7 @@ public class WVar implements Rule {
     return redundantIds(context, expression).findFirst();
   }
 
-  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var candidate = redundantId(obligation);
 
     if (candidate.isEmpty()) {

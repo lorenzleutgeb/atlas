@@ -1,0 +1,16 @@
+(match (* t *)
+  (w{mono l2xy} (let:tree:cf (w{mono l2xy} leaf) (let:tree:cf (w{mono l2xy} leaf) (w{mono l2xy} node))))
+    (w{l2xy mono} (let:tree:cf
+      (w{mono l2xy} app) (* splay_eq a t *)
+      (w{mono l2xy} (match
+        (w{mono l2xy} leaf)
+        (w{mono l2xy} (ite (* a == a' *)
+          (w{mono l2xy} node)
+          (w{mono l2xy} (ite (* a < a' *)
+            (w{mono l2xy} (let:tree:cf (w{mono l2xy} leaf) (w{mono l2xy} (let:tree:cf (w{mono l2xy} node) (w{mono l2xy} node)))))
+            (w{mono l2xy} (let:tree:cf (w{mono l2xy} leaf) (w{mono l2xy} (let:tree:cf (w{mono l2xy} node) (w{mono l2xy} node)))))
+          ))
+        ))
+      ))
+    ))
+)

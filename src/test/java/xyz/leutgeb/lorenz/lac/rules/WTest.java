@@ -1,19 +1,5 @@
 package xyz.leutgeb.lorenz.lac.rules;
 
-import static java.util.Collections.emptyMap;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
-
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Stream;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,6 +19,21 @@ import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.W;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Stream;
+
+import static java.util.Collections.emptyMap;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 
 @DisplayName("(w) Rule")
 public class WTest {
@@ -71,7 +72,7 @@ public class WTest {
   })
   @ParameterizedTest
   void withGtKnowledge(
-      int a1, int a2, int b1, int b2, boolean expectedSolution, TestInfo testInfo) {
+      int a1, int a2, int b1, int b2, boolean expectedSolution) {
     final var smallerTree = Identifier.predefinedTree("smallerTree");
     final var biggerTree = Identifier.predefinedTree("biggerTree");
 
@@ -105,7 +106,8 @@ public class WTest {
                     List.of(smallerTree, biggerTree),
                     smallerPotential,
                     biggerPotential,
-                    sizeAnalysis)));
+                    sizeAnalysis,
+                    emptyMap())));
 
     assertEquals(expectedSolution, solverResult.hasSolution());
   }
@@ -130,7 +132,7 @@ public class WTest {
         ConstraintSystemSolver.solve(
             new HashSet<>(
                 W.compareCoefficientsLessOrEqualUsingFarkas(
-                    List.of(cr, bl, br), P, Q, sizeAnalysis)));
+                    List.of(cr, bl, br), P, Q, sizeAnalysis, emptyMap())));
 
     assertTrue(solverResult.hasSolution());
   }
@@ -155,7 +157,8 @@ public class WTest {
     final var solverResult =
         ConstraintSystemSolver.solve(
             Set.copyOf(
-                W.compareCoefficientsLessOrEqualUsingFarkas(List.of(x, y), P, Q, sizeAnalysis)));
+                W.compareCoefficientsLessOrEqualUsingFarkas(
+                    List.of(x, y), P, Q, sizeAnalysis, emptyMap())));
 
     assertTrue(solverResult.hasSolution());
   }
@@ -178,7 +181,8 @@ public class WTest {
     final var solverResult =
         ConstraintSystemSolver.solve(
             Set.copyOf(
-                W.compareCoefficientsLessOrEqualUsingFarkas(List.of(x, y), P, Q, sizeAnalysis)));
+                W.compareCoefficientsLessOrEqualUsingFarkas(
+                    List.of(x, y), P, Q, sizeAnalysis, emptyMap())));
 
     assertTrue(solverResult.hasSolution());
   }
@@ -207,7 +211,8 @@ public class WTest {
     final var solverResult =
         ConstraintSystemSolver.solve(
             Set.copyOf(
-                W.compareCoefficientsLessOrEqualUsingFarkas(List.of(x), P, Q, sizeAnalysis)));
+                W.compareCoefficientsLessOrEqualUsingFarkas(
+                    List.of(x), P, Q, sizeAnalysis, emptyMap())));
 
     assertTrue(solverResult.hasSolution());
   }
@@ -237,7 +242,8 @@ public class WTest {
                     List.of(Identifier.DUMMY_TREE_ALPHA),
                     p,
                     q,
-                    new DirectedMultigraph<>(SizeEdge.class))));
+                    new DirectedMultigraph<>(SizeEdge.class),
+                    emptyMap())));
 
     assertTrue(solverResult.hasSolution());
   }

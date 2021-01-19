@@ -1,5 +1,35 @@
 package xyz.leutgeb.lorenz.lac;
 
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import xyz.leutgeb.lorenz.lac.ast.Program;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
+import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
+import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
+import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.Fraction;
+
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import static com.google.common.collect.Sets.union;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -17,35 +47,6 @@ import static xyz.leutgeb.lorenz.lac.util.Util.append;
 import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
 
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import xyz.leutgeb.lorenz.lac.ast.Program;
-import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.LessThanOrEqualConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
-import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
-import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
-import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.lac.unification.UnificationError;
-import xyz.leutgeb.lorenz.lac.util.Fraction;
-
 public class Tactics {
   @BeforeAll
   public static void beforeAll() {
@@ -58,8 +59,15 @@ public class Tactics {
   protected static final Annotation QwithConst =
       new Annotation(List.of(ONE), Map.of(List.of(1, 0), THREE, unitIndex(1), ONE), "Q");
 
-  protected static final Annotation Qnew =
-      new Annotation(List.of(ONE), Map.of(List.of(1, 0), TWO), "Q");
+  protected static final Annotation Qsmall =
+      new Annotation(
+          List.of(ONE), Map.of(List.of(1, 1), TWO, List.of(1, 0), ONE, unitIndex(1), ONE), "Q");
+
+  protected static final Annotation QsmallError =
+      new Annotation(List.of(ONE), Map.of(List.of(1, 1), TWO, unitIndex(1), ONE), "Q'");
+
+  protected static final Annotation Qpsmall =
+      new Annotation(List.of(ONE), Map.of(unitIndex(1), ONE), "Q'");
 
   protected static final Annotation Q5by2 =
       new Annotation(
@@ -69,6 +77,16 @@ public class Tactics {
 
   protected static final Annotation Q5by2p =
       new Annotation(List.of(ONE), Map.of(unitIndex(1), ONE), "Q'");
+
+  protected static final Annotation Q3by2 =
+      new Annotation(
+          List.of(new KnownCoefficient(new Fraction(1, 2))),
+          Map.of(List.of(1, 0), new KnownCoefficient(new Fraction(3, 2)), unitIndex(1), ONE),
+          "Q");
+
+  protected static final Annotation Q3by2p =
+      new Annotation(
+          List.of(new KnownCoefficient(new Fraction(1, 2))), Map.of(unitIndex(1), ONE), "Q'");
 
   protected static final Annotation P =
       new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "P");
@@ -98,7 +116,7 @@ public class Tactics {
   private static final String MERGE_FQN = "PairingHeap.merge";
   public static final String MERGE_PAIRS = "PairingHeap.merge_pairs";
 
-  private static final CombinedFunctionAnnotation SPLAY_EXPECTED_TACAS =
+  private static final CombinedFunctionAnnotation SPLAY_EXPECTED =
       CombinedFunctionAnnotation.of(QwithConst, QpwithConst, P, P, P2, P2, zero(1), zero(1));
 
   private static CombinedFunctionAnnotation passRankAndConstant(int q10, int q02) {
@@ -133,6 +151,12 @@ public class Tactics {
     return passRankAndConstant(q10, 1);
   }
 
+  private static final CombinedFunctionAnnotation SPLAY_VARIANT =
+      CombinedFunctionAnnotation.of(Qsmall, Qpsmall, P, P, P2, P2, zero(1), zero(1));
+
+  private static final CombinedFunctionAnnotation SPLAY_TOO_SMALL_ERROR =
+      CombinedFunctionAnnotation.of(QsmallError, Qpsmall, P, P, P2, P2, zero(1), zero(1));
+
   private static final CombinedFunctionAnnotation SPLAY_TIGHT =
       CombinedFunctionAnnotation.of(
           Q5by2,
@@ -145,6 +169,23 @@ public class Tactics {
               List.of(ZERO),
               Map.of(List.of(1, 0), new KnownCoefficient(new Fraction(3, 2))),
               "Q2cf"),
+          new Annotation(
+              List.of(ZERO),
+              Map.of(List.of(1, 0), new KnownCoefficient(new Fraction(1, 2))),
+              "Q2cf"),
+          new Annotation(
+              List.of(ZERO),
+              Map.of(List.of(1, 0), new KnownCoefficient(new Fraction(1, 2))),
+              "Q2cf"),
+          zero(1),
+          zero(1));
+
+  private static final CombinedFunctionAnnotation SPLAY_TIGHTER =
+      CombinedFunctionAnnotation.of(
+          Q3by2,
+          Q3by2p,
+          new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "Q2cf"),
+          new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "Q2cf"),
           new Annotation(
               List.of(ZERO),
               Map.of(List.of(1, 0), new KnownCoefficient(new Fraction(1, 2))),
@@ -214,8 +255,52 @@ public class Tactics {
   private static final Annotation SPLAY_HEAP_TO =
       new Annotation(List.of(ONE), Map.of(unitIndex(1), new KnownCoefficient(1)), "Q'");
 
-  private static Stream<Arguments> splayTest() {
+  private static Stream<Arguments> tactics() {
     return Stream.of(
+        Arguments.of(
+            Map.of(
+                "PairingHeap.del_min_via_merge_pairs_isolated",
+                Config.of(),
+                "PairingHeap.merge_pairs_isolated",
+                Config.of("PairingHeap/merge_pairs_isolated"))),
+
+        Arguments.of(
+            Map.of(
+                "PairingHeap.merge",
+                Config.of(
+                    CombinedFunctionAnnotation.of(
+                        Annotation.constant(2, "Q", UnknownCoefficient.unknown("c")),
+                        Annotation.zero(1))))),
+
+        /*
+              Arguments.of(
+                      Map.of(
+                              "SplayTree.splay", Config.of("SplayTree/splay-for-insert"),
+                              "SplayTree.insert", Config.of("SplayTree/insert"))),
+              Arguments.of(
+                      Map.of(
+                              "SplayTree.splay", Config.of("SplayTree/splay"),
+                              "SplayTree.delete", Config.of("SplayTree/delete"),
+                              "SplayTree.splay_max", Config.of("SplayTree/splay_max"))),
+        */
+
+        /*
+        Arguments.of(
+            Map.of(
+                "SplayTree.insert",
+                Config.of(
+                    "SplayTree/insert"
+                    /*, CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(ONE), Map.of(unitIndex(1), ONE, List.of(1, 2), THREE), "Q"),
+                        new Annotation(List.of(ONE), emptyMap(), "Q"))),
+                "SplayTree.splay",
+                Config.of("Scratch/hole", SPLAY_EXPECTED_TACAS))),*/
+
+        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_EXPECTED))),
+        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_VARIANT))),
+        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_TIGHT))),
+        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_TIGHTER))),
         Arguments.of(
             Map.of(
                 "SplayTree.splay",
@@ -227,53 +312,107 @@ public class Tactics {
                 Config.of())),
         Arguments.of(
             Map.of(
-                "SplayHeap.del_min",
+                "SplayTree.splay_max",
                 Config.of(
+                    "SplayTree/splay_max",
                     CombinedFunctionAnnotation.of(
+                        Q3by2,
+                        Q3by2p,
+                        new Annotation(
+                            List.of(ZERO),
+                            Map.of(List.of(1, 0), new KnownCoefficient(new Fraction(1, 2))),
+                            "Q2cf"),
+                        new Annotation(
+                            List.of(ZERO),
+                            Map.of(List.of(1, 0), new KnownCoefficient(new Fraction(1, 2))),
+                            "Q2cf"),
+                        zero(1),
+                        zero(1))))),
+
+
+            Arguments.of(
+                    Map.of(
+                            "SplayHeap.insert",
+                            Config.of(
+                                    "SplayHeap/insert"
+                    /*CombinedFunctionAnnotation.of(
                         new Annotation(
                             ONE, Map.of(List.of(1, 0), ONE, List.of(1, 1), ONE, unitIndex(1), ONE)),
                         new Annotation(ONE, Map.of(unitIndex(1), ONE)),
                         SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
                         SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
                         Annotation.zero(1),
-                        Annotation.zero(1)))))
+                        Annotation.zero(1))
+                     */
+                            ),
 
-        /*
-        Arguments.of(
-                Map.of(
-                        "SplayTree.splay_max",
-                        Config.of("SplayTree/splay_max", SPLAY_EXPECTED_TACAS))),
-         */
-        // 1
-        // 3 log(|t|)
+                            "SplayHeap.partition",
+                    Config.of("SplayHeap/partition")
+                    )),
 
-        );
-  }
-
-  private static Stream<Arguments> cav() {
-    return Stream.of(
-        Arguments.of(
-            Map.of("SplayTree.splay_eq", Config.of("SplayTree/splay_eq-fiddle", SPLAY_TIGHT))),
-        Arguments.of(
-            Map.of("SplayTree.splay_eq_min", Config.of("SplayTree/splay_eq-fiddle", SPLAY_TIGHT))),
-        Arguments.of(
-            Map.of("SplayTree.splay_eq_min", Config.of("SplayTree/splay_eq_min", SPLAY_TIGHT))));
-  }
-
-  private static Stream<Arguments> tacas() {
-    return Stream.of(
-        // 1
-        // 3 log(|t|)
-        Arguments.of(
-            Map.of("SplayTree.splay_eq", Config.of("SplayTree/splay_eq", SPLAY_EXPECTED_TACAS))),
         Arguments.of(
             Map.of(
-                "SplayTree.splay_max_eq",
-                Config.of("SplayTree/splay_max_eq", SPLAY_EXPECTED_TACAS))),
-        // 2
-        // 5/2 log(|t|)
+                "SplayHeap.del_min",
+                Config.of(
+                    "SplayHeap/del_min"
+                    /*CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            ONE, Map.of(List.of(1, 0), ONE, List.of(1, 1), ONE, unitIndex(1), ONE)),
+                        new Annotation(ONE, Map.of(unitIndex(1), ONE)),
+                        SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
+                        SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
+                        Annotation.zero(1),
+                        Annotation.zero(1))
+                     */
+                ))),
+        /*
         Arguments.of(
-            Map.of("SplayTree.splay_eq", Config.of("SplayTree/splay_eq-fiddle", SPLAY_TIGHT))),
+            Map.of(
+                "PairingHeap.del_min_via_merge_pairs_isolated",
+                Config.of("PairingHeap/del_min_via_merge_pairs_isolated"))),
+         */
+        Arguments.of(
+            Map.of(
+                "PairingHeap.merge_isolated",
+                Config.of(
+                    "PairingHeap/merge_isolated",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(ONE, ONE),
+                            Map.of(List.of(1, 1, 0), ONE, List.of(0, 0, 2), TWO),
+                            "Q"),
+                        new Annotation(ONE, Map.of(List.of(0, 2), ONE)),
+                        zero(2),
+                        zero(1))))),
+        Arguments.of(
+            Map.of(
+                "PairingHeap.merge_pairs_isolated",
+                Config.of(
+                    "PairingHeap/merge_pairs_isolated",
+                    CombinedFunctionAnnotation.of(
+                        SPLAY_EXPECTED.withCost.from,
+                        SPLAY_EXPECTED.withCost.to,
+                        P,
+                        P,
+                        zero(1),
+                        zero(1))))),
+        Arguments.of(Map.of("PairingHeap.merge_isolated", Config.of("PairingHeap/merge_isolated"))),
+        Arguments.of(
+            Map.of(
+                "SplayHeap.partition",
+                Config.of(
+                    "SplayHeap/partition",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            ONE,
+                            Map.of(List.of(1, 1), THREE, List.of(1, 0), ONE, unitIndex(1), THREE)),
+                        new Annotation(ONE, Map.of(unitIndex(1), ONE)),
+                        new Annotation(ZERO, Map.of(List.of(1, 1), ONE)),
+                        new Annotation(ZERO, Map.of(List.of(1, 0), ONE)),
+                        new Annotation(ZERO, Map.of(List.of(1, 1), TWO)),
+                        new Annotation(ZERO, Map.of(List.of(1, 0), TWO)),
+                        zero(1),
+                        zero(1))))),
 
         // SplayHeap.{insert,del_min}
         // insert   6 log(|t| + 1)                &     3 log(|t| + 1) + 1
@@ -388,8 +527,8 @@ public class Tactics {
                 Config.of(
                     "PairingHeap/merge_pairs_isolated",
                     CombinedFunctionAnnotation.of(
-                        SPLAY_EXPECTED_TACAS.withCost.from,
-                        SPLAY_EXPECTED_TACAS.withCost.to,
+                        SPLAY_EXPECTED.withCost.from,
+                        SPLAY_EXPECTED.withCost.to,
                         P,
                         P,
                         zero(1),
@@ -480,9 +619,9 @@ public class Tactics {
         // [p₍₁ ₀₎], 0 → 0}]
         Arguments.of(
             Map.of(
-                "SplayTree.insert_eq",
+                "SplayTree.insert",
                 Config.of(
-                    // "SplayTree/splay__eq",
+                    "SplayTree/insert",
                     CombinedFunctionAnnotation.of(
                         SmartRangeHeuristic.DEFAULT.generate("Q", 1),
                         new Annotation(ONE, Map.of(unitIndex(1), ONE)))),
@@ -500,14 +639,14 @@ public class Tactics {
                         zero(1),
                         zero(1))))),
         Arguments.of(
-            Map.of(
-                "SplayTree.splay_max_eq",
-                Config.of("SplayTree/splay_max_eq", SPLAY_EXPECTED_TACAS))),
+            Map.of("SplayTree.splay_max_eq", Config.of("SplayTree/splay_max_eq", SPLAY_EXPECTED))),
 
         // PairingHeap.merge_pairs_isolated h | [[62·p₀ + 122·p₍₁ ₀₎ + 69·p₍₁ ₁₎ + 27·p₍₁ ₂₎] → [p₀
         // + 1], {[2·p₍₁ ₀₎ + 15·p₍₁ ₁₎ + 6·p₍₁ ₂₎] → [p₍₁ ₀₎], [p₍₁ ₀₎ + 14·p₍₁ ₁₎ + 4·p₍₁ ₂₎] → 0,
         // 0 → 0}
-        Arguments.of(Map.of("PairingHeap.merge_pairs_isolated", Config.of())),
+        Arguments.of(
+            Map.of(
+                "PairingHeap.merge_pairs_isolated", Config.of("PairingHeap/merge_pairs_isolated"))),
         Arguments.of(
             Map.of(
                 "SplayHeap.del_min_eq",
@@ -570,17 +709,14 @@ public class Tactics {
                                               zero(1),
                                               zero(1))))),
         */
-        Arguments.of(
-            Map.of(
-                "RightList.cons_cons",
-                Config.of(
-                    "RightList/cons_cons",
+        Arguments.of(Map.of("RightList.cons_cons", Config.of("RightList/cons_cons" /*,
+
                     CombinedFunctionAnnotation.of(
                         new Annotation(
                             ONE, Map.of(List.of(1, 0), TWO, unitIndex(1), Coefficient.of(3))),
                         new Annotation(ONE, emptyMap()),
                         zero(1),
-                        zero(1))))),
+                        zero(1))*/))),
         Arguments.of(
             Map.of(
                 "RightList.cons",
@@ -827,82 +963,8 @@ public class Tactics {
                         zero(1))))));
   }
 
-  private static Stream<Arguments> allTactics() {
-    return Stream.of(
-        /*
-                   Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig-fixing"))),
-               Arguments.of(
-                   Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-light", SPLAY_EXPECTED_TACAS))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-light", SPLAY_EXPECTED_OLD))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-light"))),
-               Arguments.of(
-                   Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig-light", SPLAY_EXPECTED_TACAS))),
-               Arguments.of(
-                   Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig-light", SPLAY_EXPECTED_OLD))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig-light"))),
-
-
-                   Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig-zagzag", SPLAY_EXPECTED_TACAS))),
-                   Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig-zagzag", SPLAY_EXPECTED_OLD))),
-                   Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig-zagzag"))),
-
-                   Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq", SPLAY_EXPECTED_TACAS))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq", SPLAY_EXPECTED_OLD))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq"))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zig", SPLAY_EXPECTED_TACAS))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zig", SPLAY_EXPECTED_OLD))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zig"))),
-               Arguments.of(
-                   Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig", SPLAY_EXPECTED_TACAS))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig", SPLAY_EXPECTED_OLD))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzig"))),
-               Arguments.of(
-                   Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzag", SPLAY_EXPECTED_TACAS))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzag", SPLAY_EXPECTED_OLD))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zigzag"))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zag", SPLAY_EXPECTED_TACAS))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zag", SPLAY_EXPECTED_OLD))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zag"))),
-               Arguments.of(
-                   Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zagzig", SPLAY_EXPECTED_TACAS))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zagzig", SPLAY_EXPECTED_OLD))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zagzig"))),
-               Arguments.of(
-                   Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zagzag", SPLAY_EXPECTED_TACAS))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zagzag", SPLAY_EXPECTED_OLD))),
-               Arguments.of(Map.of(SPLAY_FQN, Config.of("SplayTree/splay_eq-zagzag"))),
-               Arguments.of(Map.of("SplayTree.splay_max_eq", Config.of("SplayTree/splay_max_eq"))),
-               Arguments.of(Map.of("SplayTree.splay_max_eq", Config.of("auto"))),
-               Arguments.of(
-                   Map.of(
-                       "SplayTree.contains_eq",
-                       Config.of("SplayTree/contains_eq"),
-                       SPLAY_FQN,
-                       Config.of(SPLAY_EXPECTED_TACAS))),
-               Arguments.of(
-                   Map.of(
-                       "SplayTree.contains_eq",
-                       Config.of("SplayTree/contains_eq"),
-                       SPLAY_FQN,
-                       Config.of("SplayTree/splay_eq"))),
-               Arguments.of(
-                   Map.of(
-                       "SplayTree.insert_eq",
-                       Config.of("SplayTree/insert_eq"),
-                       SPLAY_FQN,
-                       Config.of("SplayTree/splay_eq"))),
-               Arguments.of(
-                   Map.of(
-                       "SplayTree.insert_eq",
-                       Config.of("auto"),
-                       SPLAY_FQN,
-                       Config.of("SplayTree/splay_eq")))
-        */
-        );
-  }
-
   @ParameterizedTest
-  @MethodSource("cav")
+  @MethodSource("tactics")
   public void all(Map<String, Config> immutableAnnotations) {
     final var loader = Tests.loader();
 
@@ -949,16 +1011,13 @@ public class Tactics {
 
     final Set<Constraint> hackingConstraints = new HashSet<>();
 
-    final List<UnknownCoefficient> setCountingRankCoefficients = new ArrayList<>();
-    final List<UnknownCoefficient> setCountingNonRankCoefficients = new ArrayList<>();
-
     final List<UnknownCoefficient> pairwiseDiffRankCoefficients = new ArrayList<>();
     final List<UnknownCoefficient> pairwiseDiffNonRankCoefficients = new ArrayList<>();
 
-    final Set<Constraint> setCountingConstraints = new HashSet<>();
     final Set<Constraint> pairwiseDiffConstraints = new HashSet<>();
 
-    ConstraintSystemSolver.Domain domain = program.autoDomain();
+    ConstraintSystemSolver.Domain domain = ConstraintSystemSolver.Domain.RATIONAL; // program.autoDomain();
+    System.out.println("domain: " + domain);
 
     for (final var fqn : immutableAnnotations.keySet()) {
       if (!program.getFunctionDefinitions().containsKey(fqn)) {
@@ -969,16 +1028,9 @@ public class Tactics {
 
       FunctionAnnotation functionAnnotation =
           fd.getInferredSignature().getAnnotation().get().withCost;
-      /*
-      final var setCounting = Optimization.setCounting(functionAnnotation);
-      if (setCounting.isPresent()) {
-        setCountingRankCoefficients.addAll(setCounting.get().rankCoefficients);
-        setCountingNonRankCoefficients.addAll(setCounting.get().nonRankCoefficients);
-        setCountingConstraints.addAll(setCounting.get().constraints);
-      }
-       */
 
-      final var pairwiseDiff = Optimization.ng(functionAnnotation);
+      final var pairwiseDiff =
+          Optimization.squareWeightedComponentWiseDifference(functionAnnotation);
       if (pairwiseDiff.isPresent()) {
         pairwiseDiffRankCoefficients.addAll(pairwiseDiff.get().rankCoefficients);
         pairwiseDiffNonRankCoefficients.addAll(pairwiseDiff.get().nonRankCoefficients);
@@ -987,86 +1039,50 @@ public class Tactics {
 
       if (functionAnnotation.to.size() == 1
           && functionAnnotation.to.getRankCoefficientOrZero() instanceof UnknownCoefficient
-          && functionAnnotation.from.size() > 0) {
+          && functionAnnotation.from.size() == 1) {
         hackingConstraints.add(
-            new LessThanOrEqualConstraint(
-                ONE, functionAnnotation.to.getRankCoefficient(), "(hack) force rank"));
-        for (int i = 0; i < functionAnnotation.from.size(); i++) {
-          hackingConstraints.add(
-              new LessThanOrEqualConstraint(
-                  ONE, functionAnnotation.from.getRankCoefficient(), "(hack) force rank"));
-        }
+            new EqualityConstraint(
+                functionAnnotation.from.getRankCoefficient(),
+                functionAnnotation.to.getRankCoefficient(),
+                "(hack) force rank"));
       }
-
-      /*
-      if (fd.getFullyQualifiedName().equals(SPLAY_FQN) && tactics.getOrDefault(SPLAY_FQN, Path.of("/")).toString().contains("zigzig-light")) {
-        pairwiseDiffConstraints.add(new EqualityConstraint(fd.getAnnotation().from.getRankCoefficient(0), fd.getAnnotation().to.getRankCoefficient(0), "fix rk"));
-      }
-
-      if (Set.of(SPLAY_FQN, MERGE_PAIRS).contains(fd.getFullyQualifiedName())) {
-        pairwiseDiffConstraints.add(new
-                EqualityConstraint(fd.getAnnotation().from.getRankCoefficient(),
-        fd.getAnnotation().to.getRankCoefficient(), "hacking"));
-      }
-       */
     }
 
     // prover.plot();
-    var solverResult = prover.solve(hackingConstraints, emptyList(), "sat", domain);
+    //var solverResult = prover.solve(hackingConstraints, emptyList(), "sat", domain);
 
-    assertTrue(solverResult.getSolution().isPresent());
-    System.out.println(printTable(prover, solverResult.getSolution()));
-    program.mockIngest(solverResult.getSolution());
+    //assertTrue(solverResult.getSolution().isPresent());
+    //System.out.println(printTable(prover, solverResult.getSolution()));
+    //program.mockIngest(solverResult.getSolution());
     // prover.plotWithSolution(solution.get());
 
-    if (immutableAnnotations.values().stream().anyMatch(Config::isUnknown)) {
-      final var minimizationConstraints =
-          union(union(setCountingConstraints, pairwiseDiffConstraints), hackingConstraints);
+    //if (immutableAnnotations.values().stream().anyMatch(Config::isUnknown)) {
+      final var minimizationConstraints = union(pairwiseDiffConstraints, hackingConstraints);
 
       final var minimizationTargets =
-          append(
-              append(pairwiseDiffRankCoefficients, setCountingRankCoefficients),
-              append(pairwiseDiffNonRankCoefficients, setCountingNonRankCoefficients));
+          append(pairwiseDiffRankCoefficients, pairwiseDiffNonRankCoefficients);
+
+      /*
       final var minSolution =
-          prover.solve(minimizationConstraints, minimizationTargets, "min1", domain);
+          prover.solve(minimizationConstraints, minimizationTargets, "minz", domain);
       program.mockIngest(minSolution.getSolution());
 
-      final var minimizationTargetsWithSets =
-          append(
-              append(setCountingRankCoefficients, pairwiseDiffRankCoefficients),
-              append(setCountingNonRankCoefficients, pairwiseDiffNonRankCoefficients));
-      final var minSetSolution =
-          prover.solve(minimizationConstraints, minimizationTargetsWithSets, "min2", domain);
-      program.mockIngest(minSetSolution.getSolution());
-
       System.out.println(printTable(prover, minSolution.getSolution()));
-      System.out.println(printTable(prover, minSetSolution.getSolution()));
+       */
 
-      if (!domain.equals(ConstraintSystemSolver.Domain.RATIONAL)) {
+      //if (!domain.equals(ConstraintSystemSolver.Domain.RATIONAL)) {
         final var minSetSolutionRat =
             prover.solve(
                 minimizationConstraints,
-                minimizationTargetsWithSets,
-                "min2r",
+                minimizationTargets,
+                "minq",
                 ConstraintSystemSolver.Domain.RATIONAL);
         program.mockIngest(minSetSolutionRat.getSolution());
 
-        final var minSetSolutionRat2 =
-            prover.solve(
-                minimizationConstraints,
-                minimizationTargets,
-                "min1r",
-                ConstraintSystemSolver.Domain.RATIONAL);
-        program.mockIngest(minSetSolutionRat2.getSolution());
-
         System.out.println(printTable(prover, minSetSolutionRat.getSolution()));
-      }
-      // prover.plotWithSolution(minSetSolutionRat.get());
-      /*
-      } else {
-        prover.plotWithSolution(solution.get());
-      }
-       */
-    }
+
+        assertTrue(minSetSolutionRat.getSolution().isPresent());
+      //}
+    //}
   }
 }

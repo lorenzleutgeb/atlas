@@ -18,6 +18,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Properties;
 import java.util.Random;
@@ -375,5 +376,9 @@ public class Util {
   /** See {@link org.graalvm.nativeimage.ImageInfo#inImageRuntimeCode} */
   public static boolean inImageRuntimeCode() {
     return "runtime".equals(System.getProperty("org.graalvm.nativeimage.imagecode"));
+  }
+
+  public static boolean flag(Map<String, String> arguments, String name) {
+    return Optional.ofNullable(arguments.get(name)).map(Boolean::parseBoolean).orElse(false);
   }
 }

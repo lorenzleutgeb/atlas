@@ -1,21 +1,7 @@
 (match
-  _{w}
-  (w (match
-    (w (let:tree:cf
-      _{w}
-      _{w}
-    ))
-    (w
-      (w (let:tree:cf
-        _{w}
-        (w (let:tree:cf
-          _{w}
-          (w (let:tree:cf
-            _{w}
-            _{w}
-          ))
-        ))
-      ))
-    )
-  ))
+  (w leaf)
+  (match
+    (w (let:tree:cf leaf node))
+    (w{mono} (let:tree:cf app (let:tree:cf node (let:tree:cf node app))))
+  )
 )

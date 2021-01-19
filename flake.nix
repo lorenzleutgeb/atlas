@@ -36,7 +36,7 @@
           shellHook = ''
             export Z3_JAVA=$(nix path-info .#packages.x86_64-linux.z3.java)
 
-            export LD_LIBRARY_PATH=$Z3_JAVA:$LD_LIBRARY_PATH
+            export LD_LIBRARY_PATH=$Z3_JAVA/lib:$LD_LIBRARY_PATH
             export GRAAL_HOME="${pkgs.graalvm11-ce}"
             export JAVA_HOME="$GRAAL_HOME"
             export GRADLE_HOME="${pkgs.gradle}"
@@ -67,9 +67,11 @@
         }).overrideAttrs (old: rec {
           outputs = old.outputs ++ [ "java" ];
           postInstall = old.postInstall + ''
-            mkdir $java
-            mv com.microsoft.z3.jar $java
-            mv libz3java.so $java
+            mkdir -p $out/share/java
+            mv -v com.microsoft.z3.jar $out/share/java
+
+            moveToOutput "share/java/com.microsoft.z3.jar" $java
+            moveToOutput "lib/libz3java.so" $java
           '';
         });
 

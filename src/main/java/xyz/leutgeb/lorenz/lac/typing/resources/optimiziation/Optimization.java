@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources.optimiziation;
 
 import lombok.AllArgsConstructor;
 import lombok.Value;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
@@ -21,8 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.indexWeight;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 
@@ -120,7 +121,7 @@ public class Optimization {
     return Optional.of(new MultiTarget(rankCoefficients, nonRankCoefficients, constraints));
   }
 
-  public static Optional<MultiTarget> pairwiseDiffOld(FunctionAnnotation annotation) {
+  public static Optional<MultiTarget> pairwiseDiff(FunctionAnnotation annotation) {
     final var from = annotation.from;
     final var to = annotation.to;
 
@@ -296,18 +297,21 @@ public class Optimization {
     return Optional.of(new Optimization.MultiTarget(goals, Collections.emptyList(), constraints));
   }
 
-  public static Optional<MultiTarget> simple(FunctionAnnotation annotation) {
-    final var from = annotation.from;
-    final var to = annotation.to;
+  private static boolean sameSize(FunctionAnnotation functionAnnotation) {
+    return functionAnnotation.from.size() == functionAnnotation.to.size();
+  }
 
-    if (to.size() != from.size()) {
+  public static Optional<MultiTarget> weightedComponentWiseDifference(
+      FunctionAnnotation annotation, Function<List<Integer>, Integer> weight) {
+    if (!sameSize(annotation)) {
       return Optional.empty();
     }
 
     final Set<Constraint> constraints = new HashSet<>();
-
     final var diffSum = new ArrayList<Coefficient>();
-    from.union(to)
+    annotation
+        .from
+        .union(annotation.to)
         .forEach(
             e -> {
               var pair = e.getValue();
@@ -326,15 +330,91 @@ public class Optimization {
               constraints.add(
                   new EqualsProductConstraint(
                       weightedDiff,
-                      List.of(diff, Coefficient.of(indexWeight(e.getKey()))),
-                      "(opt)"));
+                      List.of(diff, Coefficient.of(weight.apply(e.getKey()))),
+                      "(opt) weightedComponentWiseDifference"));
               diffSum.add(weightedDiff);
+            });
+
+    UnknownCoefficient diffsumVar = UnknownCoefficient.unknown("x");
+    constraints.add(
+        new EqualsSumConstraint(diffsumVar, diffSum, "(opt) weightedComponentWiseDifference"));
+    return Optional.of(
+        new Optimization.MultiTarget(List.of(diffsumVar), Collections.emptyList(), constraints));
+  }
+
+  public static Optional<MultiTarget> squareWeightedComponentWiseDifference(
+      FunctionAnnotation annotation) {
+    return weightedComponentWiseDifference(annotation, Annotation::indexWeight);
+  }
+
+  public static Optional<MultiTarget> componentWiseDifference(FunctionAnnotation annotation) {
+    if (!sameSize(annotation)) {
+      return Optional.empty();
+    }
+
+    final Set<Constraint> constraints = new HashSet<>();
+    final var diffSum = new ArrayList<Coefficient>();
+    annotation
+        .from
+        .union(annotation.to)
+        .forEach(
+            e -> {
+              var pair = e.getValue();
+
+              if (pair.getLeft() instanceof KnownCoefficient
+                  && pair.getRight() instanceof KnownCoefficient) {
+                return;
+              }
+
+              final var diff = UnknownCoefficient.unknown("x");
+              constraints.add(
+                  new EqualsSumConstraint(
+                      diff, List.of(pair.getLeft(), pair.getRight().negate()), "(opt)"));
+              diffSum.add(diff);
             });
 
     UnknownCoefficient diffsumVar = UnknownCoefficient.unknown("x");
     constraints.add(new EqualsSumConstraint(diffsumVar, diffSum, "(opt)"));
     return Optional.of(
         new Optimization.MultiTarget(List.of(diffsumVar), Collections.emptyList(), constraints));
+  }
+
+  public static Optional<MultiTarget> componentWiseDifferenceAndSum(FunctionAnnotation annotation) {
+    if (!sameSize(annotation)) {
+      return Optional.empty();
+    }
+
+    final Set<Constraint> constraints = new HashSet<>();
+    final var diffSum = new ArrayList<Coefficient>();
+    final var sum = new ArrayList<Coefficient>();
+    annotation
+        .from
+        .union(annotation.to)
+        .forEach(
+            e -> {
+              var pair = e.getValue();
+
+              if (pair.getLeft() instanceof KnownCoefficient
+                  && pair.getRight() instanceof KnownCoefficient) {
+                return;
+              }
+
+              final var diff = UnknownCoefficient.unknown("x");
+              constraints.add(
+                  new EqualsSumConstraint(
+                      diff, List.of(pair.getLeft(), pair.getRight().negate()), "(opt)"));
+              diffSum.add(diff);
+              sum.add(pair.getLeft());
+            });
+
+    UnknownCoefficient diffsumVar = UnknownCoefficient.unknown("x");
+    constraints.add(new EqualsSumConstraint(diffsumVar, diffSum, "(opt)"));
+
+    UnknownCoefficient sumVar = UnknownCoefficient.unknown("x");
+    constraints.add(new EqualsSumConstraint(sumVar, sum, "(opt)"));
+    return Optional.of(
+        new Optimization.MultiTarget(
+            List.of(diffsumVar, sumVar), Collections.emptyList(), constraints));
   }
 
   public static Optional<MultiTarget> foo(FunctionAnnotation annotation) {

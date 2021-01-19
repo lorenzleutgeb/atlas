@@ -1,10 +1,10 @@
 (match
-  _{w}
-  (w (let:tree:cf
-    _{w}
-    (w (let:tree:cf
-      _{w}
-      _{w}
+  (w{mono l2xy} leaf)
+  (w{mono l2xy} (let:tree:cf
+    (w{mono l2xy} app)
+    (w{mono l2xy} (let:tree:cf
+      node
+      (w{mono l2xy} app)
     ))
   ))
 )

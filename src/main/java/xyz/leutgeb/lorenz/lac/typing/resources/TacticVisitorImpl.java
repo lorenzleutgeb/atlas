@@ -1,15 +1,5 @@
 package xyz.leutgeb.lorenz.lac.typing.resources;
 
-import static java.util.Collections.emptyList;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.Token;
@@ -24,6 +14,20 @@ import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.WVar;
 import xyz.leutgeb.lorenz.lac.util.Fraction;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toUnmodifiableMap;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+
 @Value
 @Slf4j
 public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
@@ -33,134 +37,110 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
   private static final boolean FIXING_ENABLED = false;
   private static final boolean RECORDING_ENABLED = false;
 
-  private void proveInternal(
-      Obligation obligation, TacticParser.TacticExpressionContext tacticExpression) {
-    if (tacticExpression instanceof TacticParser.NamedTacticExpressionContext) {
-      final var annotatedTacticExpression =
-          (TacticParser.NamedTacticExpressionContext) tacticExpression;
+  private void proveInternal(Obligation obligation, TacticParser.ListContext list) {
+    final var initial = list.first;
 
-      if (RECORDING_ENABLED) {
-        final String annotation = annotatedTacticExpression.name.getText();
-        if (annotation != null) {
-          prover.record(annotation, obligation);
+    List<Obligation> remaining = proveInternal(obligation, initial);
+
+    if (initial instanceof TacticParser.RuleContext) {
+      final var rule = (TacticParser.RuleContext) initial;
+      if (rule.ruleName.getText().equals("let:tree:cf")) {
+        final ArrayList<Obligation> remains = new ArrayList<>(remaining.size());
+        for (int i = 0; i < remaining.size(); i++) {
+          if (remaining.get(i).getCost() == 0 && i > 1) {
+            //prover.prove(remaining.get(i));
+            proveInternalAny(remaining.get(i), list.elements.get(0));
+            continue;
+          }
+          remains.add(remaining.get(i));
         }
+        remaining = remains;
       }
-
-      tacticExpression = annotatedTacticExpression.tacticExpression();
     }
 
-    Token start = null;
+    if (remaining.size() != list.elements.size()) {
+      throw bug(
+          "Applying "
+              + initial.getText()
+              + " to "
+              + obligation
+              + " yields "
+              + remaining.size()
+              + " new obligations, but "
+              + list.elements.size()
+              + " are given.");
+    }
 
-    if (tacticExpression instanceof TacticParser.FixedAnnotationContext) {
-      final var fixedAnnotationContext = (TacticParser.FixedAnnotationContext) tacticExpression;
-      start = fixedAnnotationContext.getStart();
-      if (FIXING_ENABLED) {
-        final Optional<Annotation> optionalFromFixing =
-            convert(obligation.getContext().getAnnotation().size(), fixedAnnotationContext.from);
-        final Optional<Annotation> optionalToFixing =
-            convert(obligation.getAnnotation().size(), fixedAnnotationContext.to);
+    for (int i = 0; i < remaining.size(); i++) {
+      proveInternalAny(remaining.get(i), list.elements.get(i));
+    }
+  }
 
-        if (optionalFromFixing.isPresent()) {
-          log.info(
-              "Fixing annotation named '{}' on line {}",
-              obligation.getContext().getAnnotation().getNameAndId(),
-              fixedAnnotationContext.getStart().getLine());
-          log.info(
-              "Fixing annotation named '{}' on line {}: {} = {}",
-              obligation.getContext().getAnnotation().getNameAndId(),
-              fixedAnnotationContext.getStart().getLine(),
-              obligation.getContext().getAnnotation(),
-              optionalFromFixing.get());
-
-          prover.addExternalConstraints(
-              EqualityConstraint.eq(
-                  optionalFromFixing.get(),
-                  obligation.getContext().reorderLexicographically().getAnnotation(),
-                  "(tactic) fixed at position "
-                      + start.getLine()
-                      + ":"
-                      + start.getCharPositionInLine()
-                      + " (indices mean lexicographically reordered context)"));
-        }
-
-        if (optionalToFixing.isPresent()) {
-          log.info(
-              "Fixing annotation named '{}' on line {}",
-              obligation.getAnnotation().getNameAndId(),
-              fixedAnnotationContext.getStart().getLine());
-
-          log.info(
-              "Fixing annotation named '{}' on line {}: {} = {}",
-              obligation.getAnnotation().getNameAndId(),
-              fixedAnnotationContext.getStart().getLine(),
-              obligation.getAnnotation(),
-              optionalToFixing.get());
-
-          prover.addExternalConstraints(
-              EqualityConstraint.eq(
-                  optionalToFixing.get(),
-                  obligation.getAnnotation(),
-                  "(tactic) fixed at position "
-                      + start.getLine()
-                      + ":"
-                      + start.getCharPositionInLine()));
-        }
-      }
-
-      proveInternal(obligation, fixedAnnotationContext.next);
+  private void proveInternalAny(
+      Obligation obligation, TacticParser.TacticExpressionOrListContext any) {
+    if (any instanceof TacticParser.ListContext) {
+      proveInternal(obligation, (TacticParser.ListContext) any);
       return;
     }
 
-    String ruleNameText;
-    List<TacticParser.TacticExpressionContext> next;
-    if (tacticExpression instanceof TacticParser.TerminalTacticExpressionContext) {
-      final var terminal = (TacticParser.TerminalTacticExpressionContext) tacticExpression;
-      ruleNameText = terminal.identifier.getText();
-      start = terminal.getStart();
-      next = emptyList();
-    } else if (tacticExpression instanceof TacticParser.ListTacticExpressionContext) {
-      final var listTacticExpressionContext =
-          (TacticParser.ListTacticExpressionContext) tacticExpression;
-      start = listTacticExpressionContext.getStart();
-      ruleNameText = listTacticExpressionContext.elements.get(0).getText();
-      next =
-          listTacticExpressionContext.elements.subList(
-              1, listTacticExpressionContext.elements.size());
-    } else {
-      throw new UnsupportedOperationException();
+    List<Obligation> remaining =
+        proveInternal(obligation, ((TacticParser.ImmediateContext) any).tacticExpression());
+    if (!remaining.isEmpty()) {
+      throw bug("does not consume all");
     }
-    if (ruleNameText.equals("?")) {
+  }
+
+  private List<Obligation> proveInternal(
+      Obligation obligation, TacticParser.TacticExpressionContext immediateContext) {
+    if (immediateContext instanceof TacticParser.FixContext) {
+      final var fixedAnnotationContext = (TacticParser.FixContext) immediateContext;
+      fix(obligation, fixedAnnotationContext);
+      if (RECORDING_ENABLED && fixedAnnotationContext.applicationName != null) {
+        prover.record(fixedAnnotationContext.applicationName.getText(), obligation);
+      }
+      return List.of(obligation);
+    } else if (!(immediateContext instanceof TacticParser.RuleContext)) {
+      throw new RuntimeException();
+    }
+
+    final var annotatedTacticExpression = (TacticParser.RuleContext) immediateContext;
+
+    final var ruleName = annotatedTacticExpression.ruleName.getText();
+    final var start = annotatedTacticExpression.getStart();
+    final var arguments = convert(annotatedTacticExpression.arguments);
+
+    if (RECORDING_ENABLED && annotatedTacticExpression.applicationName != null) {
+      prover.record(annotatedTacticExpression.applicationName.getText(), obligation);
+    }
+
+    if (ruleName.equals("?")) {
       log.warn(
           "Leaving hole at position {}:{} for obligation {}",
           start.getLine(),
           start.getCharPositionInLine(),
           obligation);
-      return;
-    } else if (ruleNameText.startsWith("w:var:")) {
-      prover.setWeakenVariables(Boolean.parseBoolean(ruleNameText.substring(6)));
-
-      if (next.size() != 1) {
-        throw bug("?");
-      }
-      proveInternal(obligation, next.get(0));
-      return;
+      return emptyList();
+    } else if ("w:var".equals(ruleName)) {
+      prover.setWeakenVariables(Boolean.parseBoolean(arguments.get("set")));
+      return singletonList(obligation);
     }
 
-    long withCount = 0;
     List<Obligation> result;
-    if (ruleNameText.startsWith("_")) {
-      if (!ruleNameText.contains("auto")) {
+    if ("_".equals(ruleName)) {
+      final var auto = "true".equals(arguments.get("auto"));
+      final var weakenAggressively = "true".equals(arguments.get("w"));
+      if (!auto) {
         log.debug(
             "Expanding {} at position {}:{}",
-            ruleNameText,
+            ruleName,
             start.getLine(),
             start.getCharPositionInLine());
         prover.setLogApplications(true);
       }
-      prover.setWeakenAggressively(ruleNameText.contains("w"));
+      prover.setWeakenAggressively(weakenAggressively);
       prover.prove(obligation);
-      prover.setWeakenAggressively(!ruleNameText.contains("w"));
-      if (!ruleNameText.contains("auto")) {
+      prover.setWeakenAggressively(false);
+      if (!auto) {
         prover.setLogApplications(false);
       }
       result = emptyList();
@@ -169,8 +149,8 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
           WVar.redundantIds(obligation).collect(Collectors.toUnmodifiableList());
       if (obligation.getExpression().isTerminal()
           && !redundant.isEmpty()
-          && Set.of("leaf", "node", "var", "app").contains(ruleNameText)) {
-        log.info(
+          && Set.of("leaf", "node", "var", "app").contains(ruleName)) {
+        log.debug(
             "Automatically applying (w:var) to remove leftover variables {} on line {}.",
             redundant,
             start.getLine());
@@ -178,43 +158,77 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
         obligation = prover.weakenVariables(obligation);
       }
       try {
-        result = prover.applyByName(ruleNameText, obligation);
+        result = prover.applyByName(ruleName, arguments, obligation);
       } catch (Exception e) {
         log.error("Error in line {}", start.getLine(), e);
         throw e;
       }
-      withCount = result.stream().filter(x -> x.getCost() != 0).count();
     }
 
-    if (withCount != next.size() && obligation.getCost() == 1) {
-      log.warn(
-          "Given tactic does not apply: Rule ("
-              + ruleNameText
-              + ") applied to \n\n\t\t"
-              + obligation
-              + "\n\n yields "
-              + withCount
-              + " new obligations but "
-              + next.size()
-              + " are covered.");
+    return result;
+  }
+
+  private void fix(Obligation obligation, TacticParser.FixContext fixedAnnotationContext) {
+    if (!FIXING_ENABLED) {
+      return;
     }
 
-    final boolean isLetCfRule = ruleNameText.startsWith("let:tree:cf");
+    final var start = fixedAnnotationContext.getStart();
+    final Optional<Annotation> optionalFromFixing =
+        convert(obligation.getContext().getAnnotation().size(), fixedAnnotationContext.from);
+    final Optional<Annotation> optionalToFixing =
+        convert(obligation.getAnnotation().size(), fixedAnnotationContext.to);
 
-    for (int i = 0; i < result.size(); i++) {
-      if (i < next.size()) {
-        proveInternal(result.get(i), next.get(i));
-      } else if (isLetCfRule) {
-        proveInternal(result.get(i), next.get(0));
-      } else {
-        prover.prove(result.get(i));
-      }
+    if (optionalFromFixing.isPresent()) {
+      log.info(
+          "Fixing annotation named '{}' on line {}",
+          obligation.getContext().getAnnotation().getNameAndId(),
+          fixedAnnotationContext.getStart().getLine());
+      log.info(
+          "Fixing annotation named '{}' on line {}: {} = {}",
+          obligation.getContext().getAnnotation().getNameAndId(),
+          fixedAnnotationContext.getStart().getLine(),
+          obligation.getContext().getAnnotation(),
+          optionalFromFixing.get());
+
+      prover.addExternalConstraints(
+          EqualityConstraint.eq(
+              optionalFromFixing.get(),
+              obligation.getContext().reorderLexicographically().getAnnotation(),
+              "(tactic) fixed at position "
+                  + start.getLine()
+                  + ":"
+                  + start.getCharPositionInLine()
+                  + " (indices mean lexicographically reordered context)"));
+    }
+
+    if (optionalToFixing.isPresent()) {
+      log.info(
+          "Fixing annotation named '{}' on line {}",
+          obligation.getAnnotation().getNameAndId(),
+          fixedAnnotationContext.getStart().getLine());
+
+      log.info(
+          "Fixing annotation named '{}' on line {}: {} = {}",
+          obligation.getAnnotation().getNameAndId(),
+          fixedAnnotationContext.getStart().getLine(),
+          obligation.getAnnotation(),
+          optionalToFixing.get());
+
+      prover.addExternalConstraints(
+          EqualityConstraint.eq(
+              optionalToFixing.get(),
+              obligation.getAnnotation(),
+              "(tactic) fixed at position "
+                  + start.getLine()
+                  + ":"
+                  + start.getCharPositionInLine()));
     }
   }
 
   @Override
   public Object visitTactic(TacticParser.TacticContext ctx) {
-    proveInternal(obligation, ctx.tacticExpression());
+    proveInternalAny(obligation, ctx.tacticExpressionOrList());
     return null;
   }
 
@@ -274,5 +288,12 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
               Integer.parseInt(ratContext.denominator.getText())));
     }
     throw new IllegalArgumentException("cannot convert context");
+  }
+
+  private static Map<String, String> convert(List<TacticParser.ArgumentMapEntryContext> entries) {
+    return entries.stream()
+        .collect(
+            toUnmodifiableMap(
+                e -> e.key.getText(), e -> ofNullable(e.value).map(Token::getText).orElse("true")));
   }
 }

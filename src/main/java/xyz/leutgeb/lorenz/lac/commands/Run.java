@@ -215,9 +215,6 @@ public class Run implements Runnable {
         }
       }
 
-
-      log.info("Done generating constraints.");
-
       final var autoDomain = program.autoDomain();
 
       final var domain =
@@ -232,57 +229,65 @@ public class Run implements Runnable {
             autoDomain);
       }
 
-      log.info("Solving constraints...");
       if (infer) {
         final List<UnknownCoefficient> setCountingRankCoefficients = new ArrayList<>();
         final List<UnknownCoefficient> setCountingNonRankCoefficients = new ArrayList<>();
+        final Set<Constraint> setCountingConstraints = new HashSet<>();
 
         final List<UnknownCoefficient> pairwiseDiffRankCoefficients = new ArrayList<>();
         final List<UnknownCoefficient> pairwiseDiffNonRankCoefficients = new ArrayList<>();
-
-        final Set<Constraint> setCountingConstraints = new HashSet<>();
         final Set<Constraint> pairwiseDiffConstraints = new HashSet<>();
 
-        /*
-        ConstraintSystemSolver.Domain domain =
-                annotations.values().stream().noneMatch(CombinedFunctionAnnotation::isNonInteger)
-                        ? ConstraintSystemSolver.Domain.INTEGER
-                        : ConstraintSystemSolver.Domain.RATIONAL;
-         */
+        final List<UnknownCoefficient> diffRankCoefficients = new ArrayList<>();
+        final List<UnknownCoefficient> diffNonRankCoefficients = new ArrayList<>();
+        final Set<Constraint> diffConstraints = new HashSet<>();
 
-        for (final var fqn : program.getFunctionDefinitions().keySet()) {
+        for (final var fqn : program.getRoots()) {
           if (!program.getFunctionDefinitions().containsKey(fqn)) {
             throw new RuntimeException("Could not find function definition for '" + fqn + "'.");
+          }
+          if (program.getFunctionDefinitions().size() > 1) {
+            log.info("Minimizing bounds for '{}'!", fqn);
           }
 
           final var fd = program.getFunctionDefinitions().get(fqn);
 
           FunctionAnnotation inferredAnnotation =
               fd.getInferredSignature().getAnnotation().get().withCost;
-          /*
+
           final var setCounting = Optimization.setCounting(inferredAnnotation);
           if (setCounting.isPresent()) {
             setCountingRankCoefficients.addAll(setCounting.get().rankCoefficients);
             setCountingNonRankCoefficients.addAll(setCounting.get().nonRankCoefficients);
             setCountingConstraints.addAll(setCounting.get().constraints);
           }
-           */
 
-          final var pairwiseDiff = Optimization.simple(inferredAnnotation);
+          final var pairwiseDiff = Optimization.pairwiseDiff(inferredAnnotation);
           if (pairwiseDiff.isPresent()) {
             pairwiseDiffRankCoefficients.addAll(pairwiseDiff.get().rankCoefficients);
             pairwiseDiffNonRankCoefficients.addAll(pairwiseDiff.get().nonRankCoefficients);
             pairwiseDiffConstraints.addAll(pairwiseDiff.get().constraints);
           }
+
+          final var diff = Optimization.squareWeightedComponentWiseDifference(inferredAnnotation);
+          if (diff.isPresent()) {
+            diffRankCoefficients.addAll(diff.get().rankCoefficients);
+            diffNonRankCoefficients.addAll(diff.get().nonRankCoefficients);
+            diffConstraints.addAll(diff.get().constraints);
+          }
         }
 
         final var minimizationConstraints =
-            union(union(setCountingConstraints, pairwiseDiffConstraints), outsideConstraints);
+            union(
+                diffConstraints /*union(setCountingConstraints, pairwiseDiffConstraints)*/,
+                outsideConstraints);
 
+        /*
         final var minimizationTargets =
             append(
                 append(pairwiseDiffRankCoefficients, setCountingRankCoefficients),
                 append(pairwiseDiffNonRankCoefficients, setCountingNonRankCoefficients));
+         */
 
         /*
         final var minimizationTargets =
@@ -291,8 +296,12 @@ public class Run implements Runnable {
                         append(setCountingNonRankCoefficients, pairwiseDiffNonRankCoefficients));
          */
 
+        final var minimizationTargets = append(diffRankCoefficients, diffNonRankCoefficients);
+
+        log.info("Solving constraints...");
         result = prover.solve(minimizationConstraints, minimizationTargets, "min", domain);
       } else {
+        log.info("Solving constraints...");
         result = prover.solve(outsideConstraints, emptyList(), "sat", domain);
       }
 

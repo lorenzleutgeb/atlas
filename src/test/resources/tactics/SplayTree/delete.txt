@@ -1,0 +1,22 @@
+(match (* t *)
+  leaf
+  (let:tree:cf
+    app
+    (match (* splay a t *)
+      leaf
+      (ite (* a == a1 *)
+        (match (* l *)
+          var
+          (let:tree:cf
+            app
+            (match (* splay_max l *)
+              leaf
+              node
+            )
+          )
+        )
+        node
+      )
+    )
+  )
+)

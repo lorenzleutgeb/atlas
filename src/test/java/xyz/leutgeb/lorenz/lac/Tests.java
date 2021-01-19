@@ -56,6 +56,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.InequalityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.LessThanOrEqualConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.OffsetConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 import xyz.leutgeb.lorenz.lac.typing.simple.FunctionSignature;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
@@ -88,7 +89,7 @@ public class Tests {
         arguments("LeftList.inorder", sig(ATREE, ATREE, ATREE), ExpectedResult.UNKNOWN),
         arguments("LeftList.preorder", sig(ATREE, ATREE, ATREE), ExpectedResult.UNKNOWN),
         arguments(
-            "Tree.contains_unordered",
+            "Scratch.contains_unordered",
             sig(singleton(eq(ALPHA)), ALPHA, ATREE, BOOL),
             ExpectedResult.UNKNOWN),
         arguments("LeftList.postorder", sig(ATREE, ATREE, ATREE), ExpectedResult.UNKNOWN),
@@ -121,19 +122,19 @@ public class Tests {
         arguments("LeftList.cons_cons", sig(ALPHA, ALPHA, ATREE, ATREE), 0),
         arguments("RightList.cons", sig(ALPHA, ATREE, ATREE), 0),
         arguments("RightList.cons_cons", sig(ALPHA, ALPHA, ATREE, ATREE), 0),
-        arguments("Tree.singleton", sig(ALPHA, ATREE), 0),
+        arguments("Scratch.singleton", sig(ALPHA, ATREE), 0),
         arguments("Bool.neg", sig(BOOL, BOOL), 0),
         arguments("Bool.or", sig(BOOL, BOOL, BOOL), 0),
         arguments("Bool.and", sig(BOOL, BOOL, BOOL), 0),
         arguments("RightList.tl", sig(ATREE, ATREE), 0),
         arguments("LeftList.tl", sig(ATREE, ATREE), 0),
-        arguments("Tree.id", sig(ATREE, ATREE), 0),
-        arguments("Tree.id_match", sig(ATREE, ATREE), 0),
-        arguments("Tree.right", sig(ATREE, ATREE), 0),
-        arguments("Tree.left", sig(ATREE, ATREE), 0),
-        arguments("Tree.flip", sig(ATREE, ATREE), 0),
-        arguments("Tree.empty", sig(ATREE, BOOL), 0),
-        arguments("Tree.clone", sig(ALPHA, ATREE, ATREE), 0),
+        arguments("Scratch.id_match", sig(ATREE, ATREE), 0),
+            arguments("Scratch.id_match_match", sig(ATREE, ATREE), 0),
+        arguments("Scratch.right_child", sig(ATREE, ATREE), 0),
+        arguments("Scratch.left_child", sig(ATREE, ATREE), 0),
+        arguments("Scratch.flip", sig(ATREE, ATREE), 0),
+        arguments("Scratch.empty", sig(ATREE, BOOL), 0),
+        arguments("Scratch.clone", sig(ALPHA, ATREE, ATREE), 0),
         arguments("PairingHeap.is_root", sig(ATREE, BOOL), 0),
         arguments("PairingHeap.link", sig(singleton(ord(ALPHA)), ATREE, ATREE), 0),
         // arguments("PairingHeap.merge", sig(singleton(ord(ALPHA)), ATREE, ATREE, ATREE), 1),
@@ -213,6 +214,7 @@ public class Tests {
 
   @ParameterizedTest
   @MethodSource("nonConstantCostDefinitions")
+  @DisplayName("Non-Constant Cost")
   void nonConstantCost(String fqn, FunctionSignature expectedSignature) throws Exception {
     final var program = loadAndNormalizeAndInferAndUnshare(fqn);
     for (var e : program.getFunctionDefinitions().values()) {
@@ -226,7 +228,8 @@ public class Tests {
     assertEquals(expectedSignature, definition.getInferredSignature(), "inferred signature");
 
     // TODO(lorenz.leutgeb): Check outcome.
-    program.solve();
+    final ConstraintSystemSolver.Result result = program.solve();
+    program.mockIngest(result.getSolution());
   }
 
   @Test

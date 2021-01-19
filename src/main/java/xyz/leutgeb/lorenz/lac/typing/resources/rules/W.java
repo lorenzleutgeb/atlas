@@ -1,42 +1,9 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.rules;
 
-import static com.google.common.collect.Lists.cartesianProduct;
-import static com.google.common.collect.Streams.concat;
-import static com.microsoft.z3.Status.UNKNOWN;
-import static com.microsoft.z3.Status.UNSATISFIABLE;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toUnmodifiableList;
-import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.INDEX_COMPARATOR;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.constantIndex;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.nonRankIndices;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.MINUS_ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.MINUS_TWO;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient.maybeNegative;
-import static xyz.leutgeb.lorenz.lac.util.Util.append;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
-
 import com.google.common.collect.Streams;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -57,15 +24,52 @@ import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.util.Pair;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+import static com.google.common.collect.Lists.cartesianProduct;
+import static com.google.common.collect.Streams.concat;
+import static com.microsoft.z3.Status.UNKNOWN;
+import static com.microsoft.z3.Status.UNSATISFIABLE;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toUnmodifiableList;
+import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.INDEX_COMPARATOR;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.constantIndex;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.nonRankIndices;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.MINUS_ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.MINUS_TWO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient.maybeNegative;
+import static xyz.leutgeb.lorenz.lac.util.Util.append;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.flag;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
+
 @Slf4j
 public class W implements Rule {
   public static final W INSTANCE = new W();
 
-  private static final boolean LEMMA_2XY_ENABLED = true;
+  private static final boolean FARKAS_ENABLED = false;
+
+  private static final boolean LEMMA_2XY_ENABLED = false; // was true
   private static final boolean LEMMA_PLUS1_ENABLED = false;
   private static final boolean LEMMA_PLUS1Y_ENABLED = false;
   private static final boolean LEMMA_PLUS2_ENABLED = false;
-  private static final boolean MONO_ONE_ENABLED = true;
+  private static final boolean MONO_ONE_ENABLED = false; // was true
 
   private static final Map<List<List<Integer>>, List<LessThanOrEqual<List<Integer>>>> MONO_CACHE =
       new HashMap<>();
@@ -103,7 +107,19 @@ public class W implements Rule {
       List<Identifier> identifiers,
       Annotation left,
       Annotation right,
-      Graph<Identifier, SizeEdge> sizeAnalysis) {
+      Graph<Identifier, SizeEdge> sizeAnalysis,
+      Map<String, String> arguments) {
+    return compareCoefficientsLessOrEqualUsingFarkas(
+        identifiers, left, right, sizeAnalysis, arguments, false);
+  }
+
+  public static List<Constraint> compareCoefficientsLessOrEqualUsingFarkas(
+      List<Identifier> identifiers,
+      Annotation left,
+      Annotation right,
+      Graph<Identifier, SizeEdge> sizeAnalysis,
+      Map<String, String> arguments,
+      boolean force) {
     // left is P in paper.
     // right is Q in paper.
 
@@ -125,29 +141,34 @@ public class W implements Rule {
 
     final var potentialFunctions = Annotation.nonRankIndices(left, right).collect(toList());
 
+    final boolean mono = flag(arguments, "mono") || force;
+
     final List<LessThanOrEqual<List<Integer>>> monotonyInstances =
         knowLt.isEmpty() && knowEq.isEmpty() && knowOne.isEmpty()
             ? MONO_CACHE.computeIfAbsent(
                 potentialFunctions,
-                (key) ->
-                    lessThanOrEqualNew(
-                        potentialFunctions,
-                        knowLt,
-                        knowEq,
-                        MONO_ONE_ENABLED ? knowOne : emptySet()))
-            : lessThanOrEqualNew(
-                potentialFunctions, knowLt, knowEq, MONO_ONE_ENABLED ? knowOne : emptySet());
+                (key) -> {
+                  return lessThanOrEqualNew(
+                      potentialFunctions, knowLt, knowEq, mono ? knowOne : emptySet());
+                })
+            : lessThanOrEqualNew(potentialFunctions, knowLt, knowEq, mono ? knowOne : emptySet());
+
+    final var lemma2xy = flag(arguments, "l2xy") || force;
 
     final List<List<List<Integer>>> lemma2XYInstances =
-        LEMMA_2XY_ENABLED ? lemma2XY(potentialFunctions) : emptyList();
+        lemma2xy ? lemma2XY(potentialFunctions) : emptyList();
+
+    final var lemmap1 = flag(arguments, "lp1");
+    final var lemmap1y = flag(arguments, "lp1y");
 
     final List<Pair<List<Integer>, List<Integer>>> lemmaPlus1Instances =
         append(
-            LEMMA_PLUS1_ENABLED ? lemmaPlus1(potentialFunctions) : emptyList(),
-            LEMMA_PLUS1Y_ENABLED ? lemmaPlus1Known(potentialFunctions, knowOne) : emptyList());
+            lemmap1 ? lemmaPlus1(potentialFunctions) : emptyList(),
+            lemmap1y ? lemmaPlus1Known(potentialFunctions, knowOne) : emptyList());
 
+    final var lemmap2 = flag(arguments, "lp2");
     final List<Pair<List<Integer>, List<Integer>>> lemmaPlus2Instances =
-        LEMMA_PLUS2_ENABLED ? lemmaPlus2(potentialFunctions) : emptyList();
+        lemmap2 ? lemmaPlus2(potentialFunctions) : emptyList();
 
     // List<String> identifierNames = identifiers.stream().map(Object::toString).collect(toList());
     log.trace("(w) --- " + left.getId() + " <= " + right.getId() + " --- ");
@@ -517,12 +538,19 @@ public class W implements Rule {
         .collect(toUnmodifiableList());
   }
 
-  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+  public Rule.ApplicationResult apply(
+      Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var q = obligation.getContext().getAnnotation();
     final var qp = obligation.getAnnotation();
 
     final var p = globals.getHeuristic().generate("weaken p", q);
     final var pp = globals.getHeuristic().generate("weaken p'", qp);
+
+    final var force = false;
+
+    final var farkas = flag(arguments, "mono") || flag(arguments, "l2xy") || force;
+
+    // arguments = Map.of("mono", "true", "l2xy", "true");
 
     return new Rule.ApplicationResult(
         singletonList(
@@ -532,18 +560,22 @@ public class W implements Rule {
                 pp)),
         singletonList(
             append(
-                /*
-                obligation.getContext().getIds().isEmpty()
-                    ? compareCoefficientsLessOrEqual(p, q)
-                    : */ compareCoefficientsLessOrEqualUsingFarkas(
-                    obligation.getContext().getIds(), p, q, globals.getSizeAnalysis()),
+                farkas
+                    ? compareCoefficientsLessOrEqualUsingFarkas(
+                        obligation.getContext().getIds(),
+                        p,
+                        q,
+                        globals.getSizeAnalysis(),
+                        arguments,
+                        force)
+                    : compareCoefficientsLessOrEqual(p, q, "(w) Q"),
                 /*
                 compareCoefficientsLessOrEqualUsingFarkas(
                     qp.size() > 0 ? singletonList(Identifier.DUMMY_TREE_ALPHA) : emptyList(),
                     qp,
                     pp,
                     globals.getSizeAnalysis()) */
-                compareCoefficientsLessOrEqual(qp, pp, "Q'"))),
+                compareCoefficientsLessOrEqual(qp, pp, "(w) Q'"))),
         emptyList());
   }
 

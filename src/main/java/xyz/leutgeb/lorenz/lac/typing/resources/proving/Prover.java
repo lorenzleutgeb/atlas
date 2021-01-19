@@ -1,37 +1,11 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.proving;
 
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.singletonList;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toUnmodifiableMap;
-import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF_NAME;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.output;
-import static xyz.leutgeb.lorenz.lac.util.Util.stack;
-import static xyz.leutgeb.lorenz.lac.util.Util.supply;
-import static xyz.leutgeb.lorenz.lac.util.Util.undefinedText;
-import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
-
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import guru.nidi.graphviz.attribute.Label;
 import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -82,6 +56,35 @@ import xyz.leutgeb.lorenz.lac.util.NidiAttribute;
 import xyz.leutgeb.lorenz.lac.util.NidiExporter;
 import xyz.leutgeb.lorenz.lac.util.Pair;
 import xyz.leutgeb.lorenz.lac.util.Util;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singletonList;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toUnmodifiableMap;
+import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF_NAME;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.output;
+import static xyz.leutgeb.lorenz.lac.util.Util.stack;
+import static xyz.leutgeb.lorenz.lac.util.Util.supply;
+import static xyz.leutgeb.lorenz.lac.util.Util.undefinedText;
+import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
 
 @Slf4j
 public class Prover {
@@ -230,7 +233,7 @@ public class Prover {
 
   public Obligation share(Obligation obligation) {
     while (obligation.getExpression() instanceof ShareExpression) {
-      final var result = applyInternal(obligation, shareRule);
+      final var result = applyInternal(obligation, shareRule, emptyMap());
       obligation = result.getObligations().get(0);
     }
     return obligation;
@@ -262,7 +265,7 @@ public class Prover {
       return emptyList();
     } else if (rules.size() == 1) {
       final Rule rule = rules.pop();
-      final var ruleResult = applyInternal(obligation, rule);
+      final var ruleResult = applyInternal(obligation, rule, emptyMap());
       return ruleResult.getObligations().stream()
           .flatMap(x -> proveUntil(x, condition).stream())
           .collect(Collectors.toList());
@@ -271,7 +274,7 @@ public class Prover {
     Rule.ApplicationResult ruleResult = null;
     while (!rules.isEmpty()) {
       final Rule rule = rules.pop();
-      ruleResult = applyInternal(obligation, rule);
+      ruleResult = applyInternal(obligation, rule, emptyMap());
       if (!ruleResult.getObligations().isEmpty()) {
         if (ruleResult.getObligations().size() > 1) {
           throw bug(
@@ -301,11 +304,12 @@ public class Prover {
 
   }
 
-  private Rule.ApplicationResult applyInternal(Obligation obligation, Rule rule) {
+  private Rule.ApplicationResult applyInternal(
+      Obligation obligation, Rule rule, Map<String, String> ruleArguments) {
     if (logApplications) {
       log.debug("{}: {}", String.format("%-12s", rule.getName()), obligation);
     }
-    final var result = rule.apply(obligation, globals);
+    final var result = rule.apply(obligation, globals, ruleArguments);
     if (result == null) {
       throw bug("typing rule implementation returned null");
     }
@@ -314,7 +318,12 @@ public class Prover {
   }
 
   public List<Obligation> apply(Obligation obligation, Rule rule) {
-    return applyInternal(obligation, rule).getObligations();
+    return apply(obligation, rule, emptyMap());
+  }
+
+  public List<Obligation> apply(
+      Obligation obligation, Rule rule, Map<String, String> ruleArguments) {
+    return applyInternal(obligation, rule, ruleArguments).getObligations();
   }
 
   public void prove(List<Obligation> obligations) {
@@ -336,7 +345,12 @@ public class Prover {
 
       while (!rules.isEmpty()) {
         final var rule = rules.pop();
-        ruleResult = applyInternal(nextObligation, rule);
+
+        // TODO: This is a hack that will make all automatic applications of (w) use "full power".
+        final Map<String, String> arguments =
+            rule == weakenRule ? Map.of("mono", "true", "l2xy", "true") : emptyMap();
+
+        ruleResult = applyInternal(nextObligation, rule, arguments);
 
         if (!rules.isEmpty()) {
           if (ruleResult.getObligations().size() > 1) {
@@ -437,7 +451,7 @@ public class Prover {
       final var dotTarget = basePath.resolve(name + "-proof.dot");
       transformed.render(Format.DOT).toOutputStream(output(dotTarget));
       log.info("Proof exported to {}", dotTarget);
-    } catch (Exception e) {
+    } catch (Throwable e) {
       log.warn("Non-critical exception thrown.", e);
     }
   }
@@ -518,13 +532,14 @@ public class Prover {
     return result.get(0);
   }
 
-  public List<Obligation> applyByName(String ruleName, Obligation obligation) {
+  public List<Obligation> applyByName(
+      String ruleName, Map<String, String> ruleArguments, Obligation obligation) {
     Rule rule = RULES_BY_NAME.get(ruleName);
     if (rule == null) {
       throw new IllegalArgumentException(
           "Rule name " + undefinedText(ruleName, RULES_BY_NAME.keySet()));
     }
-    return apply(obligation, rule);
+    return apply(obligation, rule, ruleArguments);
   }
 
   public void record(String name, Obligation obligation) {

@@ -103,8 +103,8 @@ public class ConstraintSystemSolver {
 
   private static Map<String, String> z3Config(boolean unsatCore) {
     // Execute `z3 -p` to get a list of parameters.
-    return emptyMap();
-    // return Map.of("unsat_core", String.valueOf(unsatCore));
+    //return emptyMap();
+    return Map.of("unsat_core", String.valueOf(unsatCore));
     // return Map.of("parallel.enable", "true");
   }
 
@@ -125,14 +125,14 @@ public class ConstraintSystemSolver {
       Set<Constraint> constraints, Path outPath, List<UnknownCoefficient> target, Domain domain) {
     load(outPath.resolve("z3.log"));
 
-    final var unsatCore = target.isEmpty() && false;
+    final var unsatCore = target.isEmpty();
 
     try (final var ctx = new Context(z3Config(unsatCore))) {
       final Solver solver = ctx.mkTactic("qflia").getSolver();
       // final Solver solver =
       // /*domain.getLogic()*/Optional.of("LIA").map(ctx::mkSolver).orElseGet(ctx::mkSolver);
 
-      final var params = ctx.mkParams();
+      //final var params = ctx.mkParams();
       // params.add("?", false);
       // params.add("threads", Runtime.getRuntime().availableProcessors());
 
@@ -141,7 +141,7 @@ public class ConstraintSystemSolver {
       // params.add("opt.priority", "pareto");
       // params.add("opt.enable_sat", "true");
       // params.add("smt.pb.enable_simplex", "true");
-      solver.setParameters(params);
+      //solver.setParameters(params);
 
       var optimize = !target.isEmpty();
       final Optimize opt = optimize ? ctx.mkOptimize() : null;
@@ -207,10 +207,10 @@ public class ConstraintSystemSolver {
         }
       }
 
-      log.trace("lac Coefficients: " + generatedCoefficients.keySet().size());
-      log.trace("lac Constraints:  " + constraints.size());
-      log.trace("Z3  Scopes:       " + (optimize ? "?" : solver.getNumScopes()));
-      log.trace("Z3  Assertions:   " + (optimize ? "?" : solver.getNumAssertions()));
+      System.out.println("lac Coefficients: " + generatedCoefficients.keySet().size());
+      System.out.println("lac Constraints:  " + constraints.size());
+      System.out.println("Z3  Scopes:       " + (optimize ? "?" : solver.getNumScopes()));
+      System.out.println("Z3  Assertions:   " + (optimize ? "?" : solver.getNumAssertions()));
 
       final Path smtFile = outPath.resolve("instance.smt");
 

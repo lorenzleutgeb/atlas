@@ -1,16 +1,29 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
-import static java.util.Optional.empty;
-import static java.util.stream.Collectors.joining;
-import static xyz.leutgeb.lorenz.lac.util.Util.flatten;
-import static xyz.leutgeb.lorenz.lac.util.Util.output;
-import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
-
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import com.microsoft.z3.Status;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
+import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
+import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
+import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
+import xyz.leutgeb.lorenz.lac.unification.Equivalence;
+import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
+import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.Util;
+
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
@@ -25,25 +38,14 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
-import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
-import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
-import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
-import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
-import xyz.leutgeb.lorenz.lac.typing.simple.FunctionSignature;
-import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.lac.unification.Equivalence;
-import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
-import xyz.leutgeb.lorenz.lac.unification.UnificationError;
-import xyz.leutgeb.lorenz.lac.util.Util;
+import java.util.stream.Stream;
+
+import static java.util.Collections.unmodifiableSet;
+import static java.util.Optional.empty;
+import static java.util.stream.Collectors.joining;
+import static xyz.leutgeb.lorenz.lac.util.Util.flatten;
+import static xyz.leutgeb.lorenz.lac.util.Util.output;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
 @Slf4j
 public class Program {
@@ -56,6 +58,7 @@ public class Program {
 
   @Getter @Setter private String name;
   @Getter private final Path basePath;
+  @Getter private final Set<String> roots;
 
   private boolean normalized;
   private boolean inferred;
@@ -63,11 +66,13 @@ public class Program {
   public Program(
       Map<String, FunctionDefinition> functionDefinitions,
       List<List<String>> order,
-      Path basePath) {
+      Path basePath,
+      Set<String> roots) {
     this.functionDefinitions = functionDefinitions;
     this.order = order;
     this.name = flatten(this.order).stream().map(Util::fqnToFlatFilename).collect(joining("+"));
     this.basePath = basePath;
+    this.roots = unmodifiableSet(roots);
   }
 
   public void infer() throws UnificationError, TypeError {
@@ -247,7 +252,7 @@ public class Program {
     final var accumulatedConstraints = prover.getAccumulatedConstraints();
     accumulatedConstraints.addAll(outsideConstraints);
 
-    prover.plot();
+    // prover.plot();
 
     // This is the entrypoint of new-style solving. We get a bunch of constraints
     // that need to be fulfilled in order to typecheck the program.
@@ -258,7 +263,7 @@ public class Program {
     }
 
     if (result.hasSolution()) {
-      prover.plotWithSolution(result.getSolution().get());
+      // prover.plotWithSolution(result.getSolution().get());
     }
 
     return result;
@@ -286,9 +291,11 @@ public class Program {
 
   public ConstraintSystemSolver.Domain autoDomain() {
     return functionDefinitions.values().stream()
-            .map(FunctionDefinition::getAnnotatedSignature)
-            .map(FunctionSignature::getAnnotation)
-            .flatMap(Optional::stream)
+            .flatMap(
+                fd ->
+                    Stream.concat(
+                        fd.getAnnotatedSignature().getAnnotation().stream(),
+                        fd.getInferredSignature().getAnnotation().stream()))
             .noneMatch(CombinedFunctionAnnotation::isNonInteger)
         ? ConstraintSystemSolver.Domain.INTEGER
         : ConstraintSystemSolver.Domain.RATIONAL;

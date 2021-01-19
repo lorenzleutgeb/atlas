@@ -38,7 +38,7 @@ import xyz.leutgeb.lorenz.lac.util.Util;
 public class LetTreeCfSimple implements Rule {
   public static final LetTreeCfSimple INSTANCE = new LetTreeCfSimple();
 
-  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = (LetExpression) obligation.getExpression();
     final var x = expression.getDeclared();
     final var value = expression.getValue();

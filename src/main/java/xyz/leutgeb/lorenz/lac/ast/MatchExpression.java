@@ -1,18 +1,6 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
-import static com.google.common.collect.Sets.intersection;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.indent;
-import static xyz.leutgeb.lorenz.lac.util.Util.pick;
-
 import com.google.common.collect.Sets;
-import java.io.PrintStream;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +14,19 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.util.Pair;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
+
+import java.io.PrintStream;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+
+import static com.google.common.collect.Sets.intersection;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.indent;
+import static xyz.leutgeb.lorenz.lac.util.Util.pick;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -70,7 +71,8 @@ public class MatchExpression extends Expression {
 
   @Override
   public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
-    if (!(nodePattern instanceof NodeExpression)) {
+    final var passthru = scrut.equals(nodePattern);
+    if (!passthru && !(nodePattern instanceof NodeExpression)) {
       throw bug("node expression as node pattern required");
     }
 
@@ -86,8 +88,8 @@ public class MatchExpression extends Expression {
     subLeaf.addIfNotEqual(result, leaf.infer(subLeaf).wiggle(subLeaf));
 
     // Case: node
-    var subNode = sub.get();
-    for (int i = 0; i < 3; i++) {
+    var subNode = passthru ? context : sub.get();
+    for (int i = 0; !passthru && i < 3; i++) {
       subNode.putType(
           ((Identifier) ((NodeExpression) nodePattern).getElements().get(i)).getName(),
           subNode.fresh(),
@@ -104,7 +106,7 @@ public class MatchExpression extends Expression {
     Expression node = this.node;
     Expression nodePattern = this.nodePattern;
 
-    if (nodePattern instanceof Identifier) {
+    if (nodePattern instanceof Identifier && !this.scrut.equals(this.nodePattern)) {
       final var nodeId = (Identifier) nodePattern;
       final var source = Derived.desugar(this);
 
@@ -260,7 +262,9 @@ public class MatchExpression extends Expression {
   @Override
   public Set<Identifier> freeVariables() {
     final var result = super.freeVariables();
-    result.removeAll(nodePattern.freeVariables());
+    if (!(nodePattern instanceof Identifier && scrut.equals(nodePattern))) {
+      result.removeAll(nodePattern.freeVariables());
+    }
     return result;
   }
 
@@ -277,7 +281,8 @@ public class MatchExpression extends Expression {
     final Set<Identifier> freeNode = newNode.freeVariables();
 
     final var testName = ((Identifier) scrut);
-    if (freeLeaf.contains(testName) || freeNode.contains(testName)) {
+    if (freeLeaf.contains(testName)
+        || (!scrut.equals(nodePattern) && freeNode.contains(testName))) {
       throw new IllegalStateException(
           "test variable is destructed, so it cannot occur freely in any case expression");
     }
@@ -313,11 +318,18 @@ public class MatchExpression extends Expression {
   public void analyzeSizes(Graph<Identifier, SizeEdge> sizeGraph) {
     super.analyzeSizes(sizeGraph);
     sizeGraph.addVertex((Identifier) scrut);
-    sizeGraph.addVertex((Identifier) ((NodeExpression) nodePattern).getLeft());
-    sizeGraph.addVertex((Identifier) ((NodeExpression) nodePattern).getRight());
-    sizeGraph.addEdge(
-        (Identifier) scrut, (Identifier) ((NodeExpression) nodePattern).getLeft(), SizeEdge.gt());
-    sizeGraph.addEdge(
-        (Identifier) scrut, (Identifier) ((NodeExpression) nodePattern).getRight(), SizeEdge.gt());
+    if (nodePattern instanceof NodeExpression) {
+      sizeGraph.addVertex((Identifier) ((NodeExpression) nodePattern).getLeft());
+      sizeGraph.addVertex((Identifier) ((NodeExpression) nodePattern).getRight());
+      sizeGraph.addEdge(
+          (Identifier) scrut, (Identifier) ((NodeExpression) nodePattern).getLeft(), SizeEdge.gt());
+      sizeGraph.addEdge(
+          (Identifier) scrut,
+          (Identifier) ((NodeExpression) nodePattern).getRight(),
+          SizeEdge.gt());
+    } /* else if (nodePattern instanceof Identifier && nodePattern.equals(scrut)) {
+        sizeGraph.addVertex((Identifier) nodePattern);
+        sizeGraph.addEdge((Identifier) nodePattern, (Identifier) scrut, SizeEdge.eq());
+      }*/
   }
 }

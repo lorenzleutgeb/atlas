@@ -24,7 +24,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 public class Leaf implements Rule {
   public static final Leaf INSTANCE = new Leaf();
 
-  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = obligation.getExpression();
     if (!(expression instanceof Identifier)) {
       throw bug(

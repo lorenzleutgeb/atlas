@@ -1,12 +1,14 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.rules;
 
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableList;
 import static java.util.stream.Collectors.toList;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 import lombok.NonNull;
@@ -16,6 +18,13 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 
 public interface Rule extends BiFunction<Obligation, AnnotatingGlobals, Rule.ApplicationResult> {
+  @Override
+  default ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+    return apply(obligation, globals, emptyMap());
+  }
+
+  ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments);
+
   String getName();
 
   @Value

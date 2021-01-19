@@ -8,6 +8,7 @@ import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import xyz.leutgeb.lorenz.lac.ast.LetExpression;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
@@ -21,7 +22,7 @@ import xyz.leutgeb.lorenz.lac.util.Pair;
 public class LetGen implements Rule {
   public static final LetGen INSTANCE = new LetGen();
 
-  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals) {
+  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = (LetExpression) obligation.getExpression();
     final var declared = expression.getDeclared();
     final var value = expression.getValue();
