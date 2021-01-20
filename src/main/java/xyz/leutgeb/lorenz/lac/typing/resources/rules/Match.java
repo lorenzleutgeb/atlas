@@ -1,5 +1,11 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.rules;
 
+import static java.util.Collections.emptyList;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.ast.MatchExpression;
 import xyz.leutgeb.lorenz.lac.ast.NodeExpression;
@@ -11,13 +17,6 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static java.util.Collections.emptyList;
 
 public class Match implements Rule {
   public static final Match INSTANCE = new Match();

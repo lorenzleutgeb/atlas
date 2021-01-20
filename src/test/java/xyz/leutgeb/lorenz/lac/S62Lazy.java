@@ -72,7 +72,7 @@ public class S62Lazy extends S62 {
       new DirectedMultigraph<>(SizeEdge.class);
 
   static {
-    final var loader = Tests.loader();
+    final var loader = TestUtil.loader();
     final Program program;
     try {
       program = loader.load(FQN);

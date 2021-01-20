@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources.rules;
 
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
@@ -9,13 +10,12 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 
-import java.util.Map;
-
 @Slf4j
 public class Var implements Rule {
   public static final Var INSTANCE = new Var();
 
-  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
+  public Rule.ApplicationResult apply(
+      Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var context = obligation.getContext();
     final var expression = obligation.getExpression();
 

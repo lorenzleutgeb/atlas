@@ -1,0 +1,10 @@
+(match (* t *)
+  ? (*w{mono l2xy} leaf*)
+  (w{mono} (let:tree:cf
+    (w{mono} leaf)
+    (w{mono} (let:tree:cf
+      (w{mono} node)
+      (w{mono} node)
+    ))
+  ))
+)

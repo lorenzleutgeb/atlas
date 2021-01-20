@@ -1,5 +1,18 @@
 package xyz.leutgeb.lorenz.lac.typing.resources;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toUnmodifiableMap;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.Token;
@@ -13,20 +26,6 @@ import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.WVar;
 import xyz.leutgeb.lorenz.lac.util.Fraction;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
-import static java.util.Optional.ofNullable;
-import static java.util.stream.Collectors.toUnmodifiableMap;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 @Value
 @Slf4j
@@ -48,7 +47,7 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
         final ArrayList<Obligation> remains = new ArrayList<>(remaining.size());
         for (int i = 0; i < remaining.size(); i++) {
           if (remaining.get(i).getCost() == 0 && i > 1) {
-            //prover.prove(remaining.get(i));
+            // prover.prove(remaining.get(i));
             proveInternalAny(remaining.get(i), list.elements.get(0));
             continue;
           }

@@ -1,46 +1,35 @@
 package xyz.leutgeb.lorenz.lac.commands;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
+import static picocli.CommandLine.Help.Visibility.ALWAYS;
+import static xyz.leutgeb.lorenz.lac.util.Util.output;
+
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import jakarta.json.Json;
 import jakarta.json.JsonObjectBuilder;
-import lombok.extern.slf4j.Slf4j;
-import picocli.CommandLine;
-import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
-import xyz.leutgeb.lorenz.lac.ast.Program;
-import xyz.leutgeb.lorenz.lac.module.Loader;
-import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.LessThanOrEqualConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
-import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
-import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
-import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.lac.unification.UnificationError;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import static com.google.common.collect.Sets.union;
-import static java.util.Collections.emptyList;
-import static picocli.CommandLine.Help.Visibility.ALWAYS;
-import static xyz.leutgeb.lorenz.lac.util.Util.append;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.output;
+import lombok.extern.slf4j.Slf4j;
+import picocli.CommandLine;
+import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
+import xyz.leutgeb.lorenz.lac.ast.Program;
+import xyz.leutgeb.lorenz.lac.module.Loader;
+import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
+import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
+import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
+import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
 @CommandLine.Command(name = "run")
 @Slf4j
@@ -68,27 +57,6 @@ public class Run implements Runnable {
       description =
           "When present relaxes constraints that force the rank coefficient of result to equal the rank coefficient of the input. Only works on functions that take exactly one tree and return a tree.")
   private Boolean relaxRank;
-
-  @CommandLine.Option(
-      names = "--domain",
-      description =
-          "When present, coefficients will not be searched in the given domain. Use 'N' for natural numbers, 'Q' for rational numbers and omit the option for automatic selection.")
-  private DomainSelection domainSelection;
-
-  private enum DomainSelection {
-    N,
-    Q;
-
-    public static ConstraintSystemSolver.Domain toDomain(DomainSelection value) {
-      switch (value) {
-        case N:
-          return ConstraintSystemSolver.Domain.INTEGER;
-        case Q:
-          return ConstraintSystemSolver.Domain.RATIONAL;
-      }
-      throw bug("unknown domain selection");
-    }
-  }
 
   @CommandLine.Option(names = "--name", description = "Name of the run.")
   private String name;
@@ -138,6 +106,7 @@ public class Run implements Runnable {
     } catch (UnificationError | TypeError unificationError) {
       throw new RuntimeException(unificationError);
     }
+    program.analyzeSizes();
     // log.info("Loaded definitions:");
     // program.printAllSimpleSignaturesInOrder(System.out);
     Multimap<String, FunctionDefinition> output = ArrayListMultimap.create();
@@ -198,111 +167,19 @@ public class Run implements Runnable {
     } else {
       final var prover = optionalProver.get();
 
-      final Set<Constraint> outsideConstraints = new HashSet<>();
-
-      if (!relaxRank && infer) {
-        for (final var fqn : program.getFunctionDefinitions().keySet()) {
-          final var fd = program.getFunctionDefinitions().get(fqn);
-          final var ann = fd.getInferredSignature().getAnnotation().get().withCost;
-          if (ann.from.size() == 1 && ann.to.size() == 1) {
-            log.warn("Forcing rank on '{}'!", fd.getFullyQualifiedName());
-            outsideConstraints.add(
-                new LessThanOrEqualConstraint(
-                    ann.from.getRankCoefficient(),
-                    ann.to.getRankCoefficient(),
-                    "(outside) force rank"));
-          }
-        }
-      }
-
-      final var autoDomain = program.autoDomain();
-
-      final var domain =
-          domainSelection != null ? DomainSelection.toDomain(domainSelection) : autoDomain;
-
-      if (domainSelection != null && autoDomain != domain) {
-        log.warn(
-            "Chosen domain '{}' is different from automatic selection '{}'. This might not be what you want"
-                + (!infer ? ", especially since we are checking, not inferring types" : "")
-                + ".",
-            domain,
-            autoDomain);
-      }
-
       if (infer) {
-        final List<UnknownCoefficient> setCountingRankCoefficients = new ArrayList<>();
-        final List<UnknownCoefficient> setCountingNonRankCoefficients = new ArrayList<>();
-        final Set<Constraint> setCountingConstraints = new HashSet<>();
-
-        final List<UnknownCoefficient> pairwiseDiffRankCoefficients = new ArrayList<>();
-        final List<UnknownCoefficient> pairwiseDiffNonRankCoefficients = new ArrayList<>();
-        final Set<Constraint> pairwiseDiffConstraints = new HashSet<>();
-
-        final List<UnknownCoefficient> diffRankCoefficients = new ArrayList<>();
-        final List<UnknownCoefficient> diffNonRankCoefficients = new ArrayList<>();
-        final Set<Constraint> diffConstraints = new HashSet<>();
-
-        for (final var fqn : program.getRoots()) {
-          if (!program.getFunctionDefinitions().containsKey(fqn)) {
-            throw new RuntimeException("Could not find function definition for '" + fqn + "'.");
-          }
-          if (program.getFunctionDefinitions().size() > 1) {
-            log.info("Minimizing bounds for '{}'!", fqn);
-          }
-
-          final var fd = program.getFunctionDefinitions().get(fqn);
-
-          FunctionAnnotation inferredAnnotation =
-              fd.getInferredSignature().getAnnotation().get().withCost;
-
-          final var setCounting = Optimization.setCounting(inferredAnnotation);
-          if (setCounting.isPresent()) {
-            setCountingRankCoefficients.addAll(setCounting.get().rankCoefficients);
-            setCountingNonRankCoefficients.addAll(setCounting.get().nonRankCoefficients);
-            setCountingConstraints.addAll(setCounting.get().constraints);
-          }
-
-          final var pairwiseDiff = Optimization.pairwiseDiff(inferredAnnotation);
-          if (pairwiseDiff.isPresent()) {
-            pairwiseDiffRankCoefficients.addAll(pairwiseDiff.get().rankCoefficients);
-            pairwiseDiffNonRankCoefficients.addAll(pairwiseDiff.get().nonRankCoefficients);
-            pairwiseDiffConstraints.addAll(pairwiseDiff.get().constraints);
-          }
-
-          final var diff = Optimization.squareWeightedComponentWiseDifference(inferredAnnotation);
-          if (diff.isPresent()) {
-            diffRankCoefficients.addAll(diff.get().rankCoefficients);
-            diffNonRankCoefficients.addAll(diff.get().nonRankCoefficients);
-            diffConstraints.addAll(diff.get().constraints);
-          }
-        }
-
-        final var minimizationConstraints =
-            union(
-                diffConstraints /*union(setCountingConstraints, pairwiseDiffConstraints)*/,
-                outsideConstraints);
-
-        /*
-        final var minimizationTargets =
-            append(
-                append(pairwiseDiffRankCoefficients, setCountingRankCoefficients),
-                append(pairwiseDiffNonRankCoefficients, setCountingNonRankCoefficients));
-         */
-
-        /*
-        final var minimizationTargets =
-                append(
-                        append(setCountingRankCoefficients, pairwiseDiffRankCoefficients),
-                        append(setCountingNonRankCoefficients, pairwiseDiffNonRankCoefficients));
-         */
-
-        final var minimizationTargets = append(diffRankCoefficients, diffNonRankCoefficients);
+        var multiTarget =
+            Optimization.combine(
+                program,
+                program.getRoots(),
+                Optimization::squareWeightedComponentWiseDifference,
+                !relaxRank);
 
         log.info("Solving constraints...");
-        result = prover.solve(minimizationConstraints, minimizationTargets, "min", domain);
+        result = prover.solve(multiTarget.constraints, multiTarget.targets, "min");
       } else {
         log.info("Solving constraints...");
-        result = prover.solve(outsideConstraints, emptyList(), "sat", domain);
+        result = prover.solve(emptySet(), emptyList(), "sat");
       }
 
       log.info("Done. Result(s): ");

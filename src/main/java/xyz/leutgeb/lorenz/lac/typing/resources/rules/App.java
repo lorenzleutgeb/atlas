@@ -82,7 +82,8 @@ public class App implements Rule {
             signature.to, obligation.getAnnotation(), ruleName(obligation.getCost()) + " Q'"));
   }
 
-  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
+  public Rule.ApplicationResult apply(
+      Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = (CallExpression) obligation.getExpression();
 
     // Look up global annotation for this function.

@@ -1,5 +1,16 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.solving;
 
+import static com.microsoft.z3.Status.SATISFIABLE;
+import static com.microsoft.z3.Status.UNKNOWN;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
+import static java.util.Optional.empty;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.output;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
+import static xyz.leutgeb.lorenz.lac.util.Util.signum;
+import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
+
 import com.google.common.collect.HashBiMap;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
@@ -12,16 +23,6 @@ import com.microsoft.z3.Solver;
 import com.microsoft.z3.Statistics;
 import com.microsoft.z3.Status;
 import com.microsoft.z3.Z3Exception;
-import lombok.Value;
-import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.util.Fraction;
-import xyz.leutgeb.lorenz.lac.util.Pair;
-import xyz.leutgeb.lorenz.lac.util.Util;
-
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -39,17 +40,15 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static com.microsoft.z3.Status.SATISFIABLE;
-import static com.microsoft.z3.Status.UNKNOWN;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptyMap;
-import static java.util.Optional.empty;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.output;
-import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
-import static xyz.leutgeb.lorenz.lac.util.Util.signum;
-import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
+import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.util.Fraction;
+import xyz.leutgeb.lorenz.lac.util.Pair;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Slf4j
 public class ConstraintSystemSolver {
@@ -103,7 +102,7 @@ public class ConstraintSystemSolver {
 
   private static Map<String, String> z3Config(boolean unsatCore) {
     // Execute `z3 -p` to get a list of parameters.
-    //return emptyMap();
+    // return emptyMap();
     return Map.of("unsat_core", String.valueOf(unsatCore));
     // return Map.of("parallel.enable", "true");
   }
@@ -118,7 +117,7 @@ public class ConstraintSystemSolver {
 
   public static Result solve(
       Set<Constraint> constraints, Path outPath, List<UnknownCoefficient> target) {
-    return solve(constraints, outPath, target, Domain.INTEGER);
+    return solve(constraints, outPath, target, Domain.RATIONAL);
   }
 
   public static Result solve(
@@ -132,7 +131,7 @@ public class ConstraintSystemSolver {
       // final Solver solver =
       // /*domain.getLogic()*/Optional.of("LIA").map(ctx::mkSolver).orElseGet(ctx::mkSolver);
 
-      //final var params = ctx.mkParams();
+      // final var params = ctx.mkParams();
       // params.add("?", false);
       // params.add("threads", Runtime.getRuntime().availableProcessors());
 
@@ -141,7 +140,7 @@ public class ConstraintSystemSolver {
       // params.add("opt.priority", "pareto");
       // params.add("opt.enable_sat", "true");
       // params.add("smt.pb.enable_simplex", "true");
-      //solver.setParameters(params);
+      // solver.setParameters(params);
 
       var optimize = !target.isEmpty();
       final Optimize opt = optimize ? ctx.mkOptimize() : null;

@@ -105,7 +105,7 @@ dependencies {
 
     // The Z3 Theorem Prover
     // See https://github.com/Z3Prover/z3#java
-    implementation(files(Optional.ofNullable(System.getenv("Z3_JAVA")).orElse("lib") + "/com.microsoft.z3.jar"))
+    implementation(files(Optional.ofNullable(System.getenv("Z3_JAVA")).orElse("lib") + "/share/java/com.microsoft.z3.jar"))
 
     // Graph output
     implementation("guru.nidi:graphviz-java:0.15.0") {
@@ -189,7 +189,7 @@ application {
 }
 
 tasks.create<JavaCompile>("compileGeneratedJava") {
-    dependsOn("generateExamples")
+    // dependsOn("generateExamples")
     source = fileTree(buildDir.resolve("generated-src/lac/main"))
     classpath = project.configurations.compileClasspath.get() + sourceSets.main.get().output
     destinationDir = sourceSets.main.get().output.classesDirs.singleFile

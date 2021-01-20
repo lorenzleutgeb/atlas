@@ -22,7 +22,6 @@ import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -46,7 +45,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.ast.Program;
-import xyz.leutgeb.lorenz.lac.module.Loader;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
@@ -59,11 +57,9 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.OffsetConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 import xyz.leutgeb.lorenz.lac.typing.simple.FunctionSignature;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint;
-import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.BoolType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
-import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 import xyz.leutgeb.lorenz.lac.util.Fraction;
 import xyz.leutgeb.lorenz.lac.util.NidiExporter;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
@@ -74,10 +70,6 @@ public class Tests {
   private static final TreeType BTREE = new TreeType(BETA);
   private static final BoolType BOOL = BoolType.INSTANCE;
   private static final File OUT = new File("out");
-
-  public static Loader loader() {
-    return new Loader(Path.of(".", "src", "test", "resources", "examples"));
-  }
 
   private static Stream<Arguments> nonConstantCostDefinitions() {
     return Stream.of(
@@ -129,7 +121,7 @@ public class Tests {
         arguments("RightList.tl", sig(ATREE, ATREE), 0),
         arguments("LeftList.tl", sig(ATREE, ATREE), 0),
         arguments("Scratch.id_match", sig(ATREE, ATREE), 0),
-            arguments("Scratch.id_match_match", sig(ATREE, ATREE), 0),
+        arguments("Scratch.id_match_match", sig(ATREE, ATREE), 0),
         arguments("Scratch.right_child", sig(ATREE, ATREE), 0),
         arguments("Scratch.left_child", sig(ATREE, ATREE), 0),
         arguments("Scratch.flip", sig(ATREE, ATREE), 0),
@@ -198,15 +190,6 @@ public class Tests {
     return exporter;
   }
 
-  public static Program loadAndNormalizeAndInferAndUnshare(String fqn)
-      throws UnificationError, TypeError, IOException {
-    final var result = loader().load(fqn);
-    result.normalize();
-    result.infer();
-    result.unshare(true);
-    return result;
-  }
-
   @BeforeAll
   public static void beforeAll() {
     load();
@@ -216,7 +199,7 @@ public class Tests {
   @MethodSource("nonConstantCostDefinitions")
   @DisplayName("Non-Constant Cost")
   void nonConstantCost(String fqn, FunctionSignature expectedSignature) throws Exception {
-    final var program = loadAndNormalizeAndInferAndUnshare(fqn);
+    final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
     for (var e : program.getFunctionDefinitions().values()) {
       e.printHaskellTo(new PrintStream(new File(OUT, e.getName() + ".hs").getAbsoluteFile()));
     }
@@ -237,7 +220,7 @@ public class Tests {
   void splay() throws Exception {
     final String fqn = "SplayTree.splay";
     final var expectedSignature = sig(singleton(ord(ALPHA)), ALPHA, ATREE, ATREE);
-    final var program = loadAndNormalizeAndInferAndUnshare(fqn);
+    final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
     final var definition = program.getFunctionDefinitions().get(fqn);
 
     assertNotNull(definition);
@@ -269,7 +252,7 @@ public class Tests {
   @ParameterizedTest
   @MethodSource("infiniteCostDefinitions")
   void infiniteCost(String fqn) throws Exception {
-    final var program = loadAndNormalizeAndInferAndUnshare(fqn);
+    final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
     final var solution = program.solve();
     program.ingest(solution.getSolution());
     program.printAllInferredSignaturesInOrder(System.out);
@@ -280,7 +263,7 @@ public class Tests {
   void revAppend() throws Exception {
     final var fqn = "LeftList.rev_append";
     final var expectedSignature = sig(ATREE, ATREE, ATREE);
-    final var program = loadAndNormalizeAndInferAndUnshare(fqn);
+    final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
     final var definition = program.getFunctionDefinitions().get(fqn);
 
     assertEquals(expectedSignature, definition.getInferredSignature());
@@ -295,7 +278,7 @@ public class Tests {
   void splayZigZig() throws Exception {
     final var fqn = "SplayTree.splay_zigzig";
     final var expectedSignature = sig(ALPHA, ATREE, ATREE);
-    final var program = loadAndNormalizeAndInferAndUnshare(fqn);
+    final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
     final var definition = program.getFunctionDefinitions().get(fqn);
 
     assertEquals(expectedSignature, definition.getInferredSignature());
@@ -328,7 +311,7 @@ public class Tests {
   @Timeout(value = 15)
   void constantCost(final String fqn, FunctionSignature expectedSignature, int constantCost)
       throws Exception {
-    final var program = loadAndNormalizeAndInferAndUnshare(fqn);
+    final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
     final var definition = program.getFunctionDefinitions().get(fqn);
 
     assertNotNull(definition);
@@ -471,7 +454,7 @@ public class Tests {
   @ParameterizedTest
   @CsvSource({"true,lazy", "false,eager"})
   void dumps(boolean lazy, String suffix) throws Exception {
-    final var loader = loader();
+    final var loader = TestUtil.loader();
     loader.autoload();
     final var program = loader.all();
     loader.exportGraph(new FileOutputStream(new File(OUT, "all.dot")));
@@ -534,7 +517,7 @@ public class Tests {
 
   @Test
   void fiddle() throws Exception {
-    var loader = loader();
+    var loader = TestUtil.loader();
     loader.autoload();
     Program program = loader.loadInline("foo t = (Scratch.empty t)");
     program.dumpToJsh(Path.of(".", "Dump.jsh"));

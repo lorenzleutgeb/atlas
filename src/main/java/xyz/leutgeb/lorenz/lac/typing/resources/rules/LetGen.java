@@ -22,7 +22,8 @@ import xyz.leutgeb.lorenz.lac.util.Pair;
 public class LetGen implements Rule {
   public static final LetGen INSTANCE = new LetGen();
 
-  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
+  public Rule.ApplicationResult apply(
+      Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = (LetExpression) obligation.getExpression();
     final var declared = expression.getDeclared();
     final var value = expression.getValue();

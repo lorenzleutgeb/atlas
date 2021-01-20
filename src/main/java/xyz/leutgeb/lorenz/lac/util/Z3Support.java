@@ -42,7 +42,7 @@ public class Z3Support {
         log.trace("Setting Z3 parameter '{}' to '{}'", key, value);
 
         Global.setParameter(parameter, value);
-        //Global.setParameter("parallel.enable", "true");
+        // Global.setParameter("parallel.enable", "true");
       }
     } catch (Throwable throwable) {
       log.debug("Error setting Z3 parameters.", throwable);

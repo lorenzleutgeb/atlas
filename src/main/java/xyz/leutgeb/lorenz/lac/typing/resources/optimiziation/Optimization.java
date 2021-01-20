@@ -1,7 +1,21 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.optimiziation;
 
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+import static xyz.leutgeb.lorenz.lac.util.Util.append;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Value;
+import xyz.leutgeb.lorenz.lac.ast.Program;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
@@ -15,24 +29,11 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.ExclusiveDisjunctiveC
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.GreaterThanOrEqualConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.IfThenElseConstraint;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.Function;
-
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
-
 public class Optimization {
   @Value
   @AllArgsConstructor
   public static class MultiTarget {
-    public List<UnknownCoefficient> rankCoefficients;
-    public List<UnknownCoefficient> nonRankCoefficients;
+    public List<UnknownCoefficient> targets;
     public Set<Constraint> constraints;
   }
 
@@ -118,7 +119,7 @@ public class Optimization {
               nonRankCoefficients.add(x);
             });
 
-    return Optional.of(new MultiTarget(rankCoefficients, nonRankCoefficients, constraints));
+    return Optional.of(new MultiTarget(append(rankCoefficients, nonRankCoefficients), constraints));
   }
 
   public static Optional<MultiTarget> pairwiseDiff(FunctionAnnotation annotation) {
@@ -156,7 +157,7 @@ public class Optimization {
             });
 
     return Optional.of(
-        new Optimization.MultiTarget(rankCoefficients, nonRankCoefficients, constraints));
+        new Optimization.MultiTarget(append(rankCoefficients, nonRankCoefficients), constraints));
   }
 
   public static Optional<MultiTarget> ng(FunctionAnnotation annotation) {
@@ -294,7 +295,7 @@ public class Optimization {
     constraints.add(new EqualsSumConstraint(sumVar, sum, "(opt)"));
     goals.add(sumVar);
 
-    return Optional.of(new Optimization.MultiTarget(goals, Collections.emptyList(), constraints));
+    return Optional.of(new Optimization.MultiTarget(goals, constraints));
   }
 
   private static boolean sameSize(FunctionAnnotation functionAnnotation) {
@@ -338,8 +339,7 @@ public class Optimization {
     UnknownCoefficient diffsumVar = UnknownCoefficient.unknown("x");
     constraints.add(
         new EqualsSumConstraint(diffsumVar, diffSum, "(opt) weightedComponentWiseDifference"));
-    return Optional.of(
-        new Optimization.MultiTarget(List.of(diffsumVar), Collections.emptyList(), constraints));
+    return Optional.of(new Optimization.MultiTarget(List.of(diffsumVar), constraints));
   }
 
   public static Optional<MultiTarget> squareWeightedComponentWiseDifference(
@@ -375,8 +375,7 @@ public class Optimization {
 
     UnknownCoefficient diffsumVar = UnknownCoefficient.unknown("x");
     constraints.add(new EqualsSumConstraint(diffsumVar, diffSum, "(opt)"));
-    return Optional.of(
-        new Optimization.MultiTarget(List.of(diffsumVar), Collections.emptyList(), constraints));
+    return Optional.of(new Optimization.MultiTarget(List.of(diffsumVar), constraints));
   }
 
   public static Optional<MultiTarget> componentWiseDifferenceAndSum(FunctionAnnotation annotation) {
@@ -412,9 +411,7 @@ public class Optimization {
 
     UnknownCoefficient sumVar = UnknownCoefficient.unknown("x");
     constraints.add(new EqualsSumConstraint(sumVar, sum, "(opt)"));
-    return Optional.of(
-        new Optimization.MultiTarget(
-            List.of(diffsumVar, sumVar), Collections.emptyList(), constraints));
+    return Optional.of(new Optimization.MultiTarget(List.of(diffsumVar, sumVar), constraints));
   }
 
   public static Optional<MultiTarget> foo(FunctionAnnotation annotation) {
@@ -564,7 +561,7 @@ public class Optimization {
     goals.add(sumVar);
     */
 
-    return Optional.of(new Optimization.MultiTarget(goals, Collections.emptyList(), constraints));
+    return Optional.of(new Optimization.MultiTarget(goals, constraints));
   }
 
   private static Constraint active(Coefficient x, Coefficient left, Coefficient right) {
@@ -582,5 +579,71 @@ public class Optimization {
   private static Constraint abs(Coefficient y, Coefficient x) {
     return new IfThenElseConstraint(
         new GreaterThanOrEqualConstraint(x, ZERO, "(abs)"), x, x.negate(), y, "(abs)");
+  }
+
+  public static MultiTarget combine(
+      Program program,
+      Collection<String> fqns,
+      Function<FunctionAnnotation, Optional<MultiTarget>> optimization,
+      boolean forceRank) {
+
+    return combine(
+        fqns.stream()
+            .map(
+                fqn ->
+                    program
+                        .getFunctionDefinitions()
+                        .get(fqn)
+                        .getInferredSignature()
+                        .getAnnotation()
+                        .get()
+                        .withCost)
+            .collect(Collectors.toList()),
+        optimization,
+        forceRank);
+  }
+
+  public static MultiTarget combine(
+      Collection<FunctionAnnotation> annotations,
+      Function<FunctionAnnotation, Optional<MultiTarget>> optimization,
+      boolean forceRank) {
+    final List<List<Coefficient>> targetSums = new ArrayList<>();
+    final Set<Constraint> constraints = new HashSet<>();
+
+    for (final var annotation : annotations) {
+      final var target = optimization.apply(annotation);
+      if (target.isPresent()) {
+        for (int i = 0; i < target.get().targets.size(); i++) {
+          if (targetSums.size() >= i) {
+            targetSums.add(new ArrayList<>());
+          }
+
+          final var sum = targetSums.get(i);
+          sum.add(target.get().targets.get(i));
+        }
+        constraints.addAll(target.get().constraints);
+      }
+
+      if (forceRank
+          && annotation.to.size() == 1
+          && annotation.to.getRankCoefficientOrZero() instanceof UnknownCoefficient
+          && annotation.from.size() == 1) {
+        constraints.add(
+            new EqualityConstraint(
+                annotation.from.getRankCoefficient(),
+                annotation.to.getRankCoefficient(),
+                "(hack) force rank"));
+      }
+    }
+
+    var targets = new ArrayList<UnknownCoefficient>(targetSums.size());
+
+    for (List<Coefficient> sum : targetSums) {
+      final var x = UnknownCoefficient.unknown("x");
+      targets.add(x);
+      constraints.add(new EqualsSumConstraint(x, sum, "(opt) combine"));
+    }
+
+    return new MultiTarget(targets, constraints);
   }
 }

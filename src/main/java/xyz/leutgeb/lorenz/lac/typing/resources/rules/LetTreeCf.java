@@ -59,7 +59,8 @@ public class LetTreeCf implements Rule {
    * <p>P' wird nicht direkt aus anderen Annotationen definiert, sondern es wird eine Form
    * angenommen, z.B. (a, c) mit a in {0, 1}, c in {0, 2}.
    */
-  public ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
+  public ApplicationResult apply(
+      Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = (LetExpression) obligation.getExpression();
     final var x = expression.getDeclared();
     final var value = expression.getValue();

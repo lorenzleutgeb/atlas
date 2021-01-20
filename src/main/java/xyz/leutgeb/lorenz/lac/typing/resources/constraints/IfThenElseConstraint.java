@@ -70,6 +70,14 @@ public class IfThenElseConstraint extends Constraint {
 
   @Override
   public String toString() {
-    return "(assert (= " + target + " (ite (" + condition + ") (" + thenBranch + ") (" + elseBranch + ")))";
+    return "(assert (= "
+        + target
+        + " (ite ("
+        + condition
+        + ") ("
+        + thenBranch
+        + ") ("
+        + elseBranch
+        + ")))";
   }
 }

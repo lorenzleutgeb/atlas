@@ -1,24 +1,19 @@
 package xyz.leutgeb.lorenz.lac;
 
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import xyz.leutgeb.lorenz.lac.ast.Program;
-import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
-import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
-import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
-import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.lac.unification.UnificationError;
-import xyz.leutgeb.lorenz.lac.util.Fraction;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static xyz.leutgeb.lorenz.lac.TestUtil.loadAndNormalizeAndInferAndUnshare;
+import static xyz.leutgeb.lorenz.lac.TestUtil.printTable;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.zero;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.THREE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient.unknown;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
+import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -29,23 +24,22 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static com.google.common.collect.Sets.union;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptyMap;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static xyz.leutgeb.lorenz.lac.TestUtil.printTable;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.zero;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.THREE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient.unknown;
-import static xyz.leutgeb.lorenz.lac.util.Util.append;
-import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
-import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
+import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
+import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
+import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.Fraction;
 
 public class Tactics {
   @BeforeAll
@@ -256,14 +250,90 @@ public class Tactics {
       new Annotation(List.of(ONE), Map.of(unitIndex(1), new KnownCoefficient(1)), "Q'");
 
   private static Stream<Arguments> tactics() {
+    final var pairingHeap = SmartRangeHeuristic.DEFAULT.generate("Q'", 1);
+    final var splayHeap = SmartRangeHeuristic.DEFAULT.generate("Q'", 1);
+
     return Stream.of(
+        /*
+        Arguments.of(
+                Map.of(
+                        "SplayHeap.del_min",
+                        Config.of(
+                                //"SplayHeap/del_min",
+                                CombinedFunctionAnnotation.of(
+                                        SmartRangeHeuristic.DEFAULT.generate("Q", 1), splayHeap,
+                                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                                        //pairingHeap,
+                                        SmartRangeHeuristic.DEFAULT.generate("Qcf1", 1),
+                                        SmartRangeHeuristic.DEFAULT.generate("Qcf1'", 1),
+                                        //SmartRangeHeuristic.DEFAULT.generate("Qcf2", 1),
+                                        //SmartRangeHeuristic.DEFAULT.generate("Qcf2'", 1),
+                                        zero(1),
+                                        zero(1)
+                                        )),
+                        "SplayHeap.partition",
+                        Config.of(
+                                // "SplayHeap/partition",
+                                CombinedFunctionAnnotation.of(
+                                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                                        //pairingHeap,
+                                        SmartRangeHeuristic.DEFAULT.generate("Qcf1", 1),
+                                        SmartRangeHeuristic.DEFAULT.generate("Qcf1'", 1),
+                                        //SmartRangeHeuristic.DEFAULT.generate("Qcf2", 1),
+                                        //SmartRangeHeuristic.DEFAULT.generate("Qcf2'", 1),
+                                        zero(1),
+                                        zero(1)
+                                )),
+                        "SplayHeap.insert",
+                        Config.of(
+                                // "SplayHeap/insert",
+                                CombinedFunctionAnnotation.of(
+                                        SmartRangeHeuristic.DEFAULT.generate("Q", 1), splayHeap)))), */
+
+        Arguments.of(
+            Map.of(
+                "PairingHeap.del_min_via_merge_pairs_isolated",
+                Config.of(
+                    CombinedFunctionAnnotation.of(
+                        SmartRangeHeuristic.DEFAULT.generate("Q", 1), pairingHeap)),
+                "PairingHeap.merge_pairs_isolated",
+                Config.of(
+                    "PairingHeap/merge_pairs_isolated",
+                    CombinedFunctionAnnotation.of(
+                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                        // pairingHeap,
+                        SmartRangeHeuristic.DEFAULT.generate("Qcf1", 1),
+                        SmartRangeHeuristic.DEFAULT.generate("Qcf1'", 1),
+                        // SmartRangeHeuristic.DEFAULT.generate("Qcf2", 1),
+                        // SmartRangeHeuristic.DEFAULT.generate("Qcf2'", 1),
+                        zero(1),
+                        zero(1))),
+                "PairingHeap.insert_isolated",
+                Config.of(
+                    // "PairingHeap/insert_isolated",
+                    CombinedFunctionAnnotation.of(
+                        SmartRangeHeuristic.DEFAULT.generate("Q", 1), pairingHeap)))),
+        Arguments.of(
+            Map.of(
+                "Scratch.test",
+                Config.of(
+                    "Scratch/test",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(List.of(ONE), Map.of(List.of(1, 0), ONE), "Q"),
+                        new Annotation(List.of(ONE), emptyMap(), "Q'"))))),
+        Arguments.of(
+            Map.of(
+                "SplayTree.splay", Config.of("SplayTree/splay-for-insert"),
+                "SplayTree.insert", Config.of("SplayTree/insert"))),
         Arguments.of(
             Map.of(
                 "PairingHeap.del_min_via_merge_pairs_isolated",
                 Config.of(),
                 "PairingHeap.merge_pairs_isolated",
                 Config.of("PairingHeap/merge_pairs_isolated"))),
-
         Arguments.of(
             Map.of(
                 "PairingHeap.merge",
@@ -328,43 +398,38 @@ public class Tactics {
                             "Q2cf"),
                         zero(1),
                         zero(1))))),
-
-
-            Arguments.of(
-                    Map.of(
-                            "SplayHeap.insert",
-                            Config.of(
-                                    "SplayHeap/insert"
+        Arguments.of(
+            Map.of(
+                "SplayHeap.insert",
+                Config.of(
+                    "SplayHeap/insert"
                     /*CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            ONE, Map.of(List.of(1, 0), ONE, List.of(1, 1), ONE, unitIndex(1), ONE)),
-                        new Annotation(ONE, Map.of(unitIndex(1), ONE)),
-                        SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
-                        SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
-                        Annotation.zero(1),
-                        Annotation.zero(1))
-                     */
-                            ),
-
-                            "SplayHeap.partition",
-                    Config.of("SplayHeap/partition")
-                    )),
-
+                       new Annotation(
+                           ONE, Map.of(List.of(1, 0), ONE, List.of(1, 1), ONE, unitIndex(1), ONE)),
+                       new Annotation(ONE, Map.of(unitIndex(1), ONE)),
+                       SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
+                       SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
+                       Annotation.zero(1),
+                       Annotation.zero(1))
+                    */
+                    ),
+                "SplayHeap.partition",
+                Config.of("SplayHeap/partition"))),
         Arguments.of(
             Map.of(
                 "SplayHeap.del_min",
                 Config.of(
                     "SplayHeap/del_min"
                     /*CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            ONE, Map.of(List.of(1, 0), ONE, List.of(1, 1), ONE, unitIndex(1), ONE)),
-                        new Annotation(ONE, Map.of(unitIndex(1), ONE)),
-                        SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
-                        SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
-                        Annotation.zero(1),
-                        Annotation.zero(1))
-                     */
-                ))),
+                       new Annotation(
+                           ONE, Map.of(List.of(1, 0), ONE, List.of(1, 1), ONE, unitIndex(1), ONE)),
+                       new Annotation(ONE, Map.of(unitIndex(1), ONE)),
+                       SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
+                       SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
+                       Annotation.zero(1),
+                       Annotation.zero(1))
+                    */
+                    ))),
         /*
         Arguments.of(
             Map.of(
@@ -965,23 +1030,9 @@ public class Tactics {
 
   @ParameterizedTest
   @MethodSource("tactics")
-  public void all(Map<String, Config> immutableAnnotations) {
-    final var loader = Tests.loader();
-
-    Program program = null;
-    try {
-      program = loader.load(immutableAnnotations.keySet());
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    program.normalize();
-    try {
-      program.infer();
-    } catch (UnificationError | TypeError e) {
-      throw new RuntimeException(e);
-    }
-    program.unshare(true);
-    program.analyzeSizes();
+  public void all(Map<String, Config> immutableAnnotations)
+      throws UnificationError, TypeError, IOException {
+    final var program = loadAndNormalizeAndInferAndUnshare(immutableAnnotations.keySet());
 
     final var annotations =
         immutableAnnotations.entrySet().stream()
@@ -1011,78 +1062,39 @@ public class Tactics {
 
     final Set<Constraint> hackingConstraints = new HashSet<>();
 
-    final List<UnknownCoefficient> pairwiseDiffRankCoefficients = new ArrayList<>();
-    final List<UnknownCoefficient> pairwiseDiffNonRankCoefficients = new ArrayList<>();
+    final List<List<Coefficient>> targetSums = new ArrayList<>();
 
-    final Set<Constraint> pairwiseDiffConstraints = new HashSet<>();
+    final Set<Constraint> optimizationConstraints = new HashSet<>();
 
-    ConstraintSystemSolver.Domain domain = ConstraintSystemSolver.Domain.RATIONAL; // program.autoDomain();
-    System.out.println("domain: " + domain);
+    // System.out.println("domain: " + domain);
 
-    for (final var fqn : immutableAnnotations.keySet()) {
-      if (!program.getFunctionDefinitions().containsKey(fqn)) {
-        fail("Could not find function definition for '" + fqn + "'.");
-      }
-
-      final var fd = program.getFunctionDefinitions().get(fqn);
-
-      FunctionAnnotation functionAnnotation =
-          fd.getInferredSignature().getAnnotation().get().withCost;
-
-      final var pairwiseDiff =
-          Optimization.squareWeightedComponentWiseDifference(functionAnnotation);
-      if (pairwiseDiff.isPresent()) {
-        pairwiseDiffRankCoefficients.addAll(pairwiseDiff.get().rankCoefficients);
-        pairwiseDiffNonRankCoefficients.addAll(pairwiseDiff.get().nonRankCoefficients);
-        pairwiseDiffConstraints.addAll(pairwiseDiff.get().constraints);
-      }
-
-      if (functionAnnotation.to.size() == 1
-          && functionAnnotation.to.getRankCoefficientOrZero() instanceof UnknownCoefficient
-          && functionAnnotation.from.size() == 1) {
-        hackingConstraints.add(
-            new EqualityConstraint(
-                functionAnnotation.from.getRankCoefficient(),
-                functionAnnotation.to.getRankCoefficient(),
-                "(hack) force rank"));
-      }
-    }
+    var multiTarget =
+        Optimization.combine(
+            program,
+            immutableAnnotations.keySet(),
+            Optimization::squareWeightedComponentWiseDifference,
+            true);
 
     // prover.plot();
-    //var solverResult = prover.solve(hackingConstraints, emptyList(), "sat", domain);
+    var solverResult = prover.solve(multiTarget.constraints, emptyList(), "sat");
 
-    //assertTrue(solverResult.getSolution().isPresent());
-    //System.out.println(printTable(prover, solverResult.getSolution()));
-    //program.mockIngest(solverResult.getSolution());
+    assertTrue(solverResult.getSolution().isPresent());
+    System.out.println(printTable(prover, solverResult.getSolution()));
+    program.mockIngest(solverResult.getSolution());
     // prover.plotWithSolution(solution.get());
 
-    //if (immutableAnnotations.values().stream().anyMatch(Config::isUnknown)) {
-      final var minimizationConstraints = union(pairwiseDiffConstraints, hackingConstraints);
+    if (immutableAnnotations.values().stream().anyMatch(Config::isUnknown)) {
+      final var minSetSolutionRat =
+          prover.solve(
+              multiTarget.constraints,
+              multiTarget.targets,
+              "minq",
+              ConstraintSystemSolver.Domain.RATIONAL);
+      program.mockIngest(minSetSolutionRat.getSolution());
 
-      final var minimizationTargets =
-          append(pairwiseDiffRankCoefficients, pairwiseDiffNonRankCoefficients);
+      System.out.println(printTable(prover, minSetSolutionRat.getSolution()));
 
-      /*
-      final var minSolution =
-          prover.solve(minimizationConstraints, minimizationTargets, "minz", domain);
-      program.mockIngest(minSolution.getSolution());
-
-      System.out.println(printTable(prover, minSolution.getSolution()));
-       */
-
-      //if (!domain.equals(ConstraintSystemSolver.Domain.RATIONAL)) {
-        final var minSetSolutionRat =
-            prover.solve(
-                minimizationConstraints,
-                minimizationTargets,
-                "minq",
-                ConstraintSystemSolver.Domain.RATIONAL);
-        program.mockIngest(minSetSolutionRat.getSolution());
-
-        System.out.println(printTable(prover, minSetSolutionRat.getSolution()));
-
-        assertTrue(minSetSolutionRat.getSolution().isPresent());
-      //}
-    //}
+      assertTrue(minSetSolutionRat.getSolution().isPresent());
+    }
   }
 }

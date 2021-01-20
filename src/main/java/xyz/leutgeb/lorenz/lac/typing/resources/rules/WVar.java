@@ -42,7 +42,8 @@ public class WVar implements Rule {
     return redundantIds(context, expression).findFirst();
   }
 
-  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
+  public Rule.ApplicationResult apply(
+      Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var candidate = redundantId(obligation);
 
     if (candidate.isEmpty()) {

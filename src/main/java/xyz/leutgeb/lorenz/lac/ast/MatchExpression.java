@@ -1,6 +1,18 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
+import static com.google.common.collect.Sets.intersection;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.indent;
+import static xyz.leutgeb.lorenz.lac.util.Util.pick;
+
 import com.google.common.collect.Sets;
+import java.io.PrintStream;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -14,19 +26,6 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.lac.util.Pair;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
-
-import java.io.PrintStream;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-
-import static com.google.common.collect.Sets.intersection;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.indent;
-import static xyz.leutgeb.lorenz.lac.util.Util.pick;
 
 @Data
 @EqualsAndHashCode(callSuper = true)

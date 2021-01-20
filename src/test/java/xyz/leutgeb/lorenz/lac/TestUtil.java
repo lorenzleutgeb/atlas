@@ -5,10 +5,14 @@ import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.common.collect.Streams;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -17,12 +21,16 @@ import java.util.stream.StreamSupport;
 import tech.tablesaw.api.StringColumn;
 import tech.tablesaw.api.Table;
 import tech.tablesaw.columns.Column;
+import xyz.leutgeb.lorenz.lac.ast.Program;
+import xyz.leutgeb.lorenz.lac.module.Loader;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
+import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
+import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
 public class TestUtil {
   public static Obligation fromProver(Prover prover, Predicate<Obligation> predicate) {
@@ -108,5 +116,24 @@ public class TestUtil {
     }
 
     return printTable(acs, as);
+  }
+
+  public static Program loadAndNormalizeAndInferAndUnshare(String... fqns)
+      throws UnificationError, TypeError, IOException {
+    return loadAndNormalizeAndInferAndUnshare(Set.of(fqns));
+  }
+
+  public static Program loadAndNormalizeAndInferAndUnshare(Collection<String> fqns)
+      throws UnificationError, TypeError, IOException {
+    final var result = loader().load(Set.copyOf(fqns));
+    result.normalize();
+    result.infer();
+    result.unshare(true);
+    result.analyzeSizes();
+    return result;
+  }
+
+  public static Loader loader() {
+    return new Loader(Path.of(".", "src", "test", "resources", "examples"));
   }
 }

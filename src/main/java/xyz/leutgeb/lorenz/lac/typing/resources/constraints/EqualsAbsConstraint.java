@@ -1,11 +1,17 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 
+import static java.util.Collections.singleton;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+
 import com.google.common.collect.BiMap;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
@@ -13,13 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-
-import static java.util.Collections.singleton;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 @Data
 @Slf4j
@@ -39,7 +38,11 @@ public class EqualsAbsConstraint extends Constraint {
   }
 
   public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
-    return ctx.mkEq(left.encode(ctx, coefficients), ctx.mkApp(ctx.mkFuncDecl("abs", ctx.getIntSort(), ctx.getIntSort()), right.encode(ctx, coefficients)));
+    return ctx.mkEq(
+        left.encode(ctx, coefficients),
+        ctx.mkApp(
+            ctx.mkFuncDecl("abs", ctx.getIntSort(), ctx.getIntSort()),
+            right.encode(ctx, coefficients)));
   }
 
   @Override

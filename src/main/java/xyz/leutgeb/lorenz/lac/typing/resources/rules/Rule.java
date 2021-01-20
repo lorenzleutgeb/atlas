@@ -23,7 +23,8 @@ public interface Rule extends BiFunction<Obligation, AnnotatingGlobals, Rule.App
     return apply(obligation, globals, emptyMap());
   }
 
-  ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments);
+  ApplicationResult apply(
+      Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments);
 
   String getName();
 

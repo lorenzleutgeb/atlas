@@ -99,7 +99,7 @@ public class S62EqLazy extends S62 {
   private static final Program PROGRAM;
 
   static {
-    final var loader = Tests.loader();
+    final var loader = TestUtil.loader();
     try {
       PROGRAM =
           loader.load(Set.of(SPLAY_FQN, INSERT_FQN, MAX_FQN, CONTAINS_FQN, LINK_FQN, MERGE_FQN));

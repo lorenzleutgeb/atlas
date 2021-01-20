@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
 import xyz.leutgeb.lorenz.lac.ast.NodeExpression;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
@@ -21,7 +20,8 @@ import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 public class Node implements Rule {
   public static final Node INSTANCE = new Node();
 
-  public Rule.ApplicationResult apply(Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
+  public Rule.ApplicationResult apply(
+      Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = (NodeExpression) obligation.getExpression();
 
     final var leftId = ((Identifier) expression.getLeft());

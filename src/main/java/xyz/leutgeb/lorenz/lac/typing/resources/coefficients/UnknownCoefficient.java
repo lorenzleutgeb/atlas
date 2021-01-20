@@ -1,16 +1,15 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.coefficients;
 
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
+
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.Context;
+import java.util.Map;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
-
-import java.util.Map;
-
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
 @Value
 @EqualsAndHashCode
