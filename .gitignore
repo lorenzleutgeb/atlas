@@ -1,4 +1,5 @@
 interpreter/generated-src/*.hs
+src/main/gen
 
 *.svg
 *.smt
