@@ -68,9 +68,13 @@ public class MatchExpression extends Expression {
     return Stream.of(leaf, node);
   }
 
+  private boolean isPassthru() {
+    return scrut.equals(nodePattern);
+  }
+
   @Override
   public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
-    final var passthru = scrut.equals(nodePattern);
+    final var passthru = isPassthru();
     if (!passthru && !(nodePattern instanceof NodeExpression)) {
       throw bug("node expression as node pattern required");
     }
@@ -212,27 +216,29 @@ public class MatchExpression extends Expression {
     out.println();
     indent(out, indentation);
     out.println("} else { ");
-    indent(out, indentation + 1);
-    out.println(
-        "final var "
-            + ((Identifier) ((NodeExpression) nodePattern).getLeft()).getName()
-            + " = "
-            + ((Identifier) scrut).getName()
-            + ".left;");
-    indent(out, indentation + 1);
-    out.println(
-        "final var "
-            + ((Identifier) ((NodeExpression) nodePattern).getElements().get(1)).getName()
-            + " = "
-            + ((Identifier) scrut).getName()
-            + ".value;");
-    indent(out, indentation + 1);
-    out.println(
-        "final var "
-            + ((Identifier) ((NodeExpression) nodePattern).getRight()).getName()
-            + " = "
-            + ((Identifier) scrut).getName()
-            + ".right;");
+    if (!isPassthru()) {
+      indent(out, indentation + 1);
+      out.println(
+          "final var "
+              + ((Identifier) ((NodeExpression) nodePattern).getLeft()).getName()
+              + " = "
+              + ((Identifier) scrut).getName()
+              + ".left;");
+      indent(out, indentation + 1);
+      out.println(
+          "final var "
+              + ((Identifier) ((NodeExpression) nodePattern).getElements().get(1)).getName()
+              + " = "
+              + ((Identifier) scrut).getName()
+              + ".value;");
+      indent(out, indentation + 1);
+      out.println(
+          "final var "
+              + ((Identifier) ((NodeExpression) nodePattern).getRight()).getName()
+              + " = "
+              + ((Identifier) scrut).getName()
+              + ".right;");
+    }
     if (node.isTerminal()) {
       indent(out, indentation + 1);
       out.println("return (");
@@ -280,8 +286,7 @@ public class MatchExpression extends Expression {
     final Set<Identifier> freeNode = newNode.freeVariables();
 
     final var testName = ((Identifier) scrut);
-    if (freeLeaf.contains(testName)
-        || (!scrut.equals(nodePattern) && freeNode.contains(testName))) {
+    if (freeLeaf.contains(testName) || (!isPassthru() && freeNode.contains(testName))) {
       throw new IllegalStateException(
           "test variable is destructed, so it cannot occur freely in any case expression");
     }
@@ -317,7 +322,7 @@ public class MatchExpression extends Expression {
   public void analyzeSizes(Graph<Identifier, SizeEdge> sizeGraph) {
     super.analyzeSizes(sizeGraph);
     sizeGraph.addVertex((Identifier) scrut);
-    if (nodePattern instanceof NodeExpression) {
+    if (!isPassthru()) {
       sizeGraph.addVertex((Identifier) ((NodeExpression) nodePattern).getLeft());
       sizeGraph.addVertex((Identifier) ((NodeExpression) nodePattern).getRight());
       sizeGraph.addEdge(

@@ -189,7 +189,7 @@ application {
 }
 
 tasks.create<JavaCompile>("compileGeneratedJava") {
-    // dependsOn("generateExamples")
+    dependsOn("generateExamples")
     source = fileTree(buildDir.resolve("generated-src/lac/main"))
     classpath = project.configurations.compileClasspath.get() + sourceSets.main.get().output
     destinationDir = sourceSets.main.get().output.classesDirs.singleFile
