@@ -74,6 +74,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.rules.Match;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Node;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Rule;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Share;
+import xyz.leutgeb.lorenz.lac.typing.resources.rules.Shift;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Var;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.W;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.WVar;
@@ -100,6 +101,7 @@ public class Prover {
   private static final Rule weakenVariableRule = WVar.INSTANCE;
   private static final Rule weakenRule = W.INSTANCE;
   private static final Rule leafRule = Leaf.INSTANCE;
+  private static final Rule shiftRule = Shift.INSTANCE;
   public static final Rule LET_TREE_CF = letTreeCfPaperRule;
 
   private static final Map<String, Rule> RULES_BY_NAME =
@@ -117,7 +119,8 @@ public class Prover {
               variableRule,
               weakenVariableRule,
               weakenRule,
-              leafRule)
+              leafRule,
+              shiftRule)
           .collect(toUnmodifiableMap(Rule::getName, identity()));
 
   private static final boolean DEFAULT_WEAKEN_AGGRESSIVELY = false;
