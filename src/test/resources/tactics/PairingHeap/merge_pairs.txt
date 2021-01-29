@@ -1,19 +1,19 @@
-(match
-  _{w}
-  (match
-    _{w}
-    (w (let:tree:cf
-      _{w}
-      (w (let:tree:cf
-        _{w}
-        (w (let:tree:cf
-          _{w}
-          (w (let:tree:cf
-            _{w}
-            _{w}
+(match (* h *)
+  (w{mono l2xy} leaf)
+  (w{l2xy mono} (match (* rx *)
+    (w{l2xy mono} (let:tree:cf leaf (w{mono l2xy} node)))
+    (w{l2xy mono} (let:tree:cf
+      (w{l2xy mono} app)
+      (w{l2xy mono} (let:tree:cf
+        (w{l2xy mono} node)
+        (w{l2xy mono} (let:tree:cf
+          (w{l2xy mono} node)
+          (w{l2xy mono} (let:tree:cf
+            (w{l2xy mono} app)
+            (w{l2xy mono} app)
           ))
         ))
       ))
     ))
-  )
+  ))
 )

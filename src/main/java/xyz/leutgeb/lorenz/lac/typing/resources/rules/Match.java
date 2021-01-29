@@ -21,6 +21,14 @@ import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 public class Match implements Rule {
   public static final Match INSTANCE = new Match();
 
+  private String ruleName(Obligation obligation) {
+    return "("
+        + getName()
+        + " `"
+        + ((MatchExpression) obligation.getExpression()).getScrut().terminalOrBox()
+        + "`)";
+  }
+
   public static AnnotatingContext pop(List<Identifier> that, Identifier scrutinee) {
     final var newIds = new ArrayList<Identifier>(Math.max(that.size() - 1, 0));
     for (final var id : that) {
@@ -87,7 +95,7 @@ public class Match implements Rule {
           new EqualsSumConstraint(
               gammap.getAnnotation().getCoefficientOrDefine(entry.getKey()),
               entry.getValue(),
-              "(match) p_{a⃗⃗, c} = Σ_{a+b=c} q_{a⃗⃗, a, b}"));
+              ruleName(obligation) + " p_{a⃗⃗, c} = Σ_{a+b=c} q_{a⃗⃗, a, b}"));
     }
 
     for (var id : gammaxq.getIds()) {
@@ -98,7 +106,7 @@ public class Match implements Rule {
           new EqualityConstraint(
               gammaxq.getRankCoefficient(id),
               gammap.getRankCoefficientOrDefine(id),
-              "(match) q_i = p_i"));
+              ruleName(obligation) + " q_i = p_i"));
     }
 
     if (x.equals(pattern)) {
@@ -121,19 +129,19 @@ public class Match implements Rule {
             new EqualityConstraint(
                 gammaxsr.getRankCoefficientOrDefine(x1),
                 gammaxq.getRankCoefficient(x),
-                "(match) r_{m+1} = q_{m+1} (for var `" + x1 + "`)"),
+                ruleName(obligation) + " r_{m+1} = q_{m+1} (for var `" + x1 + "`)"),
             new EqualityConstraint(
                 gammaxsr.getRankCoefficientOrDefine(x3),
                 gammaxq.getRankCoefficient(x),
-                "(match) r_{m+2} = q_{m+1} (for var `" + x3 + "`)"),
+                ruleName(obligation) + " r_{m+2} = q_{m+1} (for var `" + x3 + "`)"),
             new EqualityConstraint(
                 gammaxsr.getCoefficientOrDefine(id -> id.equals(x1) ? 1 : 0, 0),
                 gammaxq.getRankCoefficient(x),
-                "r_{(0⃗⃗,1,0,0)} = q_{m+1}"),
+                ruleName(obligation) + " r_{(0⃗⃗,1,0,0)} = q_{m+1}"),
             new EqualityConstraint(
                 gammaxsr.getCoefficientOrDefine(id -> id.equals(x3) ? 1 : 0, 0),
                 gammaxq.getRankCoefficient(x),
-                "r_{(0⃗,0,1,0)} = q_{m+1}")));
+                ruleName(obligation) + " r_{(0⃗,0,1,0)} = q_{m+1}")));
 
     gammaxq
         .streamNonRank()
@@ -143,7 +151,10 @@ public class Match implements Rule {
               return new EqualityConstraint(
                   gammaxsr.getCoefficientOrDefine(qEntry.mask(x1, a).mask(x3, a)),
                   qEntry.getValue(),
-                  "(match) r_{a⃗⃗,a,a,b} = q_{a⃗⃗,a,b} for expression `" + expression + "`");
+                  ruleName(obligation)
+                      + " r_{a⃗⃗,a,a,b} = q_{a⃗⃗,a,b} for expression `"
+                      + expression
+                      + "`");
             })
         .forEach(rConstraints::add);
 
@@ -155,7 +166,7 @@ public class Match implements Rule {
           new EqualityConstraint(
               gammaxq.getRankCoefficient(id),
               gammaxsr.getRankCoefficientOrDefine(id),
-              "(match) q_i = r_i"));
+              ruleName(obligation) + " q_i = r_i"));
     }
 
     return new Rule.ApplicationResult(

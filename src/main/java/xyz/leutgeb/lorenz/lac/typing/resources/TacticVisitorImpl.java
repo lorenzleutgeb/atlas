@@ -134,11 +134,11 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
             ruleName,
             start.getLine(),
             start.getCharPositionInLine());
-        prover.setLogApplications(true);
+        // prover.setLogApplications(true);
       }
-      prover.setWeakenAggressively(weakenAggressively);
-      prover.prove(obligation);
-      prover.setWeakenAggressively(false);
+      // prover.setWeakenAggressively(weakenAggressively);
+      prover.proveSmart(obligation);
+      // prover.setWeakenAggressively(false);
       if (!auto) {
         prover.setLogApplications(false);
       }
@@ -153,7 +153,7 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
             "Automatically applying (w:var) to remove leftover variables {} on line {}.",
             redundant,
             start.getLine());
-        prover.setLogApplications(true);
+        // prover.setLogApplications(true);
         obligation = prover.weakenVariables(obligation);
       }
       try {

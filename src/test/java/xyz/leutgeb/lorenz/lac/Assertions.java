@@ -15,7 +15,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 
-public class Assertions {
+class Assertions {
   public static <V> V assertAnnotationEquals(Annotation expected, Annotation actual, String name) {
     if (expected.coefficientsEqual(actual)) {
       return null;

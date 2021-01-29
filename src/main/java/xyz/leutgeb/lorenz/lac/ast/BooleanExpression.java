@@ -115,15 +115,15 @@ public class BooleanExpression extends Expression {
     // Special comparison with leaf.
 
     if (operator.equals(ComparisonOperator.EQ)) {
-      if (Identifier.LEAF.equals(left) && Identifier.LEAF.equals(right)) {
+      if (Identifier.isLeaf(left) && Identifier.isLeaf(right)) {
         out.print("true");
         return;
       }
-      if (Identifier.LEAF.equals(left) && !Identifier.LEAF.equals(right)) {
+      if (Identifier.isLeaf(left) && !Identifier.isLeaf(right)) {
         out.print(((Identifier) right).getName() + ".isLeaf()");
         return;
       }
-      if (!Identifier.LEAF.equals(left) && Identifier.LEAF.equals(right)) {
+      if (!Identifier.isLeaf(left) && Identifier.isLeaf(right)) {
         out.print(((Identifier) left).getName() + ".isLeaf()");
         return;
       }

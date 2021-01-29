@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
+import static xyz.leutgeb.lorenz.lac.util.Util.pick;
 
 import com.google.common.collect.BiMap;
 import com.microsoft.z3.ArithExpr;
@@ -34,7 +35,9 @@ public class ConjunctiveConstraint extends Constraint {
     if (elements.isEmpty()) {
       return ctx.mkTrue();
     }
-
+    if (elements.size() == 1) {
+      return pick(elements).encode(ctx, coefficients);
+    }
     return ctx.mkAnd(
         elements.stream()
             .map(element -> element.encode(ctx, coefficients))

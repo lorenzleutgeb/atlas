@@ -27,10 +27,7 @@ import xyz.leutgeb.lorenz.lac.util.Util;
 
 public class Identifier extends Expression {
   public static final String LEAF_NAME = "leaf";
-  public static final Identifier LEAF = new Identifier(Predefined.INSTANCE, LEAF_NAME);
-  public static final Identifier UNDERSCORE = new Identifier(Predefined.INSTANCE, "_");
-  public static final Identifier DUMMY_TREE_ALPHA =
-      new Identifier(Predefined.INSTANCE, "_", new TreeType(TypeVariable.ALPHA));
+  private static final Identifier UNDERSCORE = new Identifier(Predefined.INSTANCE, "_");
   private static final Set<String> BOOLEAN_NAMES = Set.of("true", "false");
   private static final Set<String> CONSTANT_NAMES = Sets.union(BOOLEAN_NAMES, singleton(LEAF_NAME));
 
@@ -61,11 +58,11 @@ public class Identifier extends Expression {
   }
 
   public static Identifier predefinedBase(String name) {
-    return predefinedBase(name, TypeVariable.ALPHA);
+    return predefinedBase(name, TypeVariable.alpha());
   }
 
   public static Identifier predefinedTree(String name) {
-    return predefinedTree(name, TypeVariable.ALPHA);
+    return predefinedTree(name, TypeVariable.alpha());
   }
 
   public static Identifier predefinedTree(String name, TypeVariable typeVariable) {
@@ -89,8 +86,12 @@ public class Identifier extends Expression {
     return CONSTANT_NAMES.contains(name);
   }
 
-  public static Expression anonymous(Source source) {
-    return get("_" + (anonymousCount++), source);
+  public static Expression anonymous(Source source, IntIdGenerator idGenerator) {
+    return get("_" + idGenerator.next(), source);
+  }
+
+  public static Identifier leaf() {
+    return new Identifier(Predefined.INSTANCE, LEAF_NAME);
   }
 
   @Override
@@ -204,5 +205,15 @@ public class Identifier extends Expression {
   @Override
   public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
     return this;
+  }
+
+  @Override
+  public boolean isTreeConstruction() {
+    return getType() instanceof TreeType;
+  }
+
+  public static boolean isLeaf(Expression identifier) {
+    return identifier instanceof Identifier
+        && LEAF_NAME.equals(((Identifier) identifier).getName());
   }
 }

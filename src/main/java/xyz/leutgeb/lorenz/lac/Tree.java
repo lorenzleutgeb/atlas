@@ -5,8 +5,6 @@ import lombok.Value;
 
 @Value
 public class Tree<T> {
-  private static final Tree<?> LEAF = new Tree<>();
-
   public Tree<T> left;
   public T value;
   public Tree<T> right;
@@ -27,7 +25,7 @@ public class Tree<T> {
   }
 
   public static <T> Tree<T> leaf() {
-    return (Tree<T>) LEAF;
+    return new Tree<>();
   }
 
   public static <T> Tree<T> node(Tree<T> left, T value, Tree<T> right) {
@@ -35,12 +33,12 @@ public class Tree<T> {
   }
 
   public boolean isLeaf() {
-    return this == LEAF;
+    return (left == null) && (value == null) && (right == null);
   }
 
   @Override
   public String toString() {
-    if (LEAF == this) {
+    if (isLeaf()) {
       return "leaf";
     }
     return "(" + left + ", " + value + ", " + right + ")";

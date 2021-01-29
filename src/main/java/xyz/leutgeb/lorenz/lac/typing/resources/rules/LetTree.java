@@ -23,6 +23,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.util.Pair;
 
+@Deprecated
 public class LetTree implements Rule {
   public static final LetTree INSTANCE = new LetTree();
 

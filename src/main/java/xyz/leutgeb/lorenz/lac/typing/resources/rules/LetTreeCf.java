@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -268,7 +269,8 @@ public class LetTreeCf implements Rule {
                       new AnnotatingContext(varsForGammaAsList, "P(" + x + ")(" + key + ")"),
                       value,
                       new Annotation(1, "P'(" + x + ")(" + key + ")"),
-                      0),
+                      0,
+                      Optional.of(obligation)),
                   new ArrayList<>());
 
       gammaDeltaQ

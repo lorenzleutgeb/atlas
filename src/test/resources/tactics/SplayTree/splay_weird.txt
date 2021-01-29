@@ -1,0 +1,7 @@
+(w{l2xy} (let:tree:cf
+  (w app) (* splay_eq a bl *)
+  (match
+    leaf
+    (let:tree:cf node (let:tree:cf node (w{mono} node)))
+  )
+))

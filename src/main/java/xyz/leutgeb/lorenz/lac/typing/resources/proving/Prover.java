@@ -26,13 +26,16 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -73,6 +76,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCfFlorian;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Match;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Node;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Rule;
+import xyz.leutgeb.lorenz.lac.typing.resources.rules.Rule.ApplicationResult;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Share;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Shift;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Var;
@@ -157,7 +161,22 @@ public class Prover {
   @AllArgsConstructor
   private static class RuleApplication {
     Rule rule;
-    Rule.ApplicationResult result;
+    ApplicationResult result;
+  }
+
+  @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
+  private static class RuleSchedule {
+    Rule rule;
+    Map<String, String> arguments;
+
+    public static RuleSchedule schedule(Rule rule) {
+      return new RuleSchedule(rule, emptyMap());
+    }
+
+    public static RuleSchedule schedule(Rule rule, Map<String, String> arguments) {
+      return new RuleSchedule(rule, arguments);
+    }
   }
 
   public Prover(String name, AnnotatingGlobals globals, Path basePath) {
@@ -232,6 +251,68 @@ public class Prover {
     }
   }
 
+  private Stack<RuleSchedule> chooseRuleSmart(Obligation obligation) {
+    final var e = obligation.getExpression();
+    if (e instanceof CallExpression) {
+      final var isInLet =
+          obligation
+              .getParent()
+              .map(parent -> parent.getExpression() instanceof LetExpression)
+              .orElse(false);
+
+      final Stack<RuleSchedule> todo = new Stack<>();
+      todo.push(RuleSchedule.schedule(applicationRule));
+      weakenVariables(obligation, todo);
+      if (!isInLet) {
+        todo.push(RuleSchedule.schedule(weakenRule, Map.of("l2xy", "true")));
+      }
+      return todo;
+    } else if (e instanceof Identifier) {
+      final var isLeaf = ((Identifier) e).getName().equals("leaf");
+      final Stack<RuleSchedule> todo = new Stack<>();
+      todo.push(RuleSchedule.schedule(isLeaf ? leafRule : variableRule));
+      weakenVariables(obligation, todo);
+      // TODO: Maybe we don't need mono if we're being bound by let.
+      todo.push(RuleSchedule.schedule(weakenRule, Map.of("mono", "true")));
+      return todo;
+    } else if (e instanceof NodeExpression) {
+      final var lastInChain =
+          obligation
+              .getParent()
+              .map(
+                  parent ->
+                      parent.getExpression() instanceof LetExpression
+                          && ((LetExpression) parent.getExpression()).getBody().equals(e))
+              .orElse(false);
+      // Covers outermost node of a tree construction.
+      final Stack<RuleSchedule> todo = new Stack<>();
+      todo.push(RuleSchedule.schedule(nodeRule));
+      weakenVariables(obligation, todo);
+      // TODO: Last in chain definitely needs l2xy, but probably we don't need mono if we're bound
+      // by let.
+      todo.push(
+          RuleSchedule.schedule(
+              weakenRule, lastInChain ? Map.of("l2xy", "true") : Map.of("mono", "true")));
+      return todo;
+    } else if (e instanceof LetExpression) {
+      final var let = (LetExpression) e;
+      if (let.getValue() instanceof CallExpression) {
+        // Makes sure we apply (w{l2xy}) right before (app).
+        return stack(
+            RuleSchedule.schedule(weakenRule, Map.of("l2xy", "true")),
+            RuleSchedule.schedule(letTreeCfPaperRule));
+      } else if (let.isTreeConstruction()) {
+        if (let.getValue() instanceof NodeExpression) {
+          // Makes sure we apply (w{mono}) if we're constructing a tree.
+          return stack(
+              RuleSchedule.schedule(weakenRule, Map.of("mono", "true")),
+              RuleSchedule.schedule(letTreeCfPaperRule));
+        }
+      }
+    }
+    return stack(RuleSchedule.schedule(chooseRule(e)));
+  }
+
   public Obligation share(Obligation obligation) {
     while (obligation.getExpression() instanceof ShareExpression) {
       final var result = applyInternal(obligation, shareRule, emptyMap());
@@ -272,7 +353,7 @@ public class Prover {
           .collect(Collectors.toList());
     }
 
-    Rule.ApplicationResult ruleResult = null;
+    ApplicationResult ruleResult = null;
     while (!rules.isEmpty()) {
       final Rule rule = rules.pop();
       ruleResult = applyInternal(obligation, rule, emptyMap());
@@ -305,10 +386,14 @@ public class Prover {
 
   }
 
-  private Rule.ApplicationResult applyInternal(
+  private ApplicationResult applyInternal(
       Obligation obligation, Rule rule, Map<String, String> ruleArguments) {
-    if (logApplications) {
-      log.debug("{}: {}", String.format("%-12s", rule.getName()), obligation);
+    if (logApplications && obligation.getCost() == 1) {
+      log.info(
+          "{}{}: {}",
+          String.format("%-12s", rule.getName()),
+          ruleArguments,
+          obligation.getExpression());
     }
     final var result = rule.apply(obligation, globals, ruleArguments);
     if (result == null) {
@@ -327,12 +412,49 @@ public class Prover {
     return applyInternal(obligation, rule, ruleArguments).getObligations();
   }
 
-  public void prove(List<Obligation> obligations) {
-    obligations.forEach(this::prove);
+  public void proveStupid(List<Obligation> obligations) {
+    obligations.forEach(this::proveStupid);
+  }
+
+  public void proveSmart(Obligation obligation) {
+    Queue<Obligation> obligations = new LinkedList<>();
+    obligations.add(obligation);
+    proof.addVertex(obligation);
+
+    while (!obligations.isEmpty()) {
+      final var top = obligations.poll();
+      final var rules = chooseRuleSmart(top);
+
+      var nextObligation = top;
+      ApplicationResult ruleResult = null;
+
+      while (!rules.isEmpty()) {
+        final var rule = rules.pop();
+
+        // setLogApplications(true);
+        ruleResult = applyInternal(nextObligation, rule.rule, rule.arguments);
+        // setLogApplications(false);
+
+        if (!rules.isEmpty()) {
+          if (ruleResult.getObligations().size() > 1) {
+            throw bug(
+                "if there are multiple rule applications scheduled, all of them except the last must return exactly one obligation");
+          }
+
+          if (ruleResult.getObligations().isEmpty()) {
+            throw bug("multiple rule applications were scheduled but we ran out of obligations");
+          }
+
+          nextObligation = ruleResult.getObligations().get(0);
+        } else {
+          obligations.addAll(ruleResult.getObligations());
+        }
+      }
+    }
   }
 
   /** Translates given obligation into a set of constraints that would prove given obligation. */
-  public void prove(Obligation obligation) {
+  public void proveStupid(Obligation obligation) {
     Stack<Obligation> obligations = new Stack<>();
     obligations.push(obligation);
     proof.addVertex(obligation);
@@ -342,7 +464,7 @@ public class Prover {
       final var rules = chooseRules(top);
 
       var nextObligation = top;
-      Rule.ApplicationResult ruleResult = null;
+      ApplicationResult ruleResult = null;
 
       while (!rules.isEmpty()) {
         final var rule = rules.pop();
@@ -371,7 +493,7 @@ public class Prover {
     }
   }
 
-  private void ingest(Obligation previous, Rule rule, Rule.ApplicationResult ruleResult) {
+  private void ingest(Obligation previous, Rule rule, ApplicationResult ruleResult) {
     results.put(previous, new RuleApplication(rule, ruleResult));
 
     if (!proof.containsVertex(previous)) {
@@ -548,6 +670,13 @@ public class Prover {
       throw new IllegalArgumentException("name already taken");
     }
     this.named.put(name, obligation);
+  }
+
+  public void weakenVariables(Obligation obligation, Stack<RuleSchedule> todo) {
+    final var wvars = WVar.redundantIds(obligation).collect(Collectors.toUnmodifiableList());
+    for (int i = 0; i < wvars.size(); i++) {
+      todo.push(RuleSchedule.schedule(weakenVariableRule));
+    }
   }
 
   public Obligation weakenVariables(Obligation obligation) {

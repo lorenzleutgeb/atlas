@@ -5,13 +5,16 @@ import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import static xyz.leutgeb.lorenz.lac.util.Util.objectNode;
 
 import com.google.common.collect.BiMap;
+import com.google.common.collect.Sets;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
@@ -56,5 +59,10 @@ public class OffsetConstraint extends EqualityConstraint {
     return graph
         .with(nodes.get(left).link(highlight(to(aux).with(Color.BLUE4).with("dir", "none"))))
         .with(aux.link(highlight(to(nodes.get(right)).with(Color.RED).with("dir", "none"))));
+  }
+
+  @Override
+  public Set<Coefficient> occurringCoefficients() {
+    return Sets.union(super.occurringCoefficients(), Collections.singleton(offset.canonical()));
   }
 }

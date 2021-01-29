@@ -11,12 +11,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.THREE;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
-import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.eq;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.ord;
-import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.ALPHA;
-import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.BETA;
+import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.alpha;
+import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.beta;
 import static xyz.leutgeb.lorenz.lac.util.Util.fqnToFlatFilename;
 import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
 
@@ -29,7 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jgrapht.nio.AttributeType;
@@ -64,10 +61,9 @@ import xyz.leutgeb.lorenz.lac.util.Fraction;
 import xyz.leutgeb.lorenz.lac.util.NidiExporter;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 
-@Timeout(value = 1, unit = TimeUnit.MINUTES)
 public class Tests {
-  static final TreeType ATREE = new TreeType(ALPHA);
-  private static final TreeType BTREE = new TreeType(BETA);
+  static final TreeType ATREE = new TreeType(alpha());
+  private static final TreeType BTREE = new TreeType(beta());
   private static final BoolType BOOL = BoolType.INSTANCE;
   private static final File OUT = new File("out");
 
@@ -78,43 +74,49 @@ public class Tests {
         arguments("LeftList.append", sig(ATREE, ATREE, ATREE), ExpectedResult.UNKNOWN),
         arguments("RightList.append", sig(ATREE, ATREE, ATREE), ExpectedResult.UNKNOWN),
         arguments("RightList.rev_append", sig(ATREE, ATREE, ATREE), ExpectedResult.UNKNOWN),
+        /*
         arguments("LeftList.inorder", sig(ATREE, ATREE, ATREE), ExpectedResult.UNKNOWN),
         arguments("LeftList.preorder", sig(ATREE, ATREE, ATREE), ExpectedResult.UNKNOWN),
         arguments(
             "Scratch.contains_unordered",
-            sig(singleton(eq(ALPHA)), ALPHA, ATREE, BOOL),
+            sig(singleton(eq(alpha())), alpha(), ATREE, BOOL),
             ExpectedResult.UNKNOWN),
+         */
         arguments("LeftList.postorder", sig(ATREE, ATREE, ATREE), ExpectedResult.UNKNOWN),
         arguments("SplayTree.splay_max", sig(ATREE, ATREE), ExpectedResult.SAT),
+        /*
         arguments(
-            "SplayTree.splay", sig(Set.of(ord(ALPHA)), ALPHA, ATREE, ATREE), ExpectedResult.SAT),
+            "SplayTree.splay",
+            sig(Set.of(ord(alpha())), alpha(), ATREE, ATREE),
+            ExpectedResult.SAT),
         arguments(
             "SplayTree.splay_eq",
-            sig(Set.of(ord(ALPHA), eq(ATREE)), ALPHA, ATREE, ATREE),
+            sig(Set.of(ord(alpha()), eq(ATREE)), alpha(), ATREE, ATREE),
             ExpectedResult.SAT),
         arguments(
             "SplayTree.delete",
-            sig(Set.of(ord(ALPHA)), ALPHA, ATREE, ATREE),
+            sig(Set.of(ord(alpha())), alpha(), ATREE, ATREE),
             ExpectedResult.UNKNOWN),
+         */
         arguments(
             "SkewHeap.merge",
-            sig(singleton(ord(ALPHA)), ATREE, ATREE, ATREE),
+            sig(singleton(ord(alpha())), ATREE, ATREE, ATREE),
             ExpectedResult.UNKNOWN),
         arguments(
             "SkewHeap.insert",
-            sig(singleton(ord(ALPHA)), ALPHA, ATREE, ATREE),
+            sig(singleton(ord(alpha())), alpha(), ATREE, ATREE),
             ExpectedResult.UNKNOWN),
-        arguments("PairingHeap.del_min", sig(singleton(ord(ALPHA)), ATREE, ATREE)),
-        arguments("PairingHeap.merge_pairs", sig(singleton(ord(ALPHA)), ATREE, ATREE)));
+        // arguments("PairingHeap.del_min", sig(singleton(ord(alpha())), ATREE, ATREE)),
+        arguments("PairingHeap.merge_pairs", sig(singleton(ord(alpha())), ATREE, ATREE)));
   }
 
   private static Stream<Arguments> constantCostDefinitions() {
     return Stream.of(
-        arguments("LeftList.cons", sig(ALPHA, ATREE, ATREE), 0),
-        arguments("LeftList.cons_cons", sig(ALPHA, ALPHA, ATREE, ATREE), 0),
-        arguments("RightList.cons", sig(ALPHA, ATREE, ATREE), 0),
-        arguments("RightList.cons_cons", sig(ALPHA, ALPHA, ATREE, ATREE), 0),
-        arguments("Scratch.singleton", sig(ALPHA, ATREE), 0),
+        arguments("LeftList.cons", sig(alpha(), ATREE, ATREE), 0),
+        arguments("LeftList.cons_cons", sig(alpha(), alpha(), ATREE, ATREE), 0),
+        arguments("RightList.cons", sig(alpha(), ATREE, ATREE), 0),
+        arguments("RightList.cons_cons", sig(alpha(), alpha(), ATREE, ATREE), 0),
+        arguments("Scratch.singleton", sig(alpha(), ATREE), 0),
         arguments("Bool.neg", sig(BOOL, BOOL), 0),
         arguments("Bool.or", sig(BOOL, BOOL, BOOL), 0),
         arguments("Bool.and", sig(BOOL, BOOL, BOOL), 0),
@@ -126,16 +128,16 @@ public class Tests {
         arguments("Scratch.left_child", sig(ATREE, ATREE), 0),
         arguments("Scratch.flip", sig(ATREE, ATREE), 0),
         arguments("Scratch.empty", sig(ATREE, BOOL), 0),
-        arguments("Scratch.clone", sig(ALPHA, ATREE, ATREE), 0),
+        arguments("Scratch.clone", sig(alpha(), ATREE, ATREE), 0),
         arguments("PairingHeap.is_root", sig(ATREE, BOOL), 0),
-        arguments("PairingHeap.link", sig(singleton(ord(ALPHA)), ATREE, ATREE), 0),
-        // arguments("PairingHeap.merge", sig(singleton(ord(ALPHA)), ATREE, ATREE, ATREE), 1),
-        // arguments("PairingHeap.insert", sig(singleton(ord(ALPHA)), ALPHA, ATREE, ATREE), 3),
+        arguments("PairingHeap.link", sig(singleton(ord(alpha())), ATREE, ATREE), 0),
+        // arguments("PairingHeap.merge", sig(singleton(ord(alpha())), ATREE, ATREE, ATREE), 1),
+        // arguments("PairingHeap.insert", sig(singleton(ord(alpha())), alpha(), ATREE, ATREE), 3),
         arguments("Scratch.empty_1", sig(ATREE, BOOL), 0),
         arguments("Scratch.empty_2", sig(ATREE, BOOL), 1),
-        arguments("Scratch.id", sig(ALPHA, ALPHA), 0),
-        arguments("Scratch.left", sig(ALPHA, BETA, ALPHA), 0),
-        arguments("Scratch.right", sig(ALPHA, BETA, BETA), 0),
+        arguments("Scratch.id", sig(alpha(), alpha()), 0),
+        arguments("Scratch.left", sig(alpha(), beta(), alpha()), 0),
+        arguments("Scratch.right", sig(alpha(), beta(), beta()), 0),
         arguments("Scratch.empty_3", sig(ATREE, BOOL), 0),
         arguments("Scratch.first_nonempty_and_second_empty", sig(ATREE, BTREE, BOOL), 1));
   }
@@ -210,46 +212,13 @@ public class Tests {
     assertEquals(expectedSignature, definition.getAnnotatedSignature(), "annotated signature");
     assertEquals(expectedSignature, definition.getInferredSignature(), "inferred signature");
 
-    // TODO(lorenz.leutgeb): Check outcome.
     final ConstraintSystemSolver.Result result = program.solve();
+    assertTrue(result.hasSolution());
     program.mockIngest(result.getSolution());
   }
 
-  @Test
-  @Disabled("too complex, see separate test cases")
-  void splay() throws Exception {
-    final String fqn = "SplayTree.splay";
-    final var expectedSignature = sig(singleton(ord(ALPHA)), ALPHA, ATREE, ATREE);
-    final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
-    final var definition = program.getFunctionDefinitions().get(fqn);
-
-    assertNotNull(definition);
-    assertEquals(expectedSignature, definition.getInferredSignature());
-
-    // Taken from Example 8.
-    final List<Coefficient> rankCoefficients = new ArrayList<>(1);
-    rankCoefficients.add(ONE);
-
-    final Map<List<Integer>, Coefficient> schoenmakers = new HashMap<>();
-    schoenmakers.put(List.of(0, 1), THREE);
-    schoenmakers.put(List.of(0, 2), ONE);
-
-    final List<Coefficient> resultRankCoefficients = new ArrayList<>(1);
-    resultRankCoefficients.add(ONE);
-
-    final var predefinedAnnotations = new HashMap<String, CombinedFunctionAnnotation>();
-    predefinedAnnotations.put(
-        fqn,
-        new CombinedFunctionAnnotation(
-            new FunctionAnnotation(
-                new Annotation(rankCoefficients, schoenmakers, "predefined"),
-                new Annotation(resultRankCoefficients, emptyMap(), "predefined")),
-            emptySet()));
-
-    assertTrue(program.solve(predefinedAnnotations).hasSolution());
-  }
-
   @ParameterizedTest
+  @Disabled("assume finiteness")
   @MethodSource("infiniteCostDefinitions")
   void infiniteCost(String fqn) throws Exception {
     final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
@@ -260,6 +229,7 @@ public class Tests {
   }
 
   @Test
+  @Disabled("linear")
   void revAppend() throws Exception {
     final var fqn = "LeftList.rev_append";
     final var expectedSignature = sig(ATREE, ATREE, ATREE);
@@ -277,7 +247,7 @@ public class Tests {
   @Disabled("too complex, see separate test cases")
   void splayZigZig() throws Exception {
     final var fqn = "SplayTree.splay_zigzig";
-    final var expectedSignature = sig(ALPHA, ATREE, ATREE);
+    final var expectedSignature = sig(alpha(), ATREE, ATREE);
     final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
     final var definition = program.getFunctionDefinitions().get(fqn);
 

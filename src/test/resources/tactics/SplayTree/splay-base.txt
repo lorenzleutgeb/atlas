@@ -1,0 +1,22 @@
+(match (* t *)
+  leaf
+  (ite (* a == c *)
+    (w node)
+    (ite (* a < c *)
+      (match (* cl, zig *)
+        (let:tree:cf leaf (w node))
+        (ite (* a == b *)
+          (let:tree:cf (w node) (w{mono} node))
+          ?
+        )
+      )
+      (match (* cr, zag *)
+        (let:tree:cf leaf (w node))
+        (ite (* a == b *)
+          (let:tree:cf (w node) (w{mono} node))
+          ?
+        )
+      )
+    )
+  )
+)

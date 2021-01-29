@@ -1,0 +1,28 @@
+(match (* t *)
+  ?
+  (ite (* a == c *)
+    ?
+    (ite (* a < c *)
+      (match (* cl, zig *)
+        ?
+        (ite (* a == b *)
+          ?
+          (ite (* a < b *)
+            (match (* bl, zig zig *)
+              ? (*let:tree:cf leaf (let:tree:cf (w node) (w{mono} node))*)
+              (w{l2xy} (let:tree:cf
+                app (* splay_eq a bl *)
+                 (w (match
+                  ? (* leaf *)
+                  (w{mono l2xy} (let:tree:cf (w node) (let:tree:cf (w node) (w{mono} node)))))
+               )
+              ))
+            )
+            ?
+          )
+        )
+      )
+      ?
+    )
+  )
+)

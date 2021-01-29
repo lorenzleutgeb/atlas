@@ -19,6 +19,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.util.Pair;
 
+@Deprecated
 public class LetGen implements Rule {
   public static final LetGen INSTANCE = new LetGen();
 

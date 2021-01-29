@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -53,10 +54,10 @@ public class Run implements Runnable {
 
   @CommandLine.Option(
       defaultValue = "false",
-      names = "--relax-rank",
+      names = "--relax-right",
       description =
           "When present relaxes constraints that force the rank coefficient of result to equal the rank coefficient of the input. Only works on functions that take exactly one tree and return a tree.")
-  private Boolean relaxRank;
+  private Boolean relaxRight;
 
   @CommandLine.Option(names = "--name", description = "Name of the run.")
   private String name;
@@ -170,13 +171,10 @@ public class Run implements Runnable {
       if (infer) {
         var multiTarget =
             Optimization.combine(
-                program,
-                program.getRoots(),
-                Optimization::squareWeightedComponentWiseDifference,
-                !relaxRank);
+                program, program.getRoots(), Optimization::squareWeightedComponentWiseDifference);
 
         log.info("Solving constraints...");
-        result = prover.solve(multiTarget.constraints, multiTarget.targets, "min");
+        result = prover.solve(multiTarget.constraints, List.of(multiTarget.target), "min");
       } else {
         log.info("Solving constraints...");
         result = prover.solve(emptySet(), emptyList(), "sat");

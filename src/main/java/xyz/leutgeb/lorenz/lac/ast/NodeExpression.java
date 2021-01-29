@@ -52,7 +52,7 @@ public class NodeExpression extends Expression implements MatchPattern {
     return new NodeExpression(
         Predefined.INSTANCE,
         List.of(left, Identifier.predefinedBase(randomHex()), right),
-        new TreeType(TypeVariable.ALPHA));
+        new TreeType(TypeVariable.alpha()));
   }
 
   public static NodeExpression predefinedNode(
@@ -177,6 +177,11 @@ public class NodeExpression extends Expression implements MatchPattern {
 
   @Override
   public boolean isTerminal() {
+    return true;
+  }
+
+  @Override
+  public boolean isTreeConstruction() {
     return true;
   }
 }

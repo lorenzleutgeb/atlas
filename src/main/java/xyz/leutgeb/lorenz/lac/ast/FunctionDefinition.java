@@ -6,6 +6,7 @@ import static guru.nidi.graphviz.model.Factory.graph;
 import static guru.nidi.graphviz.model.Factory.node;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
+import static java.util.Collections.unmodifiableSet;
 import static java.util.stream.Collectors.toList;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.minimize;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
@@ -21,9 +22,12 @@ import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
+import java.io.File;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -38,7 +42,6 @@ import org.jgrapht.nio.AttributeType;
 import org.jgrapht.nio.DefaultAttribute;
 import xyz.leutgeb.lorenz.lac.module.Loader;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
-import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
@@ -232,7 +235,7 @@ public class FunctionDefinition {
   public void stubAnnotations(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       AnnotationHeuristic heuristic,
-      boolean cf,
+      int cf,
       boolean infer) {
 
     analyzeSizes();
@@ -248,25 +251,26 @@ public class FunctionDefinition {
               heuristic.generate("args", treeLikeArguments.size()),
               heuristic.generate("return", returnsTree ? 1 : 0));
 
-      var costFreeAnnotation =
-          new FunctionAnnotation(
-              heuristic.generate("cfargs1", inferredAnnotation.from),
-              heuristic.generate("cfreturn1", inferredAnnotation.to));
+      Set<FunctionAnnotation> cfAnnotations = new HashSet<>();
 
-      var costFreeAnnotation2 =
-          new FunctionAnnotation(
-              heuristic.generate("cfargs2", inferredAnnotation.from),
-              heuristic.generate("cfreturn2", inferredAnnotation.to));
+      /*
+      if (cf > 0) {
+        cfAnnotations.add(
+            new FunctionAnnotation(
+                Annotation.zero(inferredAnnotation.from.size(), "Qcf0"),
+                Annotation.zero(inferredAnnotation.to.size(), "Qcf'")));
+      }
+       */
 
-      var zeroAnnotation =
-          new FunctionAnnotation(
-              Annotation.zero(inferredAnnotation.from.size(), "cfargszero"),
-              Annotation.zero(inferredAnnotation.to.size(), "cfreturnzero"));
+      for (int i = 1; i <= cf; i++) {
+        cfAnnotations.add(
+            new FunctionAnnotation(
+                heuristic.generate("Qcf" + i, inferredAnnotation.from),
+                heuristic.generate("Qcf" + i + "'", inferredAnnotation.to)));
+      }
 
-      Set<FunctionAnnotation> cfAnnotations =
-          cf ? Set.of(costFreeAnnotation, costFreeAnnotation2, zeroAnnotation) : emptySet();
-
-      final var combined = new CombinedFunctionAnnotation(inferredAnnotation, cfAnnotations);
+      final var combined =
+          new CombinedFunctionAnnotation(inferredAnnotation, unmodifiableSet(cfAnnotations));
       // TODO: Sort this out...
       if (infer || annotatedSignature.getAnnotation().isEmpty()) {
         inferredSignature =
@@ -321,7 +325,8 @@ public class FunctionDefinition {
             treeLikeArguments(), inferredSignature.getAnnotation().get().withCost.from),
         body,
         inferredSignature.getAnnotation().get().withCost.to,
-        cost);
+        cost,
+        Optional.empty());
   }
 
   public String getInferredSignatureString() {
@@ -501,5 +506,10 @@ public class FunctionDefinition {
 
     out.println("}");
     out.println();
+  }
+
+  public Path tactic() {
+    return Path.of(
+        getModuleName().replace(".", File.separator) + File.separator + getName() + ".txt");
   }
 }

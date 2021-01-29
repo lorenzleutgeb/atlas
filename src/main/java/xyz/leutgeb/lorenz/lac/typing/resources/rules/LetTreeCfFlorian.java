@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -200,7 +201,8 @@ public class LetTreeCfFlorian implements Rule {
                 value,
                 // globals.getHeuristic().generate("P'(" + x + ")(" + key + ")", value),
                 new Annotation(1, "P'(" + x + ")(" + key + ")"),
-                0);
+                0,
+                Optional.of(obligation));
 
     gammaDeltaQ
         .streamNonRank()

@@ -1,21 +1,21 @@
 (match (* t *)
-  leaf
+  (w leaf)
   (let:tree:cf
-    app
-    (match (* splay a t *)
-      leaf
+    app (* splay a t *)
+    (match
+      (w leaf)
       (ite (* a == a1 *)
         (match (* l *)
-          var
-          (let:tree:cf
+          (w var)
+          (w{l2xy} (let:tree:cf
             app
             (match (* splay_max l *)
-              leaf
-              node
+              (w leaf)
+              (w{mono} node)
             )
-          )
+          ))
         )
-        node
+        (w{mono} node)
       )
     )
   )

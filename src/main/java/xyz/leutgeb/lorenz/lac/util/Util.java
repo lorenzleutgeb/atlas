@@ -287,6 +287,13 @@ public class Util {
   }
 
   public static <E> List<E> append(List<E> a, List<E> b) {
+    if (a.isEmpty()) {
+      return b;
+    }
+    if (b.isEmpty()) {
+      return a;
+    }
+
     final var result = new ArrayList<E>(a.size() + b.size());
     result.addAll(a);
     result.addAll(b);

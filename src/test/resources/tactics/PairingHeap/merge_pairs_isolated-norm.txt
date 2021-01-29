@@ -1,0 +1,25 @@
+(match
+  (w{mono} leaf)
+  (match
+    (let:tree:cf leaf (w{l2xy} node))
+    (w{l2xy} (let:tree:cf
+      app (* merge_pairs_isolated rb*)
+      (match
+        (ite
+          (w{mono} (let:tree:cf node (let:tree:cf leaf (w{l2xy} node))))
+          (w{mono} (let:tree:cf node (let:tree:cf leaf (w{l2xy} node))))
+        )
+        (ite
+          (ite
+            (w{mono} (let:tree:cf node (w{mono} (let:tree:cf node (w{l2xy} node)))))
+            (w{mono} (let:tree:cf node (w{mono} (let:tree:cf node (w{l2xy} node)))))
+          )
+          (ite
+            (w{mono} (let:tree:cf node (w{mono} (let:tree:cf node (w{l2xy} node)))))
+            (w{mono} (let:tree:cf node (w{mono} (let:tree:cf node (w{l2xy} node)))))
+          )
+        )
+      )
+    ))
+  )
+)

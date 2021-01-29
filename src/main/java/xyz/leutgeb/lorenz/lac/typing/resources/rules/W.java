@@ -9,7 +9,6 @@ import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toUnmodifiableList;
-import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.INDEX_COMPARATOR;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.constantIndex;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.nonRankIndices;
@@ -142,15 +141,21 @@ public class W implements Rule {
 
     final boolean mono = flag(arguments, "mono") || force;
 
-    final List<LessThanOrEqual<List<Integer>>> monotonyInstances =
-        knowLt.isEmpty() && knowEq.isEmpty() && knowOne.isEmpty()
-            ? MONO_CACHE.computeIfAbsent(
+    final List<LessThanOrEqual<List<Integer>>> monotonyInstances;
+
+    if (knowLt.isEmpty() && knowEq.isEmpty() && knowOne.isEmpty()) {
+      synchronized (MONO_CACHE) {
+        monotonyInstances =
+            MONO_CACHE.computeIfAbsent(
                 potentialFunctions,
-                (key) -> {
-                  return lessThanOrEqualNew(
-                      potentialFunctions, knowLt, knowEq, mono ? knowOne : emptySet());
-                })
-            : lessThanOrEqualNew(potentialFunctions, knowLt, knowEq, mono ? knowOne : emptySet());
+                (key) ->
+                    lessThanOrEqualNew(
+                        potentialFunctions, knowLt, knowEq, mono ? knowOne : emptySet()));
+      }
+    } else {
+      monotonyInstances =
+          lessThanOrEqualNew(potentialFunctions, knowLt, knowEq, mono ? knowOne : emptySet());
+    }
 
     final var lemma2xy = flag(arguments, "l2xy") || force;
 
@@ -404,14 +409,14 @@ public class W implements Rule {
             path.getEdgeList().stream().allMatch(edge -> SizeEdge.Kind.EQ.equals(edge.getKind()));
 
     final Set<Integer> knowOne =
-        sizeAnalysis.containsVertex(LEAF)
+        sizeAnalysis.containsVertex(Identifier.leaf())
             ? identifiers.stream()
                 .filter(sizeAnalysis::containsVertex)
                 .filter(
                     identifier -> {
                       final var leafPaths =
                           new AllDirectedPaths<>(sizeAnalysis)
-                              .getAllPaths(identifier, LEAF, true, 16);
+                              .getAllPaths(identifier, Identifier.leaf(), true, 16);
                       return !leafPaths.isEmpty() && leafPaths.stream().anyMatch(isEq);
                     })
                 .map(identifiers::indexOf)
@@ -511,8 +516,11 @@ public class W implements Rule {
     return potentialFunctions.stream()
         .filter(Predicate.not(Annotation::isUnitIndex)) // x is not unit
         .flatMap(
-            x -> knowOne.stream().map(one -> Pair.of(x, sum(x, oneAtIndex(x.size() - 1, one)))))
-        .filter(instance -> set.contains(instance.getRight()))
+            x ->
+                knowOne.stream()
+                    .filter(one -> x.get(one) == 1)
+                    .map(one -> Pair.of(sum(x, atIndex(x.size() - 1, one, -1)), x)))
+        .filter(instance -> set.contains(instance.getLeft()))
         .collect(Collectors.toList());
   }
 
@@ -531,8 +539,12 @@ public class W implements Rule {
   }
 
   private static List<Integer> oneAtIndex(int size, int index) {
+    return atIndex(size, index, 1);
+  }
+
+  private static List<Integer> atIndex(int size, int index, int value) {
     return IntStream.rangeClosed(0, size)
-        .map(x -> x == index ? 1 : 0)
+        .map(x -> x == index ? value : 0)
         .boxed()
         .collect(toUnmodifiableList());
   }
@@ -567,14 +579,14 @@ public class W implements Rule {
                         globals.getSizeAnalysis(),
                         arguments,
                         force)
-                    : compareCoefficientsLessOrEqual(p, q, "(w) Q"),
+                    : compareCoefficientsLessOrEqual(p, q, "Q"),
                 /*
                 compareCoefficientsLessOrEqualUsingFarkas(
                     qp.size() > 0 ? singletonList(Identifier.DUMMY_TREE_ALPHA) : emptyList(),
                     qp,
                     pp,
                     globals.getSizeAnalysis()) */
-                compareCoefficientsLessOrEqual(qp, pp, "(w) Q'"))),
+                compareCoefficientsLessOrEqual(qp, pp, "Q'"))),
         emptyList());
   }
 

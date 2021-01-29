@@ -182,4 +182,8 @@ public abstract class Expression extends Syntax {
   public void analyzeSizes(org.jgrapht.Graph<Identifier, SizeEdge> sizeGraph) {
     getChildren().forEach(e -> e.analyzeSizes(sizeGraph));
   }
+
+  public boolean isTreeConstruction() {
+    return false;
+  }
 }

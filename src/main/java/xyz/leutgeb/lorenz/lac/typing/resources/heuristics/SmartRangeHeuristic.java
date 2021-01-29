@@ -4,6 +4,8 @@ import static com.google.common.collect.Lists.cartesianProduct;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static java.util.stream.IntStream.range;
 import static java.util.stream.Stream.concat;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.isConstantIndex;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.isUnitIndex;
 
 import java.util.List;
 import java.util.Set;
@@ -47,8 +49,8 @@ public class SmartRangeHeuristic implements AnnotationHeuristic {
             concat(Stream.generate(() -> as).limit(treeSize), Stream.of(bs))
                 .collect(toUnmodifiableList()))
         .stream()
-        .filter(Predicate.not(Util::isAllZeroes));
-    // TODO: Be smart about when to allow constants, especially 1. Only when there's a leaf?
-    // .filter(index -> !isConstantIndex(index) || isUnitIndex(index));
+        .filter(Predicate.not(Util::isAllZeroes))
+        // TODO: Be smart about when to allow constants, especially 1. Only when there's a leaf?
+        .filter(index -> !isConstantIndex(index) || isUnitIndex(index));
   }
 }

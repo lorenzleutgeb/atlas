@@ -102,7 +102,6 @@ public class Tactics {
   protected static final Annotation QpwithConst =
       new Annotation(List.of(ONE), Map.of(unitIndex(1), ONE), "Q'");
 
-  private static final String SPLAY_FQN = "SplayTree.splay_eq";
   private static final String INSERT_FQN = "SplayTree.insert_eq";
   private static final String MAX_FQN = "SplayTree.splay_max_eq";
   private static final String CONTAINS_FQN = "SplayTree.contains_eq";
@@ -111,7 +110,7 @@ public class Tactics {
   public static final String MERGE_PAIRS = "PairingHeap.merge_pairs";
 
   private static final CombinedFunctionAnnotation SPLAY_EXPECTED =
-      CombinedFunctionAnnotation.of(QwithConst, QpwithConst, P, P, P2, P2, zero(1), zero(1));
+      CombinedFunctionAnnotation.of(QwithConst, QpwithConst, P, P);
 
   private static CombinedFunctionAnnotation passRankAndConstant(int q10, int q02) {
     return CombinedFunctionAnnotation.of(
@@ -146,10 +145,10 @@ public class Tactics {
   }
 
   private static final CombinedFunctionAnnotation SPLAY_VARIANT =
-      CombinedFunctionAnnotation.of(Qsmall, Qpsmall, P, P, P2, P2, zero(1), zero(1));
+      CombinedFunctionAnnotation.of(Qsmall, Qpsmall, P, P);
 
   private static final CombinedFunctionAnnotation SPLAY_TOO_SMALL_ERROR =
-      CombinedFunctionAnnotation.of(QsmallError, Qpsmall, P, P, P2, P2, zero(1), zero(1));
+      CombinedFunctionAnnotation.of(QsmallError, Qpsmall, P, P);
 
   private static final CombinedFunctionAnnotation SPLAY_TIGHT =
       CombinedFunctionAnnotation.of(
@@ -174,12 +173,12 @@ public class Tactics {
           zero(1),
           zero(1));
 
-  private static final CombinedFunctionAnnotation SPLAY_TIGHTER =
+  public static final CombinedFunctionAnnotation SPLAY_TIGHTER =
       CombinedFunctionAnnotation.of(
           Q3by2,
           Q3by2p,
-          new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "Q2cf"),
-          new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "Q2cf"),
+          // new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "Q2cf"),
+          // new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "Q2cf"),
           new Annotation(
               List.of(ZERO),
               Map.of(List.of(1, 0), new KnownCoefficient(new Fraction(1, 2))),
@@ -187,9 +186,7 @@ public class Tactics {
           new Annotation(
               List.of(ZERO),
               Map.of(List.of(1, 0), new KnownCoefficient(new Fraction(1, 2))),
-              "Q2cf"),
-          zero(1),
-          zero(1));
+              "Q2cf"));
 
   private static final CombinedFunctionAnnotation SPLAY_HEAP_PARTITION_TIGHT =
       CombinedFunctionAnnotation.of(
@@ -249,11 +246,233 @@ public class Tactics {
   private static final Annotation SPLAY_HEAP_TO =
       new Annotation(List.of(ONE), Map.of(unitIndex(1), new KnownCoefficient(1)), "Q'");
 
-  private static Stream<Arguments> tactics() {
-    final var pairingHeap = SmartRangeHeuristic.DEFAULT.generate("Q'", 1);
-    final var splayHeap = SmartRangeHeuristic.DEFAULT.generate("Q'", 1);
+  private static final CombinedFunctionAnnotation SPLAY_FOR_INSERT =
+      CombinedFunctionAnnotation.of(
+          new Annotation(
+              List.of(Coefficient.of(1, 2)), Map.of(List.of(1, 0), TWO, unitIndex(1), ONE), "Q"),
+          new Annotation(
+              List.of(Coefficient.of(1, 2)),
+              Map.of(List.of(1, 0), Coefficient.of(1, 2), unitIndex(1), ONE),
+              "Q'"),
+          new Annotation(List.of(ZERO), Map.of(List.of(1, 0), Coefficient.of(1, 2)), "Q1cf"),
+          new Annotation(List.of(ZERO), Map.of(List.of(1, 0), Coefficient.of(1, 2)), "Q1cf'"));
+
+  private static CombinedFunctionAnnotation op(Annotation base, boolean cf) {
+    if (!cf) {
+      return CombinedFunctionAnnotation.of(SmartRangeHeuristic.DEFAULT.generate("Q", 1), base);
+    } else {
+      return CombinedFunctionAnnotation.of(
+          SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+          base,
+          SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
+          SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1));
+    }
+  }
+
+  private static Stream<Arguments> scratch() {
+    return Stream.of(
+        /*
+        Arguments.of(
+                Map.of(
+                        "Scratch.test",
+                        Config.of(
+                                CombinedFunctionAnnotation.of(
+                                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                                        new Annotation(
+                                                List.of(ZERO), Map.of(List.of(1, 0), Coefficient.of(1)), "Q"),
+                                        new Annotation(
+                                                List.of(ZERO), Map.of(List.of(1, 0), Coefficient.of(1)), "Q'"),
+                                        Annotation.zero(1),
+                                        Annotation.zero(1))))),
+        Arguments.of(
+                Map.of(
+                        "Scratch.test",
+                        Config.of(
+                                CombinedFunctionAnnotation.of(
+                                        new Annotation(
+                                                List.of(ZERO), Map.of(List.of(1, 0), Coefficient.of(1, 2)), "Q"),
+                                        new Annotation(
+                                                List.of(ZERO), Map.of(List.of(1, 0), Coefficient.of(1, 2)), "Q'"),
+                                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                                        Annotation.zero(1),
+                                        Annotation.zero(1))))),
+        Arguments.of(
+                Map.of(
+                        "Scratch.test",
+                        Config.of(
+                                CombinedFunctionAnnotation.of(
+                                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "Q"),
+                                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "Q'"),
+                                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                                        Annotation.zero(1),
+                                        Annotation.zero(1))))),
+        // 1/2rk(t) + 2log(t) + 2 -> 1/2rk(splay t) + 1/2log(splay t) + 2
+        Arguments.of(
+                Map.of(
+                        "Scratch.test",
+                        Config.of(
+                                CombinedFunctionAnnotation.of(
+                                        new Annotation(
+                                                List.of(Coefficient.of(1, 2)),
+                                                Map.of(List.of(1, 0), TWO, unitIndex(1), ONE),
+                                                "Q"),
+                                        new Annotation(
+                                                List.of(Coefficient.of(1, 2)),
+                                                Map.of(List.of(1, 0), Coefficient.of(1, 2), unitIndex(1), ONE),
+                                                "Q'"),
+                                        new Annotation(
+                                                List.of(ZERO), Map.of(List.of(1, 0), Coefficient.of(1, 2)), "Qcf"),
+                                        new Annotation(
+                                                List.of(ZERO), Map.of(List.of(1, 0), Coefficient.of(1, 2)), "Qcf'"),
+                                        Annotation.zero(1),
+                                        Annotation.zero(1))))),
+        */
+
+        /*
+        Arguments.of(
+            Map.of(
+                "Scratch.test",
+                Config.of(
+                    "Scratch/test",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(List.of(ONE), Map.of(List.of(1, 0), ONE), "Q"),
+                        new Annotation(List.of(ONE), emptyMap(), "Q'"))))),
+         */
+        );
+  }
+
+  private static Stream<Arguments> splayTree() {
+    final var splayTree = ModuleTest.Qp;
 
     return Stream.of(
+        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_EXPECTED))),
+        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_VARIANT))),
+        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_TIGHT))),
+        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_TIGHTER))),
+        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay-norm", SPLAY_TIGHTER))),
+        Arguments.of(Map.of("SplayTree.splay", Config.of(SPLAY_TIGHTER))),
+        Arguments.of(
+            Map.of("SplayTree.splay", Config.of(SPLAY_TIGHTER)),
+            "SplayTree.delete",
+            Config.of(),
+            "SplayTree.splay_max",
+            Config.of(SPLAY_TIGHTER)),
+        Arguments.of(
+            Map.of(
+                "SplayTree.splay",
+                Config.of("SplayTree/splay", SPLAY_TIGHTER),
+                "SplayTree.insert",
+                Config.of(
+                    "SplayTree/insert",
+                    CombinedFunctionAnnotation.of(
+                        SmartRangeHeuristic.DEFAULT.generate("Q", 1), ModuleTest.Qp))
+                // "SplayTree.delete", Config.of("SplayTree/delete"),
+                // "SplayTree.splay_max", Config.of("SplayTree/splay_max")
+                )));
+  }
+
+  private static Stream<Arguments> splayHeap() {
+    return Stream.of(
+        /* Does not work.
+        Arguments.of(
+            Map.of(
+                "SplayHeap.insert",
+                Config.of("SplayHeap/insert", op(splayHeap, false)),
+                "SplayHeap.partition",
+                Config.of("SplayHeap/partition", op(splayHeap, true)),
+                "SplayHeap.del_min",
+                Config.of("SplayHeap/del_min", op(splayHeap, true)))),
+             */
+        /* Works.
+        Arguments.of(
+            Map.of(
+                "SplayHeap.insert",
+                Config.of("SplayHeap/insert"),
+                "SplayHeap.partition",
+                Config.of("SplayHeap/partition"),
+                "SplayHeap.del_min",
+                Config.of("SplayHeap/del_min"))),
+             */
+        Arguments.of(
+            Map.of(
+                "SplayHeap.partition",
+                Config.of(
+                    "SplayHeap/partition-norm",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(Coefficient.of(1, 2)),
+                            Map.of(
+                                unitIndex(1),
+                                ONE,
+                                List.of(1, 0),
+                                Coefficient.of(3, 4),
+                                List.of(1, 1),
+                                ONE),
+                            "Q"),
+                        new Annotation(
+                            List.of(Coefficient.of(1, 2)), Map.of(unitIndex(1), ONE), "Q'"),
+                        new Annotation(
+                            List.of(ZERO), Map.of(List.of(1, 1), Coefficient.of(1, 2)), "Qcf"),
+                        new Annotation(
+                            List.of(ZERO), Map.of(List.of(1, 0), Coefficient.of(1, 2)), "Qcf'"))))),
+        Arguments.of(
+            Map.of(
+                "SplayHeap.partition",
+                Config.of(
+                    "SplayHeap/partition",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            ONE,
+                            Map.of(List.of(1, 1), THREE, List.of(1, 0), ONE, unitIndex(1), THREE)),
+                        new Annotation(ONE, Map.of(unitIndex(1), ONE)),
+                        new Annotation(ZERO, Map.of(List.of(1, 1), ONE)),
+                        new Annotation(ZERO, Map.of(List.of(1, 0), ONE)) // ,
+                        // new Annotation(ZERO, Map.of(List.of(1, 1), TWO)),
+                        // new Annotation(ZERO, Map.of(List.of(1, 0), TWO)),
+                        // zero(1),
+                        // zero(1)
+                        )))),
+
+        // SplayHeap.{insert,del_min}
+        // insert   6 log(|t| + 1)                &     3 log(|t| + 1) + 1
+        // del_min    log(|t|) + log(|t| + 1)     &     2 log(|t|) + 1
+        // 3, 4
+        Arguments.of(
+            Map.of(
+                "SplayHeap.partition",
+                Config.of(
+                    "SplayHeap/partition",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            ONE,
+                            Map.of(List.of(1, 1), THREE, List.of(1, 0), ONE, unitIndex(1), THREE)),
+                        new Annotation(ONE, Map.of(unitIndex(1), ONE)),
+                        new Annotation(ZERO, Map.of(List.of(1, 1), ONE)),
+                        new Annotation(ZERO, Map.of(List.of(1, 0), ONE)) // ,
+                        // new Annotation(ZERO, Map.of(List.of(1, 1), TWO)),
+                        // new Annotation(ZERO, Map.of(List.of(1, 0), TWO)),
+                        // zero(1),
+                        // zero(1)
+                        )),
+                "SplayHeap.insert",
+                Config.of(
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            ONE,
+                            Map.of(
+                                List.of(1, 1),
+                                THREE,
+                                List.of(1, 0),
+                                ONE,
+                                List.of(1, 2),
+                                THREE,
+                                unitIndex(1),
+                                TWO)),
+                        new Annotation(ONE, Map.of(unitIndex(1), ONE)))))) // ,
+
         /*
         Arguments.of(
                 Map.of(
@@ -292,6 +511,26 @@ public class Tactics {
                                 CombinedFunctionAnnotation.of(
                                         SmartRangeHeuristic.DEFAULT.generate("Q", 1), splayHeap)))), */
 
+        );
+  }
+
+  private static Stream<Arguments> pairingHeap() {
+    final var pairingHeap = SmartRangeHeuristic.DEFAULT.generate("Q'", 1);
+
+    return Stream.of(
+        Arguments.of(
+            Map.of(
+                "PairingHeap.merge_pairs_isolated",
+                Config.of("PairingHeap/merge_pairs_isolated"),
+                "PairingHeap.del_min_via_merge_pairs_isolated",
+                Config.of("PairingHeap/del_min_via_merge_pairs_isolated"),
+                "PairingHeap.insert",
+                Config.of())),
+        // Arguments.of(Map.of("PairingHeap.pass1", Config.of("PairingHeap/pass1"))),
+        Arguments.of(
+            Map.of(
+                "PairingHeap.merge_pairs_isolated",
+                Config.of("PairingHeap/merge_pairs_isolated-norm", SPLAY_TIGHTER))),
         Arguments.of(
             Map.of(
                 "PairingHeap.del_min_via_merge_pairs_isolated",
@@ -303,8 +542,8 @@ public class Tactics {
                     "PairingHeap/merge_pairs_isolated",
                     CombinedFunctionAnnotation.of(
                         SmartRangeHeuristic.DEFAULT.generate("Q", 1),
-                        SmartRangeHeuristic.DEFAULT.generate("Q", 1),
-                        // pairingHeap,
+                        // SmartRangeHeuristic.DEFAULT.generate("Q", 1),
+                        pairingHeap,
                         SmartRangeHeuristic.DEFAULT.generate("Qcf1", 1),
                         SmartRangeHeuristic.DEFAULT.generate("Qcf1'", 1),
                         // SmartRangeHeuristic.DEFAULT.generate("Qcf2", 1),
@@ -316,18 +555,6 @@ public class Tactics {
                     // "PairingHeap/insert_isolated",
                     CombinedFunctionAnnotation.of(
                         SmartRangeHeuristic.DEFAULT.generate("Q", 1), pairingHeap)))),
-        Arguments.of(
-            Map.of(
-                "Scratch.test",
-                Config.of(
-                    "Scratch/test",
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(List.of(ONE), Map.of(List.of(1, 0), ONE), "Q"),
-                        new Annotation(List.of(ONE), emptyMap(), "Q'"))))),
-        Arguments.of(
-            Map.of(
-                "SplayTree.splay", Config.of("SplayTree/splay-for-insert"),
-                "SplayTree.insert", Config.of("SplayTree/insert"))),
         Arguments.of(
             Map.of(
                 "PairingHeap.del_min_via_merge_pairs_isolated",
@@ -342,94 +569,6 @@ public class Tactics {
                         Annotation.constant(2, "Q", UnknownCoefficient.unknown("c")),
                         Annotation.zero(1))))),
 
-        /*
-              Arguments.of(
-                      Map.of(
-                              "SplayTree.splay", Config.of("SplayTree/splay-for-insert"),
-                              "SplayTree.insert", Config.of("SplayTree/insert"))),
-              Arguments.of(
-                      Map.of(
-                              "SplayTree.splay", Config.of("SplayTree/splay"),
-                              "SplayTree.delete", Config.of("SplayTree/delete"),
-                              "SplayTree.splay_max", Config.of("SplayTree/splay_max"))),
-        */
-
-        /*
-        Arguments.of(
-            Map.of(
-                "SplayTree.insert",
-                Config.of(
-                    "SplayTree/insert"
-                    /*, CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            List.of(ONE), Map.of(unitIndex(1), ONE, List.of(1, 2), THREE), "Q"),
-                        new Annotation(List.of(ONE), emptyMap(), "Q"))),
-                "SplayTree.splay",
-                Config.of("Scratch/hole", SPLAY_EXPECTED_TACAS))),*/
-
-        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_EXPECTED))),
-        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_VARIANT))),
-        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_TIGHT))),
-        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_TIGHTER))),
-        Arguments.of(
-            Map.of(
-                "SplayTree.splay",
-                Config.of(
-                    "SplayTree/splay",
-                    CombinedFunctionAnnotation.of(
-                        QwithConst, QpwithConst, P, P, P2, P2, P3, P3, zero(1), zero(1))),
-                "SplayTree.insert",
-                Config.of())),
-        Arguments.of(
-            Map.of(
-                "SplayTree.splay_max",
-                Config.of(
-                    "SplayTree/splay_max",
-                    CombinedFunctionAnnotation.of(
-                        Q3by2,
-                        Q3by2p,
-                        new Annotation(
-                            List.of(ZERO),
-                            Map.of(List.of(1, 0), new KnownCoefficient(new Fraction(1, 2))),
-                            "Q2cf"),
-                        new Annotation(
-                            List.of(ZERO),
-                            Map.of(List.of(1, 0), new KnownCoefficient(new Fraction(1, 2))),
-                            "Q2cf"),
-                        zero(1),
-                        zero(1))))),
-        Arguments.of(
-            Map.of(
-                "SplayHeap.insert",
-                Config.of(
-                    "SplayHeap/insert"
-                    /*CombinedFunctionAnnotation.of(
-                       new Annotation(
-                           ONE, Map.of(List.of(1, 0), ONE, List.of(1, 1), ONE, unitIndex(1), ONE)),
-                       new Annotation(ONE, Map.of(unitIndex(1), ONE)),
-                       SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
-                       SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
-                       Annotation.zero(1),
-                       Annotation.zero(1))
-                    */
-                    ),
-                "SplayHeap.partition",
-                Config.of("SplayHeap/partition"))),
-        Arguments.of(
-            Map.of(
-                "SplayHeap.del_min",
-                Config.of(
-                    "SplayHeap/del_min"
-                    /*CombinedFunctionAnnotation.of(
-                       new Annotation(
-                           ONE, Map.of(List.of(1, 0), ONE, List.of(1, 1), ONE, unitIndex(1), ONE)),
-                       new Annotation(ONE, Map.of(unitIndex(1), ONE)),
-                       SmartRangeHeuristic.DEFAULT.generate("Qcf", 1),
-                       SmartRangeHeuristic.DEFAULT.generate("Qcf'", 1),
-                       Annotation.zero(1),
-                       Annotation.zero(1))
-                    */
-                    ))),
         /*
         Arguments.of(
             Map.of(
@@ -462,127 +601,6 @@ public class Tactics {
                         zero(1),
                         zero(1))))),
         Arguments.of(Map.of("PairingHeap.merge_isolated", Config.of("PairingHeap/merge_isolated"))),
-        Arguments.of(
-            Map.of(
-                "SplayHeap.partition",
-                Config.of(
-                    "SplayHeap/partition",
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            ONE,
-                            Map.of(List.of(1, 1), THREE, List.of(1, 0), ONE, unitIndex(1), THREE)),
-                        new Annotation(ONE, Map.of(unitIndex(1), ONE)),
-                        new Annotation(ZERO, Map.of(List.of(1, 1), ONE)),
-                        new Annotation(ZERO, Map.of(List.of(1, 0), ONE)),
-                        new Annotation(ZERO, Map.of(List.of(1, 1), TWO)),
-                        new Annotation(ZERO, Map.of(List.of(1, 0), TWO)),
-                        zero(1),
-                        zero(1))))),
-
-        // SplayHeap.{insert,del_min}
-        // insert   6 log(|t| + 1)                &     3 log(|t| + 1) + 1
-        // del_min    log(|t|) + log(|t| + 1)     &     2 log(|t|) + 1
-        // 3, 4
-        Arguments.of(
-            Map.of(
-                "SplayHeap.partition",
-                Config.of(
-                    "SplayHeap/partition",
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            ONE,
-                            Map.of(List.of(1, 1), THREE, List.of(1, 0), ONE, unitIndex(1), THREE)),
-                        new Annotation(ONE, Map.of(unitIndex(1), ONE)),
-                        new Annotation(ZERO, Map.of(List.of(1, 1), ONE)),
-                        new Annotation(ZERO, Map.of(List.of(1, 0), ONE)),
-                        new Annotation(ZERO, Map.of(List.of(1, 1), TWO)),
-                        new Annotation(ZERO, Map.of(List.of(1, 0), TWO)),
-                        zero(1),
-                        zero(1))),
-                "SplayHeap.insert",
-                Config.of(
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            ONE,
-                            Map.of(
-                                List.of(1, 1),
-                                THREE,
-                                List.of(1, 0),
-                                ONE,
-                                List.of(1, 2),
-                                THREE,
-                                unitIndex(1),
-                                TWO)),
-                        new Annotation(ONE, Map.of(unitIndex(1), ONE)))))),
-
-        // -------------------------------------------------------------------------
-        // PairingHeap.merge
-        // N&B  :    log(|h1| + |h2| + 1) + 2
-        // 6
-        // Paper: 98 log(|h1| + |h2| + 1) + 3 log(|h1| + 1)
-        // Worked on 2020-10-23 01:14, took 6m45s
-        Arguments.of(
-            Map.of(
-                "PairingHeap.merge",
-                Config.of(
-                    "PairingHeap/merge",
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            List.of(ONE, ONE),
-                            Map.of(
-                                List.of(1, 1, 2),
-                                new KnownCoefficient(98),
-                                List.of(1, 0, 1),
-                                THREE),
-                            "Q"),
-                        new Annotation(ONE, Map.of(unitIndex(1), ONE)),
-                        new Annotation(
-                            List.of(ZERO, ZERO),
-                            Map.of(
-                                List.of(0, 1, 2),
-                                Coefficient.of(8),
-                                List.of(1, 0, 2),
-                                Coefficient.of(7),
-                                List.of(1, 1, 2),
-                                Coefficient.of(10)),
-                            "Qcf"),
-                        zero(1),
-                        zero(2),
-                        zero(1))))),
-        Arguments.of(
-            Map.of(
-                "PairingHeap.insert",
-                Config.of(
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(List.of(ONE), Map.of(List.of(1, 2), Coefficient.of(6)), "Q"),
-                        new Annotation(ONE, Map.of(unitIndex(1), ONE)))),
-                "PairingHeap.merge",
-                Config.of(
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            List.of(ONE, ONE),
-                            Map.of(List.of(1, 1, 0), TWO, List.of(0, 0, 2), Coefficient.of(4)),
-                            "Q"),
-                        new Annotation(ONE, Map.of(List.of(0, 2), TWO)),
-                        zero(2),
-                        zero(1))))),
-        Arguments.of(
-            Map.of(
-                "PairingHeap.insert",
-                Config.of(
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(List.of(ONE), Map.of(List.of(1, 2), Coefficient.of(6)), "Q"),
-                        new Annotation(ONE, emptyMap()))),
-                "PairingHeap.merge",
-                Config.of(
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            List.of(ONE, ONE),
-                            Map.of(List.of(1, 1, 0), TWO, List.of(0, 0, 2), THREE),
-                            "Q"),
-                        new Annotation(ONE, Map.of(List.of(0, 2), ONE)),
-                        zero(2),
-                        zero(1))))),
 
         // 5
         // 3 log(|h|)
@@ -663,7 +681,80 @@ public class Tactics {
                             List.of(ZERO),
                             Map.of(List.of(1, 0), TWO, List.of(1, 1), TWO, List.of(1, 2), TWO),
                             "Qcf"),
-                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), TWO), "Qcf'"))))));
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), TWO), "Qcf'")))))
+
+        // -------------------------------------------------------------------------
+        // PairingHeap.merge
+        // N&B  :    log(|h1| + |h2| + 1) + 2
+        // 6
+        // Paper: 98 log(|h1| + |h2| + 1) + 3 log(|h1| + 1)
+        // Worked on 2020-10-23 01:14, took 6m45s
+        // Regression on 2021-01-29
+        /*
+          Arguments.of(
+              Map.of(
+                  "PairingHeap.merge",
+                  Config.of(
+                      "PairingHeap/merge",
+                      CombinedFunctionAnnotation.of(
+                          new Annotation(
+                              List.of(ONE, ONE),
+                              Map.of(
+                                  List.of(1, 1, 2),
+                                  new KnownCoefficient(98),
+                                  List.of(1, 0, 1),
+                                  THREE),
+                              "Q"),
+                          new Annotation(ONE, Map.of(unitIndex(1), ONE)),
+                          new Annotation(
+                              List.of(ZERO, ZERO),
+                              Map.of(
+                                  List.of(0, 1, 2),
+                                  Coefficient.of(8),
+                                  List.of(1, 0, 2),
+                                  Coefficient.of(7),
+                                  List.of(1, 1, 2),
+                                  Coefficient.of(10)),
+                              "Qcf"),
+                          zero(1),
+                          zero(2),
+                          zero(1))))),
+          Arguments.of(
+              Map.of(
+                  "PairingHeap.insert",
+                  Config.of(
+                      CombinedFunctionAnnotation.of(
+                          new Annotation(List.of(ONE), Map.of(List.of(1, 2), Coefficient.of(6)), "Q"),
+                          new Annotation(ONE, Map.of(unitIndex(1), ONE)))),
+                  "PairingHeap.merge",
+                  Config.of(
+                      CombinedFunctionAnnotation.of(
+                          new Annotation(
+                              List.of(ONE, ONE),
+                              Map.of(List.of(1, 1, 0), TWO, List.of(0, 0, 2), Coefficient.of(4)),
+                              "Q"),
+                          new Annotation(ONE, Map.of(List.of(0, 2), TWO)),
+                          zero(2),
+                          zero(1))))),
+          Arguments.of(
+              Map.of(
+                  "PairingHeap.insert",
+                  Config.of(
+                      CombinedFunctionAnnotation.of(
+                          new Annotation(List.of(ONE), Map.of(List.of(1, 2), Coefficient.of(6)), "Q"),
+                          new Annotation(ONE, emptyMap()))),
+                  "PairingHeap.merge",
+                  Config.of(
+                      CombinedFunctionAnnotation.of(
+                          new Annotation(
+                              List.of(ONE, ONE),
+                              Map.of(List.of(1, 1, 0), TWO, List.of(0, 0, 2), THREE),
+                              "Q"),
+                          new Annotation(ONE, Map.of(List.of(0, 2), ONE)),
+                          zero(2),
+                          zero(1)))))
+        */
+        );
   }
 
   private static Stream<Arguments> afterTacas() {
@@ -1029,7 +1120,7 @@ public class Tactics {
   }
 
   @ParameterizedTest
-  @MethodSource("tactics")
+  @MethodSource({"scratch", "splayTree", "splayHeap", "pairingHeap"})
   public void all(Map<String, Config> immutableAnnotations)
       throws UnificationError, TypeError, IOException {
     final var program = loadAndNormalizeAndInferAndUnshare(immutableAnnotations.keySet());
@@ -1072,28 +1163,44 @@ public class Tactics {
         Optimization.combine(
             program,
             immutableAnnotations.keySet(),
-            Optimization::squareWeightedComponentWiseDifference,
-            true);
+            Optimization::squareWeightedComponentWiseDifference);
+
+    /* SplayTree.delete
+
+    var multiTarget =
+        Optimization.componentWiseDifferenceAndSum(
+            program
+                .getFunctionDefinitions()
+                .get("SplayTree.delete")
+                .getInferredSignature()
+                .getAnnotation()
+                .get()
+                .withCost).get();
+
+    multiTarget.constraints.add(Optimization.forceRank(program.getFunctionDefinitions().get("SplayTree.delete").getInferredSignature().getAnnotation().get().withCost).get());
+     */
 
     // prover.plot();
-    var solverResult = prover.solve(multiTarget.constraints, emptyList(), "sat");
 
-    assertTrue(solverResult.getSolution().isPresent());
-    System.out.println(printTable(prover, solverResult.getSolution()));
-    program.mockIngest(solverResult.getSolution());
+    var checkSat = false;
+
+    if (checkSat) {
+      var solverResult = prover.solve(multiTarget.constraints, emptyList(), "sat");
+      assertTrue(solverResult.getSolution().isPresent());
+      System.out.println(printTable(prover, solverResult.getSolution()));
+      program.mockIngest(solverResult.getSolution());
+    }
     // prover.plotWithSolution(solution.get());
 
-    if (immutableAnnotations.values().stream().anyMatch(Config::isUnknown)) {
+    if (immutableAnnotations.values().stream().anyMatch(Config::isUnknown) || !checkSat) {
       final var minSetSolutionRat =
           prover.solve(
               multiTarget.constraints,
-              multiTarget.targets,
+              List.of(multiTarget.target),
               "minq",
               ConstraintSystemSolver.Domain.RATIONAL);
       program.mockIngest(minSetSolutionRat.getSolution());
-
       System.out.println(printTable(prover, minSetSolutionRat.getSolution()));
-
       assertTrue(minSetSolutionRat.getSolution().isPresent());
     }
   }

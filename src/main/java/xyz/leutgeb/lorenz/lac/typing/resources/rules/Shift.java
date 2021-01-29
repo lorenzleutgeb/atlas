@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources.rules;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
@@ -19,6 +20,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 }
  */
 
+@Deprecated
 public class Shift implements Rule {
   public static final Shift INSTANCE = new Shift();
 
@@ -38,8 +40,8 @@ public class Shift implements Rule {
     final var q = globals.getHeuristic().generate("shiftedQ", qk.size());
     final var qp = globals.getHeuristic().generate("shiftedQp", qpk.size());
 
-    constraints.addAll(obligation.getContext().getAnnotation().increment(q, k, "(shift)"));
-    constraints.addAll(obligation.getAnnotation().increment(qp, k, "(shift)"));
+    constraints.addAll(obligation.getContext().getAnnotation().increment(q, k, "(shift1j)"));
+    constraints.addAll(obligation.getAnnotation().increment(qp, k, "(shift2)"));
 
     return new ApplicationResult(
         List.of(
@@ -47,7 +49,8 @@ public class Shift implements Rule {
                 new AnnotatingContext(obligation.getContext().getIds(), q),
                 obligation.getExpression(),
                 qp,
-                obligation.getCost())),
+                obligation.getCost(),
+                Optional.of(obligation))),
         List.of(constraints));
   }
 

@@ -1,6 +1,7 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.constraints;
 
 import static java.util.stream.Collectors.toSet;
+import static xyz.leutgeb.lorenz.lac.util.Util.pick;
 
 import com.google.common.collect.BiMap;
 import com.microsoft.z3.ArithExpr;
@@ -34,6 +35,9 @@ public class DisjunctiveConstraint extends Constraint {
   public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
     if (elements.isEmpty()) {
       return ctx.mkFalse();
+    }
+    if (elements.size() == 1) {
+      return pick(elements).encode(ctx, coefficients);
     }
     return ctx.mkOr(
         elements.stream()

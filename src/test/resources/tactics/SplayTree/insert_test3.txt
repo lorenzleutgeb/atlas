@@ -1,0 +1,7 @@
+(w{l2xy} (let:tree:cf
+  app
+  (match
+    (w leaf)
+    (let:tree:cf leaf (w{mono} (let:tree:cf node (w{l2xy} node))))
+  )
+))

@@ -16,11 +16,11 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationVariable;
 
 // NOTE: Do not use @Value here, since have other classes inherit from TypeVariable.
 public class TypeVariable implements Type {
-  public static final TypeVariable ALPHA = new TypeVariable("α");
-  public static final TypeVariable BETA = new TypeVariable("β");
-  public static final TypeVariable GAMMA = new TypeVariable("γ");
-  public static final TypeVariable DELTA = new TypeVariable("δ");
-  public static final TypeVariable EPSILON = new TypeVariable("ε");
+  // private static final TypeVariable ALPHA = new TypeVariable("α");
+  // private static final TypeVariable BETA = new TypeVariable("β");
+  private static final TypeVariable GAMMA = new TypeVariable("γ");
+  private static final TypeVariable DELTA = new TypeVariable("δ");
+  private static final TypeVariable EPSILON = new TypeVariable("ε");
   private static final String[] GREEK = new String[] {"α", "β", "γ", "δ", "ε"};
   private final String name;
 
@@ -38,6 +38,14 @@ public class TypeVariable implements Type {
 
   protected String getName() {
     return name;
+  }
+
+  public static TypeVariable alpha() {
+    return new TypeVariable("α");
+  }
+
+  public static TypeVariable beta() {
+    return new TypeVariable("β");
   }
 
   @Override

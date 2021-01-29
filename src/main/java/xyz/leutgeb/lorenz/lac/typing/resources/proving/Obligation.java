@@ -6,6 +6,7 @@ import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import guru.nidi.graphviz.attribute.Label;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.Value;
 import org.jgrapht.nio.Attribute;
@@ -28,9 +29,14 @@ public class Obligation {
   Expression expression;
   Annotation annotation;
   int cost;
+  Optional<Obligation> parent;
 
   public Obligation(
-      AnnotatingContext context, Expression expression, Annotation annotation, int cost) {
+      AnnotatingContext context,
+      Expression expression,
+      Annotation annotation,
+      int cost,
+      Optional<Obligation> parent) {
     this.context = context;
     this.expression = expression;
 
@@ -44,14 +50,7 @@ public class Obligation {
       throw new IllegalArgumentException("cost must be 0 or 1");
     }
     this.cost = cost;
-  }
-
-  public Obligation(
-      List<Identifier> contextIds,
-      Annotation contextAnnotation,
-      Expression expression,
-      Annotation annotation) {
-    this(contextIds, contextAnnotation, expression, annotation, 1);
+    this.parent = parent;
   }
 
   public Obligation(
@@ -59,26 +58,45 @@ public class Obligation {
       Annotation contextAnnotation,
       Expression expression,
       Annotation annotation,
-      int cost) {
-    this(new AnnotatingContext(contextIds, contextAnnotation), expression, annotation, cost);
+      Optional<Obligation> parent) {
+    this(contextIds, contextAnnotation, expression, annotation, 1, parent);
+  }
+
+  public Obligation(
+      List<Identifier> contextIds,
+      Annotation contextAnnotation,
+      Expression expression,
+      Annotation annotation,
+      int cost,
+      Optional<Obligation> parent) {
+    this(
+        new AnnotatingContext(contextIds, contextAnnotation), expression, annotation, cost, parent);
+  }
+
+  public Obligation(
+      List<Identifier> contextIds,
+      Annotation contextAnnotation,
+      Expression expression,
+      Annotation annotation) {
+    this(contextIds, contextAnnotation, expression, annotation, Optional.empty());
   }
 
   public Obligation keepAnnotationAndCost(AnnotatingContext context, Expression expression) {
-    return new Obligation(context, expression, annotation, cost);
+    return new Obligation(context, expression, annotation, cost, Optional.of(this));
   }
 
   public Obligation keepCost(
       AnnotatingContext context, Expression expression, Annotation annotation) {
-    return new Obligation(context, expression, annotation, cost);
+    return new Obligation(context, expression, annotation, cost, Optional.of(this));
   }
 
   public Obligation keepContextAndAnnotationAndCost(Expression expression) {
-    return new Obligation(context, expression, annotation, cost);
+    return new Obligation(context, expression, annotation, cost, Optional.of(this));
   }
 
   public Obligation substitute(Map<Coefficient, KnownCoefficient> solution) {
     return new Obligation(
-        context.substitute(solution), expression, annotation.substitute(solution), cost);
+        context.substitute(solution), expression, annotation.substitute(solution), cost, parent);
   }
 
   public Map<String, Attribute> attributes(List<Constraint> generalConstraints) {

@@ -15,6 +15,7 @@ import com.google.common.collect.HashBiMap;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.Expr;
 import com.microsoft.z3.IntNum;
 import com.microsoft.z3.Model;
 import com.microsoft.z3.Optimize;
@@ -127,7 +128,8 @@ public class ConstraintSystemSolver {
     final var unsatCore = target.isEmpty();
 
     try (final var ctx = new Context(z3Config(unsatCore))) {
-      final Solver solver = ctx.mkTactic("qflia").getSolver();
+      final Solver solver = ctx.mkSolver();
+      // final Solver solver = ctx.mkTactic("qflia").getSolver();
       // final Solver solver =
       // /*domain.getLogic()*/Optional.of("LIA").map(ctx::mkSolver).orElseGet(ctx::mkSolver);
 
@@ -216,6 +218,7 @@ public class ConstraintSystemSolver {
       try (final var out = new PrintWriter(output(smtFile))) {
         out.println(optimize ? opt : solver);
         log.debug("Wrote SMT instance to {}.", smtFile);
+        System.out.println("Wrote SMT instance to " + smtFile);
       } catch (IOException ioException) {
         log.warn("Failed to write SMT instance to {}.", smtFile, ioException);
         ioException.printStackTrace();
@@ -230,6 +233,13 @@ public class ConstraintSystemSolver {
                   solver::getUnsatCore,
                   unsatCore,
                   solver::toString);
+
+      if (optimize && result.getLeft().equals(SATISFIABLE)) {
+        System.out.println("Objectives:");
+        for (Expr objective : opt.getObjectives()) {
+          System.out.println(objective + " = " + opt.getModel().getConstInterp(objective));
+        }
+      }
 
       var stats =
           statisticsToMapAndFile(optimize ? opt.getStatistics() : solver.getStatistics(), outPath);

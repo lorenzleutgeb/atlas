@@ -14,6 +14,7 @@ import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
@@ -138,6 +139,57 @@ public class Program {
     return proveWithTactics(functionAnnotations, Collections.emptyMap(), infer);
   }
 
+  public Optional<Prover> proveSmart(
+      Map<String, CombinedFunctionAnnotation> functionAnnotations, boolean infer) {
+    final var heuristic = SmartRangeHeuristic.DEFAULT;
+    final var prover = new Prover(name + randomHex(), null, basePath);
+
+    if (functionDefinitions.values().stream()
+        .map(FunctionDefinition::runaway)
+        .anyMatch(Predicate.not(Set::isEmpty))) {
+      return empty();
+    }
+
+    final var called = calledFunctionNames();
+    forEach(
+        fd ->
+            fd.stubAnnotations(
+                functionAnnotations,
+                heuristic,
+                called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
+                infer));
+    forEach(
+        fd -> {
+          final var globals =
+              new AnnotatingGlobals(functionAnnotations, fd.getSizeAnalysis(), heuristic);
+          prover.setGlobals(globals);
+
+          Obligation typingObligation = fd.getTypingObligation(1);
+
+          prover.proveSmart(typingObligation);
+
+          for (var cfAnnotation : fd.getInferredSignature().getAnnotation().get().withoutCost) {
+            if (cfAnnotation.isZero()) {
+              log.debug("Skipping {}", cfAnnotation);
+              continue;
+            }
+
+            final var cfRoot =
+                new Obligation(
+                    fd.treeLikeArguments(),
+                    cfAnnotation.from,
+                    fd.getBody(),
+                    cfAnnotation.to,
+                    0,
+                    Optional.empty());
+
+            prover.proveSmart(cfRoot);
+          }
+        });
+
+    return Optional.of(prover);
+  }
+
   public Optional<Prover> proveWithTactics(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       Map<String, Path> tactics,
@@ -157,7 +209,7 @@ public class Program {
             fd.stubAnnotations(
                 functionAnnotations,
                 heuristic,
-                called.contains(fd.getFullyQualifiedName()),
+                called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
                 infer));
     forEach(
         fd -> {
@@ -195,9 +247,9 @@ public class Program {
               throw new RuntimeException(e);
             }
           } else {
-            prover.setWeakenAggressively(true);
-            prover.prove(typingObligation);
-            prover.setWeakenAggressively(false);
+            // prover.setWeakenAggressively(true);
+            prover.proveSmart(typingObligation);
+            // prover.setWeakenAggressively(false);
           }
 
           for (var cfAnnotation : fd.getInferredSignature().getAnnotation().get().withoutCost) {
@@ -217,7 +269,12 @@ public class Program {
 
             final var cfRoot =
                 new Obligation(
-                    fd.treeLikeArguments(), cfAnnotation.from, fd.getBody(), cfAnnotation.to, 0);
+                    fd.treeLikeArguments(),
+                    cfAnnotation.from,
+                    fd.getBody(),
+                    cfAnnotation.to,
+                    0,
+                    Optional.empty());
 
             if (tactics.containsKey(fd.getFullyQualifiedName())) {
               try {
@@ -227,9 +284,9 @@ public class Program {
                 throw new RuntimeException(e);
               }
             } else {
-              prover.setWeakenAggressively(true);
-              prover.prove(cfRoot);
-              prover.setWeakenAggressively(false);
+              // prover.setWeakenAggressively(true);
+              prover.proveSmart(cfRoot);
+              // prover.setWeakenAggressively(false);
             }
           }
         });
@@ -304,11 +361,11 @@ public class Program {
   public void mockIngest(Optional<Map<Coefficient, KnownCoefficient>> solution) {
     if (solution.isPresent()) {
       if (!(functionDefinitions.size() == 1)) {
-        log.info(namesAsSet() + ":");
+        System.out.println(namesAsSet() + ":");
       }
       for (var group : order) {
         for (var fqn : group) {
-          log.info(
+          System.out.println(
               functionDefinitions
                   .get(fqn)
                   .getMockedAnnotationString(
@@ -367,7 +424,7 @@ public class Program {
     forEach(FunctionDefinition::analyzeSizes);
   }
 
-  private void forEach(Consumer<FunctionDefinition> f) {
+  public void forEach(Consumer<FunctionDefinition> f) {
     functionDefinitions.values().forEach(f);
   }
 
@@ -379,7 +436,7 @@ public class Program {
         .collect(Collectors.joining("; "));
   }
 
-  private Set<String> calledFunctionNames() {
+  public Set<String> calledFunctionNames() {
     final var result = new HashSet<String>();
     forEach(fd -> result.addAll(fd.getOcurringFunctions()));
     return result;
@@ -472,5 +529,26 @@ public class Program {
     } catch (IOException ex) {
       throw new RuntimeException(ex);
     }
+  }
+
+  public Map<String, Path> lookupTactics(Map<String, String> tactics, Path base) {
+    final var result = new HashMap<String, Path>();
+
+    for (final var entry : functionDefinitions.entrySet()) {
+      final Path path;
+
+      if (tactics.containsKey(entry.getKey())) {
+        path = base.resolve(Path.of(tactics.get(entry.getKey()) + ".txt"));
+      } else {
+        path = base.resolve(entry.getValue().tactic());
+        if (!Files.exists(path)) {
+          continue;
+        }
+      }
+
+      result.put(entry.getKey(), path);
+    }
+
+    return result;
   }
 }

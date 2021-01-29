@@ -215,4 +215,9 @@ public class LetExpression extends Expression {
       sizeGraph.addEdge(identifier, declared, SizeEdge.eq());
     }
   }
+
+  @Override
+  public boolean isTreeConstruction() {
+    return getValue().isTreeConstruction() && getBody().isTreeConstruction();
+  }
 }

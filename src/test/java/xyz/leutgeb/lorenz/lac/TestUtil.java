@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import com.google.common.collect.Streams;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -118,6 +120,16 @@ public class TestUtil {
     return printTable(acs, as);
   }
 
+  public static Program loadAndNormalizeAndInferAndUnshare(Pattern pattern)
+      throws UnificationError, TypeError, IOException {
+    final var result = loader().loadMatching(pattern);
+    result.normalize();
+    result.infer();
+    result.unshare(true);
+    result.analyzeSizes();
+    return result;
+  }
+
   public static Program loadAndNormalizeAndInferAndUnshare(String... fqns)
       throws UnificationError, TypeError, IOException {
     return loadAndNormalizeAndInferAndUnshare(Set.of(fqns));
@@ -134,6 +146,9 @@ public class TestUtil {
   }
 
   public static Loader loader() {
-    return new Loader(Path.of(".", "src", "test", "resources", "examples"));
+    return new Loader(RESOURCES.resolve("examples"));
   }
+
+  public static Path RESOURCES = Paths.get(".", "src", "test", "resources");
+  public static Path TACTICS = RESOURCES.resolve("tactics");
 }

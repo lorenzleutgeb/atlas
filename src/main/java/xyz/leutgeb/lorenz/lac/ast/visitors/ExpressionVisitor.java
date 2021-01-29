@@ -15,9 +15,11 @@ import xyz.leutgeb.lorenz.lac.ast.IfThenElseExpression;
 import xyz.leutgeb.lorenz.lac.ast.LetExpression;
 import xyz.leutgeb.lorenz.lac.ast.MatchExpression;
 import xyz.leutgeb.lorenz.lac.ast.NodeExpression;
-import xyz.leutgeb.lorenz.lac.ast.Number;
+import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 
 class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
+  private IntIdGenerator idGenerator = new IntIdGenerator(Integer.MAX_VALUE / 2);
+
   public ExpressionVisitor(String moduleName, Path path) {
     super(moduleName, path);
   }
@@ -41,7 +43,7 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
     return new MatchExpression(
         getSource(ctx),
         visit(ctx.test),
-        ctx.leafCase != null ? visit(ctx.leafCase) : Identifier.LEAF,
+        ctx.leafCase != null ? visit(ctx.leafCase) : Identifier.leaf(),
         visit(ctx.nodePattern),
         visit(ctx.nodeCase));
   }
@@ -91,7 +93,7 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   @Override
   public Expression visitMaybeAnonymousIdentifier(SplayParser.MaybeAnonymousIdentifierContext ctx) {
     if (ctx.ANONYMOUS_IDENTIFIER() != null) {
-      return Identifier.anonymous(getSource(ctx));
+      return Identifier.anonymous(getSource(ctx), idGenerator);
     }
     return Identifier.get(ctx.IDENTIFIER().getText(), getSource(ctx));
   }
@@ -108,6 +110,6 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
 
   @Override
   public Expression visitConstant(SplayParser.ConstantContext ctx) {
-    return new Number(getSource(ctx), Integer.parseInt(ctx.NUMBER().getText()));
+    throw new UnsupportedOperationException("literal numbers are not implemented");
   }
 }

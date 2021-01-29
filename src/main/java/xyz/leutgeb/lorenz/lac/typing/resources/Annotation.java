@@ -1,6 +1,7 @@
 package xyz.leutgeb.lorenz.lac.typing.resources;
 
 import static com.google.common.collect.Comparators.lexicographical;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -41,6 +43,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsProductConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.OffsetConstraint;
 import xyz.leutgeb.lorenz.lac.util.Fraction;
@@ -57,20 +60,18 @@ public class Annotation {
 
   @Getter String name;
 
-  private static int count = 0;
+  private static final AtomicInteger COUNT = new AtomicInteger();
 
   @Getter private final int id;
 
   public Annotation(int size, String name) {
     this.name = name;
-    this.id = count;
+    this.id = COUNT.getAndIncrement();
     rankCoefficients = new ArrayList<>(size);
     for (int i = 0; i < size; i++) {
       rankCoefficients.add(null);
     }
     coefficients = new HashMap<>();
-
-    count = count + 1;
   }
 
   public Annotation(
@@ -106,7 +107,7 @@ public class Annotation {
       Map<List<Integer>, Coefficient> coefficients,
       String name) {
     this.name = name;
-    this.id = count;
+    this.id = COUNT.getAndIncrement();
     this.rankCoefficients = new ArrayList<>(rankCoefficients);
 
     for (var l : coefficients.keySet()) {
@@ -118,8 +119,6 @@ public class Annotation {
         coefficients.entrySet().stream()
             .filter(entry -> !ZERO.equals(entry.getValue()))
             .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-    count = count + 1;
   }
 
   public static Annotation knownConstant(int size, String name, int potential) {
@@ -152,6 +151,15 @@ public class Annotation {
   /** Constructs an annotation of zero size that has zero potential. */
   public static Annotation empty() {
     return zero(0);
+  }
+
+  public static boolean isZero(List<Integer> index) {
+    for (int e : index) {
+      if (e != 0) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public Annotation copyShape(String name) {
@@ -212,12 +220,20 @@ public class Annotation {
     return indexWeight(e, 2);
   }
 
-  public static int indexWeight(List<Integer> e, int exponent) {
+  public static int indexWeightOld(List<Integer> e, int exponent) {
     int weight = e.get(e.size() - 1) + 1;
     for (int i = 0; i < e.size() - 1; i++) {
       weight += Math.pow(e.get(i) + 1, exponent);
     }
     return weight;
+  }
+
+  public static int indexWeight(List<Integer> e, int exponent) {
+    int weight = 1 + ((e.get(e.size() - 1) + 1) * 2);
+    for (int i = 0; i < e.size() - 1; i++) {
+      weight += e.get(i);
+    }
+    return (int) Math.pow(weight, exponent);
   }
 
   public static List<Integer> unitIndex(int size) {
@@ -699,6 +715,62 @@ public class Annotation {
     return increment(other, new KnownCoefficient(cost), reason);
   }
 
+  public static Pair<Annotation, List<Constraint>> add(Annotation a, Annotation b) {
+    if (a.size() != b.size()) {
+      throw new IllegalArgumentException("annotations must be of same size");
+    }
+
+    final int size = a.size();
+
+    final var constraints = new ArrayList<Constraint>();
+
+    final var rankCoefficients = new ArrayList<Coefficient>(size);
+
+    for (int i = 0; i < size; i++) {
+      final var ai = a.getRankCoefficientOrZero(i);
+      if (ai.equals(ZERO)) {
+        rankCoefficients.add(b.getRankCoefficient(i));
+        continue;
+      }
+      final var bi = b.getRankCoefficientOrZero(i);
+      if (bi.equals(ZERO)) {
+        rankCoefficients.add(a.getRankCoefficient(i));
+        continue;
+      }
+
+      final var ci = UnknownCoefficient.unknown("x");
+      constraints.add(new EqualsSumConstraint(ci, List.of(ai, bi), "(add)"));
+      rankCoefficients.add(ci);
+    }
+
+    final var coefficients = new HashMap<List<Integer>, Coefficient>();
+
+    indexUnion(a, b)
+        .forEach(
+            i -> {
+              final var ai = a.getCoefficientOrZero(i);
+              final var bi = b.getCoefficientOrZero(i);
+
+              if (ai.equals(ZERO)) {
+                coefficients.put(i, bi);
+                return;
+              }
+              if (bi.equals(ZERO)) {
+                coefficients.put(i, ai);
+                return;
+              }
+
+              UnknownCoefficient ci = UnknownCoefficient.unknown("x");
+              constraints.add(new EqualsSumConstraint(ci, List.of(ai, bi), "(add)"));
+              coefficients.put(i, ci);
+            });
+
+    return Pair.of(
+        new Annotation(rankCoefficients, coefficients, a.getName() + "+" + b.getName()),
+        constraints);
+  }
+
+  /** Constraints for this = other + cost */
   public List<Constraint> increment(Annotation other, Coefficient cost, String reason) {
     if (this.size() != other.size()) {
       throw new IllegalArgumentException("annotations must be of same size");
@@ -762,5 +834,36 @@ public class Annotation {
   public boolean isZero() {
     return Streams.concat(rankCoefficients.stream(), coefficients.values().stream())
         .allMatch(x -> x == null || ZERO.equals(x));
+  }
+
+  public Pair<Annotation, List<Constraint>> multiply(KnownCoefficient factor) {
+    if (factor.getValue().equals(Fraction.ONE)) {
+      return Pair.of(this, emptyList());
+    }
+
+    final var constraints =
+        new ArrayList<Constraint>(rankCoefficients.size() + coefficients.size());
+    final var resultRankCoefficients = new ArrayList<Coefficient>(rankCoefficients.size());
+
+    for (final var rankCoefficient : rankCoefficients) {
+      if (rankCoefficient == null) {
+        resultRankCoefficients.add(null);
+      } else {
+        final var x = UnknownCoefficient.unknown("x");
+        constraints.add(new EqualsProductConstraint(x, List.of(rankCoefficient, factor), "(mul)"));
+        resultRankCoefficients.add(x);
+      }
+    }
+
+    final var resultCoefficients = new HashMap<List<Integer>, Coefficient>(coefficients.size());
+    for (final var entry : coefficients.entrySet()) {
+      final var x = UnknownCoefficient.unknown("x");
+      constraints.add(new EqualsProductConstraint(x, List.of(entry.getValue(), factor), "(mul)"));
+      resultCoefficients.put(entry.getKey(), x);
+    }
+
+    return Pair.of(
+        new Annotation(resultRankCoefficients, resultCoefficients, name + " * " + factor),
+        constraints);
   }
 }

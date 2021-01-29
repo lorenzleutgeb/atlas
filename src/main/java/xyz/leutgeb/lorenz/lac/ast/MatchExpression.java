@@ -118,9 +118,9 @@ public class MatchExpression extends Expression {
             new NodeExpression(
                 source,
                 List.of(
-                    Identifier.anonymous(source),
-                    Identifier.anonymous(source),
-                    Identifier.anonymous(source)));
+                    Identifier.anonymous(source, idGenerator),
+                    Identifier.anonymous(source, idGenerator),
+                    Identifier.anonymous(source, idGenerator)));
       } else {
         final Identifier left =
             Identifier.get(nodeId.getName() + "_l_" + idGenerator.next(), source);
