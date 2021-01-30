@@ -1,7 +1,7 @@
 {
   "": {
     "name": "lac",
-    "version": "v0.0.2-23-geea7724-dirty",
+    "version": "v0.0.2-43-ge0bf1f9-dirty",
     "path": "",
     "gradle": {
       "version": "6.7",
@@ -11,6 +11,7 @@
       "nativeVersion": "0.22-milestone-8"
     },
     "dependencies": {
+      "settings": [],
       "plugin": [
         {
           "id": {

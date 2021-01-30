@@ -185,7 +185,7 @@ tasks.test {
 }
 
 application {
-    mainClassName = "$rootPackage.Main"
+    mainClass.set("$rootPackage.Main")
 }
 
 tasks.create<JavaCompile>("compileGeneratedJava") {
