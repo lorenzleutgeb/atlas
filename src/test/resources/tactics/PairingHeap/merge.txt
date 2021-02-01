@@ -1,1 +1,16 @@
-_{w}
+(match (* h1 *)
+  (w var)
+  (match (* h2 *)
+    (w node)
+    (let:tree:cf
+      (w leaf)
+      (w{size} (let:tree:cf
+        (w node)
+        (let:tree:cf
+          (w node)
+          (w{l2xy size} app)
+        )
+      ))
+    )
+  )
+)

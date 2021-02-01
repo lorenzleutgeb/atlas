@@ -6,14 +6,14 @@
       (match (* cl, zig *)
         (let:tree:cf leaf (w node))
         (ite (* a == b *)
-          (let:tree:cf (w node) (w{mono} node))
+          (let:tree:cf (w node) (w{size} node))
           ?
         )
       )
       (match (* cr, zag *)
         (let:tree:cf leaf (w node))
         (ite (* a == b *)
-          (let:tree:cf (w node) (w{mono} node))
+          (let:tree:cf (w node) (w{size} node))
           ?
         )
       )

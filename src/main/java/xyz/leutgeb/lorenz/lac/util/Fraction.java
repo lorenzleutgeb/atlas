@@ -9,6 +9,8 @@ public class Fraction {
   public static final Fraction TWO = new Fraction(2);
   public static final Fraction THREE = new Fraction(3);
   public static final Fraction ONE_BY_TWO = new Fraction(1, 2);
+  public static final Fraction THREE_BY_TWO = new Fraction(3, 2);
+  public static final Fraction FIVE_BY_TWO = new Fraction(5, 2);
 
   int numerator;
   int denominator;

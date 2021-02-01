@@ -36,8 +36,8 @@ import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 
-@DisplayName("(w) Rule")
-public class WTest {
+@DisplayName("Weakening")
+public class WeakeningTest {
   @Test
   public void constant() {
     Obligation o =
@@ -68,8 +68,10 @@ public class WTest {
     "0,1,1,0,false",
     "0,1,1,1,true",
     "0,2,0,2,true",
-    "1,0,0,1,true",
     "1,1,0,1,false",
+    // as of 2021-02-01, (w:size) is restricted to knowledge about |t| = 1, and |t| < |t'| is
+    // ignored
+    // "1,0,0,1,true",
   })
   @ParameterizedTest
   void withGtKnowledge(int a1, int a2, int b1, int b2, boolean expectedSolution) {
@@ -107,7 +109,7 @@ public class WTest {
                     smallerPotential,
                     biggerPotential,
                     sizeAnalysis,
-                    emptyMap())));
+                    Map.of("size", "true"))));
 
     assertEquals(expectedSolution, solverResult.hasSolution());
   }
@@ -246,7 +248,7 @@ public class WTest {
                     p,
                     q,
                     new DirectedMultigraph<>(SizeEdge.class),
-                    emptyMap())));
+                    Map.of("mono", "true"))));
 
     assertTrue(solverResult.hasSolution());
   }

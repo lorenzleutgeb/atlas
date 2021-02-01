@@ -272,7 +272,6 @@ public class Prover {
       final Stack<RuleSchedule> todo = new Stack<>();
       todo.push(RuleSchedule.schedule(isLeaf ? leafRule : variableRule));
       weakenVariables(obligation, todo);
-      // TODO: Maybe we don't need mono if we're being bound by let.
       todo.push(RuleSchedule.schedule(weakenRule, Map.of("mono", "true")));
       return todo;
     } else if (e instanceof NodeExpression) {
@@ -288,8 +287,6 @@ public class Prover {
       final Stack<RuleSchedule> todo = new Stack<>();
       todo.push(RuleSchedule.schedule(nodeRule));
       weakenVariables(obligation, todo);
-      // TODO: Last in chain definitely needs l2xy, but probably we don't need mono if we're bound
-      // by let.
       todo.push(
           RuleSchedule.schedule(
               weakenRule, lastInChain ? Map.of("l2xy", "true") : Map.of("mono", "true")));
@@ -299,13 +296,13 @@ public class Prover {
       if (let.getValue() instanceof CallExpression) {
         // Makes sure we apply (w{l2xy}) right before (app).
         return stack(
-            RuleSchedule.schedule(weakenRule, Map.of("l2xy", "true")),
+            RuleSchedule.schedule(weakenRule, Map.of("l2xy", "true", "mono", "true")),
             RuleSchedule.schedule(letTreeCfPaperRule));
       } else if (let.isTreeConstruction()) {
         if (let.getValue() instanceof NodeExpression) {
-          // Makes sure we apply (w{mono}) if we're constructing a tree.
+          // Makes sure we apply (w{size}) if we're constructing a tree.
           return stack(
-              RuleSchedule.schedule(weakenRule, Map.of("mono", "true")),
+              RuleSchedule.schedule(weakenRule, Map.of("size", "true")),
               RuleSchedule.schedule(letTreeCfPaperRule));
         }
       }
@@ -471,7 +468,7 @@ public class Prover {
 
         // TODO: This is a hack that will make all automatic applications of (w) use "full power".
         final Map<String, String> arguments =
-            rule == weakenRule ? Map.of("mono", "true", "l2xy", "true") : emptyMap();
+            rule == weakenRule ? Map.of("size", "true", "l2xy", "true") : emptyMap();
 
         ruleResult = applyInternal(nextObligation, rule, arguments);
 

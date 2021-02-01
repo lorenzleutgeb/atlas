@@ -1,4 +1,0 @@
-(let:tree:cf
-  leaf
-  (w node)
-)

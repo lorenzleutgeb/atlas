@@ -3,8 +3,8 @@
   (match
     (w node)
     (ite
-      (w{l2xy} (let:tree:cf node (let:tree:cf leaf node)))
-      (w{l2xy} (let:tree:cf node (let:tree:cf leaf node)))
+      (w{mono l2xy} (let:tree:cf node (let:tree:cf leaf node)))
+      (w{mono l2xy} (let:tree:cf node (let:tree:cf leaf node)))
     )
   )
 )

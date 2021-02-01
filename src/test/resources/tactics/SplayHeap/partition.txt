@@ -1,17 +1,17 @@
 (match (* t *)
-  (w leaf)
+  leaf
   (ite
     (match
-      (let:tree:cf leaf (w{mono} (let:tree:cf node (let:tree:cf leaf node))))
+      (let:tree:cf leaf (w{size} (let:tree:cf node (let:tree:cf leaf node))))
       (ite
-        (w{l2xy} (let:tree:cf
+        (w{mono l2xy} (let:tree:cf
           app (* partition d p tc *)
           (match
-            (w leaf)
+            leaf
             (w{mono} (let:tree:cf node (let:tree:cf node (w{mono} node))))
           )
         ))
-        (w{l2xy} (let:tree:cf
+        (w{mono l2xy} (let:tree:cf
           app (* partition d p tb *)
           (match
             (w{mono} leaf)
@@ -21,19 +21,19 @@
       )
     )
     (match
-      (let:tree:cf leaf (let:tree:cf leaf (w{mono} (let:tree:cf node node))))
+      (let:tree:cf leaf (let:tree:cf leaf (w{size} (let:tree:cf node node))))
       (ite
-        (w{l2xy} (let:tree:cf
+        (w{mono l2xy} (let:tree:cf
           app (* partition d p tb *)
           (match
             (w{mono} leaf)
             (let:tree:cf node (let:tree:cf node (w{l2xy} node)))
           )
         ))
-        (w{l2xy} (let:tree:cf
+        (w{mono l2xy} (let:tree:cf
           app (* partition d p tc *)
           (match
-            (w leaf)
+            leaf
             (let:tree:cf node (let:tree:cf node (w{mono} node)))
           )
         ))

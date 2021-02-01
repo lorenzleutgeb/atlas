@@ -18,6 +18,8 @@ public class KnownCoefficient implements Coefficient {
   public static final KnownCoefficient MINUS_TWO = new KnownCoefficient(Fraction.TWO.negate());
   public static final KnownCoefficient MINUS_ONE = new KnownCoefficient(Fraction.ONE.negate());
   public static final KnownCoefficient ONE_BY_TWO = new KnownCoefficient(Fraction.ONE_BY_TWO);
+  public static final KnownCoefficient THREE_BY_TWO = new KnownCoefficient(Fraction.THREE_BY_TWO);
+  public static final KnownCoefficient FIVE_BY_TWO = new KnownCoefficient(Fraction.FIVE_BY_TWO);
 
   Fraction value;
 

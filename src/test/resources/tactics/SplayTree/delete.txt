@@ -7,15 +7,15 @@
       (ite (* a == a1 *)
         (match (* l *)
           (w var)
-          (w{l2xy} (let:tree:cf
+          (w{mono l2xy} (let:tree:cf
             app
             (match (* splay_max l *)
-              (w leaf)
-              (w{mono} node)
+              leaf
+              (w node)
             )
           ))
         )
-        (w{mono} node)
+        (w node)
       )
     )
   )

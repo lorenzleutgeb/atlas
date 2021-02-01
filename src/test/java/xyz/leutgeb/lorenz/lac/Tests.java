@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.ord;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.alpha;
@@ -22,7 +21,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -241,38 +239,6 @@ public class Tests {
     final var solution = program.solve();
     program.ingest(solution.getSolution());
     assertTrue(solution.getSolution().isEmpty());
-  }
-
-  @Test
-  @Disabled("too complex, see separate test cases")
-  void splayZigZig() throws Exception {
-    final var fqn = "SplayTree.splay_zigzig";
-    final var expectedSignature = sig(alpha(), ATREE, ATREE);
-    final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
-    final var definition = program.getFunctionDefinitions().get(fqn);
-
-    assertEquals(expectedSignature, definition.getInferredSignature());
-
-    // Taken from Example 8.
-    final List<Coefficient> rankCoefficients = new ArrayList<>(1);
-    rankCoefficients.add(ONE);
-
-    final Map<List<Integer>, Coefficient> schoenmakers = new HashMap<>();
-    schoenmakers.put(List.of(0, 1), new KnownCoefficient(new Fraction(3, 1)));
-    schoenmakers.put(List.of(0, 2), ONE);
-
-    final List<Coefficient> resultRankCoefficients = singletonList(ONE);
-
-    final var predefinedAnnotations = new HashMap<String, CombinedFunctionAnnotation>();
-    predefinedAnnotations.put(
-        fqn,
-        new CombinedFunctionAnnotation(
-            new FunctionAnnotation(
-                new Annotation(rankCoefficients, schoenmakers, "predefined"),
-                new Annotation(resultRankCoefficients, emptyMap(), "predefined")),
-            emptySet()));
-
-    assertTrue(program.solve(predefinedAnnotations).getSolution().isPresent());
   }
 
   @ParameterizedTest

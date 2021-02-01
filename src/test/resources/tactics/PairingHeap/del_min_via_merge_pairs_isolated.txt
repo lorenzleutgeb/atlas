@@ -1,4 +1,4 @@
 (match
-  (w{mono} leaf)
-  (w{l2xy} app)
+  (w leaf)
+  (w{mono} app)
 )

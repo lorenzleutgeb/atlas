@@ -1,7 +1,7 @@
 (let:tree:cf
   app (* partition d x h *)
   (match
-    (let:tree:cf leaf (let:tree:cf leaf (w{l2xy mono} node)))
-    (w{l2xy mono} node)
+    (let:tree:cf leaf (let:tree:cf leaf node))
+    (w node)
   )
 )

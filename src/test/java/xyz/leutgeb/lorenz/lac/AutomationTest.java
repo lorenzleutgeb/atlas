@@ -1,10 +1,11 @@
 package xyz.leutgeb.lorenz.lac;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static xyz.leutgeb.lorenz.lac.Tactics.SPLAY_TIGHTER;
+import static xyz.leutgeb.lorenz.lac.Tactics.SPLAY_EXPECTED;
 import static xyz.leutgeb.lorenz.lac.TestUtil.loadAndNormalizeAndInferAndUnshare;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE_BY_TWO;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 
 import java.io.IOException;
@@ -23,21 +24,20 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 public class AutomationTest {
   public static Stream<Arguments> source() {
     return Stream.of(
-        Arguments.of("PairingHeap.merge_pairs_isolated", SPLAY_TIGHTER),
+        Arguments.of("PairingHeap.merge_pairs_isolated", SPLAY_EXPECTED),
         Arguments.of(
             "SplayHeap.partition",
             CombinedFunctionAnnotation.of(
                 new Annotation(
-                    List.of(Coefficient.of(1, 2)),
+                    List.of(ONE_BY_TWO),
                     Map.of(
                         unitIndex(1), ONE, List.of(1, 0), Coefficient.of(3, 4), List.of(1, 1), ONE),
                     "Q"),
-                new Annotation(List.of(Coefficient.of(1, 2)), Map.of(unitIndex(1), ONE), "Q'"),
-                new Annotation(List.of(ZERO), Map.of(List.of(1, 1), Coefficient.of(1, 2)), "Qcf"),
-                new Annotation(
-                    List.of(ZERO), Map.of(List.of(1, 0), Coefficient.of(1, 2)), "Qcf'"))),
-        Arguments.of("SplayTree.splay", SPLAY_TIGHTER),
-        Arguments.of("SplayTree.splay_max", SPLAY_TIGHTER));
+                new Annotation(List.of(ONE_BY_TWO), Map.of(unitIndex(1), ONE), "Q'"),
+                new Annotation(List.of(ZERO), Map.of(List.of(1, 1), ONE_BY_TWO), "Qcf"),
+                new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE_BY_TWO), "Qcf'"))),
+        Arguments.of("SplayTree.splay", SPLAY_EXPECTED),
+        Arguments.of("SplayTree.splay_max", SPLAY_EXPECTED));
   }
 
   @ParameterizedTest

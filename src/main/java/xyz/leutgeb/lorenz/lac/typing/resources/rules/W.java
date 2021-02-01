@@ -21,6 +21,7 @@ import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import static xyz.leutgeb.lorenz.lac.util.Util.flag;
 import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
+import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
@@ -61,16 +62,11 @@ import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 public class W implements Rule {
   public static final W INSTANCE = new W();
 
-  private static final boolean FARKAS_ENABLED = false;
-
-  private static final boolean LEMMA_2XY_ENABLED = false; // was true
-  private static final boolean LEMMA_PLUS1_ENABLED = false;
-  private static final boolean LEMMA_PLUS1Y_ENABLED = false;
-  private static final boolean LEMMA_PLUS2_ENABLED = false;
-  private static final boolean MONO_ONE_ENABLED = false; // was true
-
   private static final Map<List<List<Integer>>, List<LessThanOrEqual<List<Integer>>>> MONO_CACHE =
       new HashMap<>();
+
+  private static final boolean DEBUG_SIZE = false;
+  private static final boolean DEBUG_KNOWLEDGE = false;
 
   public static List<Constraint> compareCoefficientsLessOrEqual(
       Annotation left, Annotation right, String reason) {
@@ -107,24 +103,8 @@ public class W implements Rule {
       Annotation right,
       Graph<Identifier, SizeEdge> sizeAnalysis,
       Map<String, String> arguments) {
-    return compareCoefficientsLessOrEqualUsingFarkas(
-        identifiers, left, right, sizeAnalysis, arguments, false);
-  }
-
-  public static List<Constraint> compareCoefficientsLessOrEqualUsingFarkas(
-      List<Identifier> identifiers,
-      Annotation left,
-      Annotation right,
-      Graph<Identifier, SizeEdge> sizeAnalysis,
-      Map<String, String> arguments,
-      boolean force) {
     // left is P in paper.
     // right is Q in paper.
-
-    final var reducedSizeAnalysis = reduceSizeAnalysis(identifiers, sizeAnalysis);
-    Set<LessThan<Integer>> knowLt = reducedSizeAnalysis.knowLt;
-    Set<Equal<Integer>> knowEq = reducedSizeAnalysis.knowEq;
-    Set<Integer> knowOne = reducedSizeAnalysis.knowOne;
 
     final List<Constraint> constraints = new ArrayList<>();
     // TODO(lorenz.leutgeb): Exploit |t| > |t'| ==> rk(t) > rk(t')
@@ -139,79 +119,96 @@ public class W implements Rule {
 
     final var potentialFunctions = Annotation.nonRankIndices(left, right).collect(toList());
 
-    final boolean mono = flag(arguments, "mono") || force;
+    final var lemma2xy = flag(W.class, arguments, "l2xy");
+    final var lemmap1 = flag(W.class, arguments, "lp1");
+    final var lemmap1y = flag(W.class, arguments, "lp1y");
+    final boolean size = flag(W.class, arguments, "size") || lemmap1y;
+    final boolean mono = flag(W.class, arguments, "mono") || size;
 
-    final List<LessThanOrEqual<List<Integer>>> monotonyInstances;
+    final ReducedSizeAnalysis reducedSizeAnalysis;
+    final Set<LessThan<Integer>> knowLt;
+    final Set<Equal<Integer>> knowEq;
+    final Set<Integer> knowOne;
+    if (size) {
+      reducedSizeAnalysis = reduceSizeAnalysis(identifiers, sizeAnalysis);
+      knowLt = emptySet(); // reducedSizeAnalysis.knowLt;
+      knowEq = emptySet(); // reducedSizeAnalysis.knowEq;
+      knowOne = reducedSizeAnalysis.knowOne;
 
-    if (knowLt.isEmpty() && knowEq.isEmpty() && knowOne.isEmpty()) {
-      synchronized (MONO_CACHE) {
-        monotonyInstances =
-            MONO_CACHE.computeIfAbsent(
-                potentialFunctions,
-                (key) ->
-                    lessThanOrEqualNew(
-                        potentialFunctions, knowLt, knowEq, mono ? knowOne : emptySet()));
+      if (DEBUG_SIZE && knowEq.isEmpty() && knowLt.isEmpty() && knowOne.isEmpty()) {
+        // Breakpoint.
+        log.debug("Size analysis did not contribute any side conditions for monotony analysis.");
       }
     } else {
-      monotonyInstances =
-          lessThanOrEqualNew(potentialFunctions, knowLt, knowEq, mono ? knowOne : emptySet());
+      knowLt = emptySet();
+      knowEq = emptySet();
+      knowOne = emptySet();
     }
 
-    final var lemma2xy = flag(arguments, "l2xy") || force;
+    final List<LessThanOrEqual<List<Integer>>> monotonyInstances =
+        mono ? lessThanOrEqual(potentialFunctions, knowLt, knowEq, knowOne) : emptyList();
 
     final List<List<List<Integer>>> lemma2XYInstances =
         lemma2xy ? lemma2XY(potentialFunctions) : emptyList();
-
-    final var lemmap1 = flag(arguments, "lp1");
-    final var lemmap1y = flag(arguments, "lp1y");
 
     final List<Pair<List<Integer>, List<Integer>>> lemmaPlus1Instances =
         append(
             lemmap1 ? lemmaPlus1(potentialFunctions) : emptyList(),
             lemmap1y ? lemmaPlus1Known(potentialFunctions, knowOne) : emptyList());
 
-    final var lemmap2 = flag(arguments, "lp2");
+    final var lemmap2 = flag(W.class, arguments, "lp2");
     final List<Pair<List<Integer>, List<Integer>>> lemmaPlus2Instances =
         lemmap2 ? lemmaPlus2(potentialFunctions) : emptyList();
 
-    // List<String> identifierNames = identifiers.stream().map(Object::toString).collect(toList());
-    log.trace("(w) --- " + left.getId() + " <= " + right.getId() + " --- ");
-    log.trace("pot: " + potentialFunctions);
-    log.trace("ids: " + identifiers);
-    log.trace(
-        "lts: " + knowLt.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
-    log.trace(
-        "eqs: " + knowEq.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
-    log.trace("one: " + knowOne.stream().map(identifiers::get).collect(toUnmodifiableList()));
+    if (DEBUG_SIZE && size && (!knowLt.isEmpty() || !knowEq.isEmpty() || !knowOne.isEmpty())) {
+      final List<LessThanOrEqual<List<Integer>>> monotonyInstancesWithoutKnowledge;
+      monotonyInstancesWithoutKnowledge =
+          lessThanOrEqual(potentialFunctions, emptySet(), emptySet(), emptySet());
+      final var improvement =
+          Sets.difference(
+              Set.copyOf(monotonyInstances), Set.copyOf(monotonyInstancesWithoutKnowledge));
+      if (improvement.isEmpty()) {
+        // Breakpoint.
+        log.debug("Size analysis did not contribute anything to monotony analysis.");
+      }
+    }
 
-    log.trace("monotony:");
-    monotonyInstances.forEach(x -> log.trace("{}", x));
+    if (DEBUG_KNOWLEDGE) {
+      log.trace("(w) --- " + left.getId() + " <= " + right.getId() + " --- ");
+      log.trace("pot: " + potentialFunctions);
+      log.trace("ids: " + identifiers);
+      log.trace(
+          "lts: "
+              + knowLt.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
+      log.trace(
+          "eqs: "
+              + knowEq.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
+      log.trace("one: " + knowOne.stream().map(identifiers::get).collect(toUnmodifiableList()));
 
-    log.trace("lemma2XY:");
-    lemma2XYInstances.forEach(
-        instance -> {
-          log.trace(
-              "2 * [...0, 2] + "
-                  + instance.get(0)
-                  + " + "
-                  + instance.get(1)
-                  + " <= 2 * "
-                  + instance.get(2));
-        });
+      log.trace("monotony:");
+      monotonyInstances.forEach(x -> log.trace("{}", x));
 
-    log.trace("lemma1Plus:");
-    lemmaPlus1Instances.forEach(
-        instance -> {
-          log.trace(instance.getRight() + " <= 1 * [...0, 2] + " + instance.getLeft());
-        });
+      log.trace("lemma2XY:");
+      lemma2XYInstances.forEach(
+          instance ->
+              log.trace(
+                  "2 * [...0, 2] + "
+                      + instance.get(0)
+                      + " + "
+                      + instance.get(1)
+                      + " <= 2 * "
+                      + instance.get(2)));
 
-    log.trace("lemma2Plus:");
-    lemmaPlus2Instances.forEach(
-        instance -> {
-          log.trace(instance.getRight() + " <= 2 * [...0, 2] + " + instance.getLeft());
-        });
+      log.trace("lemma1Plus:");
+      lemmaPlus1Instances.forEach(
+          instance -> log.trace(instance.getRight() + " <= 1 * [...0, 2] + " + instance.getLeft()));
 
-    log.trace(" --- ");
+      log.trace("lemma2Plus:");
+      lemmaPlus2Instances.forEach(
+          instance -> log.trace(instance.getRight() + " <= 2 * [...0, 2] + " + instance.getLeft()));
+
+      log.trace(" --- ");
+    }
 
     // m is the number of rows of expert knowledge.
     final var m =
@@ -451,13 +448,6 @@ public class W implements Rule {
               }
             });
 
-    if (!knowLt.isEmpty() || !knowEq.isEmpty()) {
-      log.trace(
-          "Size analysis useful ({}, {})!",
-          knowLt.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()),
-          knowEq.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
-    }
-
     return new ReducedSizeAnalysis(knowLt, knowEq, knowOne);
   }
 
@@ -557,35 +547,19 @@ public class W implements Rule {
     final var p = globals.getHeuristic().generate("weaken p", q);
     final var pp = globals.getHeuristic().generate("weaken p'", qp);
 
-    final var force = false;
+    final List<Identifier> ids = obligation.getContext().getIds();
 
-    final var farkas = flag(arguments, "mono") || flag(arguments, "l2xy") || force;
-
-    // arguments = Map.of("mono", "true", "l2xy", "true");
+    final var farkas = !arguments.isEmpty() && !ids.isEmpty();
 
     return new Rule.ApplicationResult(
         singletonList(
-            obligation.keepCost(
-                new AnnotatingContext(obligation.getContext().getIds(), p),
-                obligation.getExpression(),
-                pp)),
+            obligation.keepCost(new AnnotatingContext(ids, p), obligation.getExpression(), pp)),
         singletonList(
             append(
                 farkas
                     ? compareCoefficientsLessOrEqualUsingFarkas(
-                        obligation.getContext().getIds(),
-                        p,
-                        q,
-                        globals.getSizeAnalysis(),
-                        arguments,
-                        force)
+                        ids, p, q, globals.getSizeAnalysis(), arguments)
                     : compareCoefficientsLessOrEqual(p, q, "Q"),
-                /*
-                compareCoefficientsLessOrEqualUsingFarkas(
-                    qp.size() > 0 ? singletonList(Identifier.DUMMY_TREE_ALPHA) : emptyList(),
-                    qp,
-                    pp,
-                    globals.getSizeAnalysis()) */
                 compareCoefficientsLessOrEqual(qp, pp, "Q'"))),
         emptyList());
   }
@@ -656,12 +630,30 @@ public class W implements Rule {
             .toArray(BoolExpr[]::new));
   }
 
-  public static List<LessThanOrEqual<List<Integer>>> lessThanOrEqualNew(
+  public static List<LessThanOrEqual<List<Integer>>> lessThanOrEqual(
       List<List<Integer>> potentialFunctions,
       Set<LessThan<Integer>> knowLt,
       Set<Equal<Integer>> knowEq,
       Set<Integer> knowOne) {
+    if (potentialFunctions.isEmpty()) {
+      return emptyList();
+    }
+    if (knowLt.isEmpty() && knowEq.isEmpty() && knowOne.isEmpty()) {
+      synchronized (MONO_CACHE) {
+        return MONO_CACHE.computeIfAbsent(
+            potentialFunctions,
+            (key) ->
+                lessThanOrEqualInternal(potentialFunctions, emptySet(), emptySet(), emptySet()));
+      }
+    }
+    return lessThanOrEqualInternal(potentialFunctions, knowLt, knowEq, knowOne);
+  }
 
+  public static List<LessThanOrEqual<List<Integer>>> lessThanOrEqualInternal(
+      List<List<Integer>> potentialFunctions,
+      Set<LessThan<Integer>> knowLt,
+      Set<Equal<Integer>> knowEq,
+      Set<Integer> knowOne) {
     if (potentialFunctions.isEmpty()) {
       return emptyList();
     }

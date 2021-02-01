@@ -1,0 +1,7 @@
+(match (* h *)
+  (let:tree:cf leaf (let:tree:cf leaf node))
+  (ite
+    (w{mono} (let:tree:cf leaf (let:tree:cf node (let:tree:cf leaf node))))
+    (w{mono} (let:tree:cf leaf (let:tree:cf node (let:tree:cf leaf node))))
+  )
+)

@@ -1,10 +1,10 @@
 (match (* h *)
-  (w{l2xy mono} leaf)
-  (w{l2xy mono} (match
-    (w{l2xy mono} (let:tree:cf (w{l2xy mono} leaf) (w{mono l2xy} node)))
+  (w{l2xy size} leaf)
+  (w{l2xy size} (match
+    (w{l2xy size} (let:tree:cf (w{l2xy size} leaf) (w{size l2xy} node)))
     (ite
-      (w{l2xy mono} (let:tree:cf (w{mono l2xy} node) (w{mono l2xy} node)))
-      (w{l2xy mono} (let:tree:cf (w{mono l2xy} node) (w{mono l2xy} node)))
+      (w{l2xy size} (let:tree:cf (w{size l2xy} node) (w{size l2xy} node)))
+      (w{l2xy size} (let:tree:cf (w{size l2xy} node) (w{size l2xy} node)))
     )
   ))
 )

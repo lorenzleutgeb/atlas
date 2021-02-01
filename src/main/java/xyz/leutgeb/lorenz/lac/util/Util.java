@@ -384,7 +384,28 @@ public class Util {
     return "runtime".equals(System.getProperty("org.graalvm.nativeimage.imagecode"));
   }
 
+  public static boolean flag(Class<?> requester, Map<String, String> arguments, String name) {
+    return Boolean.parseBoolean(getProperty(requester, name, arguments, "false"));
+  }
+
+  @Deprecated
   public static boolean flag(Map<String, String> arguments, String name) {
     return Optional.ofNullable(arguments.get(name)).map(Boolean::parseBoolean).orElse(false);
+  }
+
+  public static String getProperty(Class<?> requester, String name, String fallback) {
+    return System.getProperty(requester.getName() + "." + name, fallback);
+  }
+
+  public static String getProperty(Class<?> requester, String name) {
+    return getProperty(requester, name, null);
+  }
+
+  public static String getProperty(
+      Class<?> requester, String name, Map<String, String> arguments, String fallback) {
+    if (arguments.containsKey(name)) {
+      return arguments.get(name);
+    }
+    return getProperty(requester, name, fallback);
   }
 }
