@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static xyz.leutgeb.lorenz.lac.TestUtil.loadAndNormalizeAndInferAndUnshare;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization.forceRank;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -25,7 +24,7 @@ import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 public class SplayHeapTest {
   @Test
   @Disabled("continue after CAV")
-  public void improveParition() throws UnificationError, TypeError, IOException {
+  public void improvePartition() throws UnificationError, TypeError, IOException {
     final var fixed =
         CombinedFunctionAnnotation.of(
             new Annotation(
@@ -97,12 +96,10 @@ public class SplayHeapTest {
 
     final var prover = optionalProver.get();
 
-    var multiTarget =
-        Optimization.combine(
-            program,
-            immutableAnnotations.keySet(),
-            Optimization::customWeightedComponentWiseDifference);
+    var multiTarget = Optimization.standard(program);
 
+    /*
+    should not be required
     multiTarget.constraints.addAll(
         forceRank(
             program
@@ -112,6 +109,7 @@ public class SplayHeapTest {
                 .getAnnotation()
                 .get()
                 .withCost));
+     */
 
     final var result =
         prover.solve(

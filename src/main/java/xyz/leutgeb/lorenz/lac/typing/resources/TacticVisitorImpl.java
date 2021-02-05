@@ -47,7 +47,6 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
         final ArrayList<Obligation> remains = new ArrayList<>(remaining.size());
         for (int i = 0; i < remaining.size(); i++) {
           if (remaining.get(i).getCost() == 0 && i > 1) {
-            // prover.prove(remaining.get(i));
             proveInternalAny(remaining.get(i), list.elements.get(0));
             continue;
           }
@@ -136,9 +135,7 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
             start.getCharPositionInLine());
         // prover.setLogApplications(true);
       }
-      // prover.setWeakenAggressively(weakenAggressively);
-      prover.proveSmart(obligation);
-      // prover.setWeakenAggressively(false);
+      prover.prove(obligation);
       if (!auto) {
         prover.setLogApplications(false);
       }
@@ -233,9 +230,6 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
 
   public static Optional<Annotation> convert(
       int size, TacticParser.AnnotationContext annotationContext) {
-    // if (annotationContext instanceof TacticParser.DontCareAnnotationContext) {
-    //	return Optional.empty();
-    // }
     if (annotationContext instanceof TacticParser.ZeroAnnotationContext) {
       final var start = annotationContext.getStart();
       return Optional.of(

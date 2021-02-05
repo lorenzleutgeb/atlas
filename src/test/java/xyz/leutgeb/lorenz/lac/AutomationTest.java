@@ -46,7 +46,7 @@ public class AutomationTest {
       throws UnificationError, TypeError, IOException {
     final var program = loadAndNormalizeAndInferAndUnshare(fqn);
     final var annotations = Map.of(fqn, combinedFunctionAnnotation);
-    final var optionalProver = program.proveSmart(annotations, true);
+    final var optionalProver = program.prove(annotations, true);
     assertTrue(optionalProver.isPresent());
     var solverResult = optionalProver.get().solve();
     assertTrue(solverResult.getSolution().isPresent());

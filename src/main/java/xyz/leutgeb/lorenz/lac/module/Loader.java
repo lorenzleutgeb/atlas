@@ -53,10 +53,14 @@ public class Loader {
 
   Path home;
 
+  private static final long BASE = System.nanoTime();
+
   private final Graph<String, DefaultEdge> g =
       new DefaultDirectedGraph<>(null, DefaultEdge::new, false);
 
-  @Getter private final String id = String.format("%08x", System.currentTimeMillis() * 31);
+  @Getter
+  private final String id =
+      Long.toHexString(System.currentTimeMillis() * 31 + (System.nanoTime() - BASE));
 
   public Loader(Path home) {
     if (!Files.exists(home) || !Files.isDirectory(home) || !Files.isReadable(home)) {

@@ -68,7 +68,28 @@ public class W implements Rule {
   private static final boolean DEBUG_SIZE = false;
   private static final boolean DEBUG_KNOWLEDGE = false;
 
-  public static List<Constraint> compareCoefficientsLessOrEqual(
+  public Rule.ApplicationResult apply(
+      Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
+    final var q = obligation.getContext().getAnnotation();
+    final var qp = obligation.getAnnotation();
+
+    final var p = globals.getHeuristic().generate("weaken p", q);
+    final var pp = globals.getHeuristic().generate("weaken p'", qp);
+
+    final List<Identifier> ids = obligation.getContext().getIds();
+
+    return new Rule.ApplicationResult(
+        singletonList(
+            obligation.keepCost(new AnnotatingContext(ids, p), obligation.getExpression(), pp)),
+        singletonList(
+            append(
+                compareCoefficientsLessOrEqualUsingFarkas(
+                    ids, p, q, globals.getSizeAnalysis(), arguments),
+                compareCoefficientsLessOrEqual(qp, pp, "Q'"))),
+        emptyList());
+  }
+
+  private static List<Constraint> compareCoefficientsLessOrEqual(
       Annotation left, Annotation right, String reason) {
     return compareCoefficients(
         left,
@@ -119,11 +140,12 @@ public class W implements Rule {
 
     final var potentialFunctions = Annotation.nonRankIndices(left, right).collect(toList());
 
-    final var lemma2xy = flag(W.class, arguments, "l2xy");
+    final var all = flag(W.class, arguments, "all");
+    final var lemma2xy = flag(W.class, arguments, "l2xy") || all;
     final var lemmap1 = flag(W.class, arguments, "lp1");
     final var lemmap1y = flag(W.class, arguments, "lp1y");
-    final boolean size = flag(W.class, arguments, "size") || lemmap1y;
-    final boolean mono = flag(W.class, arguments, "mono") || size;
+    final boolean size = flag(W.class, arguments, "size") || lemmap1y || all;
+    final boolean mono = flag(W.class, arguments, "mono") || size || all;
 
     final ReducedSizeAnalysis reducedSizeAnalysis;
     final Set<LessThan<Integer>> knowLt;
@@ -131,6 +153,7 @@ public class W implements Rule {
     final Set<Integer> knowOne;
     if (size) {
       reducedSizeAnalysis = reduceSizeAnalysis(identifiers, sizeAnalysis);
+      // TODO: Clarify size analysis.
       knowLt = emptySet(); // reducedSizeAnalysis.knowLt;
       knowEq = emptySet(); // reducedSizeAnalysis.knowEq;
       knowOne = reducedSizeAnalysis.knowOne;
@@ -146,7 +169,7 @@ public class W implements Rule {
     }
 
     final List<LessThanOrEqual<List<Integer>>> monotonyInstances =
-        mono ? lessThanOrEqual(potentialFunctions, knowLt, knowEq, knowOne) : emptyList();
+        mono ? monotony(potentialFunctions, knowLt, knowEq, knowOne) : emptyList();
 
     final List<List<List<Integer>>> lemma2XYInstances =
         lemma2xy ? lemma2XY(potentialFunctions) : emptyList();
@@ -163,7 +186,7 @@ public class W implements Rule {
     if (DEBUG_SIZE && size && (!knowLt.isEmpty() || !knowEq.isEmpty() || !knowOne.isEmpty())) {
       final List<LessThanOrEqual<List<Integer>>> monotonyInstancesWithoutKnowledge;
       monotonyInstancesWithoutKnowledge =
-          lessThanOrEqual(potentialFunctions, emptySet(), emptySet(), emptySet());
+          monotony(potentialFunctions, emptySet(), emptySet(), emptySet());
       final var improvement =
           Sets.difference(
               Set.copyOf(monotonyInstances), Set.copyOf(monotonyInstancesWithoutKnowledge));
@@ -364,7 +387,7 @@ public class W implements Rule {
                   + x
                   + " = Σ... + q["
                   + i
-                  + "] (farkas)"));
+                  + "] (w)"));
       constraints.add(
           new LessThanOrEqualConstraint(
               p.get(i),
@@ -379,7 +402,7 @@ public class W implements Rule {
                   + i
                   + "] ≤ "
                   + x
-                  + " (farkas)"));
+                  + " (w)"));
     }
 
     return constraints;
@@ -539,31 +562,6 @@ public class W implements Rule {
         .collect(toUnmodifiableList());
   }
 
-  public Rule.ApplicationResult apply(
-      Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
-    final var q = obligation.getContext().getAnnotation();
-    final var qp = obligation.getAnnotation();
-
-    final var p = globals.getHeuristic().generate("weaken p", q);
-    final var pp = globals.getHeuristic().generate("weaken p'", qp);
-
-    final List<Identifier> ids = obligation.getContext().getIds();
-
-    final var farkas = !arguments.isEmpty() && !ids.isEmpty();
-
-    return new Rule.ApplicationResult(
-        singletonList(
-            obligation.keepCost(new AnnotatingContext(ids, p), obligation.getExpression(), pp)),
-        singletonList(
-            append(
-                farkas
-                    ? compareCoefficientsLessOrEqualUsingFarkas(
-                        ids, p, q, globals.getSizeAnalysis(), arguments)
-                    : compareCoefficientsLessOrEqual(p, q, "Q"),
-                compareCoefficientsLessOrEqual(qp, pp, "Q'"))),
-        emptyList());
-  }
-
   @Value
   @AllArgsConstructor
   public static class Equal<T> {
@@ -612,14 +610,6 @@ public class W implements Rule {
     }
   }
 
-  public static BoolExpr encodeAll(
-      List<List<Integer>> potentialFunctions, List<ArithExpr> variables, Context ctx) {
-    return ctx.mkOr(
-        potentialFunctions.stream()
-            .map(potentialFunction -> encode(potentialFunction, variables, ctx))
-            .toArray(BoolExpr[]::new));
-  }
-
   public static BoolExpr encode(
       List<Integer> potentialFunction, List<ArithExpr> variables, Context ctx) {
     if (potentialFunction.size() != variables.size()) {
@@ -630,7 +620,7 @@ public class W implements Rule {
             .toArray(BoolExpr[]::new));
   }
 
-  public static List<LessThanOrEqual<List<Integer>>> lessThanOrEqual(
+  public static List<LessThanOrEqual<List<Integer>>> monotony(
       List<List<Integer>> potentialFunctions,
       Set<LessThan<Integer>> knowLt,
       Set<Equal<Integer>> knowEq,
@@ -642,14 +632,13 @@ public class W implements Rule {
       synchronized (MONO_CACHE) {
         return MONO_CACHE.computeIfAbsent(
             potentialFunctions,
-            (key) ->
-                lessThanOrEqualInternal(potentialFunctions, emptySet(), emptySet(), emptySet()));
+            (key) -> monotonyInternal(potentialFunctions, emptySet(), emptySet(), emptySet()));
       }
     }
-    return lessThanOrEqualInternal(potentialFunctions, knowLt, knowEq, knowOne);
+    return monotonyInternal(potentialFunctions, knowLt, knowEq, knowOne);
   }
 
-  public static List<LessThanOrEqual<List<Integer>>> lessThanOrEqualInternal(
+  public static List<LessThanOrEqual<List<Integer>>> monotonyInternal(
       List<List<Integer>> potentialFunctions,
       Set<LessThan<Integer>> knowLt,
       Set<Equal<Integer>> knowEq,

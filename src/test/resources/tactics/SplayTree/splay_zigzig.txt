@@ -1,0 +1,11 @@
+(match (* t *) ?
+  (match (* cl *) ?
+    (w{l2xy} (let:tree:cf (* s *)
+      app (* splay_eq a bl *)
+      (match
+        ?
+        (let:tree:cf node (let:tree:cf node (w{mono} node)))
+      )
+    ))
+  )
+)

@@ -478,11 +478,7 @@ public class Tactics {
 
     final var prover = optionalProver.get();
 
-    var multiTarget =
-        Optimization.combine(
-            program,
-            immutableAnnotations.keySet(),
-            Optimization::squareWeightedComponentWiseDifference);
+    var multiTarget = Optimization.standard(program);
 
     var checkSat = true;
 

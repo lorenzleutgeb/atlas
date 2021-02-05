@@ -32,11 +32,13 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
@@ -139,57 +141,6 @@ public class Program {
     return proveWithTactics(functionAnnotations, Collections.emptyMap(), infer);
   }
 
-  public Optional<Prover> proveSmart(
-      Map<String, CombinedFunctionAnnotation> functionAnnotations, boolean infer) {
-    final var heuristic = SmartRangeHeuristic.DEFAULT;
-    final var prover = new Prover(name + randomHex(), null, basePath);
-
-    if (functionDefinitions.values().stream()
-        .map(FunctionDefinition::runaway)
-        .anyMatch(Predicate.not(Set::isEmpty))) {
-      return empty();
-    }
-
-    final var called = calledFunctionNames();
-    forEach(
-        fd ->
-            fd.stubAnnotations(
-                functionAnnotations,
-                heuristic,
-                called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
-                infer));
-    forEach(
-        fd -> {
-          final var globals =
-              new AnnotatingGlobals(functionAnnotations, fd.getSizeAnalysis(), heuristic);
-          prover.setGlobals(globals);
-
-          Obligation typingObligation = fd.getTypingObligation(1);
-
-          prover.proveSmart(typingObligation);
-
-          for (var cfAnnotation : fd.getInferredSignature().getAnnotation().get().withoutCost) {
-            if (cfAnnotation.isZero()) {
-              log.debug("Skipping {}", cfAnnotation);
-              continue;
-            }
-
-            final var cfRoot =
-                new Obligation(
-                    fd.treeLikeArguments(),
-                    cfAnnotation.from,
-                    fd.getBody(),
-                    cfAnnotation.to,
-                    0,
-                    Optional.empty());
-
-            prover.proveSmart(cfRoot);
-          }
-        });
-
-    return Optional.of(prover);
-  }
-
   public Optional<Prover> proveWithTactics(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       Map<String, Path> tactics,
@@ -247,9 +198,7 @@ public class Program {
               throw new RuntimeException(e);
             }
           } else {
-            // prover.setWeakenAggressively(true);
-            prover.proveSmart(typingObligation);
-            // prover.setWeakenAggressively(false);
+            prover.prove(typingObligation);
           }
 
           for (var cfAnnotation : fd.getInferredSignature().getAnnotation().get().withoutCost) {
@@ -284,9 +233,7 @@ public class Program {
                 throw new RuntimeException(e);
               }
             } else {
-              // prover.setWeakenAggressively(true);
-              prover.proveSmart(cfRoot);
-              // prover.setWeakenAggressively(false);
+              prover.prove(cfRoot);
             }
           }
         });
@@ -550,5 +497,26 @@ public class Program {
     }
 
     return result;
+  }
+
+  public Set<Constraint> sameRightSide() {
+    return rightSide(SmartRangeHeuristic.DEFAULT.generate("right", 1));
+  }
+
+  public Set<Constraint> zeroRightSide() {
+    return rightSide(Annotation.zero(1));
+  }
+
+  public Set<Constraint> rightSide(Annotation rightSide) {
+    final var constraints = new HashSet<Constraint>();
+    forEach(
+        fd -> {
+          final Annotation to = fd.getInferredSignature().getAnnotation().get().withCost.to;
+          if (to.size() != 1) {
+            return;
+          }
+          constraints.addAll(EqualityConstraint.eq(to, rightSide, "(fix) Q'"));
+        });
+    return constraints;
   }
 }

@@ -6,6 +6,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Optional.empty;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.flag;
 import static xyz.leutgeb.lorenz.lac.util.Util.output;
 import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 import static xyz.leutgeb.lorenz.lac.util.Util.signum;
@@ -105,7 +106,6 @@ public class ConstraintSystemSolver {
     // Execute `z3 -p` to get a list of parameters.
     // return emptyMap();
     return Map.of("unsat_core", String.valueOf(unsatCore));
-    // return Map.of("parallel.enable", "true");
   }
 
   public static Result solve(Set<Constraint> constraints) {
@@ -125,26 +125,18 @@ public class ConstraintSystemSolver {
       Set<Constraint> constraints, Path outPath, List<UnknownCoefficient> target, Domain domain) {
     load(outPath.resolve("z3.log"));
 
-    final var unsatCore = target.isEmpty();
+    final var dump = flag(ConstraintSystemSolver.class, emptyMap(), "dump");
+    final var optimize = !target.isEmpty() && !dump;
+    final var unsatCore = !optimize && !dump;
+
+    // This allows more accurate memory measurements, but is dangerous when running in parallel.
+    // Native.resetMemory();
 
     try (final var ctx = new Context(z3Config(unsatCore))) {
       final Solver solver = ctx.mkSolver();
       // final Solver solver = ctx.mkTactic("qflia").getSolver();
-      // final Solver solver =
       // /*domain.getLogic()*/Optional.of("LIA").map(ctx::mkSolver).orElseGet(ctx::mkSolver);
 
-      // final var params = ctx.mkParams();
-      // params.add("?", false);
-      // params.add("threads", Runtime.getRuntime().availableProcessors());
-
-      // PT2M34.378834S
-
-      // params.add("opt.priority", "pareto");
-      // params.add("opt.enable_sat", "true");
-      // params.add("smt.pb.enable_simplex", "true");
-      // solver.setParameters(params);
-
-      var optimize = !target.isEmpty();
       final Optimize opt = optimize ? ctx.mkOptimize() : null;
 
       final var generatedCoefficients = HashBiMap.<ArithExpr, UnknownCoefficient>create();
@@ -224,6 +216,11 @@ public class ConstraintSystemSolver {
         ioException.printStackTrace();
       }
 
+      if (dump) {
+        System.out.println("Exiting because dump was requested.");
+        System.exit(0);
+      }
+
       var result =
           optimize
               ? check(opt::Check, opt::getModel, opt::getUnsatCore, unsatCore, opt::toString)
@@ -300,6 +297,12 @@ public class ConstraintSystemSolver {
         for (var entry : statistics.getEntries()) {
           final var value = entry.getValueString();
           result.put(entry.Key, value);
+          if ("max memory".equals(entry.Key)) {
+            System.out.println("Max. Memory: " + entry.getValueString() + " MiB");
+          }
+          if ("memory".equals(entry.Key)) {
+            System.out.println("     Memory: " + entry.getValueString() + " MiB");
+          }
           log.trace("{}={}", entry.Key, value);
           printer.println(entry.Key + "=" + value);
         }

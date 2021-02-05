@@ -3,11 +3,11 @@ package xyz.leutgeb.lorenz.lac.typing.resources.proving;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
-import static java.util.Collections.singletonList;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 import static xyz.leutgeb.lorenz.lac.ast.Identifier.LEAF_NAME;
 import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.flag;
 import static xyz.leutgeb.lorenz.lac.util.Util.output;
 import static xyz.leutgeb.lorenz.lac.util.Util.stack;
 import static xyz.leutgeb.lorenz.lac.util.Util.supply;
@@ -26,13 +26,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
@@ -157,6 +154,8 @@ public class Prover {
 
   @Getter @Setter private boolean weakenVariables = true;
 
+  private final boolean naive;
+
   @Value
   @AllArgsConstructor
   private static class RuleApplication {
@@ -181,6 +180,7 @@ public class Prover {
 
   public Prover(String name, AnnotatingGlobals globals, Path basePath) {
     load(basePath.resolve("z3.log"));
+    this.naive = flag(Prover.class, emptyMap(), "naive");
     this.name = name;
     this.globals = globals;
     this.basePath = basePath;
@@ -192,29 +192,30 @@ public class Prover {
   }
 
   /** Chooses which rules should be applied (in order) to prove given obligation. */
-  private Stack<Rule> chooseRules(Obligation obligation) {
+  private Stack<RuleSchedule> chooseRules(Obligation obligation) {
     final var expression = obligation.getExpression();
     if (expression.isTerminal()) {
-      final Stack<Rule> todo = new Stack<>();
-      todo.push(chooseRule(expression));
+      final Stack<RuleSchedule> todo = new Stack<>();
+      todo.push(RuleSchedule.schedule(chooseRule(expression)));
       if (weakenBeforeTerminal || weakenAggressively) {
-        todo.push(weakenRule);
+        todo.push(RuleSchedule.schedule(weakenRule));
       }
       final var wvars = WVar.redundantIds(obligation).collect(Collectors.toUnmodifiableList());
       for (int i = 0; i < wvars.size(); i++) {
-        todo.push(weakenVariableRule);
+        todo.push(RuleSchedule.schedule(weakenVariableRule));
       }
       if (wvars.size() > 0) {
-        todo.push(weakenRule);
+        todo.push(RuleSchedule.schedule(weakenRule));
       }
       return todo;
     } else if (weakenAggressively) {
       log.trace(
           "Automatically applying (w) to expression `{}` because aggressive weakening is enabled!",
           expression);
-      return stack(weakenRule, chooseRule(expression));
+      return stack(
+          RuleSchedule.schedule(weakenRule), RuleSchedule.schedule(chooseRule(expression)));
     } else {
-      return stack(chooseRule(expression));
+      return stack(RuleSchedule.schedule(chooseRule(expression)));
     }
   }
 
@@ -310,93 +311,29 @@ public class Prover {
     return stack(RuleSchedule.schedule(chooseRule(e)));
   }
 
+  @Deprecated
   public Obligation share(Obligation obligation) {
     while (obligation.getExpression() instanceof ShareExpression) {
-      final var result = applyInternal(obligation, shareRule, emptyMap());
+      final var result = applyInternal(obligation, RuleSchedule.schedule(shareRule, emptyMap()));
       obligation = result.getObligations().get(0);
     }
     return obligation;
   }
 
-  public List<Obligation> proveUntilExpressionEquals(Obligation obligation, Expression expression) {
-    return proveUntil(obligation, x -> expression.equals(x.getExpression()));
-  }
-
-  public List<Obligation> proveUntil(
-      List<Obligation> obligations, Predicate<Obligation> condition) {
-    return obligations.stream()
-        .flatMap(o -> proveUntil(o, condition).stream())
-        .collect(Collectors.toList());
-  }
-
-  public List<Obligation> proveUntil(Obligation obligation, Predicate<Obligation> condition) {
-    if (obligation == null) {
-      return emptyList();
-    }
-
-    // If the given obligation matches, stop immediately!
-    if (condition.test(obligation)) {
-      return singletonList(obligation);
-    }
-
-    final Stack<Rule> rules = chooseRules(obligation);
-    if (rules.isEmpty()) {
-      return emptyList();
-    } else if (rules.size() == 1) {
-      final Rule rule = rules.pop();
-      final var ruleResult = applyInternal(obligation, rule, emptyMap());
-      return ruleResult.getObligations().stream()
-          .flatMap(x -> proveUntil(x, condition).stream())
-          .collect(Collectors.toList());
-    }
-
-    ApplicationResult ruleResult = null;
-    while (!rules.isEmpty()) {
-      final Rule rule = rules.pop();
-      ruleResult = applyInternal(obligation, rule, emptyMap());
-      if (!ruleResult.getObligations().isEmpty()) {
-        if (ruleResult.getObligations().size() > 1) {
-          throw bug(
-              "if there are multiple rule applications scheduled, all of them except the last must return exactly one obligation");
-        }
-        obligation = ruleResult.getObligations().get(0);
-      } else {
-        if (!rules.isEmpty()) {
-          throw bug("multiple rule applications were scheduled but we ran out of obligations");
-        }
-      }
-    }
-    return ruleResult.getObligations().stream()
-        .flatMap(x -> proveUntil(x, condition).stream())
-        .collect(Collectors.toList());
-    /*
-    else if (rules.size() != 1) {
-      log.info("proveOneStep will not apply a multi-rule choice to " + obligation);
-      return singletonList(obligation);
-    }
-
-    if (rule.equals(weakenRule)) {
-      log.info("proveOneStep will not apply (w) rule to " + obligation);
-      return singletonList(obligation);
-    }
-     */
-
-  }
-
-  private ApplicationResult applyInternal(
-      Obligation obligation, Rule rule, Map<String, String> ruleArguments) {
+  private ApplicationResult applyInternal(Obligation obligation, RuleSchedule schedule) {
     if (logApplications && obligation.getCost() == 1) {
       log.info(
           "{}{}: {}",
-          String.format("%-12s", rule.getName()),
-          ruleArguments,
+          String.format("%-12s", schedule.rule.getName()),
+          schedule.arguments,
           obligation.getExpression());
     }
-    final var result = rule.apply(obligation, globals, ruleArguments);
+
+    final var result = schedule.rule.apply(obligation, globals, schedule.arguments);
     if (result == null) {
       throw bug("typing rule implementation returned null");
     }
-    ingest(obligation, rule, result);
+    ingest(obligation, schedule.rule, result);
     return result;
   }
 
@@ -406,73 +343,36 @@ public class Prover {
 
   public List<Obligation> apply(
       Obligation obligation, Rule rule, Map<String, String> ruleArguments) {
-    return applyInternal(obligation, rule, ruleArguments).getObligations();
+    return applyInternal(obligation, RuleSchedule.schedule(rule, ruleArguments)).getObligations();
   }
 
-  public void proveStupid(List<Obligation> obligations) {
-    obligations.forEach(this::proveStupid);
-  }
-
-  public void proveSmart(Obligation obligation) {
-    Queue<Obligation> obligations = new LinkedList<>();
-    obligations.add(obligation);
-    proof.addVertex(obligation);
-
-    while (!obligations.isEmpty()) {
-      final var top = obligations.poll();
-      final var rules = chooseRuleSmart(top);
-
-      var nextObligation = top;
-      ApplicationResult ruleResult = null;
-
-      while (!rules.isEmpty()) {
-        final var rule = rules.pop();
-
-        // setLogApplications(true);
-        ruleResult = applyInternal(nextObligation, rule.rule, rule.arguments);
-        // setLogApplications(false);
-
-        if (!rules.isEmpty()) {
-          if (ruleResult.getObligations().size() > 1) {
-            throw bug(
-                "if there are multiple rule applications scheduled, all of them except the last must return exactly one obligation");
-          }
-
-          if (ruleResult.getObligations().isEmpty()) {
-            throw bug("multiple rule applications were scheduled but we ran out of obligations");
-          }
-
-          nextObligation = ruleResult.getObligations().get(0);
-        } else {
-          obligations.addAll(ruleResult.getObligations());
-        }
-      }
+  public void prove(Obligation obligation) {
+    if (naive) {
+      this.setWeakenAggressively(true);
+      this.proveInternal(obligation);
+      this.setWeakenAggressively(false);
+      return;
     }
+    this.proveInternal(obligation);
   }
 
   /** Translates given obligation into a set of constraints that would prove given obligation. */
-  public void proveStupid(Obligation obligation) {
+  public void proveInternal(Obligation obligation) {
     Stack<Obligation> obligations = new Stack<>();
     obligations.push(obligation);
     proof.addVertex(obligation);
 
     while (!obligations.isEmpty()) {
       final var top = obligations.pop();
-      final var rules = chooseRules(top);
+      final var schedule = naive ? chooseRules(top) : chooseRuleSmart(top);
 
       var nextObligation = top;
       ApplicationResult ruleResult = null;
 
-      while (!rules.isEmpty()) {
-        final var rule = rules.pop();
+      while (!schedule.isEmpty()) {
+        ruleResult = applyInternal(nextObligation, schedule.pop());
 
-        // TODO: This is a hack that will make all automatic applications of (w) use "full power".
-        final Map<String, String> arguments =
-            rule == weakenRule ? Map.of("size", "true", "l2xy", "true") : emptyMap();
-
-        ruleResult = applyInternal(nextObligation, rule, arguments);
-
-        if (!rules.isEmpty()) {
+        if (!schedule.isEmpty()) {
           if (ruleResult.getObligations().size() > 1) {
             throw bug(
                 "if there are multiple rule applications scheduled, all of them except the last must return exactly one obligation");

@@ -8,6 +8,7 @@ import static xyz.leutgeb.lorenz.lac.util.Util.output;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import jakarta.json.Json;
 import jakarta.json.JsonObjectBuilder;
 import java.io.IOException;
@@ -15,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,7 @@ import picocli.CommandLine;
 import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.lac.ast.Program;
 import xyz.leutgeb.lorenz.lac.module.Loader;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
@@ -50,14 +53,8 @@ public class Run implements Runnable {
       names = "--infer",
       description =
           "When present cost annotations in the program source are ignored, instead a new typing is computed.")
+  // TODO: Make infer the default.
   private Boolean infer;
-
-  @CommandLine.Option(
-      defaultValue = "false",
-      names = "--relax-right",
-      description =
-          "When present relaxes constraints that force the rank coefficient of result to equal the rank coefficient of the input. Only works on functions that take exactly one tree and return a tree.")
-  private Boolean relaxRight;
 
   @CommandLine.Option(names = "--name", description = "Name of the run.")
   private String name;
@@ -70,7 +67,7 @@ public class Run implements Runnable {
   @CommandLine.Option(
       names = "--json",
       paramLabel = "FILE",
-      description = "If present, detailled output in JSON format will be written to this file.")
+      description = "If present, detailed output in JSON format will be written to this file.")
   private Path json;
 
   @CommandLine.Spec(CommandLine.Spec.Target.SELF)
@@ -169,12 +166,14 @@ public class Run implements Runnable {
       final var prover = optionalProver.get();
 
       if (infer) {
-        var multiTarget =
-            Optimization.combine(
-                program, program.getRoots(), Optimization::squareWeightedComponentWiseDifference);
+        var multiTarget = Optimization.standard(program);
 
-        log.info("Solving constraints...");
-        result = prover.solve(multiTarget.constraints, List.of(multiTarget.target), "min");
+        var right = Collections.<Constraint>emptySet(); //  program.sameRightSide();
+
+        log.info("Solving constraints for optimum...");
+        result =
+            prover.solve(
+                Sets.union(multiTarget.constraints, right), List.of(multiTarget.target), "min");
       } else {
         log.info("Solving constraints...");
         result = prover.solve(emptySet(), emptyList(), "sat");
