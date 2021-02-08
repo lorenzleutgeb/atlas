@@ -1,17 +1,7 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.optimiziation;
 
-import lombok.AllArgsConstructor;
-import lombok.Value;
-import xyz.leutgeb.lorenz.lac.ast.Program;
-import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsProductConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.indexWeight;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.isUnitIndex;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,9 +15,18 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.indexWeight;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.isUnitIndex;
+import lombok.AllArgsConstructor;
+import lombok.Value;
+import xyz.leutgeb.lorenz.lac.ast.Program;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsProductConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
 
 public class Optimization {
   @Value
@@ -223,12 +222,11 @@ public class Optimization {
     return Optional.of(new UniTarget(sumVar, constraints));
   }
 
-
   public static UniTarget layeredCombo(
-          Program program,
-          Iterable<String> fqns,
-          List<Integer> weights,
-          Function<FunctionAnnotation, Optional<UniTarget>>... optimizations) {
+      Program program,
+      Iterable<String> fqns,
+      List<Integer> weights,
+      Function<FunctionAnnotation, Optional<UniTarget>>... optimizations) {
     Set<Constraint> constraints = new HashSet<>();
     final var sumOverall = new ArrayList<Coefficient>();
     for (var i = 0; i < optimizations.length; i++) {
@@ -237,13 +235,13 @@ public class Optimization {
       final var sumAtLayer = new ArrayList<Coefficient>();
       for (var fqn : fqns) {
         final var ann =
-                program
-                        .getFunctionDefinitions()
-                        .get(fqn)
-                        .getInferredSignature()
-                        .getAnnotation()
-                        .get()
-                        .withCost;
+            program
+                .getFunctionDefinitions()
+                .get(fqn)
+                .getInferredSignature()
+                .getAnnotation()
+                .get()
+                .withCost;
         // var it = combine(program, fqns, opt);
         var it = opt.apply(ann).get();
         sumAtLayer.add(it.target);
@@ -254,8 +252,8 @@ public class Optimization {
       constraints.add(new EqualsSumConstraint(levelSum, sumAtLayer, "ssss"));
       final var multied = UnknownCoefficient.unknown("multied");
       constraints.add(
-              new EqualsProductConstraint(
-                      multied, List.of(Coefficient.of(weights.get(i)), levelSum), "ooo"));
+          new EqualsProductConstraint(
+              multied, List.of(Coefficient.of(weights.get(i)), levelSum), "ooo"));
       sumOverall.add(multied);
     }
     final var overall = UnknownCoefficient.unknown("overall");
@@ -274,7 +272,7 @@ public class Optimization {
       Program program,
       Iterable<String> fqns,
       Function<FunctionAnnotation, Optional<UniTarget>>... optimizations) {
-    return layeredCombo(program, fqns,List.of(16127, 997, 97, 2), optimizations);
+    return layeredCombo(program, fqns, List.of(16127, 997, 97, 2), optimizations);
   }
 
   /** Generates one target per criteria and function. First by criteria and then by function. */

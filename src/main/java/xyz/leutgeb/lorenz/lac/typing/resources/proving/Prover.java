@@ -70,6 +70,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetGen;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTree;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCf;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCfFlorian;
+import xyz.leutgeb.lorenz.lac.typing.resources.rules.LetTreeCfSimple;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Match;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Node;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.Rule;
@@ -90,6 +91,7 @@ import xyz.leutgeb.lorenz.lac.util.Util;
 public class Prover {
   private static final Rule letTreeCfPaperRule = LetTreeCf.INSTANCE;
   private static final Rule letTreeCfFlorianRule = LetTreeCfFlorian.INSTANCE;
+  private static final Rule letTreeCfSimpleRule = LetTreeCfSimple.INSTANCE;
   private static final Rule letGenRule = LetGen.INSTANCE;
   private static final Rule letTreeRule = LetTree.INSTANCE;
   private static final Rule applicationRule = App.INSTANCE;
@@ -107,7 +109,7 @@ public class Prover {
 
   private static final Map<String, Rule> RULES_BY_NAME =
       Stream.of(
-              letTreeCfPaperRule,
+              LET_TREE_CF,
               letTreeCfFlorianRule,
               letGenRule,
               letTreeRule,
@@ -298,13 +300,13 @@ public class Prover {
         // Makes sure we apply (w{l2xy}) right before (app).
         return stack(
             RuleSchedule.schedule(weakenRule, Map.of("l2xy", "true", "mono", "true")),
-            RuleSchedule.schedule(letTreeCfPaperRule));
+            RuleSchedule.schedule(LET_TREE_CF));
       } else if (let.isTreeConstruction()) {
         if (let.getValue() instanceof NodeExpression) {
           // Makes sure we apply (w{size}) if we're constructing a tree.
           return stack(
               RuleSchedule.schedule(weakenRule, Map.of("size", "true")),
-              RuleSchedule.schedule(letTreeCfPaperRule));
+              RuleSchedule.schedule(LET_TREE_CF));
         }
       }
     }

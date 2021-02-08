@@ -335,7 +335,11 @@ public class FunctionDefinition {
         + name
         + " ∷ "
         + inferredSignature.getType()
-        + inferredSignature.getAnnotation().map(Objects::toString).map(x -> " | " + x).orElse("");
+        + inferredSignature
+            .getAnnotation()
+            .map(Objects::toString)
+            .map(x -> " | " + x)
+            .orElse(" | ?");
   }
 
   public JsonObject inferredSignatureToJson() {
@@ -353,7 +357,11 @@ public class FunctionDefinition {
         + name
         + " ∷ "
         + inferredSignature.getType()
-        + annotatedSignature.getAnnotation().map(Objects::toString).map(x -> " | " + x).orElse("");
+        + annotatedSignature
+            .getAnnotation()
+            .map(Objects::toString)
+            .map(x -> " | " + x)
+            .orElse(" | ?");
   }
 
   @Deprecated

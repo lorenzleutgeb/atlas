@@ -1,17 +1,12 @@
 package xyz.leutgeb.lorenz.lac;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
-import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
-import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
-import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import static java.util.Collections.emptySet;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static xyz.leutgeb.lorenz.lac.TestUtil.loadAndNormalizeAndInferAndUnshare;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE_BY_TWO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -20,14 +15,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import static java.util.Collections.emptySet;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static xyz.leutgeb.lorenz.lac.TestUtil.loadAndNormalizeAndInferAndUnshare;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE_BY_TWO;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
+import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
+import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
 public class PairingHeapTest {
   @Test
@@ -41,7 +39,10 @@ public class PairingHeapTest {
     final var mergeSig =
         new FunctionAnnotation(
             // SmartRangeHeuristic.DEFAULT.generate("splayleft", 2),
-                new Annotation(List.of(ONE_BY_TWO, ONE_BY_TWO), Map.of(List.of(1,1,0), ONE_BY_TWO, unitIndex(2), TWO), "Q"),
+            new Annotation(
+                List.of(ONE_BY_TWO, ONE_BY_TWO),
+                Map.of(List.of(1, 1, 0), ONE_BY_TWO, unitIndex(2), TWO),
+                "Q"),
             qp);
 
     final var immutableAnnotations =
@@ -123,15 +124,15 @@ public class PairingHeapTest {
     final var constraints = new HashSet<Constraint>();
 
     final var opt =
-            Optimization.layeredCombo(
-                    program,
-                    // program.getRoots(),
-                    program.getFunctionDefinitions().keySet(),
-                    // Optimization::rankDifference,
-		    List.of(1),
-                    Optimization::customWeightedComponentWiseDifference
-                    // Optimization::constantDifference,
-                    // Optimization::abs
+        Optimization.layeredCombo(
+            program,
+            // program.getRoots(),
+            program.getFunctionDefinitions().keySet(),
+            // Optimization::rankDifference,
+            List.of(1),
+            Optimization::customWeightedComponentWiseDifference
+            // Optimization::constantDifference,
+            // Optimization::abs
             );
     constraints.addAll(opt.constraints);
 

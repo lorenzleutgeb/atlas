@@ -141,6 +141,103 @@ public class Program {
     return proveWithTactics(functionAnnotations, Collections.emptyMap(), infer);
   }
 
+  public boolean sequentiallyProveWithTactics(
+      Map<String, CombinedFunctionAnnotation> functionAnnotations,
+      Map<String, Path> tactics,
+      boolean infer) {
+
+    if (functionDefinitions.values().stream()
+        .map(FunctionDefinition::runaway)
+        .anyMatch(Predicate.not(Set::isEmpty))) {
+      return false;
+    }
+
+    final var heuristic = SmartRangeHeuristic.DEFAULT;
+    final var called = calledFunctionNames();
+
+    var root = UnificationContext.root();
+    for (List<String> component : order) {
+      final var prover = new Prover(name + randomHex(), null, basePath);
+
+      // Stub annotations.
+      for (var fqn : component) {
+        var fd = get(fqn);
+        fd.stubAnnotations(
+            functionAnnotations,
+            heuristic,
+            called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
+            infer);
+      }
+
+      // Solve.
+      for (var fqn : component) {
+        var fd = get(fqn);
+        final var globals =
+            new AnnotatingGlobals(functionAnnotations, fd.getSizeAnalysis(), heuristic);
+        prover.setGlobals(globals);
+
+        Obligation typingObligation = fd.getTypingObligation(1);
+
+        if (tactics.containsKey(fd.getFullyQualifiedName())) {
+          try {
+            prover.read(typingObligation, tactics.get(fd.getFullyQualifiedName()));
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        } else {
+          prover.prove(typingObligation);
+        }
+
+        for (var cfAnnotation : fd.getInferredSignature().getAnnotation().get().withoutCost) {
+          if (cfAnnotation.isZero()) {
+            log.debug("Skipping {}", cfAnnotation);
+            continue;
+          }
+
+          final var cfRoot =
+              new Obligation(
+                  fd.treeLikeArguments(),
+                  cfAnnotation.from,
+                  fd.getBody(),
+                  cfAnnotation.to,
+                  0,
+                  Optional.empty());
+
+          if (tactics.containsKey(fd.getFullyQualifiedName())) {
+            try {
+              log.debug("Using tactic to prove cf typing!");
+              prover.read(cfRoot, tactics.get(fd.getFullyQualifiedName()));
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          } else {
+            prover.prove(cfRoot);
+          }
+        }
+      }
+
+      final var result = prover.solve();
+      if (!result.hasSolution()) {
+        return false;
+      }
+
+      for (var fqn : component) {
+        functionAnnotations.put(
+            fqn,
+            get(fqn)
+                .getInferredSignature()
+                .getAnnotation()
+                .get()
+                .substitute(result.getSolution().get()));
+        get(fqn).substitute(result.getSolution().get());
+        // mockIngest(functionAnnotations);
+        printAllInferredSignaturesInOrder(System.out);
+      }
+    }
+
+    return true;
+  }
+
   public Optional<Prover> proveWithTactics(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       Map<String, Path> tactics,
@@ -312,37 +409,31 @@ public class Program {
       }
       for (var group : order) {
         for (var fqn : group) {
+          final FunctionDefinition functionDefinition = functionDefinitions.get(fqn);
+
+          final Optional<CombinedFunctionAnnotation> annotation1 =
+              functionDefinition.getInferredSignature().getAnnotation();
+
+          if (annotation1.isEmpty()) {
+            System.out.println(
+                functionDefinition.getModuleName()
+                    + "."
+                    + functionDefinition.getName()
+                    + " ∷ "
+                    + functionDefinition.getInferredSignature().getType()
+                    + " | ?");
+            continue;
+          }
+
           System.out.println(
-              functionDefinitions
-                  .get(fqn)
-                  .getMockedAnnotationString(
-                      new CombinedFunctionAnnotation(
-                          new FunctionAnnotation(
-                              functionDefinitions
-                                  .get(fqn)
-                                  .getInferredSignature()
-                                  .getAnnotation()
-                                  .get()
-                                  .withCost
-                                  .from
-                                  .substitute(solution.get()),
-                              functionDefinitions
-                                  .get(fqn)
-                                  .getInferredSignature()
-                                  .getAnnotation()
-                                  .get()
-                                  .withCost
-                                  .to
-                                  .substitute(solution.get())),
-                          functionDefinitions
-                              .get(fqn)
-                              .getInferredSignature()
-                              .getAnnotation()
-                              .get()
-                              .withoutCost
-                              .stream()
-                              .map(annotation -> annotation.substitute(solution.get()))
-                              .collect(Collectors.toSet()))));
+              functionDefinition.getMockedAnnotationString(
+                  new CombinedFunctionAnnotation(
+                      new FunctionAnnotation(
+                          annotation1.get().withCost.from.substitute(solution.get()),
+                          annotation1.get().withCost.to.substitute(solution.get())),
+                      annotation1.get().withoutCost.stream()
+                          .map(annotation -> annotation.substitute(solution.get()))
+                          .collect(Collectors.toSet()))));
         }
       }
     } else {

@@ -68,18 +68,17 @@ public class ModuleTest {
     // constraints.addAll(program.rightSide(Qp));
     constraints.addAll(program.sameRightSide());
 
-
     final var target =
-            Optimization.layeredCombo(
-                    program,
-                    // program.getRoots(),
-                    program.getFunctionDefinitions().keySet(),
-                    Optimization::rankDifference,
-                    Optimization::customWeightedComponentWiseDifference);
+        Optimization.layeredCombo(
+            program,
+            // program.getRoots(),
+            program.getFunctionDefinitions().keySet(),
+            Optimization::rankDifference,
+            Optimization::customWeightedComponentWiseDifference);
 
     for (var fd : program.getFunctionDefinitions().values()) {
       target.constraints.addAll(
-              forceRank(fd.getInferredSignature().getAnnotation().get().withCost));
+          forceRank(fd.getInferredSignature().getAnnotation().get().withCost));
     }
 
     constraints.addAll(target.constraints);

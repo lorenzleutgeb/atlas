@@ -329,6 +329,6 @@ public class LetTreeCfSimple implements Rule {
 
   @Override
   public String getName() {
-    return "let:tree:cf:simple";
+    return "let:tree:cf";
   }
 }
