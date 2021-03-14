@@ -12,6 +12,21 @@ See [arXiv:1807.08242](https://arxiv.org/abs/1807.08242).
 The size of a tree `t`, denoted as `|t|` is defined to be the number of its leaves. That, is `|nil| := 1` as well as
 `|(t₁, _, t₂)| := |t₁| + |t₂|`.
 
+## Properties
+
+Behaviour of the system can be controlled by setting properties.
+
+Z3 specific configuration can be set via `com.microsoft.z3.*`, for example `com.microsoft.z3.memory_max_size=25769803776` or `com.microsoft.z3.unsat_core=true`.
+Logging-specific configuration can be set via `org.slf4j.simpleLogger.*`.
+Tool-specific configuration can be set via `xyz.leutgeb.lorenz.lac.*`.
+
+## Usage
+
+Some of the above properties are exposed as command-line arugments.
+
+When inferring, set minimization target (`--minimize={roots,all}`).
+Fix right sides (`--mode={amortized,worstcase,free}`).
+
 ## Dependencies
 
 All dependencies except the [The Z3 Theorem Prover](https://github.com/Z3Prover/z3)

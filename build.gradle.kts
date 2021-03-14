@@ -4,6 +4,8 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 val rootPackage = "xyz.leutgeb.lorenz.lac"
 val rootPackagePath = rootPackage.replace(".", "/")
 
+project.setProperty("mainClassName", "$rootPackage.Main")
+
 fun run(command: String, workingDir: File = file("./")): String {
     val parts = command.split("\\s".toRegex())
     val proc = ProcessBuilder(*parts.toTypedArray())
@@ -55,7 +57,6 @@ configurations {
 
     create("nativeRuntimeClasspath") {
         extendsFrom(runtimeClasspath.get())
-
         dependencies {
             exclude(group = "io.github.classgraph")
             exclude(group = "com.google.javaformat")
@@ -119,7 +120,7 @@ dependencies {
     implementation("org.slf4j:slf4j-simple:1.7.30")
 
     // Native Image
-    compileOnly("org.graalvm.nativeimage:svm:20.2.0")
+    compileOnly("org.graalvm.nativeimage:svm:20.3.0")
 
     implementation("com.google.googlejavaformat:google-java-format:1.9")
     implementation("io.github.classgraph:classgraph:4.8.90")
@@ -134,6 +135,8 @@ dependencies {
     implementation("jakarta.json:jakarta.json-api:2.0.0")
 
     implementation("org.glassfish:jakarta.json:2.0.0")
+
+    // implementation("org.barfuin.texttree:text-tree:2.1.0")
 }
 
 java {
@@ -211,19 +214,14 @@ tasks.shadowJar {
 }
 
 tasks.create<Exec>("nativeImage") {
-    dependsOn("compileGeneratedJava")
-
+    dependsOn("compileJava")
+    dependsOn("processResources")
     val outputSuffix = if ("".equals(project.version)) "" else "-" + project.version
-
+    val cp = "${project.configurations["nativeRuntimeClasspath"].asPath}:${sourceSets.main.get().output.asPath}"
+    System.out.println(cp)
     commandLine(
             "native-image",
-            "--class-path=${project.configurations["nativeRuntimeClasspath"].asPath}:${sourceSets.main.get().output.asPath}",
-            "--no-fallback",
-            // "--enable-all-security-services",
-            "--initialize-at-build-time=com.microsoft.z3.Native",
-            "--report-unsupported-elements-at-runtime",
-            "-H:+ReportExceptionStackTraces",
-            "-H:+TraceClassInitialization",
+            "--class-path=$cp",
             "$rootPackage.Main",
             "${project.buildDir}/native-image/${project.name}$outputSuffix"
     )

@@ -17,6 +17,10 @@
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
+      z3 = pkgs.z3.override {
+          javaBindings = true;
+          jdk = pkgs.graalvm11-ce;
+      };
       #g2n = import gradle2nix {};
       gradleGen = pkgs.gradleGen.override { java = pkgs.graalvm11-ce; };
       lacEnv = pkgs.buildEnv {
@@ -28,7 +32,9 @@
           #gradle2nix."${system}".gradle2nix
           nixos-generators
           self.packages."${system}".gradle
-          self.packages."${system}".z3
+          #self.packages."${system}".z3
+          z3
+          graphviz
         ];
       };
     in rec {
@@ -45,7 +51,7 @@
                 usb = "off";
               };
             };
-            #environment.systemPackages = [ lacEnv ];
+            environment.systemPackages = [ self.defaultPackage."${system}"];
             networking.hostName = "lac";
             users.users.lac = {
               password = "lac";
@@ -75,9 +81,12 @@
         mkShell {
           buildInputs = [ lacEnv ];
           shellHook = ''
-            export Z3_JAVA=$(nix path-info .#packages.x86_64-linux.z3.java)
+            export Z3_JAVA="${z3.java}"
 
-            export LD_LIBRARY_PATH=$Z3_JAVA/lib:$LD_LIBRARY_PATH
+            rm -f src/main/resources/jni/linux/amd64/libz3java.so
+            mkdir -p src/main/resources/jni/linux/amd64
+            ln -s ${z3.lib}/lib/libz3java.so src/main/resources/jni/linux/amd64/libz3java.so
+
             export GRAAL_HOME="${pkgs.graalvm11-ce}"
             export JAVA_HOME="$GRAAL_HOME"
             export GRADLE_HOME="${pkgs.gradle}"
@@ -103,30 +112,22 @@
         lac-image = nixosConfigurations.lac.config.system.build.virtualBoxOVA;
         gradle = gradleGen.gradle_latest;
 
-        z3 = (pkgs.z3.override {
-          javaBindings = true;
-          jdk = pkgs.graalvm11-ce;
-        }).overrideAttrs (old: rec {
-          outputs = old.outputs ++ [ "java" ];
-          postInstall = old.postInstall + ''
-            mkdir -p $out/share/java
-            mv -v com.microsoft.z3.jar $out/share/java
-
-            moveToOutput "share/java/com.microsoft.z3.jar" $java
-            moveToOutput "lib/libz3java.so" $java
-          '';
-        });
-
         lac = (pkgs.callPackage ./gradle-env.nix { inherit gradleGen; }) {
           envSpec = ./gradle-env.json;
           src = ./.;
           nativeBuildInputs =
-            [ pkgs.bash pkgs.git pkgs.graalvm11-ce z3 examples ];
+            [ pkgs.bash pkgs.git pkgs.graalvm11-ce z3 examples pkgs.glibcLocales ];
           Z3_JAVA = "${z3.java}";
-          LD_LIBRARY_PATH = "${z3.java}";
+          LAC_HOME = "${examples}";
+          LANG = "en_US.UTF-8";
+          LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
+          LD_LIBRARY_PATH = "${z3.lib}";
           gradleFlags = [ "nativeImage" "-x" "test" ];
           configurePhase = ''
+            locale
             patchShebangs version.sh
+            mkdir -p src/main/resources/jni/linux/amd64
+            cp -v ${z3.lib}/lib/libz3java.so src/main/resources/jni/linux/amd64
           '';
           installPhase = ''
             mkdir $out
@@ -135,6 +136,8 @@
             echo "xyz.leutgeb.lorenz.lac.module.Loader.defaultHome=$out/examples" >> $out/lac.properties
             cp -Rv ${examples} $out/examples
             mv src/test/resources/tactics $out
+            mkdir -p $out/bin
+            ls -la build/native-image
             mv build/native-image/lac $out/bin/lac
           '';
         };
@@ -142,10 +145,10 @@
         docker-lac-shell = pkgs.dockerTools.buildLayeredImage {
           name = "lac-shell";
           tag = "latest";
-          contents = [ lacEnv packages."${system}".lac ];
+          contents = [ pkgs.bash pkgs.coreutils packages."${system}".lac ];
           config = {
-            Entrypoint = pkgs.bash + "/bin/bash";
-            Env = [ "PATH=${lacEnv}/bin" ];
+            Entrypoint = [ "${pkgs.bash}/bin/bash" ];
+            #Env = [ "PATH=${lacEnv}/bin" ];
           };
         };
 
