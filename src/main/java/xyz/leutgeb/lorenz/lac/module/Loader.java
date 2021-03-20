@@ -1,10 +1,11 @@
 package xyz.leutgeb.lorenz.lac.module;
 
+import static java.util.Collections.synchronizedMap;
 import static java.util.Optional.ofNullable;
-import static java.util.stream.Collectors.toList;
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
-import static java.util.stream.Collectors.toUnmodifiableList;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 import com.google.common.base.Functions;
 import java.io.IOException;
@@ -13,12 +14,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.Spliterators;
 import java.util.Stack;
-import java.util.function.Predicate;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.Phaser;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -29,8 +31,9 @@ import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.CharStreams;
 import org.jgrapht.Graph;
+import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector;
-import org.jgrapht.alg.interfaces.StrongConnectivityAlgorithm;
+import org.jgrapht.alg.cycle.CycleDetector;
 import org.jgrapht.graph.AsSubgraph;
 import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.graph.DefaultEdge;
@@ -47,7 +50,9 @@ import xyz.leutgeb.lorenz.lac.util.Util;
 public class Loader {
   private static final String DOT_EXTENSION = ".ml";
 
-  @Getter private final Map<String, FunctionDefinition> functionDefinitions = new HashMap<>();
+  @Getter Map<String, FunctionDefinition> functionDefinitions = synchronizedMap(new HashMap<>());
+
+  Set<String> loadedModules = Collections.synchronizedSet(new HashSet<>());
 
   @Setter private static Path defaultHome;
 
@@ -55,12 +60,10 @@ public class Loader {
 
   private static final long BASE = System.nanoTime();
 
-  private final Graph<String, DefaultEdge> g =
-      new DefaultDirectedGraph<>(null, DefaultEdge::new, false);
+  Graph<String, DefaultEdge> g = new DefaultDirectedGraph<>(null, DefaultEdge::new, false);
 
   @Getter
-  private final String id =
-      Long.toHexString(System.currentTimeMillis() * 31 + (System.nanoTime() - BASE));
+  String id = Long.toHexString(System.currentTimeMillis() * 31 + (System.nanoTime() - BASE));
 
   public Loader(Path home) {
     if (!Files.exists(home) || !Files.isDirectory(home) || !Files.isReadable(home)) {
@@ -99,8 +102,8 @@ public class Loader {
     modulePath[modulePath.length - 1] += extension;
 
     var path = home;
-    for (int i = 0; i < modulePath.length; i++) {
-      path = path.resolve(modulePath[i]);
+    for (String s : modulePath) {
+      path = path.resolve(s);
     }
     return path;
   }
@@ -145,7 +148,12 @@ public class Loader {
         .flatMap(
             path -> {
               try {
-                return ModuleParser.parse(CharStreams.fromPath(path), moduleName(path)).stream();
+                final String moduleName = moduleName(path);
+                if (loadedModules.contains(moduleName)) {
+                  return Stream.empty();
+                }
+                loadedModules.add(moduleName);
+                return ModuleParser.parse(CharStreams.fromPath(path), moduleName).stream();
               } catch (IOException e) {
                 e.printStackTrace();
                 return Stream.empty();
@@ -153,8 +161,13 @@ public class Loader {
             })
         .forEach(
             fd -> {
-              functionDefinitions.putIfAbsent(fd.getFullyQualifiedName(), fd);
-              stack.push(fd.getFullyQualifiedName());
+              try {
+                ingest(null, fd);
+                // functionDefinitions.putIfAbsent(fd.getFullyQualifiedName(), fd);
+                // stack.push(fd.getFullyQualifiedName());
+              } catch (Throwable t) {
+
+              }
             });
     load(stack);
   }
@@ -162,13 +175,9 @@ public class Loader {
   public Program loadInline(String source) throws IOException {
     final var definitions = ModuleParser.parse(source, "_");
 
-    final var stack = new Stack<String>();
-
     for (var definition : definitions) {
-      ingest(definition, stack);
+      ingest(null, definition);
     }
-
-    load(stack);
 
     return load(
         definitions.stream()
@@ -187,23 +196,22 @@ public class Loader {
             .collect(Collectors.toSet()));
   }
 
-  public Program load(final Set<String> fqns) throws IOException {
+  public Program load(final Set<String> rootFqns) throws IOException {
     final var stack =
-        fqns.stream()
-            .filter(Predicate.not(functionDefinitions::containsKey))
-            .collect(Collectors.toCollection(Stack::new));
+        rootFqns.stream()
+            .filter(not(functionDefinitions::containsKey))
+            .collect(Collectors.toCollection(ConcurrentLinkedDeque::new));
     load(stack);
 
-    final var dangling = fqns.stream().filter(Predicate.not(g::containsVertex)).collect(toSet());
-
+    final var dangling = rootFqns.stream().filter(not(g::containsVertex)).collect(toSet());
     if (!dangling.isEmpty()) {
       throw new RuntimeException("Could not load " + dangling);
     }
 
-    final var plainSubgraph =
+    final var reachable =
         new AsSubgraph<>(
             g,
-            fqns.stream()
+            rootFqns.stream()
                 .flatMap(
                     name ->
                         StreamSupport.stream(
@@ -212,66 +220,195 @@ public class Loader {
                             false))
                 .collect(Collectors.toSet()));
 
-    StrongConnectivityAlgorithm<String, DefaultEdge> scAlg =
-        new KosarajuStrongConnectivityInspector<>(plainSubgraph);
-    List<Graph<String, DefaultEdge>> stronglyConnectedSubgraphs =
-        scAlg.getStronglyConnectedComponents();
+    final Graph<Graph<String, DefaultEdge>, DefaultEdge> condensation =
+        new KosarajuStrongConnectivityInspector<>(reachable).getCondensation();
+
+    addArtificialEdges(condensation);
 
     return new Program(
-        plainSubgraph.vertexSet().stream()
+        reachable.vertexSet().stream()
             .collect(toMap(Functions.identity(), functionDefinitions::get)),
-        stronglyConnectedSubgraphs.stream()
-            .map(g -> g.vertexSet().stream().sorted().collect(toUnmodifiableList()))
-            .collect(toList()),
-        Path.of(".", "out", id),
-        fqns);
+        Path.of("out", id),
+        rootFqns,
+        condensation);
+  }
+
+  private void addArtificialEdges(Graph<Graph<String, DefaultEdge>, DefaultEdge> condensation) {
+    final var before = new CycleDetector<>(condensation);
+    if (before.detectCycles()) {
+      throw bug("Cycles! " + before.findCycles());
+    }
+
+    final var connectivity = new ConnectivityInspector<>(condensation);
+
+    final Set<Graph<String, DefaultEdge>> recursive = new HashSet<>();
+    final Set<Graph<String, DefaultEdge>> nonRecursive = new HashSet<>();
+    for (var g : condensation.vertexSet()) {
+      (isRecursive(g) ? recursive : nonRecursive).add(g);
+    }
+    for (var nr : nonRecursive) {
+      var fd = functionDefinitions.get(Util.pick(nr.vertexSet()));
+      for (var r : recursive) {
+        if (connectivity.pathExists(r, nr) || connectivity.pathExists(nr, r)) {
+          continue;
+        }
+        if (affectedModules(r).contains(fd.getModuleName())) {
+          log.info("adding artificial edge from " + r + " to " + nr);
+
+          // NOTE: It's possible that adding this edge introduces a cycle, which would violate
+          // assumptions down
+          // the road. It might be possible to refresh the ConnectivityInspector (just inform it
+          // about the newly
+          // added edge), but I didn't get that to work right away.
+          // There's a cycle check both before and after modifications, so overall such a bug should
+          // be easy to
+          // detect.
+
+          condensation.addEdge(r, nr);
+          /*
+          connectivity.edgeAdded(
+              new GraphEdgeChangeEvent<>(
+                  condensation, GraphEdgeChangeEvent.EDGE_ADDED, edge, r, nr));
+           */
+        }
+      }
+    }
+
+    final var after = new CycleDetector<>(condensation);
+    if (after.detectCycles()) {
+      throw bug("Cycles! " + after.findCycles());
+    }
+  }
+
+  private boolean isRecursive(Graph<String, DefaultEdge> g) {
+    if (g.vertexSet().size() > 1) {
+      return true;
+    }
+    if (g.vertexSet().size() == 1) {
+      final var fd = Util.pick(g.vertexSet());
+      return functionDefinitions.get(fd).getOcurringFunctions().contains(fd);
+    }
+    return false;
+  }
+
+  private Set<String> affectedModules(Graph<String, DefaultEdge> g) {
+    return g.vertexSet().stream()
+        .map(functionDefinitions::get)
+        .map(FunctionDefinition::getModuleName)
+        .collect(Collectors.toUnmodifiableSet());
   }
 
   private Path path(String moduleName) {
     return path(moduleName, home);
   }
 
-  private void load(Stack<String> stack) throws IOException {
-    while (!stack.isEmpty()) {
-      final var fqn = stack.pop();
+  private void load(Iterable<String> roots) throws IOException {
+    final Phaser phaser = new Phaser(1);
 
-      // Logical module name.
-      final var moduleName = moduleName(fqn);
+    // Possible optimization: Check how many different root modules
+    // there are, only spawn new threads if there is more than one.
 
-      // Actual path to module on disk.
-      final var path = path(moduleName);
-
-      if (!Util.goodForReading(path)) {
-        throw new RuntimeException("could not resolve path for function name '" + fqn + "'");
+    for (final String fqn : roots) {
+      final String moduleName = moduleName(fqn);
+      if (loadedModules.contains(moduleName)) {
+        continue;
       }
+      loadedModules.add(moduleName);
+      phaser.register();
+      new Thread(
+              () -> {
+                try {
+                  parse(phaser, fqn);
+                } catch (IOException e) {
+                  e.printStackTrace();
+                } finally {
+                  phaser.arriveAndDeregister();
+                }
+              })
+          .start();
+    }
 
-      if (functionDefinitions.containsKey(fqn)) {
-        ingest(functionDefinitions.get(fqn), stack);
-      } else {
-        // Ingest all definitions that were parsed, no matter whether we actually "need"
-        // them. This implementation might be a bit too eager, since it will load
-        // all function definitions in a file even though they might not be dependencies.
-        // This could be improved.
-        var definitions = ModuleParser.parse(CharStreams.fromPath(path), moduleName);
-        for (var definition : definitions) {
-          ingest(definition, stack);
-        }
+    phaser.arriveAndAwaitAdvance();
+  }
+
+  private void parse(Phaser phaser, String fqn) throws IOException {
+    // Logical module name.
+    final var moduleName = moduleName(fqn);
+
+    // Actual path to module on disk.
+    final var path = path(moduleName);
+
+    if (!Util.goodForReading(path)) {
+      throw new RuntimeException("could not resolve path for function name '" + fqn + "'");
+    }
+
+    if (functionDefinitions.containsKey(fqn)) {
+      ingest(phaser, functionDefinitions.get(fqn));
+    } else {
+      // Ingest all definitions that were parsed, no matter whether we actually "need"
+      // them. This implementation might be a bit too eager, since it will load
+      // all function definitions in a file even though they might not be
+      // dependencies.
+      // This could be improved.
+      // Instead, match the definitions with the requested pattern, and a list of dependencies.
+      var definitions = ModuleParser.parse(CharStreams.fromPath(path), moduleName);
+      for (var definition : definitions) {
+        ingest(phaser, definition);
       }
     }
   }
 
-  private void ingest(FunctionDefinition definition, Stack<String> stack) {
+  private void ingest(Phaser phaser, FunctionDefinition definition) throws IOException {
     log.debug("Loaded {}", definition.getFullyQualifiedName());
     functionDefinitions.putIfAbsent(definition.getFullyQualifiedName(), definition);
-    if (!g.containsVertex(definition.getFullyQualifiedName())) {
-      g.addVertex(definition.getFullyQualifiedName());
-    }
-    for (var dependency : definition.getOcurringFunctionsNonRecursive()) {
-      if (!g.containsVertex(dependency)) {
-        g.addVertex(dependency);
-        stack.push(dependency);
+    synchronized (g) {
+      if (!g.containsVertex(definition.getFullyQualifiedName())) {
+        g.addVertex(definition.getFullyQualifiedName());
       }
-      g.addEdge(dependency, definition.getFullyQualifiedName());
+    }
+
+    final Stack<String> todo = new Stack<>();
+    for (var dependency : definition.getOcurringFunctions()) {
+      if (dependency.equals(definition.getFullyQualifiedName())) {
+        continue;
+      }
+      synchronized (g) {
+        if (!g.containsVertex(dependency)) {
+          g.addVertex(dependency);
+          final String moduleName = moduleName(dependency);
+          if (!loadedModules.contains(moduleName)) {
+            loadedModules.add(moduleName);
+            todo.push(dependency);
+          }
+        }
+        g.addEdge(dependency, definition.getFullyQualifiedName());
+      }
+    }
+
+    while (todo.size() > 1) {
+      final String fqn = todo.pop();
+
+      if (phaser != null) {
+        phaser.register();
+        log.debug("Spawning new thread to handle " + fqn);
+        new Thread(
+                () -> {
+                  try {
+                    parse(phaser, fqn);
+                  } catch (IOException e) {
+                    e.printStackTrace();
+                  } finally {
+                    phaser.arriveAndDeregister();
+                  }
+                })
+            .start();
+      } else {
+        parse(null, fqn);
+      }
+    }
+
+    if (!todo.isEmpty()) {
+      parse(phaser, todo.pop());
     }
   }
 

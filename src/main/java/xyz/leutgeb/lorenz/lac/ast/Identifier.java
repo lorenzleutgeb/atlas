@@ -34,8 +34,6 @@ public class Identifier extends Expression {
   @NonNull @Getter private final String name;
   @Getter private Intro intro;
 
-  private static int anonymousCount = 1;
-
   private Identifier(Source source, @NonNull String name) {
     super(source);
     Objects.requireNonNull(name);
@@ -69,13 +67,8 @@ public class Identifier extends Expression {
     return predefined(name, new TreeType(typeVariable));
   }
 
-  @Deprecated
-  public Identifier(Source source, @NonNull String name, Type type) {
-    this(source, name, type, SystemIntro.INSTANCE);
-  }
-
   public static Identifier getSugar(Source source, IntIdGenerator idGenerator) {
-    return get("z" + /*Util.generateSubscript*/ (idGenerator.next()), source);
+    return get("z" + (idGenerator.next()), source);
   }
 
   public static Identifier get(String name, Source source) {

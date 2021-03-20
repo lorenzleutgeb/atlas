@@ -1,0 +1,6 @@
+{
+  "resources":[
+    {"pattern":"\\Qjni/linux/amd64/libz3java.so\\E"}
+  ],
+  "bundles":[]
+}

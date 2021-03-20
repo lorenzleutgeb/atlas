@@ -5,6 +5,6 @@ public class Predefined extends Source {
 
   @Override
   public String toString() {
-    return "<predefined>";
+    return "_PREDEFINED_";
   }
 }

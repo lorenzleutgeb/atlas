@@ -1,6 +1,7 @@
 package xyz.leutgeb.lorenz.lac.unification;
 
 import static com.google.common.collect.Sets.difference;
+import static java.util.Collections.synchronizedMap;
 
 import com.google.common.collect.Iterators;
 import java.util.Arrays;
@@ -73,10 +74,10 @@ public class UnificationContext {
         new LinkedHashMap<>(),
         new HashMap<>(),
         new HashSet<>(),
-        new HashMap<>(),
+        synchronizedMap(new HashMap<>()),
         null,
         new LinkedList<>(),
-        new IntIdGenerator());
+        IntIdGenerator.fromZeroInclusive());
   }
 
   public UnificationContext child() {
@@ -112,7 +113,7 @@ public class UnificationContext {
         this.getSignatures(),
         null,
         new LinkedList<>(),
-        new IntIdGenerator());
+        IntIdGenerator.fromZeroInclusive());
   }
 
   public String toString() {

@@ -385,12 +385,10 @@ public class LetTreeCf implements Rule {
             .collect(Collectors.toList());
 
     final var old = Util.append(List.of(p, r), pbdesOrdered);
-    final var result =
-        new ApplicationResult(
-            old.stream().map(Pair::getLeft).collect(Collectors.toUnmodifiableList()),
-            old.stream().map(Pair::getRight).collect(Collectors.toUnmodifiableList()),
-            crossConstraints);
-    return result;
+    return new ApplicationResult(
+        old.stream().map(Pair::getLeft).collect(Collectors.toUnmodifiableList()),
+        old.stream().map(Pair::getRight).collect(Collectors.toUnmodifiableList()),
+        crossConstraints);
   }
 
   @Override

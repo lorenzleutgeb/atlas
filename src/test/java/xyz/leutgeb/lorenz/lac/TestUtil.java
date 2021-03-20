@@ -107,7 +107,7 @@ public class TestUtil {
     var acs = new ArrayList<AnnotatingContext>(prover.getNamed().size());
     var as = new ArrayList<Annotation>(prover.getNamed().size());
 
-    if (as.isEmpty() && acs.isEmpty()) {
+    if (prover.getNamed().isEmpty()) {
       return "";
     }
 
@@ -118,6 +118,18 @@ public class TestUtil {
     }
 
     return printTable(acs, as);
+  }
+
+  public static Program autoloadAndNormalizeAndInferAndUnshare(Pattern pattern)
+      throws UnificationError, TypeError, IOException {
+    final var loader = loader();
+    loader.autoload();
+    final var result = loader.loadMatching(pattern);
+    result.normalize();
+    result.infer();
+    result.unshare(true);
+    // result.analyzeSizes();
+    return result;
   }
 
   public static Program loadAndNormalizeAndInferAndUnshare(Pattern pattern)

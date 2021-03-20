@@ -4,6 +4,7 @@ import static java.lang.System.getProperties;
 
 import com.microsoft.z3.Global;
 import com.microsoft.z3.Log;
+import com.microsoft.z3.Version;
 import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
 
@@ -22,7 +23,12 @@ public class Z3Support {
       return;
     }
 
+    // We instruct Z3 not to load itself.
+    // This property is checked in the static block of com.microsoft.z3.Native.
+    System.setProperty("z3.skipLibraryLoad", "true");
+    // Load Z3.
     Util.loadLibrary("z3java");
+    log.info("{}", Version.getString());
 
     try {
       for (var property : getProperties().entrySet()) {

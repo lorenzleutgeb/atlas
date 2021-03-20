@@ -50,7 +50,7 @@ public abstract class Pair<L, R> implements Map.Entry<L, R>, Serializable {
       throw new IllegalArgumentException(
           "can only convert list with even number of elements to pairs");
     }
-    final List<Pair<E, E>> result = new ArrayList<Pair<E, E>>(list.size() / 2);
+    final List<Pair<E, E>> result = new ArrayList<>(list.size() / 2);
     for (int i = 0; i < list.size() - 1; i += 2) {
       result.add(Pair.of(list.get(i), list.get(i + 1)));
     }

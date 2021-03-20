@@ -22,6 +22,7 @@ import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -55,7 +56,7 @@ import xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.BoolType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
-import xyz.leutgeb.lorenz.lac.util.Fraction;
+import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.lac.util.NidiExporter;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 
@@ -131,7 +132,7 @@ public class Tests {
         arguments("PairingHeap.link", sig(singleton(ord(alpha())), ATREE, ATREE), 0),
         // arguments("PairingHeap.merge", sig(singleton(ord(alpha())), ATREE, ATREE, ATREE), 1),
         // arguments("PairingHeap.insert", sig(singleton(ord(alpha())), alpha(), ATREE, ATREE), 3),
-        arguments("Scratch.empty_1", sig(ATREE, BOOL), 0),
+        arguments("Scratch.empty_1", sig(ATREE, BOOL), 1),
         arguments("Scratch.empty_2", sig(ATREE, BOOL), 1),
         arguments("Scratch.id", sig(alpha(), alpha()), 0),
         arguments("Scratch.left", sig(alpha(), beta(), alpha()), 0),
@@ -210,9 +211,9 @@ public class Tests {
     assertEquals(expectedSignature, definition.getAnnotatedSignature(), "annotated signature");
     assertEquals(expectedSignature, definition.getInferredSignature(), "inferred signature");
 
-    final ConstraintSystemSolver.Result result = program.solve();
-    assertTrue(result.hasSolution());
-    program.mockIngest(result.getSolution());
+    final ConstraintSystemSolver.Result result = program.solve(new HashMap<>(), emptyMap(), true, new HashSet<>());
+    assertTrue(result.isSatisfiable());
+    program.printAllInferredSignaturesInOrder(System.out);
   }
 
   @ParameterizedTest
@@ -220,8 +221,7 @@ public class Tests {
   @MethodSource("infiniteCostDefinitions")
   void infiniteCost(String fqn) throws Exception {
     final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
-    final var solution = program.solve();
-    program.ingest(solution.getSolution());
+    final var solution = program.solve(new HashMap<>(), emptyMap(), true, new HashSet<>());
     program.printAllInferredSignaturesInOrder(System.out);
     assertTrue(solution.getSolution().isEmpty());
   }
@@ -236,15 +236,15 @@ public class Tests {
 
     assertEquals(expectedSignature, definition.getInferredSignature());
 
-    final var solution = program.solve();
-    program.ingest(solution.getSolution());
+    final var solution = program.solve(new HashMap<>(), emptyMap(), true, new HashSet<>());
+    program.printAllInferredSignaturesInOrder(System.out);
     assertTrue(solution.getSolution().isEmpty());
   }
 
   @ParameterizedTest
   @MethodSource("constantCostDefinitions")
   @DisplayName("Constant Cost")
-  @Timeout(value = 15)
+  // @Timeout(value = 15)
   void constantCost(final String fqn, FunctionSignature expectedSignature, int constantCost)
       throws Exception {
     final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
@@ -278,10 +278,9 @@ public class Tests {
                     returnsTree ? Map.of(unitIndex(1), inferredResult) : emptyMap(),
                     "inferredReturn")),
             emptySet()));
-
-    final var inferredSolution = program.solve(inferred);
-    program.mockIngest(inferredSolution.getSolution());
+    final var inferredSolution = program.solve(inferred, emptyMap(), true, emptySet());
     assertTrue(inferredSolution.getSolution().isPresent());
+    program.printAllInferredSignaturesInOrder(System.out);
 
     // We show that it is possible to type the function in such a way that the difference between
     // the potential of the arguments and the potential of the result is exactly the cost that we
@@ -307,6 +306,8 @@ public class Tests {
         program
             .solve(
                 tight,
+                emptyMap(),
+                true,
                 singleton(
                     new OffsetConstraint(
                         tightInput, tightResult, new Fraction(constantCost), "outside")))
@@ -339,6 +340,8 @@ public class Tests {
           program
               .solve(
                   tooSmall,
+                  emptyMap(),
+                  true,
                   singleton(
                       new LessThanOrEqualConstraint(
                           tooSmallInput, costKnownCoefficient, "outside constraint")))
@@ -376,13 +379,15 @@ public class Tests {
     final var perpetuumMobile =
         program.solve(
             symbolicGenerator,
+            emptyMap(),
+            true,
             Set.of(
                 new LessThanOrEqualConstraint(
                     generatorInput, generatorResult, "outside constraint"),
                 new InequalityConstraint(generatorInput, generatorResult, "outside constraint")));
 
     if (perpetuumMobile.getSolution().isPresent()) {
-      program.mockIngest(perpetuumMobile.getSolution());
+      program.printAllInferredSignaturesInOrder(System.out);
     }
     assertTrue(perpetuumMobile.getSolution().isEmpty(), "Perpetuum mobile!");
   }
@@ -443,10 +448,6 @@ public class Tests {
       } catch (IOException e) {
         e.printStackTrace();
       }
-    }
-
-    for (var fd : program.getFunctionDefinitions().values()) {
-      System.out.println(fd.getFullyQualifiedName() + " ∷ " + fd.getInferredSignature());
     }
     */
   }

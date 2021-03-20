@@ -1,21 +1,5 @@
 package xyz.leutgeb.lorenz.lac;
 
-import static java.util.Collections.emptyMap;
-import static java.util.Collections.singleton;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static xyz.leutgeb.lorenz.lac.TestUtil.TACTICS;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE_BY_TWO;
-
-import java.io.IOException;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -24,6 +8,21 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
+
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.singleton;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static xyz.leutgeb.lorenz.lac.TestUtil.TACTICS;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE_BY_TWO;
 
 public class EvalTable {
   static final Annotation Qp = new Annotation(List.of(ONE_BY_TWO), Map.of(unitIndex(1), ONE), "Q'");
@@ -55,26 +54,22 @@ public class EvalTable {
   public void test(String fqn, boolean useTactics, boolean naive)
       throws UnificationError, TypeError, IOException {
 
+    /*
     System.setProperty(
         "xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover.naive", String.valueOf(naive));
 
     System.setProperty(
         "com.microsoft.z3.timeout", String.valueOf(Duration.of(30, ChronoUnit.MINUTES).toMillis()));
+     */
 
     System.out.println("tactics = " + useTactics);
     System.out.println("naive = " + naive);
 
     final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(singleton(fqn));
-    final var prover =
-        program
-            .proveWithTactics(
-                new HashMap<>(),
-                useTactics ? program.lookupTactics(emptyMap(), TACTICS) : emptyMap(),
-                true)
-            .get();
 
     final var constraints = new HashSet<Constraint>();
     // constraints.addAll(program.rightSide(Qp));
+    /*
     constraints.addAll(
         Optimization.forceRank(
             program
@@ -84,12 +79,19 @@ public class EvalTable {
                 .getAnnotation()
                 .get()
                 .withCost));
+     */
 
-    final var target = Optimization.standard(program);
-    constraints.addAll(target.constraints);
+    //final var target = Optimization.standard(program);
+    //constraints.addAll(target.constraints);
 
-    final var result = prover.solve(constraints, List.of(target.target));
-    assertTrue(result.hasSolution());
-    program.mockIngest(result.getSolution());
+    final var result =
+        program.solve(
+            new HashMap<>(),
+            useTactics ? program.lookupTactics(emptyMap(), TACTICS) : emptyMap(),
+            true,
+            constraints);
+
+    assertTrue(result.isSatisfiable());
+    program.printAllInferredSignaturesInOrder(System.out);
   }
 }

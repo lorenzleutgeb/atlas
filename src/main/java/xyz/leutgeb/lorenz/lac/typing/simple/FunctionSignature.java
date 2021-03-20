@@ -15,10 +15,10 @@ import xyz.leutgeb.lorenz.lac.unification.Substitution;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 
 @Value
-public final class FunctionSignature {
-  private final FunctionType type;
-  private final Set<TypeConstraint> constraints;
-  private final Optional<CombinedFunctionAnnotation> annotation;
+public class FunctionSignature {
+  FunctionType type;
+  Set<TypeConstraint> constraints;
+  Optional<CombinedFunctionAnnotation> annotation;
 
   private FunctionSignature(FunctionType type) {
     this.type = type;
@@ -134,14 +134,12 @@ public final class FunctionSignature {
     final FunctionSignature other = (FunctionSignature) o;
     final Object this$type = this.getType();
     final Object other$type = other.getType();
-    if (this$type == null ? other$type != null : !this$type.equals(other$type)) {
+    if (!Objects.equals(this$type, other$type)) {
       return false;
     }
     final Object this$constraints = this.getConstraints();
     final Object other$constraints = other.getConstraints();
-    if (this$constraints == null
-        ? other$constraints != null
-        : !this$constraints.equals(other$constraints)) {
+    if (!Objects.equals(this$constraints, other$constraints)) {
       return false;
     }
     // final Object this$annotation = this.getAnnotation();

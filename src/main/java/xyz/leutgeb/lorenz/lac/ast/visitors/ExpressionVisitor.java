@@ -18,7 +18,7 @@ import xyz.leutgeb.lorenz.lac.ast.NodeExpression;
 import xyz.leutgeb.lorenz.lac.util.IntIdGenerator;
 
 class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
-  private IntIdGenerator idGenerator = new IntIdGenerator(Integer.MAX_VALUE / 2);
+  private final IntIdGenerator idGenerator = IntIdGenerator.fromInclusive(Integer.MAX_VALUE / 2);
 
   public ExpressionVisitor(String moduleName, Path path) {
     super(moduleName, path);

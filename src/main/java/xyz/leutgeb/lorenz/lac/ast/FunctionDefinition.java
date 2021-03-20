@@ -1,11 +1,9 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
-import static com.google.common.collect.Sets.difference;
 import static guru.nidi.graphviz.attribute.Records.turn;
 import static guru.nidi.graphviz.model.Factory.graph;
 import static guru.nidi.graphviz.model.Factory.node;
 import static java.util.Collections.emptySet;
-import static java.util.Collections.singleton;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.stream.Collectors.toList;
 import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.minimize;
@@ -73,9 +71,6 @@ public class FunctionDefinition {
   private Expression body;
   private FunctionSignature inferredSignature;
   private FunctionSignature annotatedSignature;
-  // private FunctionAnnotation inferredAnnotation;
-
-  @Deprecated private Set<FunctionAnnotation> cfAnnotations;
 
   private org.jgrapht.Graph<Identifier, SizeEdge> sizeAnalysis = null;
 
@@ -151,7 +146,7 @@ public class FunctionDefinition {
     if (inferredSignature != null) {
       return;
     }
-    body = body.normalizeAndBind(IntIdGenerator.human());
+    body = body.normalizeAndBind(IntIdGenerator.fromOneInclusive());
   }
 
   public void substitute(Map<Coefficient, KnownCoefficient> solution) {
@@ -232,6 +227,10 @@ public class FunctionDefinition {
      */
   }
 
+  public boolean returnsTree() {
+    return body.getType() instanceof TreeType;
+  }
+
   public void stubAnnotations(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       AnnotationHeuristic heuristic,
@@ -243,13 +242,11 @@ public class FunctionDefinition {
     final var treeLikeArguments = treeLikeArguments();
     var predefined = functionAnnotations.get(getFullyQualifiedName());
 
-    final var returnsTree = body.getType() instanceof TreeType;
-
     if (predefined == null) {
       var inferredAnnotation =
           new FunctionAnnotation(
               heuristic.generate("args", treeLikeArguments.size()),
-              heuristic.generate("return", returnsTree ? 1 : 0));
+              heuristic.generate("return", returnsTree() ? 1 : 0));
 
       Set<FunctionAnnotation> cfAnnotations = new HashSet<>();
 
@@ -296,7 +293,7 @@ public class FunctionDefinition {
                 + " but it is only of size "
                 + predefined.withCost.from.size());
       }
-      if (returnsTree ? predefined.withCost.to.size() != 1 : predefined.withCost.to.size() != 0) {
+      if (returnsTree() ? predefined.withCost.to.size() != 1 : predefined.withCost.to.size() != 0) {
         throw new IllegalArgumentException(
             "the predefined annotation for the result of "
                 + getFullyQualifiedName()
@@ -362,11 +359,6 @@ public class FunctionDefinition {
             .map(Objects::toString)
             .map(x -> " | " + x)
             .orElse(" | ?");
-  }
-
-  @Deprecated
-  public String getMockedAnnotationString(CombinedFunctionAnnotation annotation) {
-    return moduleName + "." + name + " ∷ " + inferredSignature.getType() + " | " + annotation;
   }
 
   public void printTo(PrintStream out) {
@@ -436,16 +428,12 @@ public class FunctionDefinition {
     return body.getOccurringFunctions();
   }
 
-  public Set<String> getOcurringFunctionsNonRecursive() {
-    return difference(getOcurringFunctions(), singleton(getFullyQualifiedName()));
-  }
-
   public void unshare() {
     unshare(Expression.DEFAULT_LAZY);
   }
 
   public void unshare(boolean lazy) {
-    body = body.unshare(IntIdGenerator.human(), lazy);
+    body = body.unshare(IntIdGenerator.fromOneInclusive(), lazy);
   }
 
   @Override
@@ -460,7 +448,11 @@ public class FunctionDefinition {
   }
 
   public String getSimpleSignatureString() {
-    return moduleName + "." + name + " ∷ " + inferredSignature.getType();
+    return moduleName
+        + "."
+        + name
+        + " ∷ "
+        + (inferredSignature == null ? "?" : inferredSignature.getType());
   }
 
   public void printJavaTo(PrintStream out, boolean makeStatic) {
@@ -519,5 +511,18 @@ public class FunctionDefinition {
   public Path tactic() {
     return Path.of(
         getModuleName().replace(".", File.separator) + File.separator + getName() + ".txt");
+  }
+
+  public String getBoundString() {
+    return moduleName
+            + "."
+            + name
+            + " ∷ "
+            + inferredSignature.getType()
+            + inferredSignature
+            .getAnnotation()
+            .map(CombinedFunctionAnnotation::getBounds)
+            .map(x -> " | " + x)
+            .orElse(" | ?");
   }
 }

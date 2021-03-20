@@ -1,20 +1,25 @@
 package xyz.leutgeb.lorenz.lac.util;
 
 import java.util.Iterator;
+import java.util.function.Supplier;
 
-public class IntIdGenerator implements Iterator<Integer> {
+public class IntIdGenerator implements Iterator<Integer>, Supplier<Integer> {
   private int highestId;
-
-  public IntIdGenerator() {
-    this(0);
+  
+  public static IntIdGenerator fromZeroInclusive() {
+    return new IntIdGenerator(0);
   }
-
-  public IntIdGenerator(int initial) {
-    this.highestId = initial;
-  }
-
-  public static IntIdGenerator human() {
+  
+  public static IntIdGenerator fromOneInclusive() {
     return new IntIdGenerator(1);
+  }
+  
+  public static IntIdGenerator fromInclusive(int initial) {
+    return new IntIdGenerator(initial);
+  }
+
+  protected IntIdGenerator(int initial) {
+    this.highestId = initial;
   }
 
   @Override
@@ -26,10 +31,15 @@ public class IntIdGenerator implements Iterator<Integer> {
     if (highestId == Integer.MAX_VALUE) {
       throw new RuntimeException("Ran out of IDs (integer overflow)");
     }
-    return highestId++;
+    return increment();
   }
 
-  public void reset() {
-    highestId = 0;
+  @Override
+  public Integer get() {
+    return increment();
+  }
+
+  private synchronized Integer increment() {
+    return ++highestId;
   }
 }

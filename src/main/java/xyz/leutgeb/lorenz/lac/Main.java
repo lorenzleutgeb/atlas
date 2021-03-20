@@ -10,7 +10,7 @@ import xyz.leutgeb.lorenz.lac.commands.LNF;
 import xyz.leutgeb.lorenz.lac.commands.LogLevelMixin;
 import xyz.leutgeb.lorenz.lac.commands.REPL;
 import xyz.leutgeb.lorenz.lac.commands.Run;
-import xyz.leutgeb.lorenz.lac.util.Util;
+import xyz.leutgeb.lorenz.lac.util.Properties;
 
 @CommandLine.Command(
     mixinStandardHelpOptions = true,
@@ -21,7 +21,7 @@ public class Main implements Runnable {
   @CommandLine.Mixin public HomeMixin homeMixin;
 
   public static void main(String[] args) {
-    Util.readProperties(Path.of("lac.properties"));
+    Properties.readProperties(Path.of("lac.properties"));
     new CommandLine(new Main()).execute(args);
   }
 

@@ -7,6 +7,7 @@ import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoeffici
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -16,8 +17,6 @@ import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
-import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
-import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
@@ -90,34 +89,8 @@ public class SplayHeapTest {
                             "resources",
                             "tactics",
                             entry.getValue().tactic.get() + ".txt")));
-
-    final var optionalProver = program.proveWithTactics(annotations, tactics, true);
-    assertTrue(optionalProver.isPresent());
-
-    final var prover = optionalProver.get();
-
-    var multiTarget = Optimization.standard(program);
-
-    /*
-    should not be required
-    multiTarget.constraints.addAll(
-        forceRank(
-            program
-                .getFunctionDefinitions()
-                .get("SplayHeap.partition")
-                .getInferredSignature()
-                .getAnnotation()
-                .get()
-                .withCost));
-     */
-
-    final var result =
-        prover.solve(
-            multiTarget.constraints,
-            List.of(multiTarget.target),
-            "minq",
-            ConstraintSystemSolver.Domain.RATIONAL);
-    program.mockIngest(result.getSolution());
+    final var result = program.solve(annotations, tactics, true, Collections.emptySet());
     assertTrue(result.getSolution().isPresent());
+    program.printAllInferredSignaturesInOrder(System.out);
   }
 }

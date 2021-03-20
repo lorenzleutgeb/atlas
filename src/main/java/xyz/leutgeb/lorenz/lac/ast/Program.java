@@ -1,45 +1,23 @@
 package xyz.leutgeb.lorenz.lac.ast;
 
-import static java.util.Collections.unmodifiableSet;
-import static java.util.Optional.empty;
-import static java.util.stream.Collectors.joining;
-import static xyz.leutgeb.lorenz.lac.util.Util.flatten;
-import static xyz.leutgeb.lorenz.lac.util.Util.output;
-import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
-
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import com.microsoft.z3.Status;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.jgrapht.Graph;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.traverse.TopologicalOrderIterator;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
+import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
@@ -47,7 +25,35 @@ import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.Equivalence;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.Scheduler;
 import xyz.leutgeb.lorenz.lac.util.Util;
+
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.Spliterators;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.synchronizedMap;
+import static java.util.Collections.unmodifiableSet;
+import static java.util.Optional.empty;
+import static java.util.stream.Collectors.joining;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.flatten;
+import static xyz.leutgeb.lorenz.lac.util.Util.output;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
 @Slf4j
 public class Program {
@@ -57,6 +63,7 @@ public class Program {
   // SCC doesn't really matter. However we chose to still sort them to get consistent outputs
   // without resorting in multiple places.
   @Getter private final List<List<String>> order;
+  private final Graph<Graph<String, DefaultEdge>, DefaultEdge> condensation;
 
   @Getter @Setter private String name;
   @Getter private final Path basePath;
@@ -67,11 +74,21 @@ public class Program {
 
   public Program(
       Map<String, FunctionDefinition> functionDefinitions,
-      List<List<String>> order,
       Path basePath,
-      Set<String> roots) {
+      Set<String> roots,
+      Graph<Graph<String, DefaultEdge>, DefaultEdge> condensation) {
     this.functionDefinitions = functionDefinitions;
-    this.order = order;
+    this.condensation = condensation;
+
+    this.order =
+        StreamSupport.stream(
+                Spliterators.spliteratorUnknownSize(
+                    new TopologicalOrderIterator<>(condensation), 0),
+                false)
+            .map(Graph::vertexSet)
+            .map(List::copyOf)
+            .collect(Collectors.toList());
+
     this.name = flatten(this.order).stream().map(Util::fqnToFlatFilename).collect(joining("+"));
     this.basePath = basePath;
     this.roots = unmodifiableSet(roots);
@@ -80,10 +97,56 @@ public class Program {
   public void infer() throws UnificationError, TypeError {
     normalize();
 
+    if (isEmpty()) {
+      inferred = true;
+    }
+
     if (inferred) {
       return;
     }
 
+    inferParallel();
+
+    inferred = true;
+  }
+
+  private void inferParallel() throws UnificationError, TypeError {
+    var root = UnificationContext.root();
+    var scheduler =
+        new Scheduler<Void, Graph<String, DefaultEdge>, DefaultEdge>(
+            condensation,
+            (alternative) ->
+                () -> {
+                  try {
+                    final var ctx = root.childWithNewProblem();
+                    for (var fqn : alternative.vertexSet()) {
+                      var fd = get(fqn);
+                      ctx.putSignature(fd.getFullyQualifiedName(), fd.stubSignature(ctx));
+                    }
+                    for (var fqn : alternative.vertexSet()) {
+                      var fd = get(fqn);
+                      fd.infer(ctx);
+                    }
+                    var solution = Equivalence.solve(ctx.getEquivalences());
+                    for (var fqn : alternative.vertexSet()) {
+                      var fd = get(fqn);
+                      fd.resolve(solution, ctx.getSignatures().get(fqn));
+                      ctx.putSignature(fqn, fd.getInferredSignature());
+                    }
+                  } catch (UnificationError | TypeError e) {
+                    throw new RuntimeException(e);
+                  }
+                  return null;
+                });
+
+    try {
+      scheduler.run(8, 1, TimeUnit.MINUTES);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
+  }
+
+  private void inferSequential() throws UnificationError, TypeError {
     var root = UnificationContext.root();
     for (List<String> component : order) {
       final var ctx = root.childWithNewProblem();
@@ -104,140 +167,178 @@ public class Program {
         ctx.putSignature(fqn, fd.getInferredSignature());
       }
     }
-
-    inferred = true;
   }
 
   private FunctionDefinition get(String fqn) {
     return functionDefinitions.get(fqn);
   }
 
-  public ConstraintSystemSolver.Result solve() {
-    return solve(
-        new HashMap<>(),
-        new HashSet<>(),
-        (program, constraints) -> ConstraintSystemSolver.solve(constraints, basePath));
-  }
-
   public ConstraintSystemSolver.Result solve(
-      Map<String, CombinedFunctionAnnotation> functionAnnotations) {
-    return solve(
-        functionAnnotations,
-        new HashSet<>(),
-        (program, constraints) -> ConstraintSystemSolver.solve(constraints, basePath));
-  }
-
-  public ConstraintSystemSolver.Result solve(
-      Map<String, CombinedFunctionAnnotation> functionAnnotations,
-      Set<Constraint> outsideConstraints) {
-    return solve(
-        functionAnnotations,
-        outsideConstraints,
-        (program, constraints) -> ConstraintSystemSolver.solve(constraints, basePath));
-  }
-
-  public Optional<Prover> prove(
-      Map<String, CombinedFunctionAnnotation> functionAnnotations, boolean infer) {
-    return proveWithTactics(functionAnnotations, Collections.emptyMap(), infer);
-  }
-
-  public boolean sequentiallyProveWithTactics(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       Map<String, Path> tactics,
-      boolean infer) {
-
+      boolean infer,
+      Set<Constraint> externalConstraints
+  ) {
     if (functionDefinitions.values().stream()
         .map(FunctionDefinition::runaway)
         .anyMatch(Predicate.not(Set::isEmpty))) {
-      return false;
+      return new ConstraintSystemSolver.Result(Status.UNSATISFIABLE, empty(), emptyMap(), empty());
     }
 
     final var heuristic = SmartRangeHeuristic.DEFAULT;
     final var called = calledFunctionNames();
 
-    var root = UnificationContext.root();
-    for (List<String> component : order) {
-      final var prover = new Prover(name + randomHex(), null, basePath);
+    final Map<String, Annotation> rightSidesPerModule = synchronizedMap(new HashMap<>());
 
-      // Stub annotations.
-      for (var fqn : component) {
-        var fd = get(fqn);
-        fd.stubAnnotations(
-            functionAnnotations,
-            heuristic,
-            called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
-            infer);
-      }
+    final var scheduler =
+        new Scheduler<>(
+            this.condensation,
+            (scc) ->
+                () -> {
+                  final var prover = new Prover(name + randomHex(), null, basePath);
 
-      // Solve.
-      for (var fqn : component) {
-        var fd = get(fqn);
-        final var globals =
-            new AnnotatingGlobals(functionAnnotations, fd.getSizeAnalysis(), heuristic);
-        prover.setGlobals(globals);
+                  Set<FunctionDefinition> fds =
+                      scc.vertexSet().stream()
+                          .map(functionDefinitions::get)
+                          .collect(Collectors.toSet());
 
-        Obligation typingObligation = fd.getTypingObligation(1);
+                  // Stub annotations.
+                  for (var fd : fds) {
+                    fd.stubAnnotations(
+                        functionAnnotations,
+                        heuristic,
+                        called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
+                        infer);
+                  }
 
-        if (tactics.containsKey(fd.getFullyQualifiedName())) {
-          try {
-            prover.read(typingObligation, tactics.get(fd.getFullyQualifiedName()));
-          } catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        } else {
-          prover.prove(typingObligation);
-        }
+                  Set<Constraint> external = new HashSet<>();
+                  external.addAll(externalConstraints);
+                  Set<String> refresh = new HashSet<>();
 
-        for (var cfAnnotation : fd.getInferredSignature().getAnnotation().get().withoutCost) {
-          if (cfAnnotation.isZero()) {
-            log.debug("Skipping {}", cfAnnotation);
-            continue;
-          }
+                  // Set right sides equal.
+                  for (var fd : fds) {
+                    if (!fd.returnsTree()) {
+                      continue;
+                    }
+                    final var module = fd.getModuleName();
+                    external.addAll(
+                        EqualityConstraint.eq(
+                            fd.getInferredSignature().getAnnotation().get().withCost.to,
+                            rightSidesPerModule.computeIfAbsent(
+                                module,
+                                (x) -> {
+                                  refresh.add(module);
+                                  return SmartRangeHeuristic.DEFAULT.generate(module, 1);
+                                }),
+                            "(fix) right side for " + fd.getFullyQualifiedName()));
+                  }
 
-          final var cfRoot =
-              new Obligation(
-                  fd.treeLikeArguments(),
-                  cfAnnotation.from,
-                  fd.getBody(),
-                  cfAnnotation.to,
-                  0,
-                  Optional.empty());
+                  // Solve.
+                  for (var fd : fds) {
+                    final var globals =
+                        new AnnotatingGlobals(functionAnnotations, fd.getSizeAnalysis(), heuristic);
+                    prover.setGlobals(globals);
 
-          if (tactics.containsKey(fd.getFullyQualifiedName())) {
-            try {
-              log.debug("Using tactic to prove cf typing!");
-              prover.read(cfRoot, tactics.get(fd.getFullyQualifiedName()));
-            } catch (IOException e) {
-              throw new RuntimeException(e);
-            }
-          } else {
-            prover.prove(cfRoot);
-          }
-        }
-      }
+                    Obligation typingObligation = fd.getTypingObligation(1);
 
-      final var result = prover.solve();
-      if (!result.hasSolution()) {
-        return false;
-      }
+                    if (tactics.containsKey(fd.getFullyQualifiedName())) {
+                      try {
+                        prover.read(typingObligation, tactics.get(fd.getFullyQualifiedName()));
+                      } catch (IOException e) {
+                        throw new RuntimeException(e);
+                      }
+                    } else {
+                      prover.prove(typingObligation);
+                    }
 
-      for (var fqn : component) {
-        functionAnnotations.put(
-            fqn,
-            get(fqn)
-                .getInferredSignature()
-                .getAnnotation()
-                .get()
-                .substitute(result.getSolution().get()));
-        get(fqn).substitute(result.getSolution().get());
-        // mockIngest(functionAnnotations);
-        printAllInferredSignaturesInOrder(System.out);
-      }
+                    for (var cfAnnotation :
+                        fd.getInferredSignature().getAnnotation().get().withoutCost) {
+                      if (cfAnnotation.isZero()) {
+                        log.debug("Skipping {}", cfAnnotation);
+                        continue;
+                      }
+
+                      final var cfRoot =
+                          new Obligation(
+                              fd.treeLikeArguments(),
+                              cfAnnotation.from,
+                              fd.getBody(),
+                              cfAnnotation.to,
+                              0,
+                              empty());
+
+                      if (tactics.containsKey(fd.getFullyQualifiedName())) {
+                        try {
+                          log.debug("Using tactic to prove cf typing!");
+                          prover.read(cfRoot, tactics.get(fd.getFullyQualifiedName()));
+                        } catch (IOException e) {
+                          throw new RuntimeException(e);
+                        }
+                      } else {
+                        prover.prove(cfRoot);
+                      }
+                    }
+                  }
+
+                  final var optimization = Optimization.standard(fds);
+                  external.addAll(optimization.getConstraints());
+
+                  final var result = prover.solve(external, List.of(optimization.target));
+                  if (!result.isSatisfiable()) {
+                    return result;
+                  }
+
+                  for (var module : refresh) {
+                    rightSidesPerModule.computeIfPresent(
+                        module, (k, v) -> v.substitute(result.getSolution().get()));
+                  }
+
+                  for (var fqn : scc.vertexSet()) {
+                    functionAnnotations.put(
+                        fqn,
+                        get(fqn)
+                            .getInferredSignature()
+                            .getAnnotation()
+                            .get()
+                            .substitute(result.getSolution().get()));
+                    get(fqn).substitute(result.getSolution().get());
+
+                    printAllInferredSignaturesInOrder(System.out);
+                    printAllBoundsInOrder(System.out);
+                  }
+
+                  return result;
+                });
+
+    Map<Graph<String, DefaultEdge>, Scheduler.Result<ConstraintSystemSolver.Result>> result;
+    try {
+      result = scheduler.run(8, Integer.MAX_VALUE, TimeUnit.DAYS);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
     }
 
-    return true;
+    final var aggregate =
+        result.values().stream()
+            .reduce((a, b) -> Scheduler.Result.merge(a, b, ConstraintSystemSolver.Result::merge));
+
+    if (aggregate.isEmpty()) {
+      throw bug("could not aggregate results");
+    }
+
+    final var aggregateGet = aggregate.get();
+
+    if (aggregateGet.getExecutionException() != null) {
+      throw new RuntimeException(aggregateGet.getExecutionException());
+    }
+
+    if (aggregateGet.getCancellationException() != null) {
+      throw new RuntimeException(aggregateGet.getCancellationException());
+    }
+
+    return aggregateGet.getValue();
   }
 
+  @Deprecated
   public Optional<Prover> proveWithTactics(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       Map<String, Path> tactics,
@@ -257,7 +358,7 @@ public class Program {
             fd.stubAnnotations(
                 functionAnnotations,
                 heuristic,
-                called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
+                called.contains(fd.getFullyQualifiedName()) ? 3 : 0,
                 infer));
     forEach(
         fd -> {
@@ -320,7 +421,7 @@ public class Program {
                     fd.getBody(),
                     cfAnnotation.to,
                     0,
-                    Optional.empty());
+                    empty());
 
             if (tactics.containsKey(fd.getFullyQualifiedName())) {
               try {
@@ -338,107 +439,8 @@ public class Program {
     return Optional.of(prover);
   }
 
-  public ConstraintSystemSolver.Result solve(
-      Map<String, CombinedFunctionAnnotation> functionAnnotations,
-      Set<Constraint> outsideConstraints,
-      BiFunction<Program, Set<Constraint>, ConstraintSystemSolver.Result> solving) {
-
-    final var optionalProver = prove(functionAnnotations, true);
-    if (optionalProver.isEmpty()) {
-      return new ConstraintSystemSolver.Result(
-          Status.UNSATISFIABLE, empty(), Collections.emptyMap(), empty());
-    }
-    final var prover = optionalProver.get();
-    final var accumulatedConstraints = prover.getAccumulatedConstraints();
-    accumulatedConstraints.addAll(outsideConstraints);
-
-    // prover.plot();
-
-    // This is the entrypoint of new-style solving. We get a bunch of constraints
-    // that need to be fulfilled in order to typecheck the program.
-    final var result = solving.apply(this, accumulatedConstraints);
-
-    if (accumulatedConstraints.size() < 50) {
-      Constraint.plot(name, accumulatedConstraints, basePath);
-    }
-
-    if (result.hasSolution()) {
-      // prover.plotWithSolution(result.getSolution().get());
-    }
-
-    return result;
-  }
-
-  public void ingest(Optional<Map<Coefficient, KnownCoefficient>> solution) {
-    if (solution.isPresent()) {
-      forEach(fd -> fd.substitute(solution.get()));
-      if (!(functionDefinitions.size() == 1)) {
-        // log.info(namesAsSet() + ":");
-      }
-      for (var group : order) {
-        for (var fqn : group) {
-          // log.info(functionDefinitions.get(fqn).getAnnotationString());
-        }
-      }
-    } else {
-      // log.info(namesAsSet() + " | UNSAT");
-    }
-  }
-
   public boolean isEmpty() {
     return order.isEmpty() && functionDefinitions.isEmpty();
-  }
-
-  public ConstraintSystemSolver.Domain autoDomain() {
-    return functionDefinitions.values().stream()
-            .flatMap(
-                fd ->
-                    Stream.concat(
-                        fd.getAnnotatedSignature().getAnnotation().stream(),
-                        fd.getInferredSignature().getAnnotation().stream()))
-            .noneMatch(CombinedFunctionAnnotation::isNonInteger)
-        ? ConstraintSystemSolver.Domain.INTEGER
-        : ConstraintSystemSolver.Domain.RATIONAL;
-  }
-
-  @Deprecated
-  public void mockIngest(Optional<Map<Coefficient, KnownCoefficient>> solution) {
-    if (solution.isPresent()) {
-      if (!(functionDefinitions.size() == 1)) {
-        System.out.println(namesAsSet() + ":");
-      }
-      for (var group : order) {
-        for (var fqn : group) {
-          final FunctionDefinition functionDefinition = functionDefinitions.get(fqn);
-
-          final Optional<CombinedFunctionAnnotation> annotation1 =
-              functionDefinition.getInferredSignature().getAnnotation();
-
-          if (annotation1.isEmpty()) {
-            System.out.println(
-                functionDefinition.getModuleName()
-                    + "."
-                    + functionDefinition.getName()
-                    + " ∷ "
-                    + functionDefinition.getInferredSignature().getType()
-                    + " | ?");
-            continue;
-          }
-
-          System.out.println(
-              functionDefinition.getMockedAnnotationString(
-                  new CombinedFunctionAnnotation(
-                      new FunctionAnnotation(
-                          annotation1.get().withCost.from.substitute(solution.get()),
-                          annotation1.get().withCost.to.substitute(solution.get())),
-                      annotation1.get().withoutCost.stream()
-                          .map(annotation -> annotation.substitute(solution.get()))
-                          .collect(Collectors.toSet()))));
-        }
-      }
-    } else {
-      log.info(namesAsSet() + " | UNSAT");
-    }
   }
 
   public void normalize() {
@@ -481,8 +483,7 @@ public class Program {
   }
 
   public void printAllSimpleSignaturesInOrder(PrintStream out) {
-    for (int i = 0; i < order.size(); i++) {
-      final var stratum = order.get(i);
+    for (final List<String> stratum : order) {
       for (var fqn : stratum) {
         FunctionDefinition fd = functionDefinitions.get(fqn);
         out.println(fd.getSimpleSignatureString());
@@ -491,8 +492,7 @@ public class Program {
   }
 
   public void printAllAnnotatedSignaturesInOrder(PrintStream out) {
-    for (int i = 0; i < order.size(); i++) {
-      final var stratum = order.get(i);
+    for (final List<String> stratum : order) {
       for (var fqn : stratum) {
         FunctionDefinition fd = functionDefinitions.get(fqn);
         out.println(fd.getAnnotatedSignatureString());
@@ -500,9 +500,17 @@ public class Program {
     }
   }
 
+  public void printAllBoundsInOrder(PrintStream out) {
+    for (final List<String> stratum : order) {
+      for (var fqn : stratum) {
+        FunctionDefinition fd = functionDefinitions.get(fqn);
+        out.println(fd.getBoundString());
+      }
+    }
+  }
+
   public void printAllInferredSignaturesInOrder(PrintStream out) {
-    for (int i = 0; i < order.size(); i++) {
-      final var stratum = order.get(i);
+    for (final List<String> stratum : order) {
       for (var fqn : stratum) {
         FunctionDefinition fd = functionDefinitions.get(fqn);
         out.println(fd.getInferredSignatureString());
@@ -512,17 +520,14 @@ public class Program {
 
   public JsonArray inferredSignaturesToJson() {
     var builder = Json.createArrayBuilder();
-
-    for (int i = 0; i < order.size(); i++) {
+    for (List<String> stratum : order) {
       final var stratumBuilder = Json.createArrayBuilder();
-      final var stratum = order.get(i);
       for (var fqn : stratum) {
         FunctionDefinition fd = functionDefinitions.get(fqn);
         stratumBuilder.add(fd.inferredSignatureToJson());
       }
       builder.add(stratumBuilder.build());
     }
-
     return builder.build();
   }
 

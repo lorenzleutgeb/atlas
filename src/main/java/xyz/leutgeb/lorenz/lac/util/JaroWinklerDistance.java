@@ -77,8 +77,7 @@ public class JaroWinklerDistance {
       return 0D;
     }
     final double j = ((m / left.length() + m / right.length() + (m - (double) mtp[1] / 2) / m)) / 3;
-    final double jw = j < 0.7D ? j : j + defaultScalingFactor * mtp[2] * (1D - j);
-    return jw;
+    return j < 0.7D ? j : j + defaultScalingFactor * mtp[2] * (1D - j);
   }
 
   /**

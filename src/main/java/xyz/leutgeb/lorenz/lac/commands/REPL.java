@@ -8,6 +8,7 @@ import io.github.classgraph.ClassGraph;
 import java.util.Collections;
 import java.util.List;
 import jdk.jshell.tool.JavaShellToolBuilder;
+import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import xyz.leutgeb.lorenz.lac.module.Loader;
 
@@ -21,6 +22,7 @@ import xyz.leutgeb.lorenz.lac.module.Loader;
       "To get a list of parameters available, pass `--help` as a positional parameter, not an option, i.e. use `... -- --help`.",
       "See http://openjdk.java.net/jeps/222"
     })
+@Slf4j
 public class REPL implements Runnable {
   public static final String NAME = "repl";
 
@@ -48,9 +50,9 @@ public class REPL implements Runnable {
             Collections.singletonList(
                 "-R-D" + Loader.class.getName() + ".defaultHome=" + Loader.getDefaultHome()));
 
-    System.out.println(args);
+    log.info("Starting JShell with arguments: {}", args);
     try {
-      System.exit(builder.start(args.toArray(new String[args.size()])));
+      System.exit(builder.start(args.toArray(new String[0])));
     } catch (Exception exception) {
       exception.printStackTrace();
       System.exit(1);

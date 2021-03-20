@@ -1,11 +1,40 @@
 package xyz.leutgeb.lorenz.lac.typing.resources;
 
+import com.google.common.collect.Streams;
+import com.google.common.primitives.Ints;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.hipparchus.fraction.Fraction;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsProductConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.OffsetConstraint;
+import xyz.leutgeb.lorenz.lac.util.Pair;
+import xyz.leutgeb.lorenz.lac.util.Util;
+
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
 import static com.google.common.collect.Comparators.lexicographical;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
-import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
 import static java.util.function.Function.identity;
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -20,35 +49,6 @@ import static xyz.leutgeb.lorenz.lac.util.Util.generateSubscriptIndex;
 import static xyz.leutgeb.lorenz.lac.util.Util.isAllZeroes;
 import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 import static xyz.leutgeb.lorenz.lac.util.Util.repeat;
-
-import com.google.common.collect.Streams;
-import com.google.common.primitives.Ints;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsProductConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.OffsetConstraint;
-import xyz.leutgeb.lorenz.lac.util.Fraction;
-import xyz.leutgeb.lorenz.lac.util.Pair;
-import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Slf4j
 public class Annotation {
@@ -321,11 +321,8 @@ public class Annotation {
       throw bug("attempting to create zero index");
     }
     final var elem = coefficients.get(index);
-    if (elem == null) {
-      // log.info("{}{} = 0", id, generateSubscriptIndex(index));
-      return ZERO;
-    }
-    return elem;
+    // log.info("{}{} = 0", id, generateSubscriptIndex(index));
+    return Objects.requireNonNullElse(elem, ZERO);
   }
 
   public String toString() {
@@ -564,29 +561,6 @@ public class Annotation {
     return coefficients.get(index);
   }
 
-  @Deprecated
-  public Set<Constraint> setCoefficient(List<Integer> index, Coefficient value) {
-    Coefficient existingValue = coefficients.get(index);
-    if (existingValue != null) {
-      return Set.of(new EqualityConstraint(existingValue, value, "setcoefficient"));
-    }
-    coefficients.put(index, value);
-    return emptySet();
-  }
-
-  @Deprecated
-  public Set<Constraint> setRankCoefficient(Integer index, Coefficient value) {
-    final var existingValue = rankCoefficients.get(index);
-    if (existingValue != null) {
-      if (existingValue.equals(value)) {
-        return emptySet();
-      }
-      return Set.of(new EqualityConstraint(existingValue, value, "setcoefficient"));
-    }
-    rankCoefficients.set(index, value);
-    return emptySet();
-  }
-
   public Coefficient getUnitCoefficientOrZero() {
     return getCoefficientOrZero(unitIndex(size()));
   }
@@ -770,6 +744,67 @@ public class Annotation {
         constraints);
   }
 
+  public static Annotation subtract(Annotation a, Annotation b) {
+    if (a.size() != b.size()) {
+      throw new IllegalArgumentException("annotations must be of same size");
+    }
+
+    final int size = a.size();
+
+    final var rankCoefficients = new ArrayList<Coefficient>(size);
+
+    for (int i = 0; i < size; i++) {
+      final var ai = a.getRankCoefficientOrZero(i);
+      if (ai.equals(ZERO)) {
+        rankCoefficients.add(b.getRankCoefficient(i));
+        continue;
+      }
+      final var bi = b.getRankCoefficientOrZero(i);
+      if (bi.equals(ZERO)) {
+        rankCoefficients.add(a.getRankCoefficient(i));
+        continue;
+      }
+
+      if (!(ai instanceof KnownCoefficient) || !(bi instanceof KnownCoefficient)) {
+        throw new UnsupportedOperationException("must all be known");
+      }
+
+      rankCoefficients.add(
+          Coefficient.of(
+              ((KnownCoefficient) ai).getValue().subtract(((KnownCoefficient) bi).getValue())));
+    }
+
+    final var coefficients = new HashMap<List<Integer>, Coefficient>();
+
+    indexUnion(a, b)
+        .forEach(
+            i -> {
+              final var ai = a.getCoefficientOrZero(i);
+              final var bi = b.getCoefficientOrZero(i);
+
+              if (ai.equals(ZERO)) {
+                coefficients.put(i, bi);
+                return;
+              }
+              if (bi.equals(ZERO)) {
+                coefficients.put(i, ai);
+                return;
+              }
+
+
+              if (!(ai instanceof KnownCoefficient) || !(bi instanceof KnownCoefficient)) {
+                throw new UnsupportedOperationException("must all be known");
+              }
+
+              coefficients.put(i,
+                      Coefficient.of(
+                              ((KnownCoefficient) ai).getValue().subtract(((KnownCoefficient) bi).getValue()))
+                      );
+            });
+
+        return new Annotation(rankCoefficients, coefficients, a.getName() + "-" + b.getName());
+  }
+
   /** Constraints for this = other + cost */
   public List<Constraint> increment(Annotation other, Coefficient cost, String reason) {
     if (this.size() != other.size()) {
@@ -825,10 +860,10 @@ public class Annotation {
   public boolean isNonInteger() {
     return Stream.concat(
             streamNonRankCoefficients().map(Map.Entry::getValue), rankCoefficients.stream())
-        .filter(Predicate.not(Objects::isNull))
+        .filter(not(Objects::isNull))
         .filter(x -> x instanceof KnownCoefficient)
         .map(x -> ((KnownCoefficient) x).getValue())
-        .anyMatch(Fraction::isNonInteger);
+        .anyMatch(not(Util::isInteger));
   }
 
   public boolean isZero() {

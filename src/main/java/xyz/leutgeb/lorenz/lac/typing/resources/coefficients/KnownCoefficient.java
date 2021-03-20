@@ -2,11 +2,14 @@ package xyz.leutgeb.lorenz.lac.typing.resources.coefficients;
 
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.Context;
-import java.util.Map;
-import java.util.function.Predicate;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
-import xyz.leutgeb.lorenz.lac.util.Fraction;
+import org.hipparchus.fraction.Fraction;
+
+import java.util.Map;
+import java.util.function.Predicate;
+
+import static xyz.leutgeb.lorenz.lac.util.Util.isInteger;
 
 @Value
 @EqualsAndHashCode
@@ -14,12 +17,12 @@ public class KnownCoefficient implements Coefficient {
   public static final KnownCoefficient ZERO = new KnownCoefficient(Fraction.ZERO);
   public static final KnownCoefficient ONE = new KnownCoefficient(Fraction.ONE);
   public static final KnownCoefficient TWO = new KnownCoefficient(Fraction.TWO);
-  public static final KnownCoefficient THREE = new KnownCoefficient(Fraction.THREE);
+  public static final KnownCoefficient THREE = new KnownCoefficient(new Fraction(3));
   public static final KnownCoefficient MINUS_TWO = new KnownCoefficient(Fraction.TWO.negate());
   public static final KnownCoefficient MINUS_ONE = new KnownCoefficient(Fraction.ONE.negate());
-  public static final KnownCoefficient ONE_BY_TWO = new KnownCoefficient(Fraction.ONE_BY_TWO);
-  public static final KnownCoefficient THREE_BY_TWO = new KnownCoefficient(Fraction.THREE_BY_TWO);
-  public static final KnownCoefficient FIVE_BY_TWO = new KnownCoefficient(Fraction.FIVE_BY_TWO);
+  public static final KnownCoefficient ONE_BY_TWO = new KnownCoefficient(new Fraction(1, 2));
+  public static final KnownCoefficient THREE_BY_TWO = new KnownCoefficient(new Fraction(3, 2));
+  public static final KnownCoefficient FIVE_BY_TWO = new KnownCoefficient(new Fraction(5, 2));
 
   Fraction value;
 
@@ -32,7 +35,7 @@ public class KnownCoefficient implements Coefficient {
   }
 
   public ArithExpr encode(Context context, Map<UnknownCoefficient, ArithExpr> coefficients) {
-    if (!value.isNonInteger()) {
+    if (isInteger(value)) {
       return context.mkInt(value.getNumerator());
     }
     return context.mkReal(value.getNumerator(), value.getDenominator());

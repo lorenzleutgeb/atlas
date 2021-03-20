@@ -1,14 +1,12 @@
 package xyz.leutgeb.lorenz.lac.util;
 
-import static guru.nidi.graphviz.model.Factory.node;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Stream.generate;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
-
 import com.microsoft.z3.RatNum;
 import guru.nidi.graphviz.model.Node;
+import lombok.extern.slf4j.Slf4j;
+import org.hipparchus.fraction.Fraction;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -21,9 +19,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.PriorityQueue;
-import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.Stack;
@@ -33,9 +29,13 @@ import java.util.function.Supplier;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.lac.ast.Identifier;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+
+import static guru.nidi.graphviz.model.Factory.node;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Stream.generate;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 
 @Slf4j
 public class Util {
@@ -143,26 +143,48 @@ public class Util {
   }
 
   public static void loadLibrary(String name) {
-    patchLibraryPath();
+    final String libraryName = System.mapLibraryName(name);
+
+    final Path jniPath =
+        Path.of(
+            "jni",
+            System.getProperty("os.name").toLowerCase(),
+            System.getProperty("os.arch").toLowerCase(),
+            libraryName);
 
     try {
-      System.loadLibrary(name);
-    } catch (UnsatisfiedLinkError e) {
-      System.err.println(
-          "!!! The library '"
-              + name
-              + "' is required, but could not be loaded.\n!!! Make sure that a file named '"
-              + System.mapLibraryName(name)
-              + " exists in one of the following paths: '"
-              + System.getProperty(LIBRARY_PATH)
-              + "'.\n!!! Execution will continue but may fail at a later time because of this.");
-      return;
+      Native.loadLibraryFromJar(jniPath);
+    } catch (IOException ioException) {
+      log.warn(
+          "Failed to load '{}' as '{}'. Falling back to standard loading mechanism.",
+          name,
+          jniPath,
+          ioException);
+
+      patchLibraryPath();
+
+      try {
+        System.loadLibrary(name);
+      } catch (UnsatisfiedLinkError e) {
+        log.warn(
+            "The library '"
+                + name
+                + "' is required, but could not be loaded. Make sure that a file named '"
+                + libraryName
+                + " exists in one of the following paths: '"
+                + System.getProperty(LIBRARY_PATH)
+                + "'. Execution will continue but may fail at a later time because of this.");
+      }
     }
   }
 
   public static Fraction toFraction(RatNum x) {
     return new Fraction(
         x.getBigIntNumerator().intValueExact(), x.getBigIntDenominator().intValueExact());
+  }
+
+  public static boolean isInteger(Fraction fraction) {
+    return 1 == fraction.getDenominator();
   }
 
   public static <T, U> BiFunction<T, U, T> first() {
@@ -262,10 +284,6 @@ public class Util {
     return new String(new char[times]).replace("\0", str);
   }
 
-  public static int signum(Fraction fraction) {
-    return Integer.signum(fraction.getNumerator()) * Integer.signum(fraction.getDenominator());
-  }
-
   @SafeVarargs
   public static <T> Stack<T> stack(T... elements) {
     final var result = new Stack<T>();
@@ -343,24 +361,6 @@ public class Util {
     return Files.exists(path) && Files.isReadable(path) && Files.isRegularFile(path);
   }
 
-  public static void readProperties(Path propertiesPath) {
-    if (!goodForReading(propertiesPath)) {
-      return;
-    }
-    try (final var reader = Files.newBufferedReader(propertiesPath)) {
-      final Properties properties = new Properties();
-      properties.load(reader);
-      for (final var property : properties.entrySet()) {
-        if (!(property.getKey() instanceof String && property.getValue() instanceof String)) {
-          continue;
-        }
-        System.setProperty((String) property.getKey(), (String) property.getValue());
-      }
-    } catch (IOException ioException) {
-      ioException.printStackTrace();
-    }
-  }
-
   public <E> Iterable<E> toIterable(Stream<E> stream) {
     return stream::iterator;
   }
@@ -386,11 +386,6 @@ public class Util {
 
   public static boolean flag(Class<?> requester, Map<String, String> arguments, String name) {
     return Boolean.parseBoolean(getProperty(requester, name, arguments, "false"));
-  }
-
-  @Deprecated
-  public static boolean flag(Map<String, String> arguments, String name) {
-    return Optional.ofNullable(arguments.get(name)).map(Boolean::parseBoolean).orElse(false);
   }
 
   public static String getProperty(Class<?> requester, String name, String fallback) {

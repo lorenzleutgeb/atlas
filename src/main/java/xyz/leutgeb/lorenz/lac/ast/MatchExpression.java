@@ -152,12 +152,12 @@ public class MatchExpression extends Expression {
 
   @Override
   public MatchExpression rename(Map<String, String> renaming) {
-    // TODO(lorenz.leutgeb): Create new expression only if possible.
+    // TODO(lorenz.leutgeb): Create new expression only if necessary.
     return new MatchExpression(
         Derived.rename(this),
         scrut.rename(renaming),
         leaf,
-        (NodeExpression) nodePattern.rename(renaming),
+        nodePattern.rename(renaming),
         node.rename(renaming),
         type);
   }

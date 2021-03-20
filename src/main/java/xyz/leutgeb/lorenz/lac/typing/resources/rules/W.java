@@ -21,11 +21,11 @@ import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 import static xyz.leutgeb.lorenz.lac.util.Util.flag;
 import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 
-import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.IntExpr;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -160,7 +160,7 @@ public class W implements Rule {
 
       if (DEBUG_SIZE && knowEq.isEmpty() && knowLt.isEmpty() && knowOne.isEmpty()) {
         // Breakpoint.
-        log.debug("Size analysis did not contribute any side conditions for monotony analysis.");
+        log.info("Size analysis did not contribute any side conditions for monotony analysis.");
       }
     } else {
       knowLt = emptySet();
@@ -184,53 +184,75 @@ public class W implements Rule {
         lemmap2 ? lemmaPlus2(potentialFunctions) : emptyList();
 
     if (DEBUG_SIZE && size && (!knowLt.isEmpty() || !knowEq.isEmpty() || !knowOne.isEmpty())) {
-      final List<LessThanOrEqual<List<Integer>>> monotonyInstancesWithoutKnowledge;
-      monotonyInstancesWithoutKnowledge =
+      final List<LessThanOrEqual<List<Integer>>> monotonyInstancesWithoutSizeKnowledge;
+      monotonyInstancesWithoutSizeKnowledge =
           monotony(potentialFunctions, emptySet(), emptySet(), emptySet());
-      final var improvement =
-          Sets.difference(
-              Set.copyOf(monotonyInstances), Set.copyOf(monotonyInstancesWithoutKnowledge));
+      var improvement = new ArrayList<>(monotonyInstances);
+      improvement.removeAll(monotonyInstancesWithoutSizeKnowledge);
+      /*
+         Sets.difference(
+                 Set.copyOf(monotonyInstances), Set.copyOf(monotonyInstancesWithoutSizeKnowledge))
+             .stream()
+             .collect(Collectors.toCollection(ArrayList::new));
+      */
       if (improvement.isEmpty()) {
         // Breakpoint.
-        log.debug("Size analysis did not contribute anything to monotony analysis.");
+        log.info("Size analysis did not contribute anything to monotony analysis.");
+      } else {
+        /*
+        final var throwaway =
+            new ArrayList<>(
+                improvement.subList(improvement.size() / 2 - 5, improvement.size() - 1));
+        monotonyInstances.removeAll(throwaway);
+        improvement.removeAll(throwaway);
+         */
+        log.info("Monotony without size analysis:");
+        monotonyInstancesWithoutSizeKnowledge.forEach(x -> log.info("{}", x));
+        log.info("Improvement of size analysis:");
+        improvement.forEach(x -> log.info("{}", x));
+        /*
+        log.info("Thrown away:");
+        throwaway.forEach(x -> log.info("{}", x));
+         */
       }
     }
 
     if (DEBUG_KNOWLEDGE) {
-      log.trace("(w) --- " + left.getId() + " <= " + right.getId() + " --- ");
-      log.trace("pot: " + potentialFunctions);
-      log.trace("ids: " + identifiers);
-      log.trace(
-          "lts: "
-              + knowLt.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
-      log.trace(
-          "eqs: "
-              + knowEq.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
-      log.trace("one: " + knowOne.stream().map(identifiers::get).collect(toUnmodifiableList()));
-
-      log.trace("monotony:");
-      monotonyInstances.forEach(x -> log.trace("{}", x));
-
-      log.trace("lemma2XY:");
+      log.info("(w) --- " + left.getId() + " <= " + right.getId() + " --- ");
+      log.info("pot: " + potentialFunctions);
+      log.info("ids: " + identifiers);
+      log.info("one: " + knowOne.stream().map(identifiers::get).collect(toUnmodifiableList()));
+      log.info("lemma2XY:");
       lemma2XYInstances.forEach(
           instance ->
-              log.trace(
+              log.info(
                   "2 * [...0, 2] + "
                       + instance.get(0)
                       + " + "
                       + instance.get(1)
                       + " <= 2 * "
                       + instance.get(2)));
+      /*
+      log.info(
+          "lts: "
+              + knowLt.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
+      log.info(
+          "eqs: "
+              + knowEq.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
 
-      log.trace("lemma1Plus:");
+      log.info("monotony:");
+      monotonyInstances.forEach(x -> log.info("{}", x));
+
+      log.info("lemma1Plus:");
       lemmaPlus1Instances.forEach(
-          instance -> log.trace(instance.getRight() + " <= 1 * [...0, 2] + " + instance.getLeft()));
+          instance -> log.info(instance.getRight() + " <= 1 * [...0, 2] + " + instance.getLeft()));
 
-      log.trace("lemma2Plus:");
+      log.info("lemma2Plus:");
       lemmaPlus2Instances.forEach(
-          instance -> log.trace(instance.getRight() + " <= 2 * [...0, 2] + " + instance.getLeft()));
+          instance -> log.info(instance.getRight() + " <= 2 * [...0, 2] + " + instance.getLeft()));
 
-      log.trace(" --- ");
+      log.info(" --- ");
+       */
     }
 
     // m is the number of rows of expert knowledge.
@@ -551,10 +573,6 @@ public class W implements Rule {
     return Streams.zip(a.stream(), b.stream(), Integer::sum).collect(Collectors.toList());
   }
 
-  private static List<Integer> oneAtIndex(int size, int index) {
-    return atIndex(size, index, 1);
-  }
-
   private static List<Integer> atIndex(int size, int index, int value) {
     return IntStream.rangeClosed(0, size)
         .map(x -> x == index ? value : 0)
@@ -664,8 +682,8 @@ public class W implements Rule {
     try (final var ctx = new Context()) {
       final var solver = ctx.mkSolver();
       solver.push();
-      final ArithExpr one = ctx.mkInt(1);
-      final List<ArithExpr> vars =
+      final IntExpr one = ctx.mkInt(1);
+      final List<IntExpr> vars =
           IntStream.range(0, treeSize)
               .mapToObj(i -> ctx.mkIntConst("x" + i))
               .collect(Collectors.toUnmodifiableList());
@@ -696,12 +714,17 @@ public class W implements Rule {
                 ctx.mkAdd(
                     Streams.concat(
                             Streams.zip(
-                                smaller.stream().map(ctx::mkInt), vars.stream(), ctx::mkMul),
+                                smaller.stream().map(ctx::mkInt),
+                                vars.stream(),
+                                (a, b) -> ctx.mkMul(a, b)),
                             Stream.of(ctx.mkInt(smaller.get(treeSize))))
                         .toArray(ArithExpr[]::new)),
                 ctx.mkAdd(
                     Streams.concat(
-                            Streams.zip(bigger.stream().map(ctx::mkInt), vars.stream(), ctx::mkMul),
+                            Streams.zip(
+                                bigger.stream().map(ctx::mkInt),
+                                vars.stream(),
+                                (a, b) -> ctx.mkMul(a, b)),
                             Stream.of(ctx.mkInt(bigger.get(treeSize))))
                         .toArray(ArithExpr[]::new))));
 

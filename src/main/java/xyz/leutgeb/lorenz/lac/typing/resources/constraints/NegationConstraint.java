@@ -48,9 +48,4 @@ public class NegationConstraint extends Constraint {
   public String toString() {
     return "¬(" + element + ")";
   }
-
-  @Override
-  public void markCoreByTrackings(Set<String> trackings) {
-    log.info("don't know how to mark core of negated constraints");
-  }
 }

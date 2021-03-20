@@ -2,7 +2,13 @@ package xyz.leutgeb.lorenz.lac.module;
 
 import java.nio.file.Path;
 import java.util.List;
-import org.antlr.v4.runtime.*;
+import lombok.extern.slf4j.Slf4j;
+import org.antlr.v4.runtime.BailErrorStrategy;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.DefaultErrorStrategy;
+import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.atn.PredictionMode;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import xyz.leutgeb.lorenz.lac.antlr.SplayLexer;
@@ -10,6 +16,7 @@ import xyz.leutgeb.lorenz.lac.antlr.SplayParser;
 import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.lac.ast.visitors.ProgramVisitor;
 
+@Slf4j
 class ModuleParser {
   public static List<FunctionDefinition> parse(String s, String moduleName) {
     try {
@@ -28,6 +35,7 @@ class ModuleParser {
   }
 
   public static List<FunctionDefinition> parse(CharStream stream, String moduleName) {
+    log.debug("Loading module " + moduleName);
     /*
     // In order to require less memory: use unbuffered streams and avoid constructing a full parse tree.
     ASPCore2Lexer lexer = new ASPCore2Lexer(new UnbufferedCharStream(is));

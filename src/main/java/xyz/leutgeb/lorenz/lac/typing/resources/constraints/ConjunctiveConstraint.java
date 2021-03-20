@@ -16,11 +16,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 
 @Value
+@EqualsAndHashCode(callSuper = false)
 public class ConjunctiveConstraint extends Constraint {
   List<Constraint> elements;
 

@@ -25,7 +25,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.WVar;
-import xyz.leutgeb.lorenz.lac.util.Fraction;
+import org.hipparchus.fraction.Fraction;
 
 @Value
 @Slf4j
@@ -34,7 +34,7 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
   Obligation obligation;
 
   private static final boolean FIXING_ENABLED = false;
-  private static final boolean RECORDING_ENABLED = false;
+  private static final boolean RECORDING_ENABLED = true;
 
   private void proveInternal(Obligation obligation, TacticParser.ListContext list) {
     final var initial = list.first;
@@ -107,7 +107,9 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
     final var start = annotatedTacticExpression.getStart();
     final var arguments = convert(annotatedTacticExpression.arguments);
 
-    if (RECORDING_ENABLED && annotatedTacticExpression.applicationName != null) {
+    if (RECORDING_ENABLED
+        && annotatedTacticExpression.applicationName != null
+        && obligation.getCost() > 0) {
       prover.record(annotatedTacticExpression.applicationName.getText(), obligation);
     }
 

@@ -35,8 +35,8 @@ plugins {
 }
 
 repositories {
-    jcenter()
     mavenCentral()
+    jcenter()
 }
 
 buildscript {
@@ -78,38 +78,42 @@ dependencies {
     runtimeOnly("org.antlr:antlr4-runtime:$antlrVersion")
 
     implementation("com.google.guava:guava:28.2-jre")
+    implementation("org.hipparchus:hipparchus-core:1.8")
 
     // Lombok
-    val lombok = "org.projectlombok:lombok:1.18.12"
+    val lombok = "org.projectlombok:lombok:1.18.18"
     compileOnly(lombok)
     testCompileOnly(lombok)
     annotationProcessor(lombok)
 
     // Graphs
     fun jgrapht(x: String): String {
-        return "org.jgrapht:jgrapht-$x:1.4.0"
+        return "org.jgrapht:jgrapht-$x:1.5.0"
     }
     implementation(jgrapht("core"))
     implementation(jgrapht("io"))
 
     // Commandline Parameters
-    implementation("info.picocli:picocli:4.5.2")
-    annotationProcessor("info.picocli:picocli-codegen:4.5.2")
+    implementation("info.picocli:picocli:4.6.1")
+    annotationProcessor("info.picocli:picocli-codegen:4.6.1")
 
     // Testing
     fun jupiter(x: String): String {
-        return "org.junit.jupiter:junit-jupiter$x:5.7.0"
+        return "org.junit.jupiter:junit-jupiter$x:5.7.1"
     }
     testImplementation(jupiter("-params"))
     testRuntimeOnly(jupiter(""))
-    testImplementation("tech.tablesaw:tablesaw-core:0.38.1")
+    testImplementation("tech.tablesaw:tablesaw-core:0.38.2")
 
     // The Z3 Theorem Prover
     // See https://github.com/Z3Prover/z3#java
     implementation(files(Optional.ofNullable(System.getenv("Z3_JAVA")).orElse("lib") + "/share/java/com.microsoft.z3.jar"))
+    //implementation("org.sosy-lab:javasmt-solver-z3:4.8.10")
+    //implementation(group = "org.sosy-lab", name = "javasmt-solver-z3", version = "4.8.10", classifier = "libz3", ext = "so")
+    //implementation(group = "org.sosy-lab", name = "javasmt-solver-z3", version = "4.8.10", classifier = "libz3java", ext = "so")
 
     // Graph output
-    implementation("guru.nidi:graphviz-java:0.15.0") {
+    implementation("guru.nidi:graphviz-java:0.18.0") {
         // NOTE: Somehow JUnit ends up on the classpath...
         exclude("org.junit.platform")
         exclude(group = "net.arnx", module = "nashorn-promise")
@@ -123,7 +127,7 @@ dependencies {
     compileOnly("org.graalvm.nativeimage:svm:20.3.0")
 
     implementation("com.google.googlejavaformat:google-java-format:1.9")
-    implementation("io.github.classgraph:classgraph:4.8.90")
+    implementation("io.github.classgraph:classgraph:4.8.102")
 
     // JSON Binding
     // See https://javaee.github.io/jsonb-spec/getting-started.html

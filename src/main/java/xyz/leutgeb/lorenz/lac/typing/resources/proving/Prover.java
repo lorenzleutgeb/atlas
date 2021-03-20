@@ -19,6 +19,7 @@ import com.google.common.collect.Streams;
 import guru.nidi.graphviz.attribute.Label;
 import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
+import guru.nidi.graphviz.engine.GraphvizCmdLineEngine;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -146,7 +147,7 @@ public class Prover {
   @Getter @Setter private boolean weakenAggressively = DEFAULT_WEAKEN_AGGRESSIVELY;
   @Getter @Setter private boolean weakenBeforeTerminal = DEFAULT_WEAKEN_BEFORE_TERMINAL;
 
-  @Getter private final Map<String, Obligation> named = new LinkedHashMap<String, Obligation>();
+  @Getter private final Map<String, Obligation> named = new LinkedHashMap<>();
 
   private final Map<Obligation, RuleApplication> results = new LinkedHashMap<>();
 
@@ -186,11 +187,6 @@ public class Prover {
     this.name = name;
     this.globals = globals;
     this.basePath = basePath;
-  }
-
-  @Deprecated
-  public Prover(String name, AnnotatingGlobals globals) {
-    this(name, globals, Paths.get("out"));
   }
 
   /** Chooses which rules should be applied (in order) to prove given obligation. */
@@ -311,15 +307,6 @@ public class Prover {
       }
     }
     return stack(RuleSchedule.schedule(chooseRule(e)));
-  }
-
-  @Deprecated
-  public Obligation share(Obligation obligation) {
-    while (obligation.getExpression() instanceof ShareExpression) {
-      final var result = applyInternal(obligation, RuleSchedule.schedule(shareRule, emptyMap()));
-      obligation = result.getObligations().get(0);
-    }
-    return obligation;
   }
 
   private ApplicationResult applyInternal(Obligation obligation, RuleSchedule schedule) {
@@ -482,7 +469,6 @@ public class Prover {
     if (basePath == null) {
       return;
     }
-
     try {
       final NidiExporter<Obligation, DefaultEdge> exporter = new NidiExporter<>(Util::stamp);
       exporter.setVertexAttributeProvider(
@@ -498,13 +484,15 @@ public class Prover {
 
       Graphviz transformed = Graphviz.fromGraph(exporter.transform(proof));
 
-      final var target = basePath.resolve(name + "-proof.svg");
-      transformed.render(Format.SVG).toOutputStream(output(target));
-      log.info("Proof plotted to {}", target);
+      Graphviz.useEngine(new GraphvizCmdLineEngine());
 
       final var dotTarget = basePath.resolve(name + "-proof.xdot");
       transformed.render(Format.XDOT).toOutputStream(output(dotTarget));
       log.info("Proof exported to {}", dotTarget);
+
+      final var target = basePath.resolve(name + "-proof.svg");
+      transformed.render(Format.SVG).toOutputStream(output(target));
+      log.info("Proof plotted to {}", target);
     } catch (Exception e) {
       log.warn("Non-critical exception thrown.", e);
     }

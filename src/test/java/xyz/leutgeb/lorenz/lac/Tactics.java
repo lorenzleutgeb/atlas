@@ -1,6 +1,25 @@
 package xyz.leutgeb.lorenz.lac;
 
-import static java.util.Collections.emptyList;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
+import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
+import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import org.hipparchus.fraction.Fraction;
+
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static xyz.leutgeb.lorenz.lac.ModuleTest.Qp;
@@ -16,27 +35,6 @@ import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoeffici
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
-
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
-import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
-import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
-import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.lac.unification.UnificationError;
-import xyz.leutgeb.lorenz.lac.util.Fraction;
 
 public class Tactics {
   @BeforeAll
@@ -132,7 +130,22 @@ public class Tactics {
           Qp);
 
   private static Stream<Arguments> scratch() {
-    return Stream.of();
+    return Stream.of(
+        Arguments.of(
+            Map.of(
+                "PairingHeap.merge_pairs",
+                Config.of(
+                    "PairingHeap/merge_pairs",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(ONE_BY_TWO),
+                            Map.of(List.of(1, 0), THREE_BY_TWO, unitIndex(1), THREE),
+                            "Q"),
+                        SmartRangeHeuristic.DEFAULT.generate("Qp", 1),
+                        SmartRangeHeuristic.DEFAULT.generate("x1", 1),
+                        SmartRangeHeuristic.DEFAULT.generate("x2", 1))),
+                "PairingHeap.link",
+                Config.of("PairingHeap/link"))));
   }
 
   private static Stream<Arguments> splayTree() {
@@ -144,11 +157,32 @@ public class Tactics {
                 "SplayTree.insert", Config.of("SplayTree/insert", SPLAY_INSERT_EXPECTED),
                 "SplayTree.delete", Config.of("SplayTree/delete", SPLAY_DELETE_EXPECTED))),
         Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_OLD))),
-        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_VARIANT))));
+        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_VARIANT))),
+        Arguments.of(Map.of("SplayTree.splay", Config.of(SPLAY_EXPECTED))),
+        Arguments.of(Map.of("SplayTree.splay_max", Config.of(SPLAY_EXPECTED))));
   }
 
   private static Stream<Arguments> splayHeap() {
     return Stream.of(
+        Arguments.of(
+            Map.of(
+                "SplayHeap.partition",
+                Config.of(
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(ONE_BY_TWO),
+                            Map.of(
+                                unitIndex(1),
+                                ONE,
+                                List.of(1, 0),
+                                Coefficient.of(3, 4),
+                                List.of(1, 1),
+                                ONE),
+                            "Q"),
+                        new Annotation(List.of(ONE_BY_TWO), Map.of(unitIndex(1), ONE), "Q'"),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 1), ONE_BY_TWO), "Qcf"),
+                        new Annotation(
+                            List.of(ZERO), Map.of(List.of(1, 0), ONE_BY_TWO), "Qcf'"))))),
         Arguments.of(
             Map.of(
                 "SplayHeap.partition",
@@ -189,11 +223,37 @@ public class Tactics {
                         Qp,
                         new Annotation(List.of(ZERO), Map.of(List.of(1, 1), ONE_BY_TWO), "Qcf"),
                         new Annotation(
-                            List.of(ZERO), Map.of(List.of(1, 0), ONE_BY_TWO), "Qcf'"))))));
+                            List.of(ZERO), Map.of(List.of(1, 0), ONE_BY_TWO), "Qcf'"))))) // ,
+        /*
+        Arguments.of(
+            Map.of(
+                "SplayHeap.partition",
+                Config.of(
+                    "SplayHeap/partition-nosize" // ,
+                    /*
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            ONE_BY_TWO,
+                            Map.of(
+                                List.of(1, 1),
+                                ONE,
+                                List.of(1, 0),
+                                Coefficient.of(3, 4),
+                                unitIndex(1),
+                                ONE)),
+                        Qp,
+                        SmartRangeHeuristic.DEFAULT.generate("q", 1),
+                           SmartRangeHeuristic.DEFAULT.generate("q1", 1)
+                           // new Annotation(List.of(ZERO), Map.of(List.of(1, 1), ONE_BY_TWO), "Qcf"),
+                           // new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE_BY_TWO), "Qcf'")
+                    )
+            */
+        );
   }
 
   private static Stream<Arguments> pairingHeap() {
     return Stream.of(
+        Arguments.of(Map.of("PairingHeap.merge_pairs_isolated", Config.of(SPLAY_EXPECTED))),
         Arguments.of(
             Map.of(
                 "PairingHeap.merge_pairs_isolated",
@@ -448,6 +508,7 @@ public class Tactics {
 
   @ParameterizedTest
   @MethodSource({"scratch", "splayTree", "splayHeap", "pairingHeap"})
+  // @MethodSource({"scratch"})
   public void all(Map<String, Config> immutableAnnotations)
       throws UnificationError, TypeError, IOException {
     final var program = loadAndNormalizeAndInferAndUnshare(immutableAnnotations.keySet());
@@ -473,22 +534,28 @@ public class Tactics {
                             "tactics",
                             entry.getValue().tactic.get() + ".txt")));
 
-    final var optionalProver = program.proveWithTactics(annotations, tactics, true);
-    assertTrue(optionalProver.isPresent());
+    //final var optionalProver = program.proveWithTactics(annotations, tactics, true);
+    //assertTrue(optionalProver.isPresent());
 
-    final var prover = optionalProver.get();
+    //final var prover = optionalProver.get();
 
-    var multiTarget = Optimization.standard(program);
+    //var multiTarget = Optimization.standard(program);
+
+    final var result = program.solve(annotations, tactics, true, emptySet());
+    assertTrue(result.isSatisfiable());
+    program.printAllInferredSignaturesInOrder(System.out);
 
     var checkSat = true;
 
     if (checkSat) {
-      var solverResult = prover.solve(emptySet(), emptyList(), "sat");
-      assertTrue(solverResult.getSolution().isPresent());
-      System.out.println(printTable(prover, solverResult.getSolution()));
-      program.mockIngest(solverResult.getSolution());
+      // var solverResult = prover.solve(multiTarget.constraints, emptyList(), "sat");
+      // assertTrue(solverResult.getSolution().isPresent());
+      // System.out.println(printTable(prover, solverResult.getSolution()));
+      // program.mockIngest(solverResult.getSolution());
+      // prover.plotWithSolution(solverResult.getSolution().get());
     }
 
+    /*
     if (immutableAnnotations.values().stream().anyMatch(Config::isUnknown) || !checkSat) {
       final var minSetSolutionRat =
           prover.solve(
@@ -499,6 +566,9 @@ public class Tactics {
       program.mockIngest(minSetSolutionRat.getSolution());
       System.out.println(printTable(prover, minSetSolutionRat.getSolution()));
       assertTrue(minSetSolutionRat.getSolution().isPresent());
+      // prover.plotWithSolution(minSetSolutionRat.getSolution().get());
+      System.out.println(printTable(prover, minSetSolutionRat.getSolution()));
     }
+     */
   }
 }

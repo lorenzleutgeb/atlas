@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -72,16 +73,6 @@ public class AnnotatingContext {
     return annotation.getCoefficient(index);
   }
 
-  public Set<Constraint> setCoefficient(
-      Function<Identifier, Integer> indexer, Integer c, Coefficient value) {
-    final var index = new ArrayList<Integer>(size() + 1);
-    for (var id : ids) {
-      index.add(indexer.apply(id));
-    }
-    index.add(c);
-    return annotation.setCoefficient(index, value);
-  }
-
   public List<Integer> toListIndex(Function<Identifier, Integer> indexer, Integer c) {
     final var index = new ArrayList<Integer>(size() + 1);
     for (var id : ids) {
@@ -118,10 +109,6 @@ public class AnnotatingContext {
     return getCoefficient(index::getAssociatedIndex, index.getOffsetIndex());
   }
 
-  public Set<Constraint> setCoefficient(Index index, Coefficient value) {
-    return setCoefficient(index::getAssociatedIndex, index.getOffsetIndex(), value);
-  }
-
   public Coefficient getCoefficientOrZero(Index index) {
     return getCoefficientOrZero(index::getAssociatedIndex, index.getOffsetIndex());
   }
@@ -152,6 +139,7 @@ public class AnnotatingContext {
     return annotation.getCoefficientOrZero(index);
   }
 
+  /*
   public void setCoefficient(Map<Identifier, Integer> indexer, Integer c, Coefficient value) {
     if (indexer.size() < size()) {
       throw new IllegalArgumentException("indexer does not cover context");
@@ -163,6 +151,7 @@ public class AnnotatingContext {
     index.add(c);
     annotation.setCoefficient(index, value);
   }
+   */
 
   private int indexOf(Identifier id) {
     for (int i = 0; i < ids.size(); i++) {
@@ -196,15 +185,10 @@ public class AnnotatingContext {
     return annotation.getRankCoefficient(indexOf(id));
   }
 
-  public Set<Constraint> setRankCoefficient(Identifier id, Coefficient value) {
-    return annotation.setRankCoefficient(indexOf(id), value);
-  }
-
   @Override
   public String toString() {
     final var idStr =
         ids.isEmpty() ? "Ø" : ids.stream().map(Object::toString).collect(joining(", "));
-    ;
     return idStr + " | " + /*this.annotation + " named " +*/ this.annotation.getName();
   }
 
@@ -305,6 +289,7 @@ public class AnnotatingContext {
   }
 
   @Value
+  @EqualsAndHashCode(callSuper = false)
   public static class Entry extends MapIndex {
     Coefficient value;
 

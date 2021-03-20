@@ -140,14 +140,6 @@ public abstract class Constraint {
     // return Util.stamp(this);
   }
 
-  @Deprecated
-  public void markCoreByTrackings(Set<String> trackings) {
-    if (trackings.contains(getTracking())) {
-      setCore(true);
-    }
-    children().forEach(x -> x.markCoreByTrackings(trackings));
-  }
-
   public Stream<Constraint> children() {
     return Stream.empty();
   }

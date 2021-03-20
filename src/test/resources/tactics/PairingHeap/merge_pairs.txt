@@ -1,0 +1,19 @@
+(match
+  ? (* leaf *)
+  (match
+    ? (*let:tree:cf leaf node*)
+    (w{mono l2xy} (let:tree:cf
+      (w{mono l2xy} rec@app) (* merge_pairs ry *)
+      (w{mono l2xy} (let:tree:cf
+        (w{mono l2xy} node)
+        (w{mono l2xy} (let:tree:cf
+          (w{mono l2xy} node)
+          (w{mono l2xy} (let:tree:cf
+            (w{mono l2xy} link1@?) (* link *)
+            (w{mono l2xy} link2@app) (* link *)
+          ))
+        ))
+      ))
+    ))
+  )
+)

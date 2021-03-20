@@ -20,7 +20,7 @@ import lombok.EqualsAndHashCode;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.util.Fraction;
+import org.hipparchus.fraction.Fraction;
 
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -22,18 +22,18 @@ import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 @Value
 @EqualsAndHashCode(callSuper = true)
 public class LessThanOrEqualConstraint extends Constraint {
-  @NonNull protected Coefficient left, right;
+  @NonNull protected Coefficient smaller, bigger;
 
   public LessThanOrEqualConstraint(
-      @NonNull Coefficient left, @NonNull Coefficient right, String reason) {
+      @NonNull Coefficient smaller, @NonNull Coefficient bigger, String reason) {
     super(reason);
-    this.left = left;
-    this.right = right;
+    this.smaller = smaller;
+    this.bigger = bigger;
   }
 
   @Override
   public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
-    return ctx.mkLe(left.encode(ctx, coefficients), right.encode(ctx, coefficients));
+    return ctx.mkLe(smaller.encode(ctx, coefficients), bigger.encode(ctx, coefficients));
   }
 
   @Override
@@ -41,10 +41,10 @@ public class LessThanOrEqualConstraint extends Constraint {
     // Arrow on the edge should go from big to small, like the '<=' symbol.
     return graph.with(
         nodes
-            .get(left)
+            .get(smaller)
             .link(
                 highlight(
-                    to(nodes.get(right))
+                    to(nodes.get(bigger))
                         .with(Color.DARKOLIVEGREEN)
                         .with("dir", "back")
                         .with("arrowTail", "open")
@@ -54,20 +54,20 @@ public class LessThanOrEqualConstraint extends Constraint {
   @Override
   public Constraint replace(Coefficient target, Coefficient replacement) {
     return new LessThanOrEqualConstraint(
-        left.replace(target, replacement), right.replace(target, replacement), getReason());
+        smaller.replace(target, replacement), bigger.replace(target, replacement), getReason());
   }
 
   @Override
   public Set<Coefficient> occurringCoefficients() {
     final var result = new HashSet<Coefficient>();
-    result.add(left.canonical());
-    result.add(right.canonical());
+    result.add(smaller.canonical());
+    result.add(bigger.canonical());
     return result;
     // return Set.of(left.canonical(), right.canonical());
   }
 
   @Override
   public String toString() {
-    return left + " ≤ " + right;
+    return smaller + " ≤ " + bigger;
   }
 }

@@ -10,8 +10,6 @@ import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoeffici
 
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -21,9 +19,6 @@ import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
-import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
@@ -89,9 +84,11 @@ public class PairingHeapTest {
 
             );
 
+    /*
     System.setProperty(
         "xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover.naive", String.valueOf(true));
     System.setProperty("xyz.leutgeb.lorenz.lac.typing.resources.rules.W.all", String.valueOf(true));
+     */
 
     final var program = loadAndNormalizeAndInferAndUnshare(immutableAnnotations.keySet());
 
@@ -115,40 +112,8 @@ public class PairingHeapTest {
                             "resources",
                             "tactics",
                             entry.getValue().tactic.get() + ".txt")));
-
-    final var optionalProver = program.proveWithTactics(annotations, tactics, true);
-    assertTrue(optionalProver.isPresent());
-
-    final var prover = optionalProver.get();
-
-    final var constraints = new HashSet<Constraint>();
-
-    final var opt =
-        Optimization.layeredCombo(
-            program,
-            // program.getRoots(),
-            program.getFunctionDefinitions().keySet(),
-            // Optimization::rankDifference,
-            List.of(1),
-            Optimization::customWeightedComponentWiseDifference
-            // Optimization::constantDifference,
-            // Optimization::abs
-            );
-    constraints.addAll(opt.constraints);
-
-    for (var fd : program.getFunctionDefinitions().values()) {
-      constraints.addAll(
-          Optimization.forceRank(fd.getInferredSignature().getAnnotation().get().withCost));
-    }
-
-    final var result =
-        prover.solve(
-            constraints,
-            Collections.emptyList(),
-            // List.of(opt.target),
-            "minq",
-            ConstraintSystemSolver.Domain.RATIONAL);
-    program.mockIngest(result.getSolution());
+    final var result = program.solve(annotations, tactics, true, emptySet());
     assertTrue(result.getSolution().isPresent());
+    program.printAllInferredSignaturesInOrder(System.out);
   }
 }

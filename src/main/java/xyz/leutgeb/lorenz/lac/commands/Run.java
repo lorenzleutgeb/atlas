@@ -1,26 +1,18 @@
 package xyz.leutgeb.lorenz.lac.commands;
 
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
 import static picocli.CommandLine.Help.Visibility.ALWAYS;
-import static xyz.leutgeb.lorenz.lac.util.Util.output;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
-import jakarta.json.Json;
-import jakarta.json.JsonObjectBuilder;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -28,10 +20,6 @@ import picocli.CommandLine;
 import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.lac.ast.Program;
 import xyz.leutgeb.lorenz.lac.module.Loader;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
-import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
-import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
@@ -93,7 +81,7 @@ public class Run implements Runnable {
     }
 
     if (program.isEmpty()) {
-      log.error("Program to analyze is empty, nothing to do!");
+      System.out.println("Program to analyze is empty, nothing to do!");
       System.exit(3);
     }
 
@@ -119,7 +107,7 @@ public class Run implements Runnable {
       }
     }
 
-    log.info("Output will go to {}", program.getBasePath().toAbsolutePath());
+    System.out.println("Output will go to " + program.getBasePath().toAbsolutePath());
 
     Map<String, Path> tacticsMap = new HashMap<>();
 
@@ -138,57 +126,36 @@ public class Run implements Runnable {
           }
         }
 
-        log.info(fd.getAnnotatedSignatureString());
+        System.out.println(fd.getAnnotatedSignatureString());
 
-        log.info("\tDependencies: " + fd.getOcurringFunctionsNonRecursive());
-        log.info("\tSource:       " + fd.getBody().getSource().getRoot());
+        // log.info("\tDependencies: " + fd.getOcurringFunctionsNonRecursive());
+        System.out.println("\tSource:       " + fd.getBody().getSource().getRoot());
 
         if (tactics != null) {
           final var p = tacticsMap.get(fd.getFullyQualifiedName());
           if (p == null) {
-            log.info("\tTactic:       n/a (will use automatic proof generation)");
+            System.out.println("\tTactic:       n/a (will use automatic proof generation)");
           } else {
-            log.info("\tTactic:       " + p.toAbsolutePath());
+            System.out.println("\tTactic:       " + p.toAbsolutePath());
           }
         }
       }
     }
 
-    log.info("Generating constraints...");
-    Optional<Prover> optionalProver = program.proveWithTactics(new HashMap<>(), tacticsMap, infer);
-
-    ConstraintSystemSolver.Result result = ConstraintSystemSolver.Result.unknown();
-
-    if (optionalProver.isEmpty()) {
-      result = ConstraintSystemSolver.Result.unsat();
-      log.info("Nonterminating function definition detected. Aborting.");
-    } else {
-      final var prover = optionalProver.get();
-
-      if (infer) {
-        var multiTarget = Optimization.standard(program);
-
-        var right = Collections.<Constraint>emptySet(); //  program.sameRightSide();
-
-        log.info("Solving constraints for optimum...");
-        result =
-            prover.solve(
-                Sets.union(multiTarget.constraints, right), List.of(multiTarget.target), "min");
-      } else {
-        log.info("Solving constraints...");
-        result = prover.solve(emptySet(), emptyList(), "sat");
+    System.out.println("Generating constraints...");
+    final var result = program.solve(new HashMap<>(), tacticsMap, infer, Collections.emptySet());
+      if (!result.isSatisfiable()) {
+        System.exit(1);
       }
 
-      log.info("Done. Result(s): ");
-      if (!result.hasSolution()) {
-        log.info(result.getStatus().toString());
-      }
-      program.ingest(result.getSolution());
-      program.printAllInferredSignaturesInOrder(System.out);
-    }
+    System.out.println("SIGS:");
+    program.printAllInferredSignaturesInOrder(System.out);
+      System.out.println("BOUNDS:");
+    program.printAllBoundsInOrder(System.out);
 
     final var stop = Instant.now();
 
+    /*
     if (json != null) {
       JsonObjectBuilder builder = Json.createObjectBuilder();
 
@@ -215,7 +182,9 @@ public class Run implements Runnable {
         log.error("Failed to write JSON output.", ioException);
       }
     }
+     */
 
-    System.exit(result.toExitCode());
+    //System.exit(result.toExitCode());
+    System.exit(0);
   }
 }

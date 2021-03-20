@@ -1,19 +1,5 @@
 package xyz.leutgeb.lorenz.lac.rules;
 
-import static java.util.Collections.emptyMap;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
-
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Stream;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +9,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
-import xyz.leutgeb.lorenz.lac.ast.sources.Predefined;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
@@ -32,9 +17,22 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.W;
 import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
-import xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable;
-import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Stream;
+
+import static java.util.Collections.emptyMap;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
 
 @DisplayName("Weakening")
 public class WeakeningTest {
@@ -59,7 +57,7 @@ public class WeakeningTest {
             "test"));
 
     final var solverResult = ConstraintSystemSolver.solve(constraints);
-    assertTrue(solverResult.hasSolution());
+    assertTrue(solverResult.isSatisfiable());
   }
 
   @CsvSource({
@@ -111,7 +109,7 @@ public class WeakeningTest {
                     sizeAnalysis,
                     Map.of("size", "true"))));
 
-    assertEquals(expectedSolution, solverResult.hasSolution());
+    assertEquals(expectedSolution, solverResult.isSatisfiable());
   }
 
   @Test
@@ -137,7 +135,7 @@ public class WeakeningTest {
                 W.compareCoefficientsLessOrEqualUsingFarkas(
                     List.of(cr, bl, br), P, Q, sizeAnalysis, emptyMap())));
 
-    assertTrue(solverResult.hasSolution());
+    assertTrue(solverResult.isSatisfiable());
   }
 
   @Test
@@ -163,7 +161,7 @@ public class WeakeningTest {
                 W.compareCoefficientsLessOrEqualUsingFarkas(
                     List.of(x, y), P, Q, sizeAnalysis, Map.of("l2xy", "true"))));
 
-    assertTrue(solverResult.hasSolution());
+    assertTrue(solverResult.isSatisfiable());
   }
 
   @Test
@@ -187,7 +185,7 @@ public class WeakeningTest {
                 W.compareCoefficientsLessOrEqualUsingFarkas(
                     List.of(x, y), P, Q, sizeAnalysis, Map.of("lp1y", "true"))));
 
-    assertTrue(solverResult.hasSolution());
+    assertTrue(solverResult.isSatisfiable());
   }
 
   @Test
@@ -217,7 +215,7 @@ public class WeakeningTest {
                 W.compareCoefficientsLessOrEqualUsingFarkas(
                     List.of(x), P, Q, sizeAnalysis, Map.of("lp1", "true"))));
 
-    assertTrue(solverResult.hasSolution());
+    assertTrue(solverResult.isSatisfiable());
   }
 
   private static Stream<Arguments> pairs() {
@@ -242,14 +240,12 @@ public class WeakeningTest {
         ConstraintSystemSolver.solve(
             new HashSet<>(
                 W.compareCoefficientsLessOrEqualUsingFarkas(
-                    List.of(
-                        new Identifier(
-                            Predefined.INSTANCE, "_", new TreeType(TypeVariable.alpha()))),
+                    List.of(Identifier.predefinedTree("_")),
                     p,
                     q,
                     new DirectedMultigraph<>(SizeEdge.class),
                     Map.of("mono", "true"))));
 
-    assertTrue(solverResult.hasSolution());
+    assertTrue(solverResult.isSatisfiable());
   }
 }

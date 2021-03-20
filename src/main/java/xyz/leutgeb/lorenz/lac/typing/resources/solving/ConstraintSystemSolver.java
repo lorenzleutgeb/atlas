@@ -1,17 +1,5 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.solving;
 
-import static com.microsoft.z3.Status.SATISFIABLE;
-import static com.microsoft.z3.Status.UNKNOWN;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptyMap;
-import static java.util.Optional.empty;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-import static xyz.leutgeb.lorenz.lac.util.Util.flag;
-import static xyz.leutgeb.lorenz.lac.util.Util.output;
-import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
-import static xyz.leutgeb.lorenz.lac.util.Util.signum;
-import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
-
 import com.google.common.collect.HashBiMap;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
@@ -25,6 +13,16 @@ import com.microsoft.z3.Solver;
 import com.microsoft.z3.Statistics;
 import com.microsoft.z3.Status;
 import com.microsoft.z3.Z3Exception;
+import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import org.hipparchus.fraction.Fraction;
+import xyz.leutgeb.lorenz.lac.util.Pair;
+import xyz.leutgeb.lorenz.lac.util.Util;
+
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -42,15 +40,18 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.Value;
-import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.util.Fraction;
-import xyz.leutgeb.lorenz.lac.util.Pair;
-import xyz.leutgeb.lorenz.lac.util.Util;
+
+import static com.microsoft.z3.Status.SATISFIABLE;
+import static com.microsoft.z3.Status.UNKNOWN;
+import static com.microsoft.z3.Status.UNSATISFIABLE;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
+import static java.util.Optional.empty;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.flag;
+import static xyz.leutgeb.lorenz.lac.util.Util.output;
+import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
+import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
 
 @Slf4j
 public class ConstraintSystemSolver {
@@ -76,7 +77,7 @@ public class ConstraintSystemSolver {
       this.smtFile = smtFile;
     }
 
-    public boolean hasSolution() {
+    public boolean isSatisfiable() {
       return status.equals(SATISFIABLE);
     }
 
@@ -99,6 +100,27 @@ public class ConstraintSystemSolver {
 
     public static Result unknown() {
       return new Result(UNKNOWN, empty(), emptyMap(), empty());
+    }
+
+    public static Result merge(Result a, Result b) {
+      final Status status = a.status.equals(SATISFIABLE) ? b.status : a.status;
+      return new Result(
+          status,
+          UNSATISFIABLE.equals(status)
+              ? empty()
+              : Optional.of(
+                  Stream.concat(
+                          a.getSolution().orElse(emptyMap()).entrySet().stream(),
+                          b.getSolution().orElse(emptyMap()).entrySet().stream())
+                      .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (xa, xb) -> {
+                        if (xa.equals(xb)) {
+                          return xa;
+                        }
+                        log.error("Cannot merge {} and {}!", xa, xb);
+                        return null;
+                      }))),
+          emptyMap(),
+          empty());
     }
   }
 
@@ -146,6 +168,9 @@ public class ConstraintSystemSolver {
         coefficients.addAll(constraint.occurringCoefficients());
       }
 
+      final var trackNonNegative =
+          flag(ConstraintSystemSolver.class, emptyMap(), "trackNonNegative");
+
       for (var coefficient : coefficients) {
         if (!(coefficient instanceof UnknownCoefficient)) {
           continue;
@@ -160,11 +185,11 @@ public class ConstraintSystemSolver {
                   ? ctx.mkIntConst(unknownCoefficient.getName())
                   : ctx.mkRealConst(unknownCoefficient.getName());
           if (!unknownCoefficient.isMaybeNegative()) {
-            final var positive = ctx.mkGe(it, ctx.mkInt(0));
+            final var positive = ctx.mkGe((Expr) it, ctx.mkInt(0));
             if (optimize) {
               opt.Add(positive);
             } else {
-              if (unsatCore && false) {
+              if (unsatCore && trackNonNegative) {
                 solver.assertAndTrack(
                     positive, ctx.mkBoolConst("non negative " + unknownCoefficient));
               } else {
@@ -200,24 +225,24 @@ public class ConstraintSystemSolver {
         }
       }
 
-      System.out.println("lac Coefficients: " + generatedCoefficients.keySet().size());
-      System.out.println("lac Constraints:  " + constraints.size());
-      System.out.println("Z3  Scopes:       " + (optimize ? "?" : solver.getNumScopes()));
-      System.out.println("Z3  Assertions:   " + (optimize ? "?" : solver.getNumAssertions()));
+      log.info("lac Coefficients: " + generatedCoefficients.keySet().size());
+      log.info("lac Constraints:  " + constraints.size());
+      log.info("Z3  Scopes:       " + (optimize ? "?" : solver.getNumScopes()));
+      log.info("Z3  Assertions:   " + (optimize ? "?" : solver.getNumAssertions()));
 
       final Path smtFile = outPath.resolve("instance.smt");
 
       try (final var out = new PrintWriter(output(smtFile))) {
         out.println(optimize ? opt : solver);
         log.debug("Wrote SMT instance to {}.", smtFile);
-        System.out.println("Wrote SMT instance to " + smtFile);
+        log.info("Wrote SMT instance to " + smtFile);
       } catch (IOException ioException) {
         log.warn("Failed to write SMT instance to {}.", smtFile, ioException);
         ioException.printStackTrace();
       }
 
       if (dump) {
-        System.out.println("Exiting because dump was requested.");
+        log.info("Exiting because dump was requested.");
         System.exit(0);
       }
 
@@ -232,9 +257,8 @@ public class ConstraintSystemSolver {
                   solver::toString);
 
       if (optimize && result.getLeft().equals(SATISFIABLE)) {
-        System.out.println("Objectives:");
         for (Expr objective : opt.getObjectives()) {
-          System.out.println(objective + " = " + opt.getModel().getConstInterp(objective));
+          log.debug("Objective: " + objective + " = " + opt.getModel().getConstInterp(objective));
         }
       }
 
@@ -275,7 +299,7 @@ public class ConstraintSystemSolver {
         } else {
           throw bug("interpretation contains constant of unknown or unexpected type");
         }
-        if (signum(v.getValue()) < 0 && !e.getValue().isMaybeNegative()) {
+        if (v.getValue().signum() < 0 && !e.getValue().isMaybeNegative()) {
           log.warn("Got negative coefficient");
         }
         solution.put(e.getValue(), v);
@@ -298,10 +322,10 @@ public class ConstraintSystemSolver {
           final var value = entry.getValueString();
           result.put(entry.Key, value);
           if ("max memory".equals(entry.Key)) {
-            System.out.println("Max. Memory: " + entry.getValueString() + " MiB");
+            log.info("Max. Memory: " + entry.getValueString() + " MiB");
           }
           if ("memory".equals(entry.Key)) {
-            System.out.println("     Memory: " + entry.getValueString() + " MiB");
+            log.info("     Memory: " + entry.getValueString() + " MiB");
           }
           log.trace("{}={}", entry.Key, value);
           printer.println(entry.Key + "=" + value);
@@ -332,7 +356,7 @@ public class ConstraintSystemSolver {
     }
     final var stop = Instant.now();
     System.out.println("Solving duration: " + (Duration.between(start, stop)));
-    log.debug("Solving duration: " + (Duration.between(start, stop)));
+    log.debug("Solving duratio: " + (Duration.between(start, stop)));
     if (SATISFIABLE.equals(status)) {
       return Pair.of(status, Optional.of(getModel.get()));
     } else if (UNKNOWN.equals(status)) {

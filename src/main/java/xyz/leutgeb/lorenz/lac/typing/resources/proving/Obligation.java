@@ -112,7 +112,7 @@ public class Obligation {
         "label",
         new NidiAttribute<>(
             Label.html(
-                toString()
+                toString().replace("<", "&lt;").replace(">", "&gt;")
                     + (generalConstraints.isEmpty() ? "" : "<br />- - -<br />")
                     + generalConstraintsString)));
   }
@@ -123,7 +123,6 @@ public class Obligation {
         context.getIds().isEmpty()
             ? "Ø"
             : context.getIds().stream().map(Object::toString).collect(joining(", "));
-    ;
     final var contextStr =
         idStr + " | " + context.getAnnotation() + " " + context.getAnnotation().getNameAndId();
 

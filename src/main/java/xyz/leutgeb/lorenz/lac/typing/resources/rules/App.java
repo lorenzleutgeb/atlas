@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.lac.typing.resources.rules;
 import static java.util.Collections.singletonList;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.lac.util.Util.append;
+import static xyz.leutgeb.lorenz.lac.util.Util.flag;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,8 +49,7 @@ public class App implements Rule {
       throw new IllegalArgumentException("expected some candidate annotations (at least one)");
     }
 
-    final boolean noscale =
-        Boolean.parseBoolean(arguments.getOrDefault("noscale", "false")) && true;
+    final boolean noscale = flag(App.class, arguments, "noscale");
     final int m = readM(arguments);
 
     if (noscale || m == 1) {
@@ -117,66 +117,58 @@ public class App implements Rule {
       Map<String, String> arguments) {
     final var m = readM(arguments);
 
-    final List<Constraint> constraints =
-        singletonList(
-            new DisjunctiveConstraint(
-                Stream.concat(
-                        Stream.of(
-                            new ConjunctiveConstraint(
-                                append(
-                                    EqualityConstraint.eq(
-                                        signature.from,
-                                        obligation.getContext().getAnnotation(),
-                                        ruleName(obligation) + " Q"),
-                                    signature.to.increment(
-                                        obligation.getAnnotation(),
-                                        1,
-                                        ruleName(obligation)
-                                            + " Q' from signature = Q' + 1 from context")),
-                                "(app)")),
-                        candidates.stream()
-                            .flatMap(
-                                candidate ->
-                                    IntStream.rangeClosed(1, m)
-                                        .mapToObj(
-                                            i -> {
-                                              final var from =
-                                                  candidate.from.multiply(Coefficient.of(i));
-                                              final var to =
-                                                  candidate.to.multiply(Coefficient.of(i));
+    return singletonList(
+        new DisjunctiveConstraint(
+            Stream.concat(
+                    Stream.of(
+                        new ConjunctiveConstraint(
+                            append(
+                                EqualityConstraint.eq(
+                                    signature.from,
+                                    obligation.getContext().getAnnotation(),
+                                    ruleName(obligation) + " Q"),
+                                signature.to.increment(
+                                    obligation.getAnnotation(),
+                                    1,
+                                    ruleName(obligation)
+                                        + " Q' from signature = Q' + 1 from context")),
+                            "(app)")),
+                    candidates.stream()
+                        .flatMap(
+                            candidate ->
+                                IntStream.rangeClosed(1, m)
+                                    .mapToObj(
+                                        i -> {
+                                          final var from =
+                                              candidate.from.multiply(Coefficient.of(i));
+                                          final var to = candidate.to.multiply(Coefficient.of(i));
 
-                                              final var addFrom =
-                                                  Annotation.add(signature.from, from.getLeft());
-                                              final var addTo =
-                                                  Annotation.add(signature.to, to.getLeft());
+                                          final var addFrom =
+                                              Annotation.add(signature.from, from.getLeft());
+                                          final var addTo =
+                                              Annotation.add(signature.to, to.getLeft());
 
-                                              return new ConjunctiveConstraint(
+                                          return new ConjunctiveConstraint(
+                                              append(
                                                   append(
-                                                      append(
-                                                          append(from.getRight(), to.getRight()),
-                                                          append(
-                                                              addFrom.getRight(),
-                                                              addTo.getRight())),
-                                                      append(
-                                                          EqualityConstraint.eq(
-                                                              addFrom.getLeft(),
-                                                              obligation
-                                                                  .getContext()
-                                                                  .getAnnotation(),
-                                                              "(app) Q"),
-                                                          addTo
-                                                              .getLeft()
-                                                              .increment(
-                                                                  obligation.getAnnotation(),
-                                                                  1,
-                                                                  ruleName(obligation)
-                                                                      + " Q' from signature = Q' + 1 from context"))),
-                                                  "(app)");
-                                            })))
-                    .collect(Collectors.toUnmodifiableList()),
-                "(app)"));
-
-    return constraints;
+                                                      append(from.getRight(), to.getRight()),
+                                                      append(addFrom.getRight(), addTo.getRight())),
+                                                  append(
+                                                      EqualityConstraint.eq(
+                                                          addFrom.getLeft(),
+                                                          obligation.getContext().getAnnotation(),
+                                                          "(app) Q"),
+                                                      addTo
+                                                          .getLeft()
+                                                          .increment(
+                                                              obligation.getAnnotation(),
+                                                              1,
+                                                              ruleName(obligation)
+                                                                  + " Q' from signature = Q' + 1 from context"))),
+                                              "(app)");
+                                        })))
+                .collect(Collectors.toUnmodifiableList()),
+            "(app)"));
   }
 
   private List<Constraint> appPlusWithCfIncludingShift(

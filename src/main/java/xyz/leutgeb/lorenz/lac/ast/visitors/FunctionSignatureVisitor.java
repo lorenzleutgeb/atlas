@@ -22,7 +22,7 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.FunctionType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.ProductType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
-import xyz.leutgeb.lorenz.lac.util.Fraction;
+import org.hipparchus.fraction.Fraction;
 
 class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature> {
   private final TypeVisitor typeVisitor;
