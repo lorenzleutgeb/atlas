@@ -9,7 +9,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.jgrapht.Graph;
-import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.traverse.TopologicalOrderIterator;
 import xyz.leutgeb.lorenz.lac.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
@@ -25,6 +24,7 @@ import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.Equivalence;
 import xyz.leutgeb.lorenz.lac.unification.UnificationContext;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
+import xyz.leutgeb.lorenz.lac.util.DependencyEdge;
 import xyz.leutgeb.lorenz.lac.util.Scheduler;
 import xyz.leutgeb.lorenz.lac.util.Util;
 
@@ -63,7 +63,7 @@ public class Program {
   // SCC doesn't really matter. However we chose to still sort them to get consistent outputs
   // without resorting in multiple places.
   @Getter private final List<List<String>> order;
-  private final Graph<Graph<String, DefaultEdge>, DefaultEdge> condensation;
+  private final Graph<Graph<String, DependencyEdge>, DependencyEdge> condensation;
 
   @Getter @Setter private String name;
   @Getter private final Path basePath;
@@ -76,7 +76,7 @@ public class Program {
       Map<String, FunctionDefinition> functionDefinitions,
       Path basePath,
       Set<String> roots,
-      Graph<Graph<String, DefaultEdge>, DefaultEdge> condensation) {
+      Graph<Graph<String, DependencyEdge>, DependencyEdge> condensation) {
     this.functionDefinitions = functionDefinitions;
     this.condensation = condensation;
 
@@ -113,7 +113,7 @@ public class Program {
   private void inferParallel() throws UnificationError, TypeError {
     var root = UnificationContext.root();
     var scheduler =
-        new Scheduler<Void, Graph<String, DefaultEdge>, DefaultEdge>(
+        new Scheduler<Void, Graph<String, DependencyEdge>, DependencyEdge>(
             condensation,
             (alternative) ->
                 () -> {
@@ -177,8 +177,7 @@ public class Program {
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       Map<String, Path> tactics,
       boolean infer,
-      Set<Constraint> externalConstraints
-  ) {
+      Set<Constraint> externalConstraints) {
     if (functionDefinitions.values().stream()
         .map(FunctionDefinition::runaway)
         .anyMatch(Predicate.not(Set::isEmpty))) {
@@ -310,7 +309,7 @@ public class Program {
                   return result;
                 });
 
-    Map<Graph<String, DefaultEdge>, Scheduler.Result<ConstraintSystemSolver.Result>> result;
+    Map<Graph<String, DependencyEdge>, Scheduler.Result<ConstraintSystemSolver.Result>> result;
     try {
       result = scheduler.run(8, Integer.MAX_VALUE, TimeUnit.DAYS);
     } catch (InterruptedException e) {

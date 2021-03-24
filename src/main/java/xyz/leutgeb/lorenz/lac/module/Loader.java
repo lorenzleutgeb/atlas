@@ -1,30 +1,6 @@
 package xyz.leutgeb.lorenz.lac.module;
 
-import static java.util.Collections.synchronizedMap;
-import static java.util.Optional.ofNullable;
-import static java.util.function.Predicate.not;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
-
 import com.google.common.base.Functions;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.Spliterators;
-import java.util.Stack;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.Phaser;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.Value;
@@ -43,7 +19,33 @@ import org.jgrapht.nio.dot.DOTExporter;
 import org.jgrapht.traverse.BreadthFirstIterator;
 import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.lac.ast.Program;
+import xyz.leutgeb.lorenz.lac.util.DependencyEdge;
 import xyz.leutgeb.lorenz.lac.util.Util;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.Spliterators;
+import java.util.Stack;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.Phaser;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
+import static java.util.Collections.synchronizedMap;
+import static java.util.Optional.ofNullable;
+import static java.util.function.Predicate.not;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
 
 @Value
 @Slf4j
@@ -60,7 +62,7 @@ public class Loader {
 
   private static final long BASE = System.nanoTime();
 
-  Graph<String, DefaultEdge> g = new DefaultDirectedGraph<>(null, DefaultEdge::new, false);
+  Graph<String, DependencyEdge> g = new DefaultDirectedGraph<>(null, DependencyEdge::source, false);
 
   @Getter
   String id = Long.toHexString(System.currentTimeMillis() * 31 + (System.nanoTime() - BASE));
@@ -220,10 +222,10 @@ public class Loader {
                             false))
                 .collect(Collectors.toSet()));
 
-    final Graph<Graph<String, DefaultEdge>, DefaultEdge> condensation =
-        new KosarajuStrongConnectivityInspector<>(reachable).getCondensation();
+    final Graph<Graph<String, DependencyEdge>, DependencyEdge> condensation =
+        mapEdgesToSourceDependency(new KosarajuStrongConnectivityInspector<>(reachable).getCondensation());
 
-    addArtificialEdges(condensation);
+    addSyntheticEdges(condensation);
 
     return new Program(
         reachable.vertexSet().stream()
@@ -233,7 +235,7 @@ public class Loader {
         condensation);
   }
 
-  private void addArtificialEdges(Graph<Graph<String, DefaultEdge>, DefaultEdge> condensation) {
+  private void addSyntheticEdges(Graph<Graph<String, DependencyEdge>, DependencyEdge> condensation) {
     final var before = new CycleDetector<>(condensation);
     if (before.detectCycles()) {
       throw bug("Cycles! " + before.findCycles());
@@ -241,8 +243,8 @@ public class Loader {
 
     final var connectivity = new ConnectivityInspector<>(condensation);
 
-    final Set<Graph<String, DefaultEdge>> recursive = new HashSet<>();
-    final Set<Graph<String, DefaultEdge>> nonRecursive = new HashSet<>();
+    final Set<Graph<String, DependencyEdge>> recursive = new HashSet<>();
+    final Set<Graph<String, DependencyEdge>> nonRecursive = new HashSet<>();
     for (var g : condensation.vertexSet()) {
       (isRecursive(g) ? recursive : nonRecursive).add(g);
     }
@@ -264,7 +266,7 @@ public class Loader {
           // be easy to
           // detect.
 
-          condensation.addEdge(r, nr);
+          condensation.addEdge(r, nr, DependencyEdge.synthetic());
           /*
           connectivity.edgeAdded(
               new GraphEdgeChangeEvent<>(
@@ -280,7 +282,7 @@ public class Loader {
     }
   }
 
-  private boolean isRecursive(Graph<String, DefaultEdge> g) {
+  private boolean isRecursive(Graph<String, DependencyEdge> g) {
     if (g.vertexSet().size() > 1) {
       return true;
     }
@@ -291,7 +293,7 @@ public class Loader {
     return false;
   }
 
-  private Set<String> affectedModules(Graph<String, DefaultEdge> g) {
+  private Set<String> affectedModules(Graph<String, DependencyEdge> g) {
     return g.vertexSet().stream()
         .map(functionDefinitions::get)
         .map(FunctionDefinition::getModuleName)
@@ -413,7 +415,14 @@ public class Loader {
   }
 
   public void exportGraph(OutputStream stream) throws ExportException {
-    final var exporter = new DOTExporter<String, DefaultEdge>(node -> "\"" + node + "\"");
+    final var exporter = new DOTExporter<String, DependencyEdge>(node -> "\"" + node + "\"");
     exporter.exportGraph(g, stream);
+  }
+  
+  private static <V> Graph<V, DependencyEdge> mapEdgesToSourceDependency(Graph<V, DefaultEdge> g) {
+    final var result = new DefaultDirectedGraph<V, DependencyEdge>(null, DependencyEdge::source, false);
+    g.vertexSet().forEach(result::addVertex);
+    g.edgeSet().forEach(e -> result.addEdge(g.getEdgeSource(e), g.getEdgeTarget(e)));
+    return result;
   }
 }
