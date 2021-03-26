@@ -17,24 +17,25 @@
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
+      jdk = pkgs.graalvm11-ce;
       z3 = pkgs.z3.override {
+          inherit jdk;
           javaBindings = true;
-          jdk = pkgs.graalvm11-ce;
       };
       #g2n = import gradle2nix {};
-      gradleGen = pkgs.gradleGen.override { java = pkgs.graalvm11-ce; };
+      gradleGen = pkgs.gradleGen.override { java = jdk; };
+      gradle = gradleGen.gradle_latest;
       lacEnv = pkgs.buildEnv {
         name = "lac-env";
-        paths = with pkgs; [
-          dot2tex
-          graalvm11-ce
-          gradle2nix.packages."${system}".gradle2nix
-          #gradle2nix."${system}".gradle2nix
-          nixos-generators
-          self.packages."${system}".gradle
-          #self.packages."${system}".z3
+        paths = [
+          gradle
+          jdk
           z3
-          graphviz
+
+          pkgs.dot2tex
+          pkgs.graphviz
+
+          gradle2nix.packages."${system}".gradle2nix
         ];
       };
     in rec {
@@ -87,9 +88,9 @@
             mkdir -p src/main/resources/jni/linux/amd64
             ln -s ${z3.lib}/lib/libz3java.so src/main/resources/jni/linux/amd64/libz3java.so
 
-            export GRAAL_HOME="${pkgs.graalvm11-ce}"
+            export GRAAL_HOME="${jdk}"
             export JAVA_HOME="$GRAAL_HOME"
-            export GRADLE_HOME="${pkgs.gradle}"
+            export GRADLE_HOME="${gradle}"
 
             $JAVA_HOME/bin/java -version
             $GRAAL_HOME/bin/gu --version
@@ -110,13 +111,12 @@
 
       packages."${system}" = rec {
         lac-image = nixosConfigurations.lac.config.system.build.virtualBoxOVA;
-        gradle = gradleGen.gradle_latest;
 
         lac = (pkgs.callPackage ./gradle-env.nix { inherit gradleGen; }) {
           envSpec = ./gradle-env.json;
           src = ./.;
           nativeBuildInputs =
-            [ pkgs.bash pkgs.git pkgs.graalvm11-ce z3 examples pkgs.glibcLocales ];
+            [ pkgs.bash pkgs.git jdk z3 examples pkgs.glibcLocales ];
           Z3_JAVA = "${z3.java}";
           LAC_HOME = "${examples}";
           LANG = "en_US.UTF-8";

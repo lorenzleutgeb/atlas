@@ -35,8 +35,8 @@ plugins {
 }
 
 repositories {
-    mavenCentral()
     jcenter()
+    mavenCentral()
 }
 
 buildscript {
