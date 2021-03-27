@@ -8,14 +8,14 @@ jobs:
       with:
         submodules: recursive
         fetch-depth: 0
-    - name: Cache Nix Store
-      uses: actions/cache@v2
-      id: cache-nix
-      with:
-        path: nix-store.nar
-        key: nix-${{ runner.os }}-${{ github.sha }}
-        restore-keys: |
-          nix-${{ runner.os }}-
+   #- name: Cache Nix Store
+   #  uses: actions/cache@v2
+   #  id: cache-nix
+   #  with:
+   #    path: nix-store.nar
+   #    key: nix-${{ runner.os }}-${{ github.sha }}
+   #    restore-keys: |
+   #      nix-${{ runner.os }}-
    #- name: Cache Gradle Caches
    #  uses: actions/cache@preview
    #  id: cache-gradle
@@ -37,18 +37,23 @@ jobs:
         nix_path: nixpkgs=channel:nixos-unstable
         extra_nix_config: |
           experimental-features = nix-command flakes
-    - name: Import Nix Store
-      if: steps.cache-nix.outputs.cache-hit
-      run: nix-store --import < nix-store.nar
+    - uses: cachix/cachix-action@v8
+      with:
+        name: lorenzleutgeb-public
+        signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
+   #- run: nix-build -A mypackage.components.all
+   #- name: Import Nix Store
+   #  if: steps.cache-nix.outputs.cache-hit
+   #  run: nix-store --import < nix-store.nar
     - run: |
         ulimit -a
         cat /proc/sys/kernel/core_pattern
         nix flake check
-    - run: "eval \"$(nix print-dev-env)\""
-    - name: Compute Closure
-      run: nix path-info --recursive --inputs-from . .#packages.x86_64-linux.lac | tee closure.txt
-    - name: Export Nix Store
-      run: xargs --arg-file=closure.txt nix-store --export > nix-store.nar
+   #- run: "eval \"$(nix print-dev-env)\""
+   #- name: Compute Closure
+   #  run: nix path-info --recursive --inputs-from . .#packages.x86_64-linux.lac | tee closure.txt
+   #- name: Export Nix Store
+   #  run: xargs --arg-file=closure.txt nix-store --export > nix-store.nar
     - name: Build
       run: nix build --print-build-logs .#packages.x86_64-linux.lac
    #- name: Set up Docker Buildx
@@ -84,14 +89,14 @@ jobs:
    #  with:
    #    name: tacas
    #    path: build/distributions/tacas.zip
-    - uses: actions/upload-artifact@v2
-      with:
-        name: nix
-        path: |
-          nix-store.nar
-          closure.txt
-    - uses: actions/upload-artifact@v2
-      if: ${{ failure() }}
-      with:
-        name: corefiles
-        path: corefile-*
+   #- uses: actions/upload-artifact@v2
+   #  with:
+   #    name: nix
+   #    path: |
+   #      nix-store.nar
+   #      closure.txt
+   #- uses: actions/upload-artifact@v2
+   #  if: ${{ failure() }}
+   #  with:
+   #    name: corefiles
+   #    path: corefile-*
