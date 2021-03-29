@@ -19,8 +19,8 @@
       pkgs = import nixpkgs { inherit system; };
       jdk = pkgs.graalvm11-ce;
       z3 = pkgs.z3.override {
-          inherit jdk;
-          javaBindings = true;
+        inherit jdk;
+        javaBindings = true;
       };
       #g2n = import gradle2nix {};
       gradleGen = pkgs.gradleGen.override { java = jdk; };
@@ -48,11 +48,9 @@
           ({ pkgs, ... }: {
             virtualbox = {
               vmName = "lac";
-              params = {
-                usb = "off";
-              };
+              params = { usb = "off"; };
             };
-            environment.systemPackages = [ self.defaultPackage."${system}"];
+            environment.systemPackages = [ self.defaultPackage."${system}" ];
             networking.hostName = "lac";
             users.users.lac = {
               password = "lac";
@@ -110,11 +108,23 @@
       defaultPackage."${system}" = packages."${system}".lac;
 
       packages."${system}" = rec {
-        lac-image = nixosConfigurations.lac.config.system.build.virtualBoxOVA;
+        lac-ova = nixosConfigurations.lac.config.system.build.virtualBoxOVA;
 
         lac = (pkgs.callPackage ./gradle-env.nix { inherit gradleGen; }) {
           envSpec = ./gradle-env.json;
-          src = ./.;
+
+          src =
+            /* pkgs.nix-gitignore.gitignoreSourcePure [
+                 "*"
+                 "!src/"
+                 "!*gradle.kts"
+                 "!gradle.properties"
+                 "!lac.*"
+                 "!version.sh"
+               ]
+            */
+            ./.;
+
           nativeBuildInputs =
             [ pkgs.bash pkgs.git jdk z3 examples pkgs.glibcLocales ];
           Z3_JAVA = "${z3.java}";
@@ -142,7 +152,7 @@
           '';
         };
 
-        docker-lac-shell = pkgs.dockerTools.buildLayeredImage {
+        lac-shell-oci = pkgs.dockerTools.buildLayeredImage {
           name = "lac-shell";
           tag = "latest";
           contents = [ pkgs.bash pkgs.coreutils packages."${system}".lac ];
@@ -152,7 +162,7 @@
           };
         };
 
-        docker-lac = pkgs.dockerTools.buildLayeredImage {
+        lac-oci = pkgs.dockerTools.buildLayeredImage {
           name = "lac";
           tag = "latest";
           config.Entrypoint = packages."${system}".lac + "/lac";
