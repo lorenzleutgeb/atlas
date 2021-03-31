@@ -16,7 +16,10 @@
   outputs = { self, nixpkgs, gradle2nix, examples }:
     let
       system = "x86_64-linux";
-      pkgs = import nixpkgs { inherit system; };
+      pkgs = import nixpkgs {
+        inherit system;
+        #config.allowUnfree = true;
+      };
       jdk = pkgs.graalvm11-ce;
       z3 = pkgs.z3.override {
         inherit jdk;
@@ -25,16 +28,20 @@
       #g2n = import gradle2nix {};
       gradleGen = pkgs.gradleGen.override { java = jdk; };
       gradle = gradleGen.gradle_latest;
+      solvers = with pkgs; [
+        alt-ergo
+        cvc4
+        yices
+        opensmt
+      ];
       lacEnv = pkgs.buildEnv {
         name = "lac-env";
         paths = [
           gradle
           jdk
           z3
-
           pkgs.dot2tex
           pkgs.graphviz
-
           gradle2nix.packages."${system}".gradle2nix
         ];
       };
