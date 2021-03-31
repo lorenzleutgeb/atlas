@@ -24,9 +24,9 @@ public class Match implements Rule {
   private String ruleName(Obligation obligation) {
     return "("
         + getName()
-        + " `"
+        + " "
         + ((MatchExpression) obligation.getExpression()).getScrut().terminalOrBox()
-        + "`)";
+        + ")";
   }
 
   public static AnnotatingContext pop(List<Identifier> that, Identifier scrutinee) {
@@ -129,19 +129,19 @@ public class Match implements Rule {
             new EqualityConstraint(
                 gammaxsr.getRankCoefficientOrDefine(x1),
                 gammaxq.getRankCoefficient(x),
-                ruleName(obligation) + " r_{m+1} = q_{m+1} (for var `" + x1 + "`)"),
+                ruleName(obligation) + " r_{m+1} = q_{m+1} (for var " + x1 + ")"),
             new EqualityConstraint(
                 gammaxsr.getRankCoefficientOrDefine(x3),
                 gammaxq.getRankCoefficient(x),
-                ruleName(obligation) + " r_{m+2} = q_{m+1} (for var `" + x3 + "`)"),
+                ruleName(obligation) + " r_{m+2} = q_{m+1} (for var " + x3 + ")"),
             new EqualityConstraint(
                 gammaxsr.getCoefficientOrDefine(id -> id.equals(x1) ? 1 : 0, 0),
                 gammaxq.getRankCoefficient(x),
-                ruleName(obligation) + " r_{(0⃗⃗,1,0,0)} = q_{m+1}"),
+                ruleName(obligation) + " r_{(0,...,0,1,0,0)} = q_{m+1}"),
             new EqualityConstraint(
                 gammaxsr.getCoefficientOrDefine(id -> id.equals(x3) ? 1 : 0, 0),
                 gammaxq.getRankCoefficient(x),
-                ruleName(obligation) + " r_{(0⃗,0,1,0)} = q_{m+1}")));
+                ruleName(obligation) + " r_{(0,...,0,0,1,0)} = q_{m+1}")));
 
     gammaxq
         .streamNonRank()
@@ -152,9 +152,8 @@ public class Match implements Rule {
                   gammaxsr.getCoefficientOrDefine(qEntry.mask(x1, a).mask(x3, a)),
                   qEntry.getValue(),
                   ruleName(obligation)
-                      + " r_{a⃗⃗,a,a,b} = q_{a⃗⃗,a,b} for expression `"
-                      + expression
-                      + "`");
+                      + " r_{a⃗⃗,a,a,b} = q_{a⃗⃗,a,b} for expression "
+                      + expression);
             })
         .forEach(rConstraints::add);
 

@@ -20,6 +20,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 @Value
 @EqualsAndHashCode(callSuper = false)
@@ -33,16 +34,19 @@ public class ConjunctiveConstraint extends Constraint {
   }
 
   @Override
-  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
+  public BoolExpr encode(
+      Context ctx,
+      BiMap<UnknownCoefficient, ArithExpr> coefficients,
+      ConstraintSystemSolver.Domain domain) {
     if (elements.isEmpty()) {
       return ctx.mkTrue();
     }
     if (elements.size() == 1) {
-      return pick(elements).encode(ctx, coefficients);
+      return pick(elements).encode(ctx, coefficients, domain);
     }
     return ctx.mkAnd(
         elements.stream()
-            .map(element -> element.encode(ctx, coefficients))
+            .map(element -> element.encode(ctx, coefficients, domain))
             .toArray(BoolExpr[]::new));
   }
 

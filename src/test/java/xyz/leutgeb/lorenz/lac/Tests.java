@@ -28,13 +28,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.hipparchus.fraction.Fraction;
 import org.jgrapht.nio.AttributeType;
 import org.jgrapht.nio.DefaultAttribute;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -56,7 +56,6 @@ import xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.BoolType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
-import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.lac.util.NidiExporter;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
 
@@ -211,7 +210,8 @@ public class Tests {
     assertEquals(expectedSignature, definition.getAnnotatedSignature(), "annotated signature");
     assertEquals(expectedSignature, definition.getInferredSignature(), "inferred signature");
 
-    final ConstraintSystemSolver.Result result = program.solve(new HashMap<>(), emptyMap(), true, new HashSet<>());
+    final ConstraintSystemSolver.Result result =
+        program.solve(new HashMap<>(), emptyMap(), true, new HashSet<>());
     assertTrue(result.isSatisfiable());
     program.printAllInferredSignaturesInOrder(System.out);
   }

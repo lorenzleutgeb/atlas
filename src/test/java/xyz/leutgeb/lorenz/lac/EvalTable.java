@@ -1,21 +1,5 @@
 package xyz.leutgeb.lorenz.lac;
 
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.optimiziation.Optimization;
-import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.lac.unification.UnificationError;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
-
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -23,6 +7,20 @@ import static xyz.leutgeb.lorenz.lac.TestUtil.TACTICS;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE_BY_TWO;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
+import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
 public class EvalTable {
   static final Annotation Qp = new Annotation(List.of(ONE_BY_TWO), Map.of(unitIndex(1), ONE), "Q'");
@@ -81,8 +79,8 @@ public class EvalTable {
                 .withCost));
      */
 
-    //final var target = Optimization.standard(program);
-    //constraints.addAll(target.constraints);
+    // final var target = Optimization.standard(program);
+    // constraints.addAll(target.constraints);
 
     final var result =
         program.solve(

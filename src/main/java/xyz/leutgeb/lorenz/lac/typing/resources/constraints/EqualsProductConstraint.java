@@ -27,6 +27,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
@@ -48,15 +49,19 @@ public class EqualsProductConstraint extends Constraint {
   }
 
   @Override
-  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
+  public BoolExpr encode(
+      Context ctx,
+      BiMap<UnknownCoefficient, ArithExpr> coefficients,
+      ConstraintSystemSolver.Domain domain) {
     if (product.size() == 1) {
-      return ctx.mkEq(left.encode(ctx, coefficients), pick(product).encode(ctx, coefficients));
+      return ctx.mkEq(
+          left.encode(ctx, coefficients, domain), pick(product).encode(ctx, coefficients, domain));
     }
 
     final ArithExpr[] encodedSum =
-        product.stream().map(c -> c.encode(ctx, coefficients)).toArray(ArithExpr[]::new);
+        product.stream().map(c -> c.encode(ctx, coefficients, domain)).toArray(ArithExpr[]::new);
 
-    return ctx.mkEq(left.encode(ctx, coefficients), ctx.mkMul(encodedSum));
+    return ctx.mkEq(left.encode(ctx, coefficients, domain), ctx.mkMul(encodedSum));
   }
 
   @Override

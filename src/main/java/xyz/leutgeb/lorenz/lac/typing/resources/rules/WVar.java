@@ -72,7 +72,7 @@ public class WVar implements Rule {
                 gammaR,
                 "(w:var) q_i = r_i when removing "
                     + idToWeaken
-                    + " for expression `"
+                    + " for expression "
                     + obligation.getExpression()),
             context
                 .streamNonRank()
@@ -85,9 +85,9 @@ public class WVar implements Rule {
                           gammaR.getCoefficientOrDefine(entry),
                           "(w:var) r_{(a⃗⃗, b)} = q_{(a⃗⃗, 0, b)} when removing "
                               + idToWeaken
-                              + " for expression `"
+                              + " for expression "
                               + obligation.getExpression()
-                              + "`"
+                              + ""
                           // + "` with (a⃗⃗, b) = "
                           // + rIndex
                           );

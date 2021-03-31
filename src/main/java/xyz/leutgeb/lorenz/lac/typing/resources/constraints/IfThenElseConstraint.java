@@ -14,6 +14,7 @@ import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
@@ -38,13 +39,16 @@ public class IfThenElseConstraint extends Constraint {
   }
 
   @Override
-  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
+  public BoolExpr encode(
+      Context ctx,
+      BiMap<UnknownCoefficient, ArithExpr> coefficients,
+      ConstraintSystemSolver.Domain domain) {
     return ctx.mkEq(
-        target.encode(ctx, coefficients),
+        target.encode(ctx, coefficients, domain),
         ctx.mkITE(
-            condition.encode(ctx, coefficients),
-            thenBranch.encode(ctx, coefficients),
-            elseBranch.encode(ctx, coefficients)));
+            condition.encode(ctx, coefficients, domain),
+            thenBranch.encode(ctx, coefficients, domain),
+            elseBranch.encode(ctx, coefficients, domain)));
   }
 
   @Override

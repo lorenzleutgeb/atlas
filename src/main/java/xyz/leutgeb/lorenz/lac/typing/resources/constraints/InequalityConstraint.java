@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 @Value
 @Slf4j
@@ -38,8 +39,12 @@ public class InequalityConstraint extends Constraint {
     this.right = right;
   }
 
-  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
-    return ctx.mkNot(ctx.mkEq(left.encode(ctx, coefficients), right.encode(ctx, coefficients)));
+  public BoolExpr encode(
+      Context ctx,
+      BiMap<UnknownCoefficient, ArithExpr> coefficients,
+      ConstraintSystemSolver.Domain domain) {
+    return ctx.mkNot(
+        ctx.mkEq(left.encode(ctx, coefficients, domain), right.encode(ctx, coefficients, domain)));
   }
 
   @Override

@@ -12,6 +12,7 @@ import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 @Value
 @Slf4j
@@ -24,8 +25,11 @@ public class NegationConstraint extends Constraint {
   }
 
   @Override
-  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
-    return ctx.mkNot(element.encode(ctx, coefficients));
+  public BoolExpr encode(
+      Context ctx,
+      BiMap<UnknownCoefficient, ArithExpr> coefficients,
+      ConstraintSystemSolver.Domain domain) {
+    return ctx.mkNot(element.encode(ctx, coefficients, domain));
   }
 
   @Override

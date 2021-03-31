@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 public class UnsatisfiableConstraint extends Constraint {
   public UnsatisfiableConstraint(String reason) {
@@ -18,7 +19,10 @@ public class UnsatisfiableConstraint extends Constraint {
   }
 
   @Override
-  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
+  public BoolExpr encode(
+      Context ctx,
+      BiMap<UnknownCoefficient, ArithExpr> coefficients,
+      ConstraintSystemSolver.Domain domain) {
     return ctx.mkFalse();
   }
 

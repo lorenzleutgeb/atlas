@@ -1,12 +1,14 @@
 package xyz.leutgeb.lorenz.lac.util;
 
+import static guru.nidi.graphviz.model.Factory.node;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Stream.generate;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+
 import com.microsoft.z3.RatNum;
 import guru.nidi.graphviz.model.Node;
-import lombok.extern.slf4j.Slf4j;
-import org.hipparchus.fraction.Fraction;
-import xyz.leutgeb.lorenz.lac.ast.Identifier;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -29,13 +31,10 @@ import java.util.function.Supplier;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static guru.nidi.graphviz.model.Factory.node;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Stream.generate;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+import lombok.extern.slf4j.Slf4j;
+import org.hipparchus.fraction.Fraction;
+import xyz.leutgeb.lorenz.lac.ast.Identifier;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 
 @Slf4j
 public class Util {

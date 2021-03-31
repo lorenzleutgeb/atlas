@@ -5,7 +5,6 @@ import static picocli.CommandLine.Help.Visibility.ALWAYS;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -144,13 +143,13 @@ public class Run implements Runnable {
 
     System.out.println("Generating constraints...");
     final var result = program.solve(new HashMap<>(), tacticsMap, infer, Collections.emptySet());
-      if (!result.isSatisfiable()) {
-        System.exit(1);
-      }
+    if (!result.isSatisfiable()) {
+      System.exit(1);
+    }
 
     System.out.println("SIGS:");
     program.printAllInferredSignaturesInOrder(System.out);
-      System.out.println("BOUNDS:");
+    System.out.println("BOUNDS:");
     program.printAllBoundsInOrder(System.out);
 
     final var stop = Instant.now();
@@ -184,7 +183,7 @@ public class Run implements Runnable {
     }
      */
 
-    //System.exit(result.toExitCode());
+    // System.exit(result.toExitCode());
     System.exit(0);
   }
 }

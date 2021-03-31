@@ -1,19 +1,5 @@
 package xyz.leutgeb.lorenz.lac;
 
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
-import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.lac.unification.UnificationError;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Stream;
-
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -21,6 +7,19 @@ import static xyz.leutgeb.lorenz.lac.TestUtil.TACTICS;
 import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE_BY_TWO;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Stream;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
+import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
 public class ModuleTest {
   static final Annotation Qp = new Annotation(List.of(ONE_BY_TWO), Map.of(unitIndex(1), ONE), "Q'");
@@ -57,7 +56,7 @@ public class ModuleTest {
             new HashMap<>(),
             useTactics ? program.lookupTactics(emptyMap(), TACTICS) : emptyMap(),
             true,
-                emptySet());
+            emptySet());
     assertTrue(result.isSatisfiable());
     program.printAllInferredSignaturesInOrder(System.out);
   }

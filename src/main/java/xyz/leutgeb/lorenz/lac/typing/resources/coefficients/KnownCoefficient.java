@@ -1,15 +1,16 @@
 package xyz.leutgeb.lorenz.lac.typing.resources.coefficients;
 
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import static xyz.leutgeb.lorenz.lac.util.Util.isInteger;
+
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.Context;
+import java.util.Map;
+import java.util.function.Predicate;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.hipparchus.fraction.Fraction;
-
-import java.util.Map;
-import java.util.function.Predicate;
-
-import static xyz.leutgeb.lorenz.lac.util.Util.isInteger;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 @Value
 @EqualsAndHashCode
@@ -34,11 +35,17 @@ public class KnownCoefficient implements Coefficient {
     this(new Fraction(value));
   }
 
-  public ArithExpr encode(Context context, Map<UnknownCoefficient, ArithExpr> coefficients) {
-    if (isInteger(value)) {
+  public ArithExpr encode(
+      Context context,
+      Map<UnknownCoefficient, ArithExpr> coefficients,
+      ConstraintSystemSolver.Domain domain) {
+    if (isInteger(value) && ConstraintSystemSolver.Domain.INTEGER.equals(domain)) {
       return context.mkInt(value.getNumerator());
     }
-    return context.mkReal(value.getNumerator(), value.getDenominator());
+    if (ConstraintSystemSolver.Domain.RATIONAL.equals(domain)) {
+      return context.mkReal(value.getNumerator(), value.getDenominator());
+    }
+    throw bug("cannot encode constant");
   }
 
   @Override

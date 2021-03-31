@@ -5,15 +5,15 @@ import java.util.function.Supplier;
 
 public class IntIdGenerator implements Iterator<Integer>, Supplier<Integer> {
   private int highestId;
-  
+
   public static IntIdGenerator fromZeroInclusive() {
     return new IntIdGenerator(0);
   }
-  
+
   public static IntIdGenerator fromOneInclusive() {
     return new IntIdGenerator(1);
   }
-  
+
   public static IntIdGenerator fromInclusive(int initial) {
     return new IntIdGenerator(initial);
   }

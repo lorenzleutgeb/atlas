@@ -94,7 +94,7 @@ public class LetTreeCf implements Rule {
       throw bug("shared variables in let expression when attempting to generate constraints");
     }
 
-    final var prefix = "(let:tree:cf `" + x.getName() + "`) ";
+    final var prefix = "(let:tree:cf " + x.getName() + ") ";
 
     final var varsForGammaAsList =
         obligation.getContext().getIds().stream()

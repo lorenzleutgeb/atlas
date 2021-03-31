@@ -19,6 +19,7 @@ import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 @Value
 @Slf4j
@@ -32,16 +33,19 @@ public class DisjunctiveConstraint extends Constraint {
   }
 
   @Override
-  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
+  public BoolExpr encode(
+      Context ctx,
+      BiMap<UnknownCoefficient, ArithExpr> coefficients,
+      ConstraintSystemSolver.Domain domain) {
     if (elements.isEmpty()) {
       return ctx.mkFalse();
     }
     if (elements.size() == 1) {
-      return pick(elements).encode(ctx, coefficients);
+      return pick(elements).encode(ctx, coefficients, domain);
     }
     return ctx.mkOr(
         elements.stream()
-            .map(element -> element.encode(ctx, coefficients))
+            .map(element -> element.encode(ctx, coefficients, domain))
             .toArray(BoolExpr[]::new));
   }
 

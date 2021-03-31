@@ -1,34 +1,5 @@
 package xyz.leutgeb.lorenz.lac.typing.resources;
 
-import com.google.common.collect.Streams;
-import com.google.common.primitives.Ints;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import org.hipparchus.fraction.Fraction;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsProductConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.OffsetConstraint;
-import xyz.leutgeb.lorenz.lac.util.Pair;
-import xyz.leutgeb.lorenz.lac.util.Util;
-
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
 import static com.google.common.collect.Comparators.lexicographical;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -49,6 +20,34 @@ import static xyz.leutgeb.lorenz.lac.util.Util.generateSubscriptIndex;
 import static xyz.leutgeb.lorenz.lac.util.Util.isAllZeroes;
 import static xyz.leutgeb.lorenz.lac.util.Util.randomHex;
 import static xyz.leutgeb.lorenz.lac.util.Util.repeat;
+
+import com.google.common.collect.Streams;
+import com.google.common.primitives.Ints;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.hipparchus.fraction.Fraction;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsProductConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
+import xyz.leutgeb.lorenz.lac.typing.resources.constraints.OffsetConstraint;
+import xyz.leutgeb.lorenz.lac.util.Pair;
+import xyz.leutgeb.lorenz.lac.util.Util;
 
 @Slf4j
 public class Annotation {
@@ -791,18 +790,19 @@ public class Annotation {
                 return;
               }
 
-
               if (!(ai instanceof KnownCoefficient) || !(bi instanceof KnownCoefficient)) {
                 throw new UnsupportedOperationException("must all be known");
               }
 
-              coefficients.put(i,
-                      Coefficient.of(
-                              ((KnownCoefficient) ai).getValue().subtract(((KnownCoefficient) bi).getValue()))
-                      );
+              coefficients.put(
+                  i,
+                  Coefficient.of(
+                      ((KnownCoefficient) ai)
+                          .getValue()
+                          .subtract(((KnownCoefficient) bi).getValue())));
             });
 
-        return new Annotation(rankCoefficients, coefficients, a.getName() + "-" + b.getName());
+    return new Annotation(rankCoefficients, coefficients, a.getName() + "-" + b.getName());
   }
 
   /** Constraints for this = other + cost */

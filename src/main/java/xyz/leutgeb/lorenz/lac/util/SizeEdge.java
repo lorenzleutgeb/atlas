@@ -1,7 +1,6 @@
 package xyz.leutgeb.lorenz.lac.util;
 
 import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
 import lombok.Value;
 
 @Value

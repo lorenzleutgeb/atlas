@@ -1,5 +1,27 @@
 package xyz.leutgeb.lorenz.lac;
 
+import static java.util.Collections.emptySet;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static xyz.leutgeb.lorenz.lac.ModuleTest.Qp;
+import static xyz.leutgeb.lorenz.lac.TestUtil.loadAndNormalizeAndInferAndUnshare;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.zero;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.FIVE_BY_TWO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE_BY_TWO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.THREE;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.THREE_BY_TWO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
+
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.hipparchus.fraction.Fraction;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -11,30 +33,6 @@ import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
-import org.hipparchus.fraction.Fraction;
-
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static java.util.Collections.emptySet;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static xyz.leutgeb.lorenz.lac.ModuleTest.Qp;
-import static xyz.leutgeb.lorenz.lac.TestUtil.loadAndNormalizeAndInferAndUnshare;
-import static xyz.leutgeb.lorenz.lac.TestUtil.printTable;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.zero;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.FIVE_BY_TWO;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ONE_BY_TWO;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.THREE;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.THREE_BY_TWO;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.TWO;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
-import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
 
 public class Tactics {
   @BeforeAll
@@ -534,12 +532,12 @@ public class Tactics {
                             "tactics",
                             entry.getValue().tactic.get() + ".txt")));
 
-    //final var optionalProver = program.proveWithTactics(annotations, tactics, true);
-    //assertTrue(optionalProver.isPresent());
+    // final var optionalProver = program.proveWithTactics(annotations, tactics, true);
+    // assertTrue(optionalProver.isPresent());
 
-    //final var prover = optionalProver.get();
+    // final var prover = optionalProver.get();
 
-    //var multiTarget = Optimization.standard(program);
+    // var multiTarget = Optimization.standard(program);
 
     final var result = program.solve(annotations, tactics, true, emptySet());
     assertTrue(result.isSatisfiable());

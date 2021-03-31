@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 @Data
 @Slf4j
@@ -37,12 +38,15 @@ public class EqualsAbsConstraint extends Constraint {
     this.right = right;
   }
 
-  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
+  public BoolExpr encode(
+      Context ctx,
+      BiMap<UnknownCoefficient, ArithExpr> coefficients,
+      ConstraintSystemSolver.Domain domain) {
     return ctx.mkEq(
-        left.encode(ctx, coefficients),
+        left.encode(ctx, coefficients, domain),
         ctx.mkApp(
             ctx.mkFuncDecl("abs", ctx.getIntSort(), ctx.getIntSort()),
-            right.encode(ctx, coefficients)));
+            right.encode(ctx, coefficients, domain)));
   }
 
   @Override

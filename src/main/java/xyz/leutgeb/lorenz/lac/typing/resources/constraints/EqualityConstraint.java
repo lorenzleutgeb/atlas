@@ -29,6 +29,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 @Data
 @Slf4j
@@ -133,8 +134,12 @@ public class EqualityConstraint extends Constraint {
     return result;
   }
 
-  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
-    return ctx.mkEq(left.encode(ctx, coefficients), right.encode(ctx, coefficients));
+  public BoolExpr encode(
+      Context ctx,
+      BiMap<UnknownCoefficient, ArithExpr> coefficients,
+      ConstraintSystemSolver.Domain domain) {
+    return ctx.mkEq(
+        left.encode(ctx, coefficients, domain), right.encode(ctx, coefficients, domain));
   }
 
   @Override

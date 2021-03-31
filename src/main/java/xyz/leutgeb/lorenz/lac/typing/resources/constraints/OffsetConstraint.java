@@ -17,10 +17,11 @@ import java.util.Map;
 import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
-import org.hipparchus.fraction.Fraction;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -42,14 +43,18 @@ public class OffsetConstraint extends EqualityConstraint {
   }
 
   @Override
-  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
+  public BoolExpr encode(
+      Context ctx,
+      BiMap<UnknownCoefficient, ArithExpr> coefficients,
+      ConstraintSystemSolver.Domain domain) {
     if (offset instanceof KnownCoefficient
         && ((KnownCoefficient) offset).getValue().getDenominator() != 1) {
       throw bug("oops");
     }
     return ctx.mkEq(
-        left.encode(ctx, coefficients),
-        ctx.mkAdd(right.encode(ctx, coefficients), offset.encode(ctx, coefficients)));
+        left.encode(ctx, coefficients, domain),
+        ctx.mkAdd(
+            right.encode(ctx, coefficients, domain), offset.encode(ctx, coefficients, domain)));
   }
 
   @Override

@@ -1,8 +1,7 @@
 package xyz.leutgeb.lorenz.lac.util;
 
-import org.jgrapht.graph.DefaultEdge;
-
 import java.util.Objects;
+import org.jgrapht.graph.DefaultEdge;
 
 public class KindedEdge<K> extends DefaultEdge {
   protected K kind;

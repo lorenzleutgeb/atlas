@@ -515,11 +515,11 @@ public class FunctionDefinition {
 
   public String getBoundString() {
     return moduleName
-            + "."
-            + name
-            + " ∷ "
-            + inferredSignature.getType()
-            + inferredSignature
+        + "."
+        + name
+        + " ∷ "
+        + inferredSignature.getType()
+        + inferredSignature
             .getAnnotation()
             .map(CombinedFunctionAnnotation::getBounds)
             .map(x -> " | " + x)

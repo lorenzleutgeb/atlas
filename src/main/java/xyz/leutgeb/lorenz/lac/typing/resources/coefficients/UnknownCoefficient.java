@@ -10,6 +10,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 @Value
 @EqualsAndHashCode
@@ -56,7 +57,10 @@ public class UnknownCoefficient implements Coefficient {
     return (negated ? "-" : "") + name;
   }
 
-  public ArithExpr encode(Context ctx, Map<UnknownCoefficient, ArithExpr> coefficients) {
+  public ArithExpr encode(
+      Context ctx,
+      Map<UnknownCoefficient, ArithExpr> coefficients,
+      ConstraintSystemSolver.Domain domain) {
     final var inner = coefficients.get(this.canonical());
     return negated ? ctx.mkUnaryMinus(inner) : inner;
   }

@@ -1,16 +1,9 @@
 package xyz.leutgeb.lorenz.lac.util;
 
+import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import lombok.AllArgsConstructor;
-import lombok.Generated;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import org.jgrapht.Graph;
-import org.jgrapht.GraphTests;
-import org.jgrapht.Graphs;
-import org.jgrapht.util.ModifiableInteger;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,8 +18,13 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
-
-import static xyz.leutgeb.lorenz.lac.util.Util.bug;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.jgrapht.Graph;
+import org.jgrapht.GraphTests;
+import org.jgrapht.Graphs;
+import org.jgrapht.util.ModifiableInteger;
 
 @Slf4j
 public class Scheduler<T, V, E> {
@@ -48,14 +46,11 @@ public class Scheduler<T, V, E> {
   @AllArgsConstructor
   public static class Result<T> {
 
-    @Getter
-    private final ExecutionException executionException;
+    @Getter private final ExecutionException executionException;
 
-    @Getter
-    private final CancellationException cancellationException;
+    @Getter private final CancellationException cancellationException;
 
-    @Getter
-    private final T value;
+    @Getter private final T value;
 
     public static <T> Result<T> fromFuture(Future<T> future) throws InterruptedException {
       try {

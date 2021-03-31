@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.antlr.v4.runtime.Token;
+import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.lac.antlr.SplayParser;
 import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.CombinedFunctionAnnotation;
@@ -22,7 +23,6 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.FunctionType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.ProductType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
-import org.hipparchus.fraction.Fraction;
 
 class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature> {
   private final TypeVisitor typeVisitor;

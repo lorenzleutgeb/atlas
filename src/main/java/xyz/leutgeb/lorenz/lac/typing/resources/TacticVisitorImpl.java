@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.Token;
+import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.lac.antlr.TacticBaseVisitor;
 import xyz.leutgeb.lorenz.lac.antlr.TacticParser;
 import xyz.leutgeb.lorenz.lac.ast.Identifier;
@@ -25,7 +26,6 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.lac.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.lac.typing.resources.rules.WVar;
-import org.hipparchus.fraction.Fraction;
 
 @Value
 @Slf4j

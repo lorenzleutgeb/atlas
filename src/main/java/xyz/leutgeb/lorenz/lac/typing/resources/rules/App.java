@@ -38,9 +38,9 @@ public class App implements Rule {
   private static String ruleName(Obligation obligation) {
     return "(app"
         + (obligation.getCost() == 0 ? ":cf" : "")
-        + " `"
+        + " "
         + obligation.getExpression().terminalOrBox()
-        + "`)";
+        + ")";
   }
 
   private static List<Constraint> costFree(

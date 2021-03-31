@@ -34,7 +34,7 @@ public class Node implements Rule {
       throw bug("context was not weakened");
     }
 
-    final var prefix = "(node `" + expression + "`) ";
+    final var prefix = "(node " + expression + ") ";
 
     // We reorder the context such that it matches the syntax.
     final var q = qunordered.reorder(List.of(leftId, rightId)).getAnnotation();

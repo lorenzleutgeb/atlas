@@ -33,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 @Slf4j
 public abstract class Constraint {
@@ -111,7 +112,10 @@ public abstract class Constraint {
     return reason;
   }
 
-  public abstract BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients);
+  public abstract BoolExpr encode(
+      Context ctx,
+      BiMap<UnknownCoefficient, ArithExpr> coefficients,
+      ConstraintSystemSolver.Domain domain);
 
   /**
    * Edge colors:

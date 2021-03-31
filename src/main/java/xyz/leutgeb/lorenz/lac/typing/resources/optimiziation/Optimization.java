@@ -21,16 +21,13 @@ import lombok.AllArgsConstructor;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.lac.ast.Program;
-import xyz.leutgeb.lorenz.lac.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsProductConstraint;
 import xyz.leutgeb.lorenz.lac.typing.resources.constraints.EqualsSumConstraint;
-import xyz.leutgeb.lorenz.lac.typing.resources.constraints.LessThanOrEqualConstraint;
 
 public class Optimization {
   @Value
@@ -50,7 +47,7 @@ public class Optimization {
   private static boolean sameSize(FunctionAnnotation functionAnnotation) {
     return functionAnnotation.from.size() == functionAnnotation.to.size();
   }
-  
+
   public static Optional<UniTarget> weightedComponentWiseDifference(
       FunctionAnnotation annotation, Function<List<Integer>, Integer> weight) {
     if (annotation.to.size() == 0 || annotation.from.size() == 0) {
@@ -257,8 +254,8 @@ public class Optimization {
         // var it = combine(program, fqns, opt);
         var it = opt.apply(ann);
         if (it.isPresent()) {
-        sumAtLayer.add(it.get().target);
-        constraints.addAll(it.get().constraints);
+          sumAtLayer.add(it.get().target);
+          constraints.addAll(it.get().constraints);
         }
       }
       final var levelSum = UnknownCoefficient.unknown("levelsum");

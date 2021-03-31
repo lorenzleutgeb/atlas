@@ -16,6 +16,7 @@ import lombok.NonNull;
 import lombok.Value;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.lac.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.lac.typing.resources.solving.ConstraintSystemSolver;
 
 /** @see LessThanOrEqualConstraint */
 @Value
@@ -31,8 +32,12 @@ public class GreaterThanOrEqualConstraint extends Constraint {
   }
 
   @Override
-  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, ArithExpr> coefficients) {
-    return ctx.mkGe(left.encode(ctx, coefficients), right.encode(ctx, coefficients));
+  public BoolExpr encode(
+      Context ctx,
+      BiMap<UnknownCoefficient, ArithExpr> coefficients,
+      ConstraintSystemSolver.Domain domain) {
+    return ctx.mkGe(
+        left.encode(ctx, coefficients, domain), right.encode(ctx, coefficients, domain));
   }
 
   @Override
