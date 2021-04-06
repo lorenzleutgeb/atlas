@@ -6,7 +6,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        submodules: recursive
+        #submodules: recursive
         fetch-depth: 0
    #- name: Cache Nix Store
    #  uses: actions/cache@v2
@@ -77,6 +77,8 @@ jobs:
         nix log   .#packages.x86_64-linux.$PKG > log/${PKG}.txt
         RESULT=$(nix path-info .#packages.x86_64-linux.$PKG)
         echo "::set-output name=result::$RESULT"
+        RESULT_JACOCO=$(nix path-info .#packages.x86_64-linux.$PKG)
+        echo "::set-output name=result-jacoco::$RESULT_JACOCO"
     - name: Build 'lac-oci'
       id: lac-oci
       run: |
@@ -105,7 +107,9 @@ jobs:
         docker push -q lorenzleutgeb/lac-shell:$GITHUB_SHA
         docker push -q ghcr.io/lorenzleutgeb/lac/lac:$GITHUB_SHA
         docker push -q ghcr.io/lorenzleutgeb/lac/lac-shell:$GITHUB_SHA
-
+    - uses: codecov/codecov-action@v1
+      with:
+        files:  $${{ steps.lac.outputs.result-jacoco }}
    #- name: Package TACAS Artifact
    #  run: ./tacas.sh
    #- uses: actions/upload-artifact@v2
