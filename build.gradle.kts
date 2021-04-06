@@ -99,6 +99,7 @@ dependencies {
     annotationProcessor("info.picocli:picocli-codegen:4.6.1")
 
     // Testing
+    implementation(enforcedPlatform("org.junit:junit-bom:5.7.1"))
     fun jupiter(x: String): String {
         return "org.junit.jupiter:junit-jupiter$x:5.7.1"
     }

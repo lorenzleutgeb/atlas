@@ -1,7 +1,7 @@
 {
   "": {
     "name": "lac",
-    "version": "v0.0.2-61-gc3e6445-dirty",
+    "version": "v0.0.2-61-ge6e88b8-dirty",
     "path": "",
     "gradle": {
       "version": "6.8.3",
@@ -2988,6 +2988,38 @@
             "https://repo.maven.apache.org/maven2/org/jheaps/jheaps/0.13/jheaps-0.13.pom"
           ],
           "sha256": "487db125b171098e3fa8338535ac59476922ac2c452b57a14d3cf661f2288430"
+        },
+        {
+          "id": {
+            "group": "org.junit",
+            "name": "junit-bom",
+            "version": "5.7.1",
+            "type": "module",
+            "extension": "module"
+          },
+          "name": "junit-bom-5.7.1.module",
+          "path": "org/junit/junit-bom/5.7.1",
+          "urls": [
+            "https://jcenter.bintray.com/org/junit/junit-bom/5.7.1/junit-bom-5.7.1.module",
+            "https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.7.1/junit-bom-5.7.1.module"
+          ],
+          "sha256": "9854e3894d64b2485207e0046bca07b3d42d169e782f4fa8c9ce229a78faee04"
+        },
+        {
+          "id": {
+            "group": "org.junit",
+            "name": "junit-bom",
+            "version": "5.7.1",
+            "type": "pom",
+            "extension": "pom"
+          },
+          "name": "junit-bom-5.7.1.pom",
+          "path": "org/junit/junit-bom/5.7.1",
+          "urls": [
+            "https://jcenter.bintray.com/org/junit/junit-bom/5.7.1/junit-bom-5.7.1.pom",
+            "https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.7.1/junit-bom-5.7.1.pom"
+          ],
+          "sha256": "0b9b14a3d62106fafe8c68a717b87b87ad18685899451b753c04fa41b6857784"
         },
         {
           "id": {

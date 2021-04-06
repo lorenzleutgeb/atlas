@@ -3,11 +3,11 @@
     "examples": {
       "flake": false,
       "locked": {
-        "lastModified": 1612515493,
-        "narHash": "sha256-z7q9aqISTfYjy9Glhai1Vt3qMkxthm/NZFS9r1wd0V0=",
+        "lastModified": 1617736871,
+        "narHash": "sha256-TKQFhJ5D4C9n0L3M6MvJDxbfA5B78wxQGf/+IFveCwQ=",
         "owner": "lorenzleutgeb",
         "repo": "lac-examples",
-        "rev": "5b46fc5fa8c0c01384150c4e65b568774c67141a",
+        "rev": "5ebaecb91f8f55b09ec2691b98181cbc92c67e76",
         "type": "github"
       },
       "original": {

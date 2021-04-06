@@ -146,6 +146,7 @@
             patchShebangs version.sh
             mkdir -p src/main/resources/jni/linux/amd64
             cp -v ${z3.lib}/lib/libz3java.so src/main/resources/jni/linux/amd64
+            ln -sv ${examples} src/test/resources/examples
           '';
           installPhase = ''
             mkdir $out
