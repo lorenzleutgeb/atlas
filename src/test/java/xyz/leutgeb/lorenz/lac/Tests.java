@@ -1,33 +1,5 @@
 package xyz.leutgeb.lorenz.lac;
 
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptyMap;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.singleton;
-import static java.util.Collections.singletonList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
-import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
-import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
-import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.ord;
-import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.alpha;
-import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.beta;
-import static xyz.leutgeb.lorenz.lac.util.Util.fqnToFlatFilename;
-import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.PrintStream;
-import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.hipparchus.fraction.Fraction;
 import org.jgrapht.nio.AttributeType;
 import org.jgrapht.nio.DefaultAttribute;
@@ -58,6 +30,35 @@ import xyz.leutgeb.lorenz.lac.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.lac.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.lac.util.NidiExporter;
 import xyz.leutgeb.lorenz.lac.util.SizeEdge;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singleton;
+import static java.util.Collections.singletonList;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static xyz.leutgeb.lorenz.lac.typing.resources.Annotation.unitIndex;
+import static xyz.leutgeb.lorenz.lac.typing.resources.coefficients.KnownCoefficient.ZERO;
+import static xyz.leutgeb.lorenz.lac.typing.simple.TypeConstraint.ord;
+import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.alpha;
+import static xyz.leutgeb.lorenz.lac.typing.simple.TypeVariable.beta;
+import static xyz.leutgeb.lorenz.lac.util.Util.fqnToFlatFilename;
+import static xyz.leutgeb.lorenz.lac.util.Z3Support.load;
 
 public class Tests {
   static final TreeType ATREE = new TreeType(alpha());
@@ -131,13 +132,14 @@ public class Tests {
         arguments("PairingHeap.link", sig(singleton(ord(alpha())), ATREE, ATREE), 0),
         // arguments("PairingHeap.merge", sig(singleton(ord(alpha())), ATREE, ATREE, ATREE), 1),
         // arguments("PairingHeap.insert", sig(singleton(ord(alpha())), alpha(), ATREE, ATREE), 3),
-        arguments("Scratch.empty_1", sig(ATREE, BOOL), 1),
-        arguments("Scratch.empty_2", sig(ATREE, BOOL), 1),
+        // arguments("Scratch.empty_1", sig(ATREE, BOOL), 1),
+        // arguments("Scratch.empty_2", sig(ATREE, BOOL), 1),
+        // arguments("Scratch.empty_3", sig(ATREE, BOOL), 0),
         arguments("Scratch.id", sig(alpha(), alpha()), 0),
         arguments("Scratch.left", sig(alpha(), beta(), alpha()), 0),
-        arguments("Scratch.right", sig(alpha(), beta(), beta()), 0),
-        arguments("Scratch.empty_3", sig(ATREE, BOOL), 0),
-        arguments("Scratch.first_nonempty_and_second_empty", sig(ATREE, BTREE, BOOL), 1));
+        arguments("Scratch.right", sig(alpha(), beta(), beta()), 0)
+        // arguments("Scratch.first_nonempty_and_second_empty", sig(ATREE, BTREE, BOOL), 1)
+        );
   }
 
   private static FunctionSignature sig(Set<TypeConstraint> constraints, Type... types) {
@@ -195,6 +197,7 @@ public class Tests {
     load();
   }
 
+  @Disabled
   @ParameterizedTest
   @MethodSource("nonConstantCostDefinitions")
   @DisplayName("Non-Constant Cost")
@@ -394,6 +397,7 @@ public class Tests {
 
   @ParameterizedTest
   @CsvSource({"true,lazy", "false,eager"})
+  @Disabled
   void dumps(boolean lazy, String suffix) throws Exception {
     final var loader = TestUtil.loader();
     loader.autoload();

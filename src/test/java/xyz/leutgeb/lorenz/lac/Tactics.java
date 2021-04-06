@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.hipparchus.fraction.Fraction;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -34,6 +35,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
+@Disabled
 public class Tactics {
   @BeforeAll
   public static void beforeAll() {

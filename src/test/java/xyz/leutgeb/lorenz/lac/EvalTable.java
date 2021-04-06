@@ -14,6 +14,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -22,6 +24,7 @@ import xyz.leutgeb.lorenz.lac.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.lac.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.lac.unification.UnificationError;
 
+@Disabled
 public class EvalTable {
   static final Annotation Qp = new Annotation(List.of(ONE_BY_TWO), Map.of(unitIndex(1), ONE), "Q'");
 
