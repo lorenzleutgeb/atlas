@@ -139,7 +139,8 @@
           LANG = "en_US.UTF-8";
           LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
           LD_LIBRARY_PATH = "${z3.lib}";
-          gradleFlags = [ "nativeImage" "-x" "test" ];
+          gradleFlags = [ "nativeImage" "jacocoTestReport" ];
+          outputs = [ "out" "jacoco" ];
           configurePhase = ''
             locale
             patchShebangs version.sh
@@ -156,6 +157,7 @@
             mkdir -p $out/bin
             ls -la build/native-image
             mv build/native-image/lac $out/bin/lac
+            mv build/reports/jacoco/test/jacocoTestReport.xml $jacoco
           '';
         };
 
