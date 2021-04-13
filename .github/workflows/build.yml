@@ -109,7 +109,7 @@ jobs:
         docker push -q ghcr.io/lorenzleutgeb/lac/lac-shell:$GITHUB_SHA
     - uses: codecov/codecov-action@v1
       with:
-        files:  $${{ steps.lac.outputs.result-jacoco }}
+        files:  ${{ steps.lac.outputs.result-jacoco }}
    #- name: Package TACAS Artifact
    #  run: ./tacas.sh
    #- uses: actions/upload-artifact@v2
