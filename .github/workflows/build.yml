@@ -77,7 +77,7 @@ jobs:
         nix log   .#packages.x86_64-linux.$PKG > log/${PKG}.txt
         RESULT=$(nix path-info .#packages.x86_64-linux.$PKG)
         echo "::set-output name=result::$RESULT"
-        RESULT_JACOCO=$(nix path-info .#packages.x86_64-linux.$PKG)
+        RESULT_JACOCO=$(nix path-info .#packages.x86_64-linux.$PKG.jacoco)
         echo "::set-output name=result-jacoco::$RESULT_JACOCO"
     - name: Build 'lac-oci'
       id: lac-oci
