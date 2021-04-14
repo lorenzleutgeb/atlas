@@ -1,4 +1,4 @@
-rootProject.name = "lac"
+rootProject.name = "atlas"
 
 /**
  * NOTE(lorenzleutgeb): I keep my $XDG_CACHE_HOME in main memory to speed up

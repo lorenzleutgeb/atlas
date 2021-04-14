@@ -2,17 +2,17 @@
 
 # NOTE: Before running this, set a reasonable time limit for Z3!
 
-OUT=json-out-night
-JAR=./build/libs/lac-v0.0.2-17-g2847b1e-dirty-shadow.jar
-FUNCTIONS=(SplayTree.splay_eq SplayTree.splay_eq_min SplayTree.splay_max_eq SplayHeap.insert SplayHeap.del_min PairingHeap.merge_pairs_isolated PairingHeap.insert PairingHeap.merge PairingHeap.pass1 PairingHeap.pass2)
+OUT=json-out-night2
+JAR=./build/libs/atlas-v0.0.2-37-g95a98dc-dirty-shadow.jar
+FUNCTIONS=(SplayTree.splay SplayTree.splay_max SplayHeap.insert SplayHeap.del_min PairingHeap.merge_pairs_isolated PairingHeap.insert PairingHeap.merge)
 RESOURCES="./src/test/resources"
 
 # TODO Prover:
 #  - How many times was (w) applied.
 
-for INFER_OR_CHECK in 'check' 'infer'
+for INFER_OR_CHECK in 'infer'
 do
-	for TACTICS in 'true' 'false'
+	for TACTICS in 'false'
 	do
 		for F in "${FUNCTIONS[@]}"
 		do

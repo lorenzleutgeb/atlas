@@ -5,14 +5,11 @@
       <profile default="true" name="Default" enabled="true" />
       <profile name="Gradle Imported" enabled="true">
         <outputRelativeToContentRoot value="true" />
-        <option name="project" value="lac" />
+        <option name="project" value="atlas" />
         <option name="verbose" value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.12/48e4e5d60309ebd833bc528dcf77668eab3cd72c/lombok-1.18.12.jar" />
-          <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/info.picocli/picocli-codegen/4.5.2/95da318a2bbc8a5a8c767c0ec85ff92356980880/picocli-codegen-4.5.2.jar" />
-          <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/info.picocli/picocli/4.5.2/265314f98a6e7beed510f3bd7b5eaf1bfcaf9d50/picocli-4.5.2.jar" />
+        <processorPath useClasspath="true">
         </processorPath>
-        <module name="lorenzleutgeb.lac.main" />
+        <module name="atlas.main" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel target="11" />

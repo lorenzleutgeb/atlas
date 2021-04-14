@@ -1,4 +1,4 @@
-name: Build lac
+name: Build atlas
 on: [push]
 jobs:
   build:
@@ -51,7 +51,7 @@ jobs:
    #    nix flake check
    #- run: "eval \"$(nix print-dev-env)\""
    #- name: Compute Closure
-   #  run: nix path-info --recursive --inputs-from . .#packages.x86_64-linux.lac | tee closure.txt
+   #  run: nix path-info --recursive --inputs-from . .#packages.x86_64-linux.atlas | tee closure.txt
    #- name: Export Nix Store
    #  run: xargs --arg-file=closure.txt nix-store --export > nix-store.nar
     - name: Make Directories
@@ -69,47 +69,47 @@ jobs:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.CR_PAT }}
-    - name: Build 'lac'
-      id: lac
+    - name: Build 'atlas'
+      id: atlas
       run: |
-        PKG=lac
+        PKG=atlas
         nix build .#packages.x86_64-linux.$PKG --no-link --print-build-logs --json
         nix log   .#packages.x86_64-linux.$PKG > log/${PKG}.txt
         RESULT=$(nix path-info .#packages.x86_64-linux.$PKG)
         echo "::set-output name=result::$RESULT"
         RESULT_JACOCO=$(nix path-info .#packages.x86_64-linux.$PKG.jacoco)
         echo "::set-output name=result-jacoco::$RESULT_JACOCO"
-    - name: Build 'lac-oci'
-      id: lac-oci
+    - name: Build 'atlas-oci'
+      id: atlas-oci
       run: |
-        PKG=lac-oci
+        PKG=atlas-oci
         nix build .#packages.x86_64-linux.$PKG --no-link --print-build-logs --json
         nix log   .#packages.x86_64-linux.$PKG > log/${PKG}.txt
         RESULT=$(nix path-info .#packages.x86_64-linux.$PKG)
         docker load < $RESULT
-        docker tag lac:latest lorenzleutgeb/lac:$GITHUB_SHA
-        docker tag lac:latest ghcr.io/lorenzleutgeb/lac/lac:$GITHUB_SHA
+        docker tag atlas:latest lorenzleutgeb/atlas:$GITHUB_SHA
+        docker tag atlas:latest ghcr.io/lorenzleutgeb/atlas/atlas:$GITHUB_SHA
         echo "::set-output name=result::$RESULT"
-    - name: Build 'lac-shell-oci'
-      id: lac-shell-oci
+    - name: Build 'atlas-shell-oci'
+      id: atlas-shell-oci
       run: |
-        PKG=lac-shell-oci
+        PKG=atlas-shell-oci
         nix build .#packages.x86_64-linux.$PKG --no-link --print-build-logs --json
         nix log   .#packages.x86_64-linux.$PKG > log/${PKG}.txt
         RESULT=$(nix path-info .#packages.x86_64-linux.$PKG)
         docker load < $RESULT
-        docker tag lac-shell:latest lorenzleutgeb/lac-shell:$GITHUB_SHA
-        docker tag lac-shell:latest ghcr.io/lorenzleutgeb/lac/lac-shell:$GITHUB_SHA
+        docker tag atlas-shell:latest lorenzleutgeb/atlas-shell:$GITHUB_SHA
+        docker tag atlas-shell:latest ghcr.io/lorenzleutgeb/atlas/atlas-shell:$GITHUB_SHA
         echo "::set-output name=result::$RESULT"
     - name: Push Docker Images
       run: |
-        docker push -q lorenzleutgeb/lac:$GITHUB_SHA
-        docker push -q lorenzleutgeb/lac-shell:$GITHUB_SHA
-        docker push -q ghcr.io/lorenzleutgeb/lac/lac:$GITHUB_SHA
-        docker push -q ghcr.io/lorenzleutgeb/lac/lac-shell:$GITHUB_SHA
+        docker push -q lorenzleutgeb/atlas:$GITHUB_SHA
+        docker push -q lorenzleutgeb/atlas-shell:$GITHUB_SHA
+        docker push -q ghcr.io/lorenzleutgeb/atlas/atlas:$GITHUB_SHA
+        docker push -q ghcr.io/lorenzleutgeb/atlas/atlas-shell:$GITHUB_SHA
     - uses: codecov/codecov-action@v1
       with:
-        files:  ${{ steps.lac.outputs.result-jacoco }}
+        files:  ${{ steps.atlas.outputs.result-jacoco }}
    #- name: Package TACAS Artifact
    #  run: ./tacas.sh
    #- uses: actions/upload-artifact@v2
@@ -128,16 +128,16 @@ jobs:
         path: log
     - uses: actions/upload-artifact@v2
       with:
-        name: lac
-        path: ${{ steps.lac.outputs.result }}
+        name: atlas
+        path: ${{ steps.atlas.outputs.result }}
     - uses: actions/upload-artifact@v2
       with:
-        name: lac-oci
-        path: ${{ steps.lac-oci.outputs.result }}
+        name: atlas-oci
+        path: ${{ steps.atlas-oci.outputs.result }}
     - uses: actions/upload-artifact@v2
       with:
-        name: lac-shell-oci
-        path: ${{ steps.lac-shell-oci.outputs.result }}
+        name: atlas-shell-oci
+        path: ${{ steps.atlas-shell-oci.outputs.result }}
    #- uses: actions/upload-artifact@v2
    #  if: ${{ failure() }}
    #  with:

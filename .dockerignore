@@ -1,7 +1,0 @@
-*
-!build/libs/lac-*-shadow.jar
-!lib/*.so
-!lac.jsh
-!lac.properties
-!src/test/resources/examples
-!src/test/resources/tactics

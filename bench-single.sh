@@ -2,7 +2,7 @@
 
 # NOTE: Before running this, set a reasonable time limit for Z3!
 
-JAR=./build/libs/lac-v0.0.2-17-g2847b1e-dirty-shadow.jar
+JAR=./build/libs/atlas-v0.0.2-17-g2847b1e-dirty-shadow.jar
 FUNCTIONS=(SplayTree.splay_eq SplayTree.splay_eq_min SplayTree.splay_max_eq SplayHeap.insert SplayHeap.del_min PairingHeap.insert PairingHeap.merge_pairs_isolated PairingHeap.insert PairingHeap.merge PairingHeap.pass1 PairingHeap.pass2)
 RESOURCES="./src/test/resources"
 

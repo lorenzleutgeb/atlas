@@ -3,7 +3,7 @@
 # NOTE: Before running this, set a reasonable time limit for Z3!
 
 OUT=json-out-day
-JAR=./build/libs/lac-v0.0.2-17-g2847b1e-dirty-shadow.jar
+JAR=./build/libs/atlas-v0.0.2-17-g2847b1e-dirty-shadow.jar
 FUNCTIONS=(SplayTree.splay_eq_min)
 RESOURCES="./src/test/resources"
 

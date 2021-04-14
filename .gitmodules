@@ -1,3 +1,3 @@
 [submodule "src/test/resources/examples"]
 	path = src/test/resources/examples
-	url = https://github.com/lorenzleutgeb/lac-examples.git
+	url = https://github.com/lorenzleutgeb/atlas-examples.git
