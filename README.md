@@ -1,6 +1,8 @@
 # lac
 
 [![DOI](https://zenodo.org/badge/156873559.svg)](https://zenodo.org/badge/latestdoi/156873559)
+[![codecov](https://codecov.io/gh/lorenzleutgeb/lac/branch/main/graph/badge.svg?token=cXfOoGOXV2)](https://codecov.io/gh/lorenzleutgeb/lac)
+[![codebeat badge](https://codebeat.co/badges/64e5fc79-f2b7-4a49-ac3e-bf19395d1b07)](https://codebeat.co/projects/github-com-lorenzleutgeb-lac-main)
 
 A tool for Automated Analysis of **L**ogarithmic **A**moritzed **C**omplexity
 
