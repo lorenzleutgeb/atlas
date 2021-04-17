@@ -150,20 +150,21 @@
             ln -svn ${examples} src/test/resources/examples
           '';
           installPhase = ''
-            mkdir $out
-            mv atlas.jsh $out
-            mv atlas.properties $out
-            echo "xyz.leutgeb.lorenz.atlas.module.Loader.defaultHome=$out/examples" >> $out/atlas.properties
-            cp -Rv ${examples} $out/examples
-            mv src/test/resources/tactics $out
-            mkdir -p $out/bin
-            ls -la build/native-image
-            mv build/native-image/atlas $out/bin/atlas
-            mv build/reports/jacoco/test/jacocoTestReport.xml $jacoco
+            mkdir -pv $out/var/atlas/resources $out/bin
+
+            cp -vR ${examples}                     $out/var/atlas/resources/examples
+            cp -vR $src/src/test/resources/tactics $out/var/atlas/resources/tactics
+            cp -v  $src/atlas.{jsh,properties}     $out/var/atlas
+
+            cp -v  build/native-image/atlas $out/bin/atlas
+            cp -v  build/reports/jacoco/test/jacocoTestReport.xml $jacoco
+
+            chmod ug+w $out/var/atlas/atlas.properties
+            echo "xyz.leutgeb.lorenz.atlas.module.Loader.defaultHome=$out/var/atlas/resources/examples" >> $out/var/atlas/atlas.properties
           '';
         };
 
-        atlas-shell-oci = pkgs.dockerTools.buildLayeredImage {
+        atlas-shell-image = pkgs.dockerTools.buildLayeredImage {
           name = "atlas-shell";
           tag = "latest";
           contents = [ pkgs.bash pkgs.coreutils packages."${system}".atlas ];
@@ -173,10 +174,11 @@
           };
         };
 
-        atlas-oci = pkgs.dockerTools.buildLayeredImage {
+        atlas-image = pkgs.dockerTools.buildLayeredImage {
           name = "atlas";
           tag = "latest";
-          config.Entrypoint = packages."${system}".atlas + "/atlas";
+          contents = [ packages."${system}".atlas ];
+          config.Entrypoint = [ (packages."${system}".atlas + "/bin/atlas") ];
         };
       };
     };
