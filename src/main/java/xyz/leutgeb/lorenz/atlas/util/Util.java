@@ -3,6 +3,7 @@ package xyz.leutgeb.lorenz.atlas.util;
 import static guru.nidi.graphviz.model.Factory.node;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Stream.generate;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ZERO;
@@ -38,6 +39,8 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 
 @Slf4j
 public class Util {
+  public static final String TOOL_NAME = "atlas";
+
   private static final Random RANDOM = new Random(0L);
   private static final String LIBRARY_PATH = "java.library.path";
   private static final String LIBRARY_PATH_PREFIX =
@@ -133,7 +136,7 @@ public class Util {
         + "?)";
   }
 
-  private static void patchLibraryPath() {
+  private static synchronized void patchLibraryPath() {
     final String libraryPath = System.getProperty(LIBRARY_PATH);
     if (!libraryPath.startsWith(LIBRARY_PATH_PREFIX)) {
       System.setProperty(
@@ -143,37 +146,18 @@ public class Util {
 
   public static void loadLibrary(String name) {
     final String libraryName = System.mapLibraryName(name);
-
-    final Path jniPath =
-        Path.of(
-            "jni",
-            System.getProperty("os.name").toLowerCase(),
-            System.getProperty("os.arch").toLowerCase(),
-            libraryName);
-
+    patchLibraryPath();
     try {
-      Native.loadLibraryFromJar(jniPath);
-    } catch (IOException ioException) {
+      System.loadLibrary(name);
+    } catch (UnsatisfiedLinkError e) {
       log.warn(
-          "Failed to load '{}' as '{}'. Falling back to standard loading mechanism.",
-          name,
-          jniPath,
-          ioException);
-
-      patchLibraryPath();
-
-      try {
-        System.loadLibrary(name);
-      } catch (UnsatisfiedLinkError e) {
-        log.warn(
-            "The library '"
-                + name
-                + "' is required, but could not be loaded. Make sure that a file named '"
-                + libraryName
-                + " exists in one of the following paths: '"
-                + System.getProperty(LIBRARY_PATH)
-                + "'. Execution will continue but may fail at a later time because of this.");
-      }
+          "The library '"
+              + name
+              + "' is required, but could not be loaded. Make sure that a file named '"
+              + libraryName
+              + " exists in one of the following paths: '"
+              + System.getProperty(LIBRARY_PATH)
+              + "'. Execution will continue but may fail at a later time because of this.");
     }
   }
 
@@ -331,17 +315,13 @@ public class Util {
     return list.stream().flatMap(Collection::stream).collect(toList());
   }
 
-  // public static <Kx, Ky, V> Map<Ky, V> rekey(Map<Kx, V> map, Function<Kx, Ky> rekeyingFunction) {
-  //  return map.entrySet().stream().collect(toMap(rekeyingFunction, e -> e.getValue()));
-  // }
-
   public static <E> List<E> reorder(List<E> list, List<Integer> indices) {
     return indices.stream().map(list::get).collect(toList());
   }
 
   @SafeVarargs
   public static <K> Map<List<K>, Coefficient> ones(List<K>... indices) {
-    return Stream.of(indices).collect(Collectors.toMap(Function.identity(), x -> ONE));
+    return Stream.of(indices).collect(toMap(Function.identity(), x -> ONE));
   }
 
   public static <T> Supplier<T> supply(T value) {

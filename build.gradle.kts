@@ -1,4 +1,3 @@
-import java.util.Optional
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 val rootPackage = "xyz.leutgeb.lorenz.atlas"
@@ -36,8 +35,16 @@ plugins {
 }
 
 repositories {
-    jcenter()
-    mavenCentral()
+    mavenCentral {
+        metadataSources {
+        mavenPom()
+        }
+    }
+    mavenCentral {
+        metadataSources {
+            artifact()
+        }
+    }
 }
 
 buildscript {
@@ -50,12 +57,14 @@ dependencyLocking {
     lockAllConfigurations()
 }
 
-configurations {
-    // See https://github.com/gradle/gradle/issues/820
-    compile {
-        setExtendsFrom(extendsFrom.filterNot { it == antlr.get() })
-    }
+// See https://github.com/gradle/gradle/issues/820
+configurations[JavaPlugin.API_CONFIGURATION_NAME].let { apiConfiguration ->
+    apiConfiguration.setExtendsFrom(apiConfiguration.extendsFrom.filter {
+        it.name != "antlr"
+    })
+}
 
+configurations {
     create("nativeRuntimeClasspath") {
         extendsFrom(runtimeClasspath.get())
         dependencies {
@@ -108,11 +117,7 @@ dependencies {
     testImplementation("tech.tablesaw:tablesaw-core:0.38.2")
 
     // The Z3 Theorem Prover
-    // See https://github.com/Z3Prover/z3#java
-    implementation(files(Optional.ofNullable(System.getenv("Z3_JAVA")).orElse("lib") + "/share/java/com.microsoft.z3.jar"))
-    // implementation("org.sosy-lab:javasmt-solver-z3:4.8.10")
-    // implementation(group = "org.sosy-lab", name = "javasmt-solver-z3", version = "4.8.10", classifier = "libz3", ext = "so")
-    // implementation(group = "org.sosy-lab", name = "javasmt-solver-z3", version = "4.8.10", classifier = "libz3java", ext = "so")
+    implementation("org.sosy-lab:javasmt-solver-z3:4.8.10:com.microsoft.z3@jar")
 
     // Graph output
     implementation("guru.nidi:graphviz-java:0.18.0") {
@@ -141,8 +146,6 @@ dependencies {
     implementation("jakarta.json:jakarta.json-api:2.0.0")
 
     implementation("org.glassfish:jakarta.json:2.0.0")
-
-    // implementation("org.barfuin.texttree:text-tree:2.1.0")
 }
 
 java {
@@ -227,6 +230,8 @@ tasks.create<Exec>("nativeImage") {
     commandLine(
             "native-image",
             "--class-path=$cp",
+            // "--static",
+            "-H:+StaticExecutableWithDynamicLibC",
             "$rootPackage.Main",
             "${project.buildDir}/native-image/${project.name}$outputSuffix"
     )

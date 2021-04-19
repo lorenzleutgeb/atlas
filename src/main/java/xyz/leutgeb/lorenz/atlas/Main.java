@@ -1,5 +1,7 @@
 package xyz.leutgeb.lorenz.atlas;
 
+import static xyz.leutgeb.lorenz.atlas.util.Util.TOOL_NAME;
+
 import java.nio.file.Path;
 import picocli.CommandLine;
 import xyz.leutgeb.lorenz.atlas.commands.Haskell;
@@ -20,8 +22,11 @@ public class Main implements Runnable {
 
   @CommandLine.Mixin public HomeMixin homeMixin;
 
+  private static final String PROPERTY_FILE_NAME = TOOL_NAME + ".properties";
+
   public static void main(String[] args) {
-    Properties.readProperties(Path.of("atlas.properties"));
+    Properties.readProperties(
+        Path.of(PROPERTY_FILE_NAME), Path.of("var", TOOL_NAME, PROPERTY_FILE_NAME));
     new CommandLine(new Main()).execute(args);
   }
 

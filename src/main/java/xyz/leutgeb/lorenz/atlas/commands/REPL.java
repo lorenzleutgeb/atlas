@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.atlas.commands;
 
 import static picocli.CommandLine.Help.Visibility.ALWAYS;
 import static xyz.leutgeb.lorenz.atlas.commands.REPL.NAME;
+import static xyz.leutgeb.lorenz.atlas.util.Util.TOOL_NAME;
 import static xyz.leutgeb.lorenz.atlas.util.Util.append;
 
 import io.github.classgraph.ClassGraph;
@@ -38,7 +39,7 @@ public class REPL implements Runnable {
           "--startup",
           "PRINTING",
           "--startup",
-          "atlas.jsh");
+          TOOL_NAME + ".jsh");
 
   @Override
   public void run() {

@@ -3,11 +3,11 @@
     "examples": {
       "flake": false,
       "locked": {
-        "lastModified": 1617736871,
-        "narHash": "sha256-TKQFhJ5D4C9n0L3M6MvJDxbfA5B78wxQGf/+IFveCwQ=",
+        "lastModified": 1618432220,
+        "narHash": "sha256-+dENbqOTSETHjR7L0A+WIujZ38SAk5FzwDNC3O0miWg=",
         "owner": "lorenzleutgeb",
         "repo": "atlas-examples",
-        "rev": "5ebaecb91f8f55b09ec2691b98181cbc92c67e76",
+        "rev": "28eced73b64d9e6fceb7f0b6149138e3596e4c52",
         "type": "github"
       },
       "original": {
@@ -39,11 +39,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1609821491,
-        "narHash": "sha256-nMbQZ6UAhRXiJC/b4wG5S7pdN+pYI2GfbhjMB7afbs4=",
+        "lastModified": 1615424709,
+        "narHash": "sha256-N45ncEA9tA8iT0EqxmlEtqrd81m4dXRHe/w2oWXT4lg=",
         "owner": "tadfisher",
         "repo": "gradle2nix",
-        "rev": "13958d35bf568e03d45ca00648471e70d7f5fda6",
+        "rev": "fafe5b7e0b0caf4682111e594bb9087559ee3a4f",
         "type": "github"
       },
       "original": {
@@ -54,11 +54,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1615259932,
-        "narHash": "sha256-IXecmbqCr+XCtFwzBO3tHEd8PoJ4X4EyPZebKbV2ioE=",
+        "lastModified": 1618801528,
+        "narHash": "sha256-1ru9LzP33ElEAZcDzYLgJQG3/uHhAg0LFJEfVZSOPZg=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "29b0d4d0b600f8f5dd0b86e3362a33d4181938f9",
+        "rev": "0a5f5bab0e08e968ef25cff393312aa51a3512cf",
         "type": "github"
       },
       "original": {

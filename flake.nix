@@ -16,24 +16,15 @@
   outputs = { self, nixpkgs, gradle2nix, examples }:
     let
       system = "x86_64-linux";
-      pkgs = import nixpkgs {
-        inherit system;
-        #config.allowUnfree = true;
-      };
+      pkgs = import nixpkgs { inherit system; };
       jdk = pkgs.graalvm11-ce;
       z3 = pkgs.z3.override {
         inherit jdk;
         javaBindings = true;
       };
-      #g2n = import gradle2nix {};
       gradleGen = pkgs.gradleGen.override { java = jdk; };
       gradle = gradleGen.gradle_latest;
-      solvers = with pkgs; [
-        alt-ergo
-        cvc4
-        yices
-        opensmt
-      ];
+      solvers = with pkgs; [ alt-ergo cvc4 yices opensmt ];
       atlasEnv = pkgs.buildEnv {
         name = "atlas-env";
         paths = [
@@ -42,10 +33,116 @@
           z3
           pkgs.dot2tex
           pkgs.graphviz
-          gradle2nix.packages."${system}".gradle2nix
+          gradle2nix.packages.${system}.gradle2nix
         ];
       };
     in rec {
+      devShell.${system} = pkgs.mkShell {
+        buildInputs = [ atlasEnv ];
+        shellHook = ''
+          export LD_LIBRARY_PATH="${z3.lib}/lib:$LD_LIBRARY_PATH"
+
+          export GRAAL_HOME="${jdk}"
+          export JAVA_HOME="$GRAAL_HOME"
+          export GRADLE_HOME="${gradle}"
+
+          $JAVA_HOME/bin/java -version
+          $GRAAL_HOME/bin/gu list
+          $GRADLE_HOME/bin/gradle -version
+          z3 --version
+          dot2tex --version
+        '';
+      };
+
+      defaultPackage.${system} = packages.${system}.atlas;
+
+      packages.${system} = rec {
+        atlas = (pkgs.callPackage ./gradle-env.nix { inherit gradleGen; }) {
+          envSpec = ./gradle-env.json;
+
+          src = ./.;
+
+          nativeBuildInputs = [
+            pkgs.bash
+            pkgs.git
+            pkgs.glibcLocales
+            examples
+            jdk
+            z3
+          ];
+          ATLAS_HOME = "${examples}";
+          LANG = "en_US.UTF-8";
+          LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
+          LD_LIBRARY_PATH = "${z3.lib}/lib";
+          gradleFlags = [ "jacocoTestReport" "nativeImage" ];
+          outputs = [ "out" "jacoco" ];
+
+          configurePhase = ''
+            locale
+            patchShebangs version.sh
+            rm -rvf src/test/resources/examples
+            ln -svn ${examples} src/test/resources/examples
+          '';
+
+          installPhase = ''
+            mkdir -pv $out/var/atlas/resources $out/bin
+
+            cp -vR ${examples}                     $out/var/atlas/resources/examples
+            cp -vR $src/src/test/resources/tactics $out/var/atlas/resources/tactics
+            cp -v  $src/atlas.{jsh,properties}     $out/var/atlas
+
+            patchelf \
+              --add-needed libz3.so \
+              --add-needed libz3java.so \
+              --set-rpath ${pkgs.glibc}/lib:${z3.lib}/lib \
+              build/native-image/atlas
+
+            cp -v build/native-image/atlas $out/bin/atlas
+            cp -v build/reports/jacoco/test/jacocoTestReport.xml $jacoco
+
+            chmod ug+w $out/var/atlas/atlas.properties
+            echo "xyz.leutgeb.lorenz.atlas.module.Loader.defaultHome=$out/var/atlas/resources/examples" >> $out/var/atlas/atlas.properties
+          '';
+        };
+
+        atlas-shell-image = pkgs.dockerTools.buildLayeredImage {
+          name = "atlas-shell";
+          tag = "latest";
+          contents = [
+            pkgs.bash
+            pkgs.bash-completion
+            pkgs.coreutils
+            pkgs.gnugrep
+            pkgs.less
+            packages.${system}.atlas
+          ];
+          config = { Entrypoint = [ "${pkgs.bash}/bin/bash" ]; };
+        };
+
+        atlas-image = pkgs.dockerTools.buildLayeredImage {
+          name = "atlas";
+          tag = "latest";
+          contents = [ packages.${system}.atlas ];
+          config.Entrypoint = [ (packages.${system}.atlas + "/bin/atlas") ];
+        };
+
+        atlas-ova = nixosConfigurations.atlas.config.system.build.virtualBoxOVA;
+
+        # TODO: Does not work because there's no internet access in sandbox.
+        atlas-nix = pkgs.stdenv.mkDerivation {
+          name = "atlas-nix";
+          src = ./.;
+          buildInputs = [ jdk gradle2nix.packages.${system}.gradle2nix ];
+          buildPhase = ''
+            gradle2nix --gradle-version 7.0 
+          '';
+          installPhase = ''
+            mkdir $out
+            cp gradle-env.* $out
+          '';
+        };
+      };
+
       nixosConfigurations.atlas = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [
@@ -57,7 +154,7 @@
               vmName = "atlas";
               params = { usb = "off"; };
             };
-            environment.systemPackages = [ self.defaultPackage."${system}" ];
+            environment.systemPackages = [ self.defaultPackage.${system} ];
             networking.hostName = "atlas";
             users.users.atlas = {
               password = "atlas";
@@ -82,104 +179,6 @@
             };
           })
         ];
-      };
-      devShell."${system}" = with pkgs;
-        mkShell {
-          buildInputs = [ atlasEnv ];
-          shellHook = ''
-            export Z3_JAVA="${z3.java}"
-
-            rm -f src/main/resources/jni/linux/amd64/libz3java.so
-            mkdir -p src/main/resources/jni/linux/amd64
-            ln -s ${z3.lib}/lib/libz3java.so src/main/resources/jni/linux/amd64/libz3java.so
-
-            export GRAAL_HOME="${jdk}"
-            export JAVA_HOME="$GRAAL_HOME"
-            export GRADLE_HOME="${gradle}"
-
-            $JAVA_HOME/bin/java -version
-            $GRAAL_HOME/bin/gu --version
-            $GRAAL_HOME/bin/gu list
-            $GRADLE_HOME/bin/gradle -version
-
-            z3 --version
-            dot2tex --version
-
-            if [ "$GITHUB_ACTIONS" = "true" ]
-            then
-              echo "$PATH" >> $GITHUB_PATH
-              env | grep -E "^((GRAAL|GRADLE|JAVA)_HOME|LD_LIBRARY_PATH|Z3_JAVA)=" | tee -a $GITHUB_ENV
-            fi
-          '';
-        };
-      defaultPackage."${system}" = packages."${system}".atlas;
-
-      packages."${system}" = rec {
-        atlas-ova = nixosConfigurations.atlas.config.system.build.virtualBoxOVA;
-
-        atlas = (pkgs.callPackage ./gradle-env.nix { inherit gradleGen; }) {
-          envSpec = ./gradle-env.json;
-
-          src =
-            /* pkgs.nix-gitignore.gitignoreSourcePure [
-                 "*"
-                 "!src/"
-                 "!*gradle.kts"
-                 "!gradle.properties"
-                 "!atlas.*"
-                 "!version.sh"
-               ]
-            */
-            ./.;
-
-          nativeBuildInputs =
-            [ pkgs.bash pkgs.git jdk z3 examples pkgs.glibcLocales ];
-          Z3_JAVA = "${z3.java}";
-          ATLAS_HOME = "${examples}";
-          LANG = "en_US.UTF-8";
-          LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
-          LD_LIBRARY_PATH = "${z3.lib}";
-          gradleFlags = [ "nativeImage" "jacocoTestReport" ];
-          outputs = [ "out" "jacoco" ];
-          configurePhase = ''
-            locale
-            patchShebangs version.sh
-            mkdir -p src/main/resources/jni/linux/amd64
-            cp -v ${z3.lib}/lib/libz3java.so src/main/resources/jni/linux/amd64
-            rm -rfv src/test/resources/examples
-            ln -svn ${examples} src/test/resources/examples
-          '';
-          installPhase = ''
-            mkdir -pv $out/var/atlas/resources $out/bin
-
-            cp -vR ${examples}                     $out/var/atlas/resources/examples
-            cp -vR $src/src/test/resources/tactics $out/var/atlas/resources/tactics
-            cp -v  $src/atlas.{jsh,properties}     $out/var/atlas
-
-            cp -v  build/native-image/atlas $out/bin/atlas
-            cp -v  build/reports/jacoco/test/jacocoTestReport.xml $jacoco
-
-            chmod ug+w $out/var/atlas/atlas.properties
-            echo "xyz.leutgeb.lorenz.atlas.module.Loader.defaultHome=$out/var/atlas/resources/examples" >> $out/var/atlas/atlas.properties
-          '';
-        };
-
-        atlas-shell-image = pkgs.dockerTools.buildLayeredImage {
-          name = "atlas-shell";
-          tag = "latest";
-          contents = [ pkgs.bash pkgs.coreutils packages."${system}".atlas ];
-          config = {
-            Entrypoint = [ "${pkgs.bash}/bin/bash" ];
-            #Env = [ "PATH=${atlasEnv}/bin" ];
-          };
-        };
-
-        atlas-image = pkgs.dockerTools.buildLayeredImage {
-          name = "atlas";
-          tag = "latest";
-          contents = [ packages."${system}".atlas ];
-          config.Entrypoint = [ (packages."${system}".atlas + "/bin/atlas") ];
-        };
       };
     };
 }

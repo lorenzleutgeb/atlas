@@ -11,7 +11,7 @@ See [arXiv:1807.08242][arxiv-1] and [arXiv:2101.12029][arxiv-2].
 ## Building
 
 `atlas` is built using [Gradle][gradle]. Pre- and postprocessing is implemented in
-Java, and [The Z3 Theorem Prover] is used for solving.
+Java, and [The Z3 Theorem Prover][z3] is used for solving.
 
 Using Gradle, `atlas` can be built for multiple target environments:
 
@@ -21,7 +21,7 @@ Using Gradle, `atlas` can be built for multiple target environments:
  - Docker Image (based on ELF x86_64 binary).
  - Open Virtual Appliance (OVA; based on ELF x86_64 binary, and [NixOS][nixos]).
 
-x86_64 is the only architecure supported. Linux is the only operating system supported.
+x86_64 is the only architecture supported. Linux is the only operating system supported.
 
 The build process is fully automated with [Nix][nix] as a [flake][nix-flakes],
 but Nix is not necessary. Nix will run Gradle and build Z3 on demand.
@@ -74,7 +74,7 @@ Copy `com.microsoft.z3.jar` to `lib/share/java/com.microsoft.z3.jar`.
 
 ##### Shared Library
 
-Copy `libz3java.so` to `src/main/resources/jni/linux/amd64/libz3java.so`.
+Copy `libz3.so` and `libz3java.so` to a path listed in `$LD_LIBRARY_PATH` or `./lib`.
 
 ### Building a JAR File
 
@@ -122,6 +122,7 @@ The size of a tree `t`, denoted as `|t|` is defined to be the number of its leav
 [nixos]: https://nixos.org/
 [nix]: https://nixos.org/nix
 [nix-flakes]: https://nixos.wiki/wiki/Flakes
+[z3]: https://github.com/Z3Prover/z3
 [z3-readme-java]: https://github.com/Z3Prover/z3/blob/z3-4.8.10/README.md#java
 [z3-example-java-readme]: https://github.com/Z3Prover/z3/blob/z3-4.8.10/examples/java/README
 [gradle-install]: https://gradle.org/install/

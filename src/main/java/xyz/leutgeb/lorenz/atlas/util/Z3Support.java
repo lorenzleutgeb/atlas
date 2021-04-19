@@ -27,6 +27,7 @@ public class Z3Support {
     // This property is checked in the static block of com.microsoft.z3.Native.
     System.setProperty("z3.skipLibraryLoad", "true");
     // Load Z3.
+    Util.loadLibrary("z3");
     Util.loadLibrary("z3java");
     log.info("{}", Version.getString());
 

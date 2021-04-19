@@ -20,7 +20,6 @@ import static xyz.leutgeb.lorenz.atlas.util.Z3Support.load;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -460,7 +459,7 @@ public class Tests {
     var loader = TestUtil.loader();
     loader.autoload();
     Program program = loader.loadInline("foo t = (Scratch.empty t)");
-    program.dumpToJsh(Path.of(".", "Dump.jsh"));
+    program.dumpToJsh(new File(OUT, "Dump.jsh").toPath());
   }
 
   private enum ExpectedResult {
