@@ -231,7 +231,7 @@ tasks.create<Exec>("nativeImage") {
             "native-image",
             "--class-path=$cp",
             // "--static",
-            "-H:+StaticExecutableWithDynamicLibC",
+            // "-H:+StaticExecutableWithDynamicLibC",
             "$rootPackage.Main",
             "${project.buildDir}/native-image/${project.name}$outputSuffix"
     )

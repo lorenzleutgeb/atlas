@@ -301,10 +301,10 @@ public class Program {
                             .substitute(result.getSolution().get()));
                     get(fqn).substitute(result.getSolution().get());
 
-                    printAllInferredSignaturesInOrder(System.out);
-                    printAllBoundsInOrder(System.out);
+                    //printAllInferredSignaturesInOrder(System.out);
+                    //printAllBoundsInOrder(System.out);
                   }
-
+                  log.info("Done solving for {}", scc.vertexSet());
                   return result;
                 });
 

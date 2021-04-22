@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources;
 
+import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Value;
@@ -34,7 +35,7 @@ public class FunctionAnnotation {
     return from.isZero() && to.isZero();
   }
 
-  public String getBound() {
-    return Annotation.subtract(from, to).toLongString();
+  public String getBound(List<String> arguments) {
+    return Annotation.subtract(from, to).toLongString(arguments);
   }
 }

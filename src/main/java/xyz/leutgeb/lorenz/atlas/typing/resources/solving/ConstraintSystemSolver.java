@@ -362,7 +362,7 @@ public class ConstraintSystemSolver {
       throw e;
     }
     final var stop = Instant.now();
-    System.out.println("Solving duration: " + (Duration.between(start, stop)));
+    log.info("Solving duration: " + (Duration.between(start, stop)));
     log.debug("Solving duratio: " + (Duration.between(start, stop)));
     if (SATISFIABLE.equals(status)) {
       return Pair.of(status, Optional.of(getModel.get()));

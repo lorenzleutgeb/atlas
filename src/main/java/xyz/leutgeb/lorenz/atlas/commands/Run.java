@@ -106,12 +106,14 @@ public class Run implements Runnable {
       }
     }
 
-    System.out.println("Output will go to " + program.getBasePath().toAbsolutePath());
+    System.out.println("Output Directory: " + program.getBasePath().toAbsolutePath());
+    System.out.println();
 
     Map<String, Path> tacticsMap = new HashMap<>();
 
     // log.info(infer ? "Given for comparison:" : "Will check following types:");
 
+    System.out.println("Function Definitions:");
     for (int i = 0; i < program.getOrder().size(); i++) {
       final var stratum = program.getOrder().get(i);
       for (var fqn : stratum) {
@@ -140,16 +142,18 @@ public class Run implements Runnable {
         }
       }
     }
+    System.out.println();
 
-    System.out.println("Generating constraints...");
     final var result = program.solve(new HashMap<>(), tacticsMap, infer, Collections.emptySet());
     if (!result.isSatisfiable()) {
       System.exit(1);
     }
 
-    System.out.println("SIGS:");
+    System.out.println("Signatures:");
     program.printAllInferredSignaturesInOrder(System.out);
-    System.out.println("BOUNDS:");
+    System.out.println();
+
+    System.out.println("Bounds:");
     program.printAllBoundsInOrder(System.out);
 
     final var stop = Instant.now();

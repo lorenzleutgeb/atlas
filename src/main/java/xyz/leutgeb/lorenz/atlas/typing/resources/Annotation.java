@@ -1,5 +1,34 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources;
 
+import com.google.common.collect.Streams;
+import com.google.common.primitives.Ints;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.hipparchus.fraction.Fraction;
+import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsProductConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsSumConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.OffsetConstraint;
+import xyz.leutgeb.lorenz.atlas.util.Pair;
+import xyz.leutgeb.lorenz.atlas.util.Util;
+
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
 import static com.google.common.collect.Comparators.lexicographical;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -20,34 +49,6 @@ import static xyz.leutgeb.lorenz.atlas.util.Util.generateSubscriptIndex;
 import static xyz.leutgeb.lorenz.atlas.util.Util.isAllZeroes;
 import static xyz.leutgeb.lorenz.atlas.util.Util.randomHex;
 import static xyz.leutgeb.lorenz.atlas.util.Util.repeat;
-
-import com.google.common.collect.Streams;
-import com.google.common.primitives.Ints;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import org.hipparchus.fraction.Fraction;
-import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
-import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsProductConstraint;
-import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsSumConstraint;
-import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.OffsetConstraint;
-import xyz.leutgeb.lorenz.atlas.util.Pair;
-import xyz.leutgeb.lorenz.atlas.util.Util;
 
 @Slf4j
 public class Annotation {
@@ -436,7 +437,7 @@ public class Annotation {
 
   public static String toPotential(List<String> names, List<Integer> index) {
     if (isUnitIndex(index)) {
-      return "1";
+      throw new IllegalArgumentException("unit index must be handled at a higher level");
     }
     final var items = new ArrayList<String>(index.size());
     for (int i = 0; i < index.size() - 1; i++) {
@@ -461,12 +462,11 @@ public class Annotation {
     boolean nonzero = false;
     for (int i = 0; i < size(); i++) {
       var q = getRankCoefficientOrZero(i);
-      if (q == ZERO) {
+      if (ZERO.equals(q)) {
         continue;
       }
       nonzero = true;
-      if (!(q instanceof KnownCoefficient)
-          || !(((KnownCoefficient) q).getValue().equals(new Fraction(1)))) {
+      if (!ONE.equals(q)) {
         sb.append(q);
         sb.append(" · ");
       }
@@ -487,9 +487,12 @@ public class Annotation {
                   final var coefficient = e.getValue();
                   var result = "";
                   if (!coefficient.equals(new KnownCoefficient(Fraction.ONE))) {
-                    result = coefficient + " · ";
+                    result = coefficient.toString();
                   }
-                  return result + toPotential(parameters, index);
+                  if (isUnitIndex(index)) {
+                    return result;
+                  }
+                  return result + " · " + toPotential(parameters, index);
                 })
             .collect(Collectors.joining(" + "));
 
@@ -498,14 +501,6 @@ public class Annotation {
     }
 
     sb.append(schoenmakerPart);
-
-    final var units = getUnitCoefficientOrZero();
-    if (units != null && !units.equals(new KnownCoefficient(Fraction.ZERO))) {
-      if (sb.length() > 0) {
-        sb.append(" + ");
-      }
-      sb.append(units);
-    }
 
     if (sb.length() == 0) {
       return "0";

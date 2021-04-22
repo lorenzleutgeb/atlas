@@ -1,14 +1,18 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static java.util.function.Predicate.not;
 
 // TODO: Maybe refactor this to a record once Java 17 is out?
 @Value
@@ -58,19 +62,26 @@ public class CombinedFunctionAnnotation {
         || (!withoutCost.isEmpty() && withoutCost.stream().anyMatch(FunctionAnnotation::isUnknown));
   }
 
-  public String getBounds() {
+  public String getBounds(List<String> arguments) {
     if (isUnknown()) {
       return "?";
     }
+
     if (withCost.from.size() != withCost.to.size()) {
       return toString();
     }
-    return "["
-        + withCost.getBound()
-        + ", "
-        + withoutCost.stream()
-            .map(FunctionAnnotation::getBound)
-            .collect(Collectors.joining(", ", "{", "}"))
-        + "]";
+
+    final var withCost = this.withCost.getBound(arguments);
+    final var withoutCost =
+        this.withoutCost.stream()
+            .map(x -> x.getBound(arguments))
+            .filter(not("0"::equals))
+            .collect(Collectors.joining(", ", "{", "}"));
+
+    if ("{}".equals(withoutCost)) {
+      return withCost;
+    }
+
+    return "[" + withCost + ", " + withoutCost + "]";
   }
 }
