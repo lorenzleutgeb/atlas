@@ -24,7 +24,8 @@ Using Gradle, `atlas` can be built for multiple target environments:
 x86_64 is the only architecture supported. Linux is the only operating system supported.
 
 The build process is fully automated with [Nix][nix] as a [flake][nix-flakes],
-but Nix is not necessary. Nix will run Gradle and build Z3 on demand.
+but Nix is not necessary. Nix will run Gradle and build Z3 on demand. See also
+["How Nix works"][nix-how].
 
 Without Nix, Gradle will still handle download and installation of all
 dependencies except [The Z3 Theorem Prover](https://github.com/Z3Prover/z3).
@@ -32,6 +33,8 @@ Thus, the only manual steps required are building Z3 and placing two files
 in the correct locations.
 
 ### With Nix
+
+This section assumes that [Nix][nix] is [installed][nix-install] and functional.
 
 To get an overview of the derivations that can be built run following command.
 Their names match the "target environments" listed in the previous section.
@@ -49,6 +52,10 @@ Then, to build, for example:
 $ nix build .#defaultPackage.x86_64-linux
 $ nix build --print-build-logs .#packages.x86_64-linux.atlas-oci
 ```
+
+After completion, the result of the build will be available as `./result`.
+Note that `./result` may be a directory, or a file of arbitrary type, depending
+on which environment was targeted.
 
 ## Without Nix
 
@@ -70,17 +77,24 @@ Follow instructions to build `com.microsoft.z3.jar` and `libz3java.so`.
 
 ##### JAR
 
-Copy `com.microsoft.z3.jar` to `lib/share/java/com.microsoft.z3.jar`.
+The JAR file provided by Z3, named `com.microsoft.z3.jar` does not need to be
+supplied. Instead, Gradle will download bindings for Z3 4.8.10 automatically.
 
 ##### Shared Library
 
-Copy `libz3.so` and `libz3java.so` to a path listed in `$LD_LIBRARY_PATH` or `./lib`.
+Copy `libz3.so` and `libz3java.so` to a path listed in `$LD_LIBRARY_PATH` or
+`./lib`. This is required, so that the JVM can (at runtime) find and load
+these two shared libraries.
 
 ### Building a JAR File
+
+This is done via Gradle. Execute
 
 ```console
 $ gradle build
 ```
+
+This will result in a new file at `./build/libs/*.jar`.
 
 ## Java Properties
 
@@ -122,9 +136,12 @@ The size of a tree `t`, denoted as `|t|` is defined to be the number of its leav
 [nixos]: https://nixos.org/
 [nix]: https://nixos.org/nix
 [nix-flakes]: https://nixos.wiki/wiki/Flakes
+[nix-install]: https://nixos.org/guides/install-nix.html
+[nix-how]: https://nixos.org/guides/how-nix-works.html
 [z3]: https://github.com/Z3Prover/z3
 [z3-readme-java]: https://github.com/Z3Prover/z3/blob/z3-4.8.10/README.md#java
 [z3-example-java-readme]: https://github.com/Z3Prover/z3/blob/z3-4.8.10/examples/java/README
+[gradle]: https://gradle.org/
 [gradle-install]: https://gradle.org/install/
 [z3-releases]: https://github.com/Z3Prover/z3/releases
 [simplelogger]: http://www.slf4j.org/api/org/slf4j/impl/SimpleLogger.html
