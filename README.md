@@ -96,6 +96,29 @@ $ gradle build
 
 This will result in a new file at `./build/libs/*.jar`.
 
+## Using
+
+### Highlighted Files
+
+#### `atlas.properties`
+
+Configuration file that can be used to change Z3 parameters and
+logging settings. By setting the log level to "debug" or "trace",
+much more detailled output can be obtained.
+
+#### `src/test/resources/examples`
+
+Contains source code of the function definitions to be analyzed
+(`*.ml` files in subdirectories). 
+
+#### `src/test/resources/tactics`
+
+Contains tactics for guided proof.
+
+#### `src/antlr/**/*.g4`
+
+Contains grammars of the input languages for reference.
+
 ## Java Properties
 
 Behaviour of the system can be controlled by setting Java properties.

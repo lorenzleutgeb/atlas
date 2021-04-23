@@ -1,143 +1,42 @@
-Submitting your artifact
-
-Include your tool in the virtual machine or Docker image: create in the home directory a folder with the following items: 
-  1. Your accepted paper 
-  2. A detailed README file of how to run your tool.  Specify which badges your artifact is aiming for.
-  3. A directory containing the artifact (benchmarks + tool or proof scripts)
-
-Submit to EasyChair. Please use the same title as for the CAV submission.
-
----
-
-Check/document all CLI arguments
-
 # ATLAS
 
-## Notice
+## Important Notice
 
-This is the README accompanying the artifact, according to "Submitting your artifact",
-item 1.2. of the "Artifact Evaluation" website at
+This is the "readme" accompanying the artifact, according to "Submitting your
+artifact", item 1.2. of the "Artifact Evaluation" website at
 
   http://i-cav.org/2021/artifact-evaluation/
 
-## Badges
+This file has been named not been named `README.md` or similar, but `ARTIFACT.md`
+instead, to avoid confusion with the `README.md` file in the source repository
+of the artifact.
 
-This artifact aims for all three badges (functional, available, reusable).
+This artifact submitted as #329 for "Artifact Evaluation", is associated with
+the paper submission as #294 for "Main track".
+
+This artifact aims for all three badges (functional, available, reusable). For
+each badge, there is one corresponding section in this file.
+
+## Open Virtual Appliance (OVA) vs. Docker Image
+
+The Docker image does not include any kind of package manager. It is therefore
+much more cumbersome to add additional software if the need arises during
+evaluation.
+Note that in the OVA, the [Nix][nix] package manager is installed, so
+installation is as simple as
+
+    nix-env -iA nixos.hello
+
+The Docker image is much smaller in size, because it does not contain a
+graphical desktop.
 
 ## Functional
 
-> Document in detail how to reproduce the experimental results of the paper
-> using the artifact; keep this process simple through easy-to-use scripts and
-> provide detailed documentation assuming minimum expertise.
-
-> Ensure the artifact is in the state ready to run. It should work without a network connection. It should not require the user to install additional software before running, that is, all required packages should be installed on the provided virtual machine.
-
-> The artifact should use reasonably modest resources (RAM, number of cores), so that the results can be reproduced on various hardware platforms including laptops. The evaluation should take a reasonable amount of time to complete (no more than 3 to 5 hours). If this is not the case for your benchmarks, make sure to also include simpler benchmarks that do not require a long running time. If this is not possible, please contact PC and AEC chairs as soon as possible.
-
-> When possible include source code within your virtual machine image and point to the most relevant and interesting parts of the source code tree.
-
-> We encourage the authors to include log files that were produced by their tools, and point to the relevant log files in the artifact description.
-
-## Available
-
-This artifact was submitted via Zenodo.
-
-## Reusable
-
-> Ensure that your tool is usable independently of your artifact VM or
-> container, by making your source code and a set of representative experiments
-> available on a public platform (personal website, code-hosting platform…),
-> under a license that allows reuse.
-
-The source code for this artifact is publicly available at
-
-  https://github.com/lorenzleutgeb/atlas
-
-and input files and representative experiments are publicly available at
-
-  https://github.com/lorenzleutgeb/atlas-examples
-
-These two repositories are split on purpose, so that future and/or competing
-implementations may share and collaborate on the input files in separated from
-this concrete implementation.
-
-The contents of both repositories are licensed to allow re-use. See
-
-  https://github.com/lorenzleutgeb/atlas/blob/main/LICENSE
-TODO
-  https://github.com/lorenzleutgeb/atlas-examples/blob/main/LICENSE
-
-> Your source code release should include detailed documentation
-> (setup and usage instructions).
-
-Please refer to
-
-  https://github.com/lorenzleutgeb/atlas/blob/main/README.md
-
-> Ensure that the set-up process for your artifact is reproducible by including
-> a script used to build the VM or container (Vagrantfile, Docker script,
-> Bash script) that allows users to automatically reproduce your artifact’s
-> set-up.  Try to keep this script reasonably simple.
-
-Please refer to
-
-  https://github.com/lorenzleutgeb/atlas/blob/main/README.md
-
-Note that this process is highly reproducible, because it is implemented 
-using the Nix package manager. To learn more, please refer to
-
-  https://nixos.org/guides/how-nix-works.html
-  https://doi.org/10.1017/S0956796810000195
-  https://r13y.com/
-
-> Include instructions for reviewers explaining how to exercise your artifact
-> on new inputs; in particular, document what inputs your tool support.
-
-TODO
-
-> When applicable, make sure that your tool accepts inputs in standard formats
-> (e.g. SMTLIB).
-
-We think that this is not applicable for our *input* of our tool, but indeed our
-tool provides SMTLIB as a standard *output* format.
-
-TODO
-
-> Ensure that your tool is reusable on inputs beyond those included in the paper
-> by describing one experiment beyond those in the paper that a reviewer might
-> run (a new program to feed to your compiler, a new problem for your SMT
-> solver, etc.)
-
-TODO
+The art
 
 # Artifact
 
 ## Contents of `artifact`
-
-### `atlas`
-
-The presented system compiled as an x86-64 ELF binary.
-It will dynamically link to `libc`. Usage of is explained below.
-
-### `atlas.properties`
-
-Configuration file that can be used to change Z3 parameters and
-logging settings. By setting the log level to "debug" or "trace",
-much more detailled output can be obtained.
-
-### `dependencies`
-
-Contains the Ubuntu package dependencies. They must be installed before the
-artifact can be evaluated. Do this by running
-
-    sudo dpkg -i artifact/dependencies/*.deb
-
-### `resources`
-
-Contains source code of the function definitions to be analyzed
-(`*.ml` files) as well as tactics for guided proof.
-
-Contains grammars of the input languages for reference.
 
 ## Invoking the Artifact
 
@@ -228,6 +127,93 @@ These correspond to the following lines/names in the paper (line by line):
     `PairingHeap.merge_pairs`, `PairingHeap.insert` and `PairingHeap.merge` (sixth, seventh and eighth line)
     `PairingHeap.pass1` and `PairingHeap.pass2` (ninth and tenth line)
 
+> Document in detail how to reproduce the experimental results of the paper
+> using the artifact; keep this process simple through easy-to-use scripts and
+> provide detailed documentation assuming minimum expertise.
+
+
+
+> Ensure the artifact is in the state ready to run. It should work without a network connection. It should not require the user to install additional software before running, that is, all required packages should be installed on the provided virtual machine.
+
+> The artifact should use reasonably modest resources (RAM, number of cores), so that the results can be reproduced on various hardware platforms including laptops. The evaluation should take a reasonable amount of time to complete (no more than 3 to 5 hours). If this is not the case for your benchmarks, make sure to also include simpler benchmarks that do not require a long running time. If this is not possible, please contact PC and AEC chairs as soon as possible.
+
+> When possible include source code within your virtual machine image and point to the most relevant and interesting parts of the source code tree.
+
+> We encourage the authors to include log files that were produced by their tools, and point to the relevant log files in the artifact description.
+
+## Available
+
+This artifact was submitted via Zenodo.
+
+## Reusable
+
+> Ensure that your tool is usable independently of your artifact VM or
+> container, by making your source code and a set of representative experiments
+> available on a public platform (personal website, code-hosting platform…),
+> under a license that allows reuse.
+
+The source code for this artifact is publicly available at
+
+  https://github.com/lorenzleutgeb/atlas
+
+and input files and representative experiments are publicly available at
+
+  https://github.com/lorenzleutgeb/atlas-examples
+
+These two repositories are split on purpose, so that future and/or competing
+implementations may share and collaborate on the input files in separated from
+this concrete implementation.
+
+The contents of both repositories are licensed to allow re-use. See
+
+  https://github.com/lorenzleutgeb/atlas/blob/main/LICENSE
+TODO
+  https://github.com/lorenzleutgeb/atlas-examples/blob/main/LICENSE
+
+> Your source code release should include detailed documentation
+> (setup and usage instructions).
+
+Please refer to
+
+  https://github.com/lorenzleutgeb/atlas/blob/main/README.md
+
+> Ensure that the set-up process for your artifact is reproducible by including
+> a script used to build the VM or container (Vagrantfile, Docker script,
+> Bash script) that allows users to automatically reproduce your artifact’s
+> set-up.  Try to keep this script reasonably simple.
+
+Please refer to
+
+  https://github.com/lorenzleutgeb/atlas/blob/main/README.md
+
+Note that this process is highly reproducible, because it is implemented 
+using the Nix package manager. To learn more, please refer to
+
+  https://nixos.org/guides/how-nix-works.html
+  https://doi.org/10.1017/S0956796810000195
+  https://r13y.com/
+
+> Include instructions for reviewers explaining how to exercise your artifact
+> on new inputs; in particular, document what inputs your tool support.
+
+TODO
+
+> When applicable, make sure that your tool accepts inputs in standard formats
+> (e.g. SMTLIB).
+
+We think that this is not applicable for our *input* of our tool, but indeed our
+tool provides SMTLIB as a standard *output* format.
+
+TODO
+
+> Ensure that your tool is reusable on inputs beyond those included in the paper
+> by describing one experiment beyond those in the paper that a reviewer might
+> run (a new program to feed to your compiler, a new problem for your SMT
+> solver, etc.)
+
+TODO
+
+
 ## Resource Limits
 
 The artifact imposes following resource limits on Z3:
@@ -239,18 +225,6 @@ These (and other) parameters as well as logging configuration can be changed in 
 
 All results were computed on a machine with 32GiB main memory, and computations took on the order of
 less than a second up to fifteen minutes.
-
-## Archiving
-
-The authors will not take extra steps to archive the artifact. Its source code is freely available at
-
-    https://github.com/lorenzleutgeb/atlas
-
-and is also archived on Zenodo, see
-
-    https://doi.org/10.5281/zenodo.4122492
-
-Note that Zenodo will archive the source of the artifact, not the artifact itself.
 
 
 # Response
@@ -624,14 +598,6 @@ time and exact instructions as how to do so.
 
 ```
 
-## Initial Check
-```
-(accept)
-
-I was able to successfully run the artifact in the VM following the
-instructions of the authors.
-```
-
 # Review 3
 
 ## Final Review
@@ -661,13 +627,4 @@ Also, the authors should have written down the conversion of output to human rea
 
 Apart from these minor things, I believe the tool works as intended and suggest acceptance.
 
-```
-
-## Initial Check
-```
-(accept)
-
-Using the Tacas21 virtual machine, I was able to install and run it without any problems. The instructions were very clear and easy to follow.
-
-I was able to run all the commands from the Readme file. Hence, the tool passes the initial check.
 ```

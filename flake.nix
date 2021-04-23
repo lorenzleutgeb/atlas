@@ -164,9 +164,12 @@
           src = ./.;
           buildInputs = [ examples ];
           buildPhase = ''
-            cp -Rv  $src        $out
-            chmod ug+rwx $out/src/test/resources
-            ln -svn ${examples} $out/src/test/resources/examples
+            cp    -Rv    $src        $out
+
+            chmod ug+rwx             $out/src/test/resources
+
+            rm    -rvf               $out/src/test/resources/examples
+            ln    -svn   ${examples} $out/src/test/resources/examples
           '';
           installPhase = "true";
         };
