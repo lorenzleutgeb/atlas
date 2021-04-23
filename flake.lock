@@ -3,11 +3,11 @@
     "examples": {
       "flake": false,
       "locked": {
-        "lastModified": 1618432220,
-        "narHash": "sha256-+dENbqOTSETHjR7L0A+WIujZ38SAk5FzwDNC3O0miWg=",
+        "lastModified": 1619100628,
+        "narHash": "sha256-8knipoNPHnosttfUGom8QRxoF5b/feyW0V0Vqi8HpbE=",
         "owner": "lorenzleutgeb",
         "repo": "atlas-examples",
-        "rev": "28eced73b64d9e6fceb7f0b6149138e3596e4c52",
+        "rev": "691144a99bf348f86c084b0a5eb36f2e6b4b6683",
         "type": "github"
       },
       "original": {
@@ -52,13 +52,33 @@
         "type": "github"
       }
     },
+    "home-manager": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1619162713,
+        "narHash": "sha256-JeTL/D/fW7ja2UbvmR9wqXaHlbM5UmooNEnRxo++qKo=",
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "rev": "e00dd0d7d2565a9d79c3826b088bef039624382e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1618801528,
-        "narHash": "sha256-1ru9LzP33ElEAZcDzYLgJQG3/uHhAg0LFJEfVZSOPZg=",
+        "lastModified": 1619057301,
+        "narHash": "sha256-1Y1nCnwGSQHM76KGIhz+8tOAGOT3wlP+dKjwoyQXCtg=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "0a5f5bab0e08e968ef25cff393312aa51a3512cf",
+        "rev": "d235056d6d6dcbd2999bd55fd120d831d4df6304",
         "type": "github"
       },
       "original": {
@@ -71,6 +91,7 @@
       "inputs": {
         "examples": "examples",
         "gradle2nix": "gradle2nix",
+        "home-manager": "home-manager",
         "nixpkgs": "nixpkgs"
       }
     }
