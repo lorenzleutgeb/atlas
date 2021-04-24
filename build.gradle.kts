@@ -131,7 +131,7 @@ dependencies {
     implementation("org.slf4j:slf4j-simple:1.7.30")
 
     // Native Image
-    compileOnly("org.graalvm.nativeimage:svm:20.3.0")
+    compileOnly("org.graalvm.nativeimage:svm:21.0.0")
 
     implementation("com.google.googlejavaformat:google-java-format:1.9")
     implementation("io.github.classgraph:classgraph:4.8.102")

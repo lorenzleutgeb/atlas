@@ -133,6 +133,12 @@ on which environment was targeted. This is a Nix default.
 should mention "GraalVM", and the environment variable `JAVA_HOME` must point at
 your GraalVM installation.
 
+#### Compatible GraalVM Version
+
+For development GraalVM CE 21.0.0 (build 11.0.10+8-jvmci-21.0-b06) was used.
+Any GraalVM version with a major version of 21 and a Java major version of 11
+is expected to work.
+
 #### Gradle
 
 [Install Gradle 7][gradle-install].

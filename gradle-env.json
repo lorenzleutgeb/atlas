@@ -1,7 +1,7 @@
 {
   "": {
     "name": "atlas",
-    "version": "v0.0.2-75-g268138c-dirty",
+    "version": "v0.0.2-81-g17b3286-dirty",
     "path": "",
     "gradle": {
       "version": "7.0",
@@ -2273,417 +2273,417 @@
           "id": {
             "group": "org.graalvm.compiler",
             "name": "compiler",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "jar",
             "extension": "jar"
           },
-          "name": "compiler-20.3.0.jar",
-          "path": "org/graalvm/compiler/compiler/20.3.0",
+          "name": "compiler-21.0.0.jar",
+          "path": "org/graalvm/compiler/compiler/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/compiler/compiler/20.3.0/compiler-20.3.0.jar",
-            "https://repo.maven.apache.org/maven2/org/graalvm/compiler/compiler/20.3.0/compiler-20.3.0.jar"
+            "https://repo.maven.apache.org/maven2/org/graalvm/compiler/compiler/21.0.0/compiler-21.0.0.jar",
+            "https://repo.maven.apache.org/maven2/org/graalvm/compiler/compiler/21.0.0/compiler-21.0.0.jar"
           ],
-          "sha256": "d47f9c607ad59ff1bc1b7689d456170b0e942cebeb73801ca72caf437d7f89cd"
+          "sha256": "46b847478be87c1cd5d66515bd8b8bc4b6121bf75c0a7811f287a71bdca74f40"
         },
         {
           "id": {
             "group": "org.graalvm.compiler",
             "name": "compiler",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "pom",
             "extension": "pom"
           },
-          "name": "compiler-20.3.0.pom",
-          "path": "org/graalvm/compiler/compiler/20.3.0",
+          "name": "compiler-21.0.0.pom",
+          "path": "org/graalvm/compiler/compiler/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/compiler/compiler/20.3.0/compiler-20.3.0.pom",
-            "https://repo.maven.apache.org/maven2/org/graalvm/compiler/compiler/20.3.0/compiler-20.3.0.pom"
+            "https://repo.maven.apache.org/maven2/org/graalvm/compiler/compiler/21.0.0/compiler-21.0.0.pom",
+            "https://repo.maven.apache.org/maven2/org/graalvm/compiler/compiler/21.0.0/compiler-21.0.0.pom"
           ],
-          "sha256": "24f6ee4c584b3243dd8778d85813f3849c9e4a52470a7ed7bb3d63f21f8a7b96"
+          "sha256": "799d0812141e4be75426df501a4bd4831fb5e03daa7e473ff8b40ee63efce639"
         },
         {
           "id": {
             "group": "org.graalvm.nativeimage",
             "name": "objectfile",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "jar",
             "extension": "jar"
           },
-          "name": "objectfile-20.3.0.jar",
-          "path": "org/graalvm/nativeimage/objectfile/20.3.0",
+          "name": "objectfile-21.0.0.jar",
+          "path": "org/graalvm/nativeimage/objectfile/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/objectfile/20.3.0/objectfile-20.3.0.jar",
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/objectfile/20.3.0/objectfile-20.3.0.jar"
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/objectfile/21.0.0/objectfile-21.0.0.jar",
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/objectfile/21.0.0/objectfile-21.0.0.jar"
           ],
-          "sha256": "7515dd06bd533af0976198a5f9f26e7596e97f9852333dc87a5cf343a7fa1434"
+          "sha256": "a80b9969f048d6a06ca75a35abe55a594d3686fd503a5e18cb65633f540c0fdc"
         },
         {
           "id": {
             "group": "org.graalvm.nativeimage",
             "name": "objectfile",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "pom",
             "extension": "pom"
           },
-          "name": "objectfile-20.3.0.pom",
-          "path": "org/graalvm/nativeimage/objectfile/20.3.0",
+          "name": "objectfile-21.0.0.pom",
+          "path": "org/graalvm/nativeimage/objectfile/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/objectfile/20.3.0/objectfile-20.3.0.pom",
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/objectfile/20.3.0/objectfile-20.3.0.pom"
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/objectfile/21.0.0/objectfile-21.0.0.pom",
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/objectfile/21.0.0/objectfile-21.0.0.pom"
           ],
-          "sha256": "f60e77c668b3872f5b12f76a30f6e8df88254f4cb2c9587947213d9e6276d1a5"
+          "sha256": "a1ca5320d541f043fab219d4f45e2e62b8bcf8e579791037a641540153f7b892"
         },
         {
           "id": {
             "group": "org.graalvm.nativeimage",
             "name": "pointsto",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "jar",
             "extension": "jar"
           },
-          "name": "pointsto-20.3.0.jar",
-          "path": "org/graalvm/nativeimage/pointsto/20.3.0",
+          "name": "pointsto-21.0.0.jar",
+          "path": "org/graalvm/nativeimage/pointsto/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/pointsto/20.3.0/pointsto-20.3.0.jar",
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/pointsto/20.3.0/pointsto-20.3.0.jar"
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/pointsto/21.0.0/pointsto-21.0.0.jar",
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/pointsto/21.0.0/pointsto-21.0.0.jar"
           ],
-          "sha256": "9245afc89b2aa0538dceec5167fe7cf169df6549a28a394e870c1b563e708005"
+          "sha256": "c25809accea62e200218d7ec124fc21ffc0b4c4a5a4200c7cb6362f06a2453d9"
         },
         {
           "id": {
             "group": "org.graalvm.nativeimage",
             "name": "pointsto",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "pom",
             "extension": "pom"
           },
-          "name": "pointsto-20.3.0.pom",
-          "path": "org/graalvm/nativeimage/pointsto/20.3.0",
+          "name": "pointsto-21.0.0.pom",
+          "path": "org/graalvm/nativeimage/pointsto/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/pointsto/20.3.0/pointsto-20.3.0.pom",
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/pointsto/20.3.0/pointsto-20.3.0.pom"
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/pointsto/21.0.0/pointsto-21.0.0.pom",
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/pointsto/21.0.0/pointsto-21.0.0.pom"
           ],
-          "sha256": "b29624bf73472cb4181aaf2f48e84f604ccd01837133f5892c6870b84cc64364"
+          "sha256": "bb099d6b67d09f7a8e97f444bfb3956e72b3c3015c5b3655498ce2334fc63f44"
         },
         {
           "id": {
             "group": "org.graalvm.nativeimage",
             "name": "svm",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "jar",
             "extension": "jar"
           },
-          "name": "svm-20.3.0.jar",
-          "path": "org/graalvm/nativeimage/svm/20.3.0",
+          "name": "svm-21.0.0.jar",
+          "path": "org/graalvm/nativeimage/svm/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm/20.3.0/svm-20.3.0.jar",
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm/20.3.0/svm-20.3.0.jar"
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm/21.0.0/svm-21.0.0.jar",
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm/21.0.0/svm-21.0.0.jar"
           ],
-          "sha256": "6f1f33de8d2a8d21589cdfd25624e12504aa69e602d98b3de3ad9b7317810333"
+          "sha256": "7f9842da9930aefad6817732a2c6e539f2cc65db86e660fefed23fb4a14f1738"
         },
         {
           "id": {
             "group": "org.graalvm.nativeimage",
             "name": "svm",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "pom",
             "extension": "pom"
           },
-          "name": "svm-20.3.0.pom",
-          "path": "org/graalvm/nativeimage/svm/20.3.0",
+          "name": "svm-21.0.0.pom",
+          "path": "org/graalvm/nativeimage/svm/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm/20.3.0/svm-20.3.0.pom",
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm/20.3.0/svm-20.3.0.pom"
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm/21.0.0/svm-21.0.0.pom",
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm/21.0.0/svm-21.0.0.pom"
           ],
-          "sha256": "6a1f57c83eee226d48b1b6a19fdf5c83f578ea63eab0870e6e685e43cc92c9dc"
+          "sha256": "9a857b4161ed74a03e289caad3b40e10796580aaf5bcd49b8a9db611b1ebf091"
         },
         {
           "id": {
             "group": "org.graalvm.nativeimage",
             "name": "svm-hosted-native-darwin-amd64",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "pom",
             "extension": "pom"
           },
-          "name": "svm-hosted-native-darwin-amd64-20.3.0.pom",
-          "path": "org/graalvm/nativeimage/svm-hosted-native-darwin-amd64/20.3.0",
+          "name": "svm-hosted-native-darwin-amd64-21.0.0.pom",
+          "path": "org/graalvm/nativeimage/svm-hosted-native-darwin-amd64/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-darwin-amd64/20.3.0/svm-hosted-native-darwin-amd64-20.3.0.pom",
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-darwin-amd64/20.3.0/svm-hosted-native-darwin-amd64-20.3.0.pom"
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-darwin-amd64/21.0.0/svm-hosted-native-darwin-amd64-21.0.0.pom",
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-darwin-amd64/21.0.0/svm-hosted-native-darwin-amd64-21.0.0.pom"
           ],
-          "sha256": "7883977f382f30556799c05122b8cdc6ad06a652bd7fc41ddafff12c50c5bd7d"
+          "sha256": "502dd2db79b30168b0520615acfd475b4b671ec371458ecb2350221689a282ca"
         },
         {
           "id": {
             "group": "org.graalvm.nativeimage",
             "name": "svm-hosted-native-darwin-amd64",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "tar.gz",
             "extension": "tar.gz"
           },
-          "name": "svm-hosted-native-darwin-amd64-20.3.0.tar.gz",
-          "path": "org/graalvm/nativeimage/svm-hosted-native-darwin-amd64/20.3.0",
+          "name": "svm-hosted-native-darwin-amd64-21.0.0.tar.gz",
+          "path": "org/graalvm/nativeimage/svm-hosted-native-darwin-amd64/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-darwin-amd64/20.3.0/svm-hosted-native-darwin-amd64-20.3.0.tar.gz",
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-darwin-amd64/20.3.0/svm-hosted-native-darwin-amd64-20.3.0.tar.gz"
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-darwin-amd64/21.0.0/svm-hosted-native-darwin-amd64-21.0.0.tar.gz",
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-darwin-amd64/21.0.0/svm-hosted-native-darwin-amd64-21.0.0.tar.gz"
           ],
-          "sha256": "33b39478aed2c7541429157600118d497b1bb7ec3e9f6b7b7446f0cd6b04f04e"
+          "sha256": "efd2d61f316b6619156cc572293696252c245e8b91c1b5d07f7f535dc87df231"
         },
         {
           "id": {
             "group": "org.graalvm.nativeimage",
             "name": "svm-hosted-native-linux-amd64",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "pom",
             "extension": "pom"
           },
-          "name": "svm-hosted-native-linux-amd64-20.3.0.pom",
-          "path": "org/graalvm/nativeimage/svm-hosted-native-linux-amd64/20.3.0",
+          "name": "svm-hosted-native-linux-amd64-21.0.0.pom",
+          "path": "org/graalvm/nativeimage/svm-hosted-native-linux-amd64/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-linux-amd64/20.3.0/svm-hosted-native-linux-amd64-20.3.0.pom",
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-linux-amd64/20.3.0/svm-hosted-native-linux-amd64-20.3.0.pom"
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-linux-amd64/21.0.0/svm-hosted-native-linux-amd64-21.0.0.pom",
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-linux-amd64/21.0.0/svm-hosted-native-linux-amd64-21.0.0.pom"
           ],
-          "sha256": "fb0378ce8867d857e0fb454465f6a0f6a41e460965295f9c9049a6f6a2444058"
+          "sha256": "cc6463ff5bcbe0df466994dfee673b52c31c071bd843ee0e6ff09394f0272501"
         },
         {
           "id": {
             "group": "org.graalvm.nativeimage",
             "name": "svm-hosted-native-linux-amd64",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "tar.gz",
             "extension": "tar.gz"
           },
-          "name": "svm-hosted-native-linux-amd64-20.3.0.tar.gz",
-          "path": "org/graalvm/nativeimage/svm-hosted-native-linux-amd64/20.3.0",
+          "name": "svm-hosted-native-linux-amd64-21.0.0.tar.gz",
+          "path": "org/graalvm/nativeimage/svm-hosted-native-linux-amd64/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-linux-amd64/20.3.0/svm-hosted-native-linux-amd64-20.3.0.tar.gz",
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-linux-amd64/20.3.0/svm-hosted-native-linux-amd64-20.3.0.tar.gz"
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-linux-amd64/21.0.0/svm-hosted-native-linux-amd64-21.0.0.tar.gz",
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-linux-amd64/21.0.0/svm-hosted-native-linux-amd64-21.0.0.tar.gz"
           ],
-          "sha256": "e64b912f194f9612d9da5b3ac5920206bed0ab5b6e25a641088283198d2b06c4"
+          "sha256": "15b0832b0a214181cea537d655e0e2db29b87092b100452313a8fbcacc8ef53d"
         },
         {
           "id": {
             "group": "org.graalvm.nativeimage",
             "name": "svm-hosted-native-windows-amd64",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "pom",
             "extension": "pom"
           },
-          "name": "svm-hosted-native-windows-amd64-20.3.0.pom",
-          "path": "org/graalvm/nativeimage/svm-hosted-native-windows-amd64/20.3.0",
+          "name": "svm-hosted-native-windows-amd64-21.0.0.pom",
+          "path": "org/graalvm/nativeimage/svm-hosted-native-windows-amd64/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-windows-amd64/20.3.0/svm-hosted-native-windows-amd64-20.3.0.pom",
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-windows-amd64/20.3.0/svm-hosted-native-windows-amd64-20.3.0.pom"
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-windows-amd64/21.0.0/svm-hosted-native-windows-amd64-21.0.0.pom",
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-windows-amd64/21.0.0/svm-hosted-native-windows-amd64-21.0.0.pom"
           ],
-          "sha256": "1d5858c167bd59b5e5e5c6858099a51a6c4a287e02579ba9226cdd201d9e51af"
+          "sha256": "48cb2682b60dd6580b7e9c96651cc3892128512891a865fc74e44c6cfa2e1933"
         },
         {
           "id": {
             "group": "org.graalvm.nativeimage",
             "name": "svm-hosted-native-windows-amd64",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "tar.gz",
             "extension": "tar.gz"
           },
-          "name": "svm-hosted-native-windows-amd64-20.3.0.tar.gz",
-          "path": "org/graalvm/nativeimage/svm-hosted-native-windows-amd64/20.3.0",
+          "name": "svm-hosted-native-windows-amd64-21.0.0.tar.gz",
+          "path": "org/graalvm/nativeimage/svm-hosted-native-windows-amd64/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-windows-amd64/20.3.0/svm-hosted-native-windows-amd64-20.3.0.tar.gz",
-            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-windows-amd64/20.3.0/svm-hosted-native-windows-amd64-20.3.0.tar.gz"
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-windows-amd64/21.0.0/svm-hosted-native-windows-amd64-21.0.0.tar.gz",
+            "https://repo.maven.apache.org/maven2/org/graalvm/nativeimage/svm-hosted-native-windows-amd64/21.0.0/svm-hosted-native-windows-amd64-21.0.0.tar.gz"
           ],
-          "sha256": "ff5d8ad2e672d7d154031a7dcdab0f6d0a8238aba930316d30681e4731654f43"
+          "sha256": "f272f57d6c605b40fa57ceb08d02525f67adda6b266ffcca6a36d30e5b625883"
         },
         {
           "id": {
             "group": "org.graalvm.sdk",
             "name": "graal-sdk",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "jar",
             "extension": "jar"
           },
-          "name": "graal-sdk-20.3.0.jar",
-          "path": "org/graalvm/sdk/graal-sdk/20.3.0",
+          "name": "graal-sdk-21.0.0.jar",
+          "path": "org/graalvm/sdk/graal-sdk/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/sdk/graal-sdk/20.3.0/graal-sdk-20.3.0.jar",
-            "https://repo.maven.apache.org/maven2/org/graalvm/sdk/graal-sdk/20.3.0/graal-sdk-20.3.0.jar"
+            "https://repo.maven.apache.org/maven2/org/graalvm/sdk/graal-sdk/21.0.0/graal-sdk-21.0.0.jar",
+            "https://repo.maven.apache.org/maven2/org/graalvm/sdk/graal-sdk/21.0.0/graal-sdk-21.0.0.jar"
           ],
-          "sha256": "a8bf1a655a4b513ea61b7f01ec488a339d7e2719a7d32125fe5eac3a619f0589"
+          "sha256": "b51768a0aedae3c3e4a6bcb359a507e399524d709fecd23976552f4d16880ad7"
         },
         {
           "id": {
             "group": "org.graalvm.sdk",
             "name": "graal-sdk",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "pom",
             "extension": "pom"
           },
-          "name": "graal-sdk-20.3.0.pom",
-          "path": "org/graalvm/sdk/graal-sdk/20.3.0",
+          "name": "graal-sdk-21.0.0.pom",
+          "path": "org/graalvm/sdk/graal-sdk/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/sdk/graal-sdk/20.3.0/graal-sdk-20.3.0.pom",
-            "https://repo.maven.apache.org/maven2/org/graalvm/sdk/graal-sdk/20.3.0/graal-sdk-20.3.0.pom"
+            "https://repo.maven.apache.org/maven2/org/graalvm/sdk/graal-sdk/21.0.0/graal-sdk-21.0.0.pom",
+            "https://repo.maven.apache.org/maven2/org/graalvm/sdk/graal-sdk/21.0.0/graal-sdk-21.0.0.pom"
           ],
-          "sha256": "d6e112b39d2f253d829c5967adf3cf93d5294907283db9b0c2e7512ea86d9d21"
+          "sha256": "8f9455c5280625c6753d68c3038024de141ad8aa1f10dde35b8e92c18b85acef"
         },
         {
           "id": {
             "group": "org.graalvm.truffle",
             "name": "truffle-api",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "jar",
             "extension": "jar"
           },
-          "name": "truffle-api-20.3.0.jar",
-          "path": "org/graalvm/truffle/truffle-api/20.3.0",
+          "name": "truffle-api-21.0.0.jar",
+          "path": "org/graalvm/truffle/truffle-api/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-api/20.3.0/truffle-api-20.3.0.jar",
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-api/20.3.0/truffle-api-20.3.0.jar"
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-api/21.0.0/truffle-api-21.0.0.jar",
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-api/21.0.0/truffle-api-21.0.0.jar"
           ],
-          "sha256": "0096b45169ed5c9d55b554cfc04f530fe5392a29ac01300aab3a9448583c6e61"
+          "sha256": "3f6b7a939539febc2a2fc70ebbab404bb874c3ac75b586b521fc8c1ea6cc33ad"
         },
         {
           "id": {
             "group": "org.graalvm.truffle",
             "name": "truffle-api",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "pom",
             "extension": "pom"
           },
-          "name": "truffle-api-20.3.0.pom",
-          "path": "org/graalvm/truffle/truffle-api/20.3.0",
+          "name": "truffle-api-21.0.0.pom",
+          "path": "org/graalvm/truffle/truffle-api/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-api/20.3.0/truffle-api-20.3.0.pom",
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-api/20.3.0/truffle-api-20.3.0.pom"
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-api/21.0.0/truffle-api-21.0.0.pom",
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-api/21.0.0/truffle-api-21.0.0.pom"
           ],
-          "sha256": "b2f3fd288771ad79cb231b98c036220883bb1d27ef5dd081e5c585c7adb5046b"
+          "sha256": "b62a628d5dc30e7a53dc987dab5772c60b46d89ce89e42162ca3b3b60c7e9ff3"
         },
         {
           "id": {
             "group": "org.graalvm.truffle",
             "name": "truffle-nfi",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "jar",
             "extension": "jar"
           },
-          "name": "truffle-nfi-20.3.0.jar",
-          "path": "org/graalvm/truffle/truffle-nfi/20.3.0",
+          "name": "truffle-nfi-21.0.0.jar",
+          "path": "org/graalvm/truffle/truffle-nfi/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi/20.3.0/truffle-nfi-20.3.0.jar",
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi/20.3.0/truffle-nfi-20.3.0.jar"
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi/21.0.0/truffle-nfi-21.0.0.jar",
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi/21.0.0/truffle-nfi-21.0.0.jar"
           ],
-          "sha256": "c4fef34708d4e2a653d0385ada7093f7972b6242f917b5879f5c7a3477ce1920"
+          "sha256": "7d4664875da874308fa265bf7956ecb7e48446f7700301bffc86b1aa4fe21925"
         },
         {
           "id": {
             "group": "org.graalvm.truffle",
             "name": "truffle-nfi",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "pom",
             "extension": "pom"
           },
-          "name": "truffle-nfi-20.3.0.pom",
-          "path": "org/graalvm/truffle/truffle-nfi/20.3.0",
+          "name": "truffle-nfi-21.0.0.pom",
+          "path": "org/graalvm/truffle/truffle-nfi/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi/20.3.0/truffle-nfi-20.3.0.pom",
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi/20.3.0/truffle-nfi-20.3.0.pom"
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi/21.0.0/truffle-nfi-21.0.0.pom",
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi/21.0.0/truffle-nfi-21.0.0.pom"
           ],
-          "sha256": "0d7e7fcb55bb28acef67ff4b5a76690b71b5cc391df2de32cd064e32596bae3c"
+          "sha256": "060a31a4c78a6d28417d62f90bcc15a24cfd7951367502406ec476ce37ac22ff"
         },
         {
           "id": {
             "group": "org.graalvm.truffle",
             "name": "truffle-nfi-native-darwin-amd64",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "pom",
             "extension": "pom"
           },
-          "name": "truffle-nfi-native-darwin-amd64-20.3.0.pom",
-          "path": "org/graalvm/truffle/truffle-nfi-native-darwin-amd64/20.3.0",
+          "name": "truffle-nfi-native-darwin-amd64-21.0.0.pom",
+          "path": "org/graalvm/truffle/truffle-nfi-native-darwin-amd64/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-darwin-amd64/20.3.0/truffle-nfi-native-darwin-amd64-20.3.0.pom",
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-darwin-amd64/20.3.0/truffle-nfi-native-darwin-amd64-20.3.0.pom"
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-darwin-amd64/21.0.0/truffle-nfi-native-darwin-amd64-21.0.0.pom",
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-darwin-amd64/21.0.0/truffle-nfi-native-darwin-amd64-21.0.0.pom"
           ],
-          "sha256": "3edbeddfcd0a4cae8467cfc7a155e3d4cffcf457ef65939a95a8bedf6ab9a4ee"
+          "sha256": "f1d7c0088d0824fed9f09999361b0488ada7cc8baa3223cb704025864871d5b1"
         },
         {
           "id": {
             "group": "org.graalvm.truffle",
             "name": "truffle-nfi-native-darwin-amd64",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "tar.gz",
             "extension": "tar.gz"
           },
-          "name": "truffle-nfi-native-darwin-amd64-20.3.0.tar.gz",
-          "path": "org/graalvm/truffle/truffle-nfi-native-darwin-amd64/20.3.0",
+          "name": "truffle-nfi-native-darwin-amd64-21.0.0.tar.gz",
+          "path": "org/graalvm/truffle/truffle-nfi-native-darwin-amd64/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-darwin-amd64/20.3.0/truffle-nfi-native-darwin-amd64-20.3.0.tar.gz",
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-darwin-amd64/20.3.0/truffle-nfi-native-darwin-amd64-20.3.0.tar.gz"
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-darwin-amd64/21.0.0/truffle-nfi-native-darwin-amd64-21.0.0.tar.gz",
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-darwin-amd64/21.0.0/truffle-nfi-native-darwin-amd64-21.0.0.tar.gz"
           ],
-          "sha256": "9cbd72199cb1c370f6c423848257eca59c97b718f78692c2953ddcc1eee20084"
+          "sha256": "788d3b61aee89c9a73f40161dca66053ee4da5bf2ef67509285c92843317b46d"
         },
         {
           "id": {
             "group": "org.graalvm.truffle",
             "name": "truffle-nfi-native-linux-aarch64",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "pom",
             "extension": "pom"
           },
-          "name": "truffle-nfi-native-linux-aarch64-20.3.0.pom",
-          "path": "org/graalvm/truffle/truffle-nfi-native-linux-aarch64/20.3.0",
+          "name": "truffle-nfi-native-linux-aarch64-21.0.0.pom",
+          "path": "org/graalvm/truffle/truffle-nfi-native-linux-aarch64/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-aarch64/20.3.0/truffle-nfi-native-linux-aarch64-20.3.0.pom",
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-aarch64/20.3.0/truffle-nfi-native-linux-aarch64-20.3.0.pom"
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-aarch64/21.0.0/truffle-nfi-native-linux-aarch64-21.0.0.pom",
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-aarch64/21.0.0/truffle-nfi-native-linux-aarch64-21.0.0.pom"
           ],
-          "sha256": "fdfe844de32eec0daddcd4e443c8714063f040962db9f50f0bc01d94a0ae80d5"
+          "sha256": "39e9d706fb37761d9b7b6ededf5076e4a6d6c6fd83528dc6ccd1abdbb5031b80"
         },
         {
           "id": {
             "group": "org.graalvm.truffle",
             "name": "truffle-nfi-native-linux-aarch64",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "tar.gz",
             "extension": "tar.gz"
           },
-          "name": "truffle-nfi-native-linux-aarch64-20.3.0.tar.gz",
-          "path": "org/graalvm/truffle/truffle-nfi-native-linux-aarch64/20.3.0",
+          "name": "truffle-nfi-native-linux-aarch64-21.0.0.tar.gz",
+          "path": "org/graalvm/truffle/truffle-nfi-native-linux-aarch64/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-aarch64/20.3.0/truffle-nfi-native-linux-aarch64-20.3.0.tar.gz",
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-aarch64/20.3.0/truffle-nfi-native-linux-aarch64-20.3.0.tar.gz"
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-aarch64/21.0.0/truffle-nfi-native-linux-aarch64-21.0.0.tar.gz",
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-aarch64/21.0.0/truffle-nfi-native-linux-aarch64-21.0.0.tar.gz"
           ],
-          "sha256": "d0ab99d96153f3ebd2bd01d13e9bde56db0593144ccdaac8d8df776b0034fbf1"
+          "sha256": "1fa46acb71d4176471644c0c99ecc7ad68444a15afbe1ca0c401884f2d876d64"
         },
         {
           "id": {
             "group": "org.graalvm.truffle",
             "name": "truffle-nfi-native-linux-amd64",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "pom",
             "extension": "pom"
           },
-          "name": "truffle-nfi-native-linux-amd64-20.3.0.pom",
-          "path": "org/graalvm/truffle/truffle-nfi-native-linux-amd64/20.3.0",
+          "name": "truffle-nfi-native-linux-amd64-21.0.0.pom",
+          "path": "org/graalvm/truffle/truffle-nfi-native-linux-amd64/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-amd64/20.3.0/truffle-nfi-native-linux-amd64-20.3.0.pom",
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-amd64/20.3.0/truffle-nfi-native-linux-amd64-20.3.0.pom"
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-amd64/21.0.0/truffle-nfi-native-linux-amd64-21.0.0.pom",
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-amd64/21.0.0/truffle-nfi-native-linux-amd64-21.0.0.pom"
           ],
-          "sha256": "bdfec4d9fc63f7b89c742da7f7470c7b11f416364339d218a1c88b8476c6e300"
+          "sha256": "bf47380a096befd24f5387a78b822aff6974b4c2d552cc3a9d086fee6fd67479"
         },
         {
           "id": {
             "group": "org.graalvm.truffle",
             "name": "truffle-nfi-native-linux-amd64",
-            "version": "20.3.0",
+            "version": "21.0.0",
             "type": "tar.gz",
             "extension": "tar.gz"
           },
-          "name": "truffle-nfi-native-linux-amd64-20.3.0.tar.gz",
-          "path": "org/graalvm/truffle/truffle-nfi-native-linux-amd64/20.3.0",
+          "name": "truffle-nfi-native-linux-amd64-21.0.0.tar.gz",
+          "path": "org/graalvm/truffle/truffle-nfi-native-linux-amd64/21.0.0",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-amd64/20.3.0/truffle-nfi-native-linux-amd64-20.3.0.tar.gz",
-            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-amd64/20.3.0/truffle-nfi-native-linux-amd64-20.3.0.tar.gz"
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-amd64/21.0.0/truffle-nfi-native-linux-amd64-21.0.0.tar.gz",
+            "https://repo.maven.apache.org/maven2/org/graalvm/truffle/truffle-nfi-native-linux-amd64/21.0.0/truffle-nfi-native-linux-amd64-21.0.0.tar.gz"
           ],
-          "sha256": "cf569de4242ff936d758a7c7dcdc09f516d0c9a984d13a518390de2dddacff17"
+          "sha256": "506b4da54afcb313e75717f11383e659ef7f4c73b03743d3f7d6a05ff45035a3"
         },
         {
           "id": {
