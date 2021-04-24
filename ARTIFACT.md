@@ -1,4 +1,4 @@
-# ATLAS
+# atlas Artifact Readme
 
 ## Important Notice
 
@@ -8,10 +8,10 @@ artifact", item 1.2. of the "Artifact Evaluation" website at
   http://i-cav.org/2021/artifact-evaluation/
 
 This file has been named not been named `README.md` or similar, but `ARTIFACT.md`
-instead, to avoid confusion with the `README.md` file in the source repository
-of the artifact.
+instead, to avoid confusion with `README.md` in the source repository
+of the tool.
 
-This artifact submitted as #329 for "Artifact Evaluation", is associated with
+This artifact, submitted as #329 for "Artifact Evaluation", is associated with
 the paper submission as #294 for "Main track".
 
 This artifact aims for all three badges (functional, available, reusable). For
@@ -25,32 +25,19 @@ evaluation.
 Note that in the OVA, the [Nix][nix] package manager is installed, so
 installation is as simple as
 
-    nix-env -iA nixos.hello
+    $ nix-env -iA nixos.hello
 
 The Docker image is much smaller in size, because it does not contain a
 graphical desktop.
 
 ## Functional
 
-The art
+Please make sure to read the section "Using" of `README.md` for general remarks
+on operating the tool, then return to this section which addresses reproduction
+of results.
 
-# Artifact
-
-## Contents of `artifact`
-
-## Invoking the Artifact
-
-In a Bash-compatible shell, run
-
-    cd artifact
-
-to change into the artifact directory. Paths below are relative to this folder.
-Then run
-
-    ./atlas --help
-
-To get a help text. To verify the results in the
-accompanying paper, you will need the "run"
+To verify the results in the
+associated paper, you will need the "run"
 subcommand
 
     ./atlas run --help
@@ -103,15 +90,9 @@ artifact contains some tactics in
 
 To enable them, use the `run` subcommand with the `--tactics` parameter.
 
-## Results Reported in the TACAS Tool Paper
+## Results Reported in the Associated Paper
 
-The artifact is consistent with the results reported in the TACAS tool paper
-(see Fig. 8 on page 16), submitted on 2020-10-23. These results differ slightly
-from the results in the paper submitted on 2020-10-16, since we fixed a bug and
-added two additional benchmark (`SplayTree.splay_max_eq`, and
-`PairingHeap.insert`).
-
-To verify the results presented in the accompanying paper, run the following commands:
+To verify the results presented in the associated paper, run the following commands:
 
     ./atlas run --home resources/examples --tactics resources/tactics "SplayTree\\.splay(_max)?_eq"
     ./atlas run --home resources/examples --tactics resources/tactics "SplayTree\\.splay_eq_min"
@@ -132,7 +113,6 @@ These correspond to the following lines/names in the paper (line by line):
 > provide detailed documentation assuming minimum expertise.
 
 
-
 > Ensure the artifact is in the state ready to run. It should work without a network connection. It should not require the user to install additional software before running, that is, all required packages should be installed on the provided virtual machine.
 
 > The artifact should use reasonably modest resources (RAM, number of cores), so that the results can be reproduced on various hardware platforms including laptops. The evaluation should take a reasonable amount of time to complete (no more than 3 to 5 hours). If this is not the case for your benchmarks, make sure to also include simpler benchmarks that do not require a long running time. If this is not possible, please contact PC and AEC chairs as soon as possible.
@@ -142,6 +122,10 @@ These correspond to the following lines/names in the paper (line by line):
 > We encourage the authors to include log files that were produced by their tools, and point to the relevant log files in the artifact description.
 
 ## Available
+
+> To get the available badge, please upload your VM to a permanent repository,
+> such as Zenodo, figshare, or Dryad and use that link in your artifact
+> submission.
 
 This artifact was submitted via Zenodo.
 
@@ -161,13 +145,12 @@ and input files and representative experiments are publicly available at
   https://github.com/lorenzleutgeb/atlas-examples
 
 These two repositories are split on purpose, so that future and/or competing
-implementations may share and collaborate on the input files in separated from
+implementations may share and collaborate on the input files separated from
 this concrete implementation.
 
 The contents of both repositories are licensed to allow re-use. See
 
   https://github.com/lorenzleutgeb/atlas/blob/main/LICENSE
-TODO
   https://github.com/lorenzleutgeb/atlas-examples/blob/main/LICENSE
 
 > Your source code release should include detailed documentation
@@ -176,6 +159,8 @@ TODO
 Please refer to
 
   https://github.com/lorenzleutgeb/atlas/blob/main/README.md
+
+Note that this file is also included in the artifact.
 
 > Ensure that the set-up process for your artifact is reproducible by including
 > a script used to build the VM or container (Vagrantfile, Docker script,
@@ -221,25 +206,18 @@ The artifact imposes following resource limits on Z3:
   Wall clock runtime: 15 minutes
   Limit for memory: 24GiB
 
-These (and other) parameters as well as logging configuration can be changed in `atlas.properties`.
+These (and other) parameters as well as logging configuration can be changed
+in `atlas.properties`.
 
-All results were computed on a machine with 32GiB main memory, and computations took on the order of
-less than a second up to fifteen minutes.
-
+All results were computed on a machine with 64GiB main memory, and computations
+took on the order of less than a second up to fifteen minutes.
 
 # Response
-
-We have no response for reviews 2 and 3 because there were no questions raised.
-A response regarding review 1 (with inline quotes) follows.
-
-We thank all reviewers for their efforts, which will certainly result in improving the quality of the artifact and our work.
-
----
 
 Regarding your item (1):
 
 Please consider the following list of invocations which correspond directly to
-lines in the result table from our paper:
+lines in the result table from the associated paper:
 
     ./lac run --home resources/examples --tactics resources/tactics "SplayTree\\.splay_eq"
     ./lac run --home resources/examples --tactics resources/tactics "SplayTree\\.splay_eq_min"
@@ -598,33 +576,4 @@ time and exact instructions as how to do so.
 
 ```
 
-# Review 3
-
-## Final Review
-```
-(accept)
-
-I was able to produce all the entries in figure 8 from the paper except the "SplayTree.splay minimised solution" one. It gives an error that the core is unsatisfiable. Here is the output that I got:
-
---------------------------------
-..
-..
-[1, 0] <= [1, 1]
-[1, 0] <= [1, 2]
-[1, 1] <= [1, 2]
-INFO Done.
-INFO Solving constraints...
-ERROR Constraint system is unsatisfiable!
-INFO Unsatisfiable core (raw from Z3):
-(assert (let ((a!1 (= (to_real |b1fd8a6449b8f60d7c1ff5341d383973438f1e428ec8eeeaf247b57cd942d568.sum[2]|) (+ (/ 1.0 2.0) (to_real (- |b1fd8a6449b8f60d7c1ff5341d383973438f1e428ec8eeeaf247b57cd942d568.f[1]|)) (to_real |b1fd8a6449b8f60d7c1ff5341d383973438f1e428ec8eeeaf247b57cd942d568.f[6]|) (to_real |b1fd8a6449b8f60d7c1ff5341d383973438f1e428ec8eeeaf247b57cd942d568.f[7]|) (to_real |b1fd8a6449b8f60d7c1ff5341d383973438f1e428ec8eeeaf247b57cd942d568.f[9]|))))) (=> |0353929749: (w 797 ≤ 60) b1fd8a6449b8f60d7c1ff5341d383973438f1e428ec8eeeaf247b57cd942d568.sum[2] = Σ... + q[2] (farkas)| a!1)))
-INFO Done. Result(s): 
-INFO UNSAT
----------------------------------
-
-I believe this is due to some small error which can be fixed easily. 
-
-Also, the authors should have written down the conversion of output to human readable form in the readme file. It was very helpful that it was in the rebuttal. The authors could've also translated it directly into something readable, it was very cryptic. 
-
-Apart from these minor things, I believe the tool works as intended and suggest acceptance.
-
-```
+[nix]: https://nixos.org/nix
