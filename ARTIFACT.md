@@ -92,21 +92,22 @@ To enable them, use the `run` subcommand with the `--tactics` parameter.
 
 ## Results Reported in the Associated Paper
 
-To verify the results presented in the associated paper, run the following commands:
+To verify the results presented in Table 1 on page 3 of the associated paper,
+run the following commands.
 
-    ./atlas run --home resources/examples --tactics resources/tactics "SplayTree\\.splay(_max)?_eq"
-    ./atlas run --home resources/examples --tactics resources/tactics "SplayTree\\.splay_eq_min"
-    ./atlas run --home resources/examples --tactics resources/tactics "SplayHeap\\.(insert,del_min)"
-    ./atlas run --home resources/examples --tactics resources/tactics "PairingHeap\\.(insert|merge_pairs_isolated)"
-    ./atlas run --home resources/examples --tactics resources/tactics "PairingHeap\\.pass(1|2)"
+For the first group of four lines (`SplayTree`):
 
-These correspond to the following lines/names in the paper (line by line):
+    ./atlas run --home resources/examples --tactics resources/tactics "SplayTree\\.(splay(_max)?|insert|delete)"
 
-    `SplayTree.splay` (fist line) and `SplayTree.splay_max` (third line)
-    `SplayTree.splay` minimised (second line)
-    `SplayHeap.insert` (fourth line) and `SplayHeap.del_min` (fifth line)
-    `PairingHeap.merge_pairs`, `PairingHeap.insert` and `PairingHeap.merge` (sixth, seventh and eighth line)
-    `PairingHeap.pass1` and `PairingHeap.pass2` (ninth and tenth line)
+For the second group of three lines (`SplayHeap`):
+
+    ./atlas run --home resources/examples --tactics resources/tactics "SplayHeap\\.(insert|del_min)"
+
+For the third group of four lines (`PairingHeap`) **EXCEPT** `PairingHeap.merge`:
+
+    ./atlas run --home resources/examples --tactics resources/tactics "PairingHeap\\.(insert|merge_pairs|del_min_via_merge_pairs)_isolated"
+
+TODO: Cover merge.
 
 > Document in detail how to reproduce the experimental results of the paper
 > using the artifact; keep this process simple through easy-to-use scripts and
