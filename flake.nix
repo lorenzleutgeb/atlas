@@ -50,6 +50,11 @@
         nano
       ];
       submission = "CAV2021_paper_294.pdf";
+      maintainers = [{
+        name = "Lorenz Leutgeb";
+        email = "lorenz@leutgeb.xyz";
+        github = "lorenzleutgeb";
+      }];
     in rec {
       devShell.${system} = pkgs.mkShell {
         buildInputs = [ atlasEnv ];
@@ -81,6 +86,14 @@
           '';
           downloadToTemp = true;
           recursiveHash = true;
+
+          meta = {
+            inherit maintainers;
+
+            longDescription = ''
+              The associated paper as PDF, wrapped in a directory.
+            '';
+          };
         };
 
         atlas = (pkgs.callPackage ./gradle-env.nix { inherit gradleGen; }) {
@@ -123,6 +136,20 @@
             chmod ug+w $out/var/atlas/atlas.properties
             echo "xyz.leutgeb.lorenz.atlas.module.Loader.defaultHome=$out/var/atlas/resources/examples" >> $out/var/atlas/atlas.properties
           '';
+
+          meta = {
+            inherit maintainers;
+
+            longDescription = ''
+              The atlas tool, along with some auxiliary files.
+
+              This derivation produces two outputs:
+                1. The standard output 'out' contains the binary as
+                   `/bin/atlas` and auxiliary files under `/var/atlas`.
+                2. The output 'jacoco' which contains a test coverage
+                   report in XML format.
+            '';
+          };
         };
 
         atlas-shell-image = pkgs.dockerTools.buildLayeredImage {
@@ -134,6 +161,15 @@
             packages.${system}.atlas-src
           ];
           config = { Entrypoint = [ "${pkgs.bash}/bin/bash" ]; };
+
+          meta = {
+            inherit maintainers;
+
+            longDescription = ''
+              A Docker image that contains atlas, alongside some useful tools,
+              the associated paper, and sources.
+            '';
+          };
         };
 
         atlas-image = pkgs.dockerTools.buildLayeredImage {
@@ -141,6 +177,14 @@
           tag = "latest";
           contents = [ packages.${system}.atlas ];
           config.Entrypoint = [ (packages.${system}.atlas + "/bin/atlas") ];
+
+          meta = {
+            inherit maintainers;
+            longDescription = ''
+              A Docker image that contains atlas (but not much more),
+              and will run it by default.
+            '';
+          };
         };
 
         atlas-ova = nixosConfigurations.atlas.config.system.build.virtualBoxOVA;
@@ -172,6 +216,16 @@
             ln    -svn   ${examples} $out/src/test/resources/examples
           '';
           installPhase = "true";
+
+          meta = {
+            inherit maintainers;
+            longDescription = ''
+              Takes the contents of this repository and adds
+              examples to src/test/resources/examples as if
+              it would be initialized and updated as a Git
+              submodule.
+            '';
+          };
         };
       };
 
