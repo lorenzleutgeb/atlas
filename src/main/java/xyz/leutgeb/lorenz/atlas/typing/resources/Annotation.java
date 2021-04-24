@@ -1,34 +1,5 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources;
 
-import com.google.common.collect.Streams;
-import com.google.common.primitives.Ints;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import org.hipparchus.fraction.Fraction;
-import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
-import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsProductConstraint;
-import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsSumConstraint;
-import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.OffsetConstraint;
-import xyz.leutgeb.lorenz.atlas.util.Pair;
-import xyz.leutgeb.lorenz.atlas.util.Util;
-
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
 import static com.google.common.collect.Comparators.lexicographical;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -49,6 +20,34 @@ import static xyz.leutgeb.lorenz.atlas.util.Util.generateSubscriptIndex;
 import static xyz.leutgeb.lorenz.atlas.util.Util.isAllZeroes;
 import static xyz.leutgeb.lorenz.atlas.util.Util.randomHex;
 import static xyz.leutgeb.lorenz.atlas.util.Util.repeat;
+
+import com.google.common.collect.Streams;
+import com.google.common.primitives.Ints;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.hipparchus.fraction.Fraction;
+import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
+import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsProductConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsSumConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.OffsetConstraint;
+import xyz.leutgeb.lorenz.atlas.util.Pair;
+import xyz.leutgeb.lorenz.atlas.util.Util;
 
 @Slf4j
 public class Annotation {

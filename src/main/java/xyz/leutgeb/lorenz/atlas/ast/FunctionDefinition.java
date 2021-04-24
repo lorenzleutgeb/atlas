@@ -514,15 +514,15 @@ public class FunctionDefinition {
   }
 
   public String getBoundString() {
-    final List<String> treeArguments = treeLikeArguments().stream().map(Identifier::getName).collect(Collectors.toUnmodifiableList());
+    final List<String> treeArguments =
+        treeLikeArguments().stream()
+            .map(Identifier::getName)
+            .collect(Collectors.toUnmodifiableList());
 
     return moduleName
         + "."
         + name
         + ": "
-        + inferredSignature
-            .getAnnotation()
-            .map(x -> x.getBounds(treeArguments))
-            .orElse("?");
+        + inferredSignature.getAnnotation().map(x -> x.getBounds(treeArguments)).orElse("?");
   }
 }

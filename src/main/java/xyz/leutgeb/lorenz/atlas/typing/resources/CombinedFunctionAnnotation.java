@@ -1,9 +1,6 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources;
 
-import lombok.AllArgsConstructor;
-import lombok.Value;
-import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
+import static java.util.function.Predicate.not;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -11,8 +8,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import static java.util.function.Predicate.not;
+import lombok.AllArgsConstructor;
+import lombok.Value;
+import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 
 // TODO: Maybe refactor this to a record once Java 17 is out?
 @Value
