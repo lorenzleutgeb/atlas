@@ -162,6 +162,7 @@
           ];
           config = { Entrypoint = [ "${pkgs.bash}/bin/bash" ]; };
 
+          /*
           meta = {
             inherit maintainers;
 
@@ -170,6 +171,7 @@
               the associated paper, and sources.
             '';
           };
+          */
         };
 
         atlas-image = pkgs.dockerTools.buildLayeredImage {
@@ -178,6 +180,7 @@
           contents = [ packages.${system}.atlas ];
           config.Entrypoint = [ (packages.${system}.atlas + "/bin/atlas") ];
 
+          /*
           meta = {
             inherit maintainers;
             longDescription = ''
@@ -185,6 +188,7 @@
               and will run it by default.
             '';
           };
+          */
         };
 
         atlas-ova = nixosConfigurations.atlas.config.system.build.virtualBoxOVA;
