@@ -152,7 +152,7 @@
           };
         };
 
-        atlas-shell-image = pkgs.dockerTools.buildLayeredImage {
+        atlas-shell-docker = pkgs.dockerTools.buildLayeredImage {
           name = "atlas-shell";
           tag = "latest";
           contents = utils ++ [
@@ -174,7 +174,7 @@
           */
         };
 
-        atlas-image = pkgs.dockerTools.buildLayeredImage {
+        atlas-docker = pkgs.dockerTools.buildLayeredImage {
           name = "atlas";
           tag = "latest";
           contents = [ packages.${system}.atlas ];

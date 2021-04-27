@@ -79,10 +79,10 @@ jobs:
         echo "::set-output name=result::$RESULT"
         RESULT_JACOCO=$(nix path-info .#packages.x86_64-linux.$PKG.jacoco)
         echo "::set-output name=result-jacoco::$RESULT_JACOCO"
-    - name: Build 'atlas-image'
-      id: atlas-image
+    - name: Build 'atlas-docker'
+      id: atlas-docker
       run: |
-        PKG=atlas-image
+        PKG=atlas-docker
         nix build .#packages.x86_64-linux.$PKG --no-link --print-build-logs --json
         nix log   .#packages.x86_64-linux.$PKG > log/${PKG}.txt
         RESULT=$(nix path-info .#packages.x86_64-linux.$PKG)
@@ -90,10 +90,10 @@ jobs:
         docker tag atlas:latest lorenzleutgeb/atlas:$GITHUB_SHA
         docker tag atlas:latest ghcr.io/lorenzleutgeb/atlas/atlas:$GITHUB_SHA
         echo "::set-output name=result::$RESULT"
-    - name: Build 'atlas-shell-image'
-      id: atlas-shell-image
+    - name: Build 'atlas-shell-docker'
+      id: atlas-shell-docker
       run: |
-        PKG=atlas-shell-image
+        PKG=atlas-shell-docker
         nix build .#packages.x86_64-linux.$PKG --no-link --print-build-logs --json
         nix log   .#packages.x86_64-linux.$PKG > log/${PKG}.txt
         RESULT=$(nix path-info .#packages.x86_64-linux.$PKG)
@@ -132,12 +132,12 @@ jobs:
         path: ${{ steps.atlas.outputs.result }}
     - uses: actions/upload-artifact@v2
       with:
-        name: atlas-image
-        path: ${{ steps.atlas-image.outputs.result }}
+        name: atlas-docker
+        path: ${{ steps.atlas-docker.outputs.result }}
     - uses: actions/upload-artifact@v2
       with:
-        name: atlas-shell-image
-        path: ${{ steps.atlas-shell-image.outputs.result }}
+        name: atlas-shell-docker
+        path: ${{ steps.atlas-shell-docker.outputs.result }}
    #- uses: actions/upload-artifact@v2
    #  if: ${{ failure() }}
    #  with:
