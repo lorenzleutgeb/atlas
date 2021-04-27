@@ -1,4 +1,4 @@
-# atlas Artifact Readme
+# ATLAS: Artifact Readme
 
 ## Important Notice
 
@@ -12,7 +12,7 @@ instead, to avoid confusion with `README.md` in the source repository
 of the tool.
 
 This artifact, submitted as #329 for "Artifact Evaluation", is associated with
-the paper submission as #294 for "Main track".
+the paper submitted as #294 for "Main track".
 
 This artifact aims for all three badges (functional, available, reusable). For
 each badge, there is one corresponding section in this file.
@@ -22,35 +22,38 @@ each badge, there is one corresponding section in this file.
 The Docker image does not include any kind of package manager. It is therefore
 much more cumbersome to add additional software if the need arises during
 evaluation.
-Note that in the OVA, the [Nix][nix] package manager is installed, so
-installation is as simple as
+Note that in the OVA version, the [Nix][nix] package manager is installed, so
+installation of further tools is as simple as
 
     $ nix-env -iA nixos.hello
+
+Refer to <https://search.nixos.org/> to search for packages.
 
 The Docker image is much smaller in size, because it does not contain a
 graphical desktop.
 
 ## Functional
 
-Please make sure to read the section "Using" of `README.md` for general remarks
-on operating the tool, then return to this section which addresses reproduction
-of results.
+Please make sure to first read the section "Using" of `README.md` for general
+remarks on operating the tool, then return to this section which addresses
+reproduction of results.
 
-To verify the results in the
-associated paper, you will need the "run"
+To verify the results in the associated paper, you will need the "run"
 subcommand
 
-    ./atlas run --help
+    atlas run --help
 
 For example, to check the type annotation of the function definition
 `PairingHeap.link`, run
 
-    ./atlas run --home=resources/examples "PairingHeap.link"
+    atlas --home=$HOME/atlas/src/test/resources/examples run "PairingHeap.link"
 
 Note that the `--home` parameter corresponds to the module search directory, so
 the module `PairingHeap` corresponds to the file
 
-    resources/examples/PairingHeap.ml
+    $HOME/atlas/src/test/resources/examples/PairingHeap.ml
+
+The `--home` parameter is omitted below for brevity.
 
 Note that the last positional parameter in the previous invocation is
 interpreted as a regular expression.
@@ -58,25 +61,18 @@ This way, resource annotations for multiple functions can be inferred/checked
 together, even if their definitions do not depend on each other. An extreme,
 unrealistic invocation is
 
-    ./atlas run --home=resources/examples '.*'
+    atlas run '.*'
 
 Which will attempt to infer resource annotations for all function definitions.
 However, the artifact also contains some non-terminating definitions
 (see `Infinite.ml`) and checking all at once will require a lot of time/memory.
 
-To infer resource annotations with coefficients defined over the rational
-numbers, use `--rational`, like so
-
-    ./atlas run --home=resources/examples --infer --rational 'PairingHeap.link'
-
-To check a resource annotation, you will have to edit the corresponding `*.ml`
-file. The program will print the source of all definitions that are loaded via
-the `run` subcommand.
+    atlas run --infer 'PairingHeap.link'
 
 There is another subcommand, which is helpful to understand how definitions are
 translated before constraints are generated and tactics applied:
 
-    ./atlas lnf --home=resources/examples --out=mydir
+    atlas lnf --out=mydir
 
 will print function definitions in let-normal-form to the directory passed as
 `out` argument. This directory must exist and be writable. This command works
@@ -86,41 +82,65 @@ resulting file.
 To speed up resource annotation inference/checking, tactics can be used. The
 artifact contains some tactics in
 
-    resources/tactics/<module-name>/<function-name>.txt
+    $HOME/atlas/src/test/resources/tactics/<module-name>/<function-name>.txt
 
-To enable them, use the `run` subcommand with the `--tactics` parameter.
+To enable them, use the `run` subcommand with the `--tactics` parameter (see
+below).
 
-## Results Reported in the Associated Paper
+### Results Reported in the Associated Paper
+
+> Document in detail how to reproduce the experimental results of the paper
+> using the artifact; [...]
 
 To verify the results presented in Table 1 on page 3 of the associated paper,
-run the following commands.
+run the following commands (and remember, that `--home` is omitted).
 
 For the first group of four lines (`SplayTree`):
 
-    ./atlas run --home resources/examples --tactics resources/tactics "SplayTree\\.(splay(_max)?|insert|delete)"
+    atlas run --tactics [...] --infer "SplayTree\\.(splay(_max)?|insert|delete)"
 
 For the second group of three lines (`SplayHeap`):
 
-    ./atlas run --home resources/examples --tactics resources/tactics "SplayHeap\\.(insert|del_min)"
+    atlas run --tactics [...] --infer "SplayHeap\\.(insert|del_min)"
 
 For the third group of four lines (`PairingHeap`) **EXCEPT** `PairingHeap.merge`:
 
-    ./atlas run --home resources/examples --tactics resources/tactics "PairingHeap\\.(insert|merge_pairs|del_min_via_merge_pairs)_isolated"
+    atlas run --tactics [...] --infer "PairingHeap\\.(insert|merge_pairs|del_min_via_merge_pairs)_isolated"
 
-TODO: Cover merge.
+For `PairingHeap.merge` the implementation suffers from a regression that we
+were unable to resolve before the artifact submission deadline. In its
+current state, the tool will produce slightly different results for type
+*inference*. However, the exact result from the paper can be *checked* with
 
-> Document in detail how to reproduce the experimental results of the paper
-> using the artifact; keep this process simple through easy-to-use scripts and
+    atlas run --tactics [...] "PairingHeap\\.merge_isolated"
+
+The result that differs from the paper can be observed by executing 
+
+    atlas run --tactics [...] --infer "PairingHeap\\.(insert|merge_pairs|del_min_via_merge_pairs|merge)_isolated"
+
+> [...]; keep this process simple through easy-to-use scripts and
 > provide detailed documentation assuming minimum expertise.
 
+The script at `$HOME/atlas/reproduce.sh` will run all above commands in sequence.
 
-> Ensure the artifact is in the state ready to run. It should work without a network connection. It should not require the user to install additional software before running, that is, all required packages should be installed on the provided virtual machine.
+### Source Code
 
-> The artifact should use reasonably modest resources (RAM, number of cores), so that the results can be reproduced on various hardware platforms including laptops. The evaluation should take a reasonable amount of time to complete (no more than 3 to 5 hours). If this is not the case for your benchmarks, make sure to also include simpler benchmarks that do not require a long running time. If this is not possible, please contact PC and AEC chairs as soon as possible.
+> When possible include source code within your virtual machine image and point
+> to the most relevant and interesting parts of the source code tree.
 
-> When possible include source code within your virtual machine image and point to the most relevant and interesting parts of the source code tree.
+Please refer to `$HOME/atlas/src/main/`, and "Highlighted Files" in `README.md`.
 
-> We encourage the authors to include log files that were produced by their tools, and point to the relevant log files in the artifact description.
+### Log Files
+
+> We encourage the authors to include log files that were produced by their
+> tools, and point to the relevant log files in the artifact description.
+
+We do not provide log files, but would like to note that by default, the tool
+will append logs to `$PWD/atlas.log` (`$PWD` stands for the current working directory).
+
+Verbosity of logging can be adjusted by setting properties in
+`atlas.properties`. The file contains some helpful comments and references to
+online documentation for property names and possible values.
 
 ## Available
 
@@ -182,167 +202,60 @@ using the Nix package manager. To learn more, please refer to
 > Include instructions for reviewers explaining how to exercise your artifact
 > on new inputs; in particular, document what inputs your tool support.
 
-TODO
+Consider the example inputs at 
+
+  https://github.com/lorenzleutgeb/atlas-examples
+
+The grammar(s) used to generate the parser for the input language can be found
+at
+
+    src/main/antlr/**.g4
+
+This programming language is necessarily simple, to allow for easier analysis,
+but sufficiently complex to express self-balancing trees and heaps.
+
+One could implement additional functions and define them in a new Module
+(i.e. a new `*.ml` file).
+
+It is also possible to provide resource annotations for specific function
+definitions. This can also be observed in the examples.
 
 > When applicable, make sure that your tool accepts inputs in standard formats
 > (e.g. SMTLIB).
 
 We think that this is not applicable for our *input* of our tool, but indeed our
-tool provides SMTLIB as a standard *output* format.
+tool provides SMTLIB as a standard *output* format. The tool prints the output
+folder name to standard output upon invocation.
 
-TODO
+### Usage beyond the Paper
 
 > Ensure that your tool is reusable on inputs beyond those included in the paper
 > by describing one experiment beyond those in the paper that a reviewer might
 > run (a new program to feed to your compiler, a new problem for your SMT
 > solver, etc.)
 
-TODO
+Our examples contain tests for nonterminating programs. One case for which
+nontermination can be detected, is `Infinite.infinite_18`. Run it with
 
+    atlas run --infer 'Infinite\.infinite_18' 
 
-## Resource Limits
+#### Checking other annotations
 
-The artifact imposes following resource limits on Z3:
+To check a custom resource annotation, you may define a new function (or copy
+an example definition) and lwill have to edit the corresponding `*.ml`
+file. The program will print the source of all definitions that are loaded via
+the `run` subcommand.
 
-  Wall clock runtime: 15 minutes
-  Limit for memory: 24GiB
+### Translating Signatures to Bounds
 
-These (and other) parameters as well as logging configuration can be changed
-in `atlas.properties`.
+We will describe the process in detail and take `PairingHeap.link` as an
+example:
 
-All results were computed on a machine with 64GiB main memory, and computations
-took on the order of less than a second up to fifteen minutes.
-
-# Response
-
-Regarding your item (1):
-
-Please consider the following list of invocations which correspond directly to
-lines in the result table from the associated paper:
-
-    ./lac run --home resources/examples --tactics resources/tactics "SplayTree\\.splay_eq"
-    ./lac run --home resources/examples --tactics resources/tactics "SplayTree\\.splay_eq_min"
-    ./lac run --home resources/examples --tactics resources/tactics "SplayTree\\.splay_max_eq"
-    ./lac run --home resources/examples --tactics resources/tactics "SplayHeap\\.insert"
-    ./lac run --home resources/examples --tactics resources/tactics "SplayHeap\\.del_min"
-    ./lac run --home resources/examples --tactics resources/tactics "PairingHeap\\.merge_pairs_isolated"
-    ./lac run --home resources/examples --tactics resources/tactics "PairingHeap\\.insert"
-    ./lac run --home resources/examples --tactics resources/tactics "PairingHeap\\.merge"
-    ./lac run --home resources/examples --tactics resources/tactics "PairingHeap\\.pass1"
-    ./lac run --home resources/examples --tactics resources/tactics "PairingHeap\\.pass2"
-
-Regarding your remark:
-
-> The current explanation about which command maps to which line in the results table is confusing primarily because it is not clear how to get multiple lines of results from one command.
-
-We would like to clarify: If the artifact is (a) invoked with a function
-definition name of a function definition that depends on other function
-definitions (by application), or (b) invoked with a regular expression that
-matches multiple function definition names, then the output will contain
-multiple annotated function types. This is the case also with the output that
-you quote in your review as part of item (3), which we will address below.
-We reproduce your output here:
-
-~~~
-PairingHeap.link ∷ Tree α → Tree α | [[0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 1) ↦ 1] → [(1 0) ↦ 1]}]
-PairingHeap.pass2 ∷ Tree α → Tree α | [[0 ↦ 3, (0 2) ↦ 1, (1 0) ↦ 4] → [0 ↦ 1, (0 2) ↦ 1, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 0) ↦ 2, (1 1) ↦ 2, (1 2) ↦ 2] → [(1 0) ↦ 2]}]
-PairingHeap.pass1 ∷ Tree α → Tree α | [[0 ↦ 3, (0 2) ↦ 1, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 1, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 0) ↦ 2, (1 1) ↦ 2, (1 2) ↦ 2] → [(1 0) ↦ 2], [(1 0) ↦ 1] → [(1 0) ↦ 1]}]
-~~~
-
-Consider this output, and that it represents a result for three functions, which
-you probably obtained by just one invocation of the artifact:
-
-    ./lac run --home resources/examples --tactics resources/tactics "PairingHeap\\.pass(1|2)"
-
-Regarding your remark:
-
-> Some naming is confusing too, e.g., are `PairingHeap.merge_pairs` and `PairingHeap.merge` the same thing because the only command that includes the word merge is this one: `…`
-
-We would like to clarify: No, PairingHeap.merge and PairingHeap.merge_pairs
-are two different functions. Please see the file `resources/examples/PairingHeap.ml` in which both are
-defined (starting on lines 169 and 212 respectively).
-The command that you mentioned, however, will also produce the result for
-`PairingHeap.merge`. It will produce the results for `PairingHeap.merge_pairs`
-and `PairingHeap.insert` because these two names are matched by the regular
-expression directly. Furthermore, since `PairingHeap.insert` calls
-`PairingHeap.merge`, the result for this function will also be produced even
-though its name is not explicitly referenced in the invocation of the artifact.
-We agree, however, that we should have made this more explicit in the `Readme` to accompany
-the artifact. Please consider the more explicit list of invocations which we
-have given above, which mentions both `PairingHeap.merge` and
-`PairingHeap.merge_pairs_isolated`.
-
-Regarding your remark:
-
-> Should I run the commands provided directly as written and the example below should print 3 results? Then I would read the 1st result as the 6th line of the table and the 2nd result as the 7th line and the 3rd result as the 8th result of the table?
-
-Yes, this was our intention. And further, regarding
-
-> Or should I split the command up, e.g., instead of the command above should I run:
-> `…`
-> `…`
-
-We did not intend you to do this, when we wrote `Readme.txt`, but it is one
-possible way of leveraging a regular expression that matches multiple function
-definition names. It produces the same results.
-
-> Also the table has 12 lines in the paper but no upper bound is computed for lines 4 and 5, so you refer to line 6 as line 4 and line 7 as line 5 etc.
-
-Yes, we are mistaken here. Thank you for pointing this out.
-
-> Is `(insert,del_min)` a typo, and should it be written `(insert|del_min)`?
-
-Yes, this is a typo and it should indeed be written `(insert|del_min)`. It arose from a confusion of shell globbing patterns and regular expressions. Thank
-you for pointing this out.
-
-
-Regarding your item (2):
-
-Actually, none of the instances requires 32GiB memory. We first present resource
-usage statistics obtained locally using the artifact:
-
-| Regular Expression        | Z3 max. Memory Usage [MiB] |
-|---------------------------|----------------------------|
-| `PairingHeap\.pass(1\|2)` |                        883 |
-| `SplayTree\.splay_eq`     |                       1059 |
-| `PairingHeap\.del_min`    |                        655 |
-
-These can be checked by inspecting `out/2d…/sat/z3-statistics.txt`, where
-the ellipsis means some other hexadecimal digits. At the moment there is no
-mapping between arguments passed to the artifact on invocation and the name of
-the output directory, so you will have to use an indirect method, for example,
-check when the output directory was changed.
-
-The contents of `z3-statistics.txt` is a dump of the statistics that Z3
-provides, most notably the `max_memory`.
-
-
-Regarding your item (3):
-
-We will describe the process in detail. Before we address `PairingHeap.pass1`
-and `PairingHeap.pass2` (these results are more complicated because they refer
-to potential differences, and not amortised cost, see our remark in the paper),
-we first interpret the output for `PairingHeap.link`.
-
-We start from the output provided in your review:
-
-~~~
-PairingHeap.link ∷ Tree α → Tree α | [[0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 1) ↦ 1] → [(1 0) ↦ 1]}]
-PairingHeap.pass2 ∷ Tree α → Tree α | [[0 ↦ 3, (0 2) ↦ 1, (1 0) ↦ 4] → [0 ↦ 1, (0 2) ↦ 1, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 0) ↦ 2, (1 1) ↦ 2, (1 2) ↦ 2] → [(1 0) ↦ 2]}]
-PairingHeap.pass1 ∷ Tree α → Tree α | [[0 ↦ 3, (0 2) ↦ 1, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 1, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 0) ↦ 2, (1 1) ↦ 2, (1 2) ↦ 2] → [(1 0) ↦ 2], [(1 0) ↦ 1] → [(1 0) ↦ 1]}]
-~~~
-
-Since we first focus on `PairingHeap.link` we ignore output lines 2 and 3:
-
-~~~
-PairingHeap.link ∷ Tree α → Tree α | [[0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 1) ↦ 1] → [(1 0) ↦ 1]}]
-~~~
+    PairingHeap.link ∷ Tree α → Tree α | [[0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 1) ↦ 1] → [(1 0) ↦ 1]}]
 
 We drop the function name, and the "simple" part of the type:
 
-~~~
-[[0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 1) ↦ 1] → [(1 0) ↦ 1]}]
-~~~
+    [[0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 1) ↦ 1] → [(1 0) ↦ 1]}]
 
 What is left now is a sequence with two elements. The first element is the
 annotation for `PairingHeap.link` with cost and the second element is the
@@ -351,230 +264,57 @@ annotation for `PairingHeap.link` without cost ("cost free").
 Since we are interested in the amortised cost of `PairingHeap.link`, we focus
 on the first element of the sequence:
 
-~~~
-[0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 1]
-~~~
+    [0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 1]
 
-We translate this short notation into two resource functions, over terms familiar from the table in our paper:
+We translate this short notation into two resource functions, over terms
+familiar from the table in our paper:
 
-$$
-Q(h) = rk(h) + 2 \log(2) + 2 \log(|h|)
-$$
-$$
-P(h) = rk(h) + 2 \log(2) + 1 \log(|h|)
-$$
+    Q(h) = rk(h) + 2 \log(2) + 2 \log(|h|)
+    P(h) = rk(h) + 2 \log(2) + 1 \log(|h|)
 
 Note that $Q(h)$ annotates the argument and $P(h)$ annotates the result of `PairingHeap.link`.
 According to the design of our type system, $P(h)$ can be directly used as potential, and it relates to amortised cost and actual cost as follows:
 
-$$
-c_{amortised}(link) = \lambda h . c_{actual}(link)(h) + P(link(h)) - P(h)
-$$
+    c_{amortised}(link) = \lambda h . c_{actual}(link)(h) + P(link(h)) - P(h)
 
 And further, according to the soundness of our type system we have
 
-$$
-Q(h) \geq P(link(h)) + c_{actual}(link)(h)
-$$
+    Q(h) \geq P(link(h)) + c_{actual}(link)(h)
 
 To bound amortised cost, we take the difference of $Q$ and $P$:
 
-$$
-D(h) = Q(h) - P(h) \geq P(link(h)) + c_{actual}(link)(h) - P(h) = c_{amortised}(link)(h)
-$$
+    D(h) = Q(h) - P(h) \geq P(link(h)) + c_{actual}(link)(h) - P(h) = c_{amortised}(link)(h)
 
 Thus, the upper bound for amortised cost of `PairingHeap.link` that is represented by the above result, is
 
-$$ \log(|h|) $$
+    \log(|h|)
 
-Now that we have explained how to interpret a result for amortised cost, we will
-consider `PairingHeap.pass1` and `PairingHeap.pass2` which are results about
-potential difference. Consider our remark from the paper:
+## Resource Usage and Limits
 
-> While we can automatically obtain an upper bound on `pass_1` and `pass_2`,
-> the bound is too high.
-> However, we can automatically confirm the logarithmic bounds from [Nipkow and Brinkop 2019] on the potential differences for these functions (indicated by $\dagger$).
+The artifact imposes following resource limits on Z3:
 
-The first two steps are the same. We focus on the result for `PairingHeap.pass1`. Therefore, we ignore output lines 1 and 2:
+  Wall clock runtime: 2H
+  (see property `com.microsoft.z3.timeout` in `atlas.properties`)
 
-~~~
-PairingHeap.pass1 ∷ Tree α → Tree α | [[0 ↦ 3, (0 2) ↦ 1, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 1, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 0) ↦ 2, (1 1) ↦ 2, (1 2) ↦ 2] → [(1 0) ↦ 2], [(1 0) ↦ 1] → [(1 0) ↦ 1]}]
-~~~
+  Limit for memory: 24GiB
+  (see property `com.microsoft.z3.memory_max_size` in `atlas.properties`)
 
-We drop the function name, and the "simple" part of the type:
+These (and other) parameters as well as logging configuration can be changed
+in `atlas.properties`.
 
-~~~
-[[0 ↦ 3, (0 2) ↦ 1, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 1, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 0) ↦ 2, (1 1) ↦ 2, (1 2) ↦ 2] → [(1 0) ↦ 2], [(1 0) ↦ 1] → [(1 0) ↦ 1]}]
-~~~
+All results were computed on a machine with an Intel Xeon W-1290P 64GiB
+processor and 64GiB main memory, and computations took on the order of less
+than a second up to fifteen minutes.
 
-Again, what is left now is a sequence with two elements. The first element is the
-annotation for `PairingHeap.pass1` with cost and the second element is the
-annotation for `PairingHeap.pass1` without cost ("cost free").
-Given the note in our paper quoted above, the result with cost is bad (very
-high bound, might be addressed by future work). You can verify this yourself
-by applying the method we described for `PairingHeap.link` above.
-So, what we are interested in here is potential difference, which is encoded
-in the second element of the sequence, i.e. the annotation without cost. We
-focus:
+## Z3 Statistics
 
-~~~
-{[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 0) ↦ 2, (1 1) ↦ 2, (1 2) ↦ 2] → [(1 0) ↦ 2], [(1 0) ↦ 1] → [(1 0) ↦ 1]}
-~~~
+These can be checked by inspecting `out/2d…/sat/z3-statistics.txt`, where
+the ellipsis means some other hexadecimal digits. At the moment there is no
+mapping between arguments passed to the artifact on invocation and the name of
+the output directory, so you will have to use an indirect method, for example,
+check when the output directory was changed.
 
-From this, we drop the zero annotation. Trivially if the "incoming" potential is
-zero and we assign no cost to function calls, then the "outgoing" potential can
-be zero.
-
-~~~
-{[(1 0) ↦ 2] → [(1 0) ↦ 2], [(1 0) ↦ 2, (1 1) ↦ 2, (1 2) ↦ 2] → [(1 0) ↦ 2], [(1 0) ↦ 1] → [(1 0) ↦ 1]}
-~~~
-
-We further drop the two annotations that assign the same potential to "input"
-and "output" and omit curly braces.
-
-~~~
-[(1 0) ↦ 2, (1 1) ↦ 2, (1 2) ↦ 2] → [(1 0) ↦ 2]
-~~~
-
-We repeat the reasoning explained above for the case with cost, and take the difference.
-
-~~~
-[(1 1) ↦ 2, (1 2) ↦ 2]
-~~~
-
-Again, in terms of the table:
-
-$$
-2 \cdot \log(|h| + 1) + 2 \cdot \log(|h| + 2)
-$$
-
-Simplify to get the same form as in the table:
-
-$$
-2 \cdot (\log(|h| + 1) + \log(|h| + 2))
-$$
-
-# Review 1
-
-## Final Review
-```
-(weak accept)
-
-Thank you for the detailed response to the initial check. It would be great if some of that explanation could be included in the artifact. 
-
-I'm still not sure whether I should have had the error message about the unsatisfiable constraint system when running this command:
-
-./lac run --home resources/examples --tactics resources/tactics "SplayTree\\.splay_eq_min"
-
-I think this is an error and I hope that the authors can fix this in the artifact. 
-
-I've left my score as a weak accept, since I believe all the other results can be reproduced. I also have not carefully followed the steps to convert the terminal output into the same format as the results in the table for all outputs, so I leave my confidence score as a medium. 
-```
-
-## Initial Check
-```
-(weak accept)
-
-I was able to install the dependencies, and run the example command
-./lac run --home=resources/examples "PairingHeap.link"
-
-I ran the commands in the README for reproducing the results reported in the TACAS tool paper, and I have the following questions and comments:
-
-1) Please can you provide the individual command used to produce each line of the table, in the order the results appear in the table or clarify better how the commands map to the table lines?
-
-The current explanation about which command maps to which line in the results table is confusing primarily because it is not clear how to get multiple lines of results from one command. Also the table has 12 lines in the paper but no upper bound is computed for lines 4 and 5, so you refer to line 6 as line 4 and line 7 as line 5 etc. Some naming is confusing too, e.g., are PairingHeap.merge_pairs and PairingHeap.merge the same thing because the only command that includes the word merge is this one:
-
-./lac run --home resources/examples --tactics resources/tactics "PairingHeap\\.(insert|merge_pairs_isolated)"
-
-I'm not sure whether I get multiple results from running one command or if I need to split the commands up. Should I run the commands provided directly as written and the example below should print 3 results? Then I would read the 1st result as the 6th line of the table and the 2nd result as the 7th line and the 3rd result as the 8th result of the table? Or should I split the command up, e.g., instead of the command above should I run:
-./lac run --home resources/examples --tactics resources/tactics "PairingHeap\\.(insert)"
-./lac run --home resources/examples --tactics resources/tactics "PairingHeap\\.(merge_pairs_isolated)"
-
-Is (insert,del_min) a typo, and should it be written (insert|del_min)?
-
-2) Some of the commands seem to need more resources than available in the TACAS VM. I note that the results were computed on a machine with 32GiB main memory, but it would be helpful to provide an estimate of the memory actually required since it appears to be large. If 32GiB is required, it is recommended that authors provide a way to produce a subset of results that can be produced on hardware platforms (including laptops) using more modest resources.
-
-3) I would appreciate guidance on how to interpret the output, e.g., how would I produce the 9th and 10th lines of the table from the experimental output which looks like this:
-~~~
-PairingHeap.link ∷ Tree α → Tree α | [[0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 1) ↦ 1] → [(1 0) ↦ 1]}]
-PairingHeap.pass2 ∷ Tree α → Tree α | [[0 ↦ 3, (0 2) ↦ 1, (1 0) ↦ 4] → [0 ↦ 1, (0 2) ↦ 1, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 0) ↦ 2, (1 1) ↦ 2, (1 2) ↦ 2] → [(1 0) ↦ 2]}]
-PairingHeap.pass1 ∷ Tree α → Tree α | [[0 ↦ 3, (0 2) ↦ 1, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 1, (1 0) ↦ 1], {[(1 0) ↦ 2] → [(1 0) ↦ 2], [] → [], [(1 0) ↦ 2, (1 1) ↦ 2, (1 2) ↦ 2] → [(1 0) ↦ 2], [(1 0) ↦ 1] → [(1 0) ↦ 1]}]
-~~~
-
-
-For information, the outputs I obtained from running the 5 commands provided are as follows:
-
-Running
-./lac run --home resources/examples --tactics resources/tactics "SplayTree\\.splay(_max)?_eq"
-
-Produced the following result:
-INFO Done.
-INFO Solving constraints...
-Killed
-
-Running
-./lac run --home resources/examples --tactics resources/tactics "SplayTree\\.splay_eq_min"
-
-Produced:
-ERROR Constraint system is unsatisfiable!
-Killed
-
-Running
-./lac run --home resources/examples --tactics resources/tactics "SplayHeap\\.(insert,del_min)"
-
-Produced:
-INFO Output will go to /home/tacas21/sub158/artifact/./out/2d3bd9d9fb81
-INFO Generating constraints...
-INFO Done.
-INFO Solving constraints...
-INFO Done. Result(s):
-
-
-Running:
-./lac run --home resources/examples --tactics resources/tactics "PairingHeap\\.(insert|merge_pairs_isolated)"
-
-Produced:
-INFO Done.
-INFO Solving constraints...
-Killed
-
-Running:
-./lac run --home resources/examples --tactics resources/tactics "PairingHeap\\.pass(1|2)"
-
-Produced:
-PairingHeap.link ∷ Tree α → Tree α | [[0 ↦ 1, (0 2) ↦ 3, (1 0) ↦ 1, (1 2) ↦ 1] → [0 ↦ 1, (0 2) ↦ 2, (1 0) ↦ 1], {[] → [], [(1 0) ↦ 2] → [(1 0) ↦ 2], [(1 0) ↦ 1] → [(1 0) ↦ 1]}]
-PairingHeap.pass2 ∷ Tree α → Tree α | [[0 ↦ 3, (0 2) ↦ 1, (1 0) ↦ 4] → [0 ↦ 1, (0 2) ↦ 1, (1 0) ↦ 1], {[] → [], [(1 0) ↦ 2, (1 1) ↦ 2, (1 2) ↦ 2] → [(1 0) ↦ 2], [(1 0) ↦ 2] → [(1 0) ↦ 2]}]
-PairingHeap.pass1 ∷ Tree α → Tree α | [[0 ↦ 3, (0 2) ↦ 1, (1 0) ↦ 2] → [0 ↦ 1, (0 2) ↦ 1, (1 0) ↦ 1], {[(1 0) ↦ 1] → [(1 0) ↦ 1], [(1 0) ↦ 2] → [(1 0) ↦ 2], [(1 0) ↦ 2, (1 1) ↦ 2, (1 2) ↦ 2] → [(1 0) ↦ 2], [] → []}]
-```
-
-# Review 2
-
-Note that this review went from "accept" to "weak accept".
-
-```
-(weak accept)
-
-I could successfully check, infer, and annotate-and-check resource
-annotations. Moreover I could run the tactics that helped in these
-tasks. The instructions were clear and easy to follow.
-
-What was not really clear, as the author's response shows, was how to interpret
-the results and thus be able to thoroughly check the reproducibility of
-Figure 8. The lack of a good presentation for the output is the biggest drawback
-of the artifact.
-
-Another aspect to improve would be to point out the cases where tactics are
-helpful. For example one can cleary see their benefit on
-
-  "PairingHeap\\.(insert|merge_pairs_isolated)"
-
-but not on, say,
-
-   "PairingHeap.merge".
-
-Finally, I'm confident that the other experiments could be reproduced given the necessary
-time and exact instructions as how to do so.
-
-```
+The contents of `z3-statistics.txt` is a dump of the statistics that Z3
+provides, most notably `max_memory`.
 
 [nix]: https://nixos.org/nix

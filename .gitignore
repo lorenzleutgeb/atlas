@@ -14,6 +14,7 @@ gradle.properties
 *.jar
 *.so
 *.dll
+atlas
 
 # Nix
 result
