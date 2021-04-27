@@ -66,10 +66,6 @@ public class CombinedFunctionAnnotation {
       return "?";
     }
 
-    if (withCost.from.size() != withCost.to.size()) {
-      return toString();
-    }
-
     final var withCost = this.withCost.getBound(arguments);
     final var withoutCost =
         this.withoutCost.stream()

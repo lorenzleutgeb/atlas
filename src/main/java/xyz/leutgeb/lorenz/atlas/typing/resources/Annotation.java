@@ -484,14 +484,21 @@ public class Annotation {
                 e -> {
                   final var index = e.getKey();
                   final var coefficient = e.getValue();
-                  var result = "";
-                  if (!coefficient.equals(new KnownCoefficient(Fraction.ONE))) {
-                    result = coefficient.toString();
+
+                  final boolean cancelIndex = isUnitIndex(index);
+                  final boolean cancelCoefficient =
+                      coefficient.equals(new KnownCoefficient(Fraction.ONE));
+
+                  if (cancelCoefficient && cancelIndex) {
+                    return "1";
                   }
-                  if (isUnitIndex(index)) {
-                    return result;
+                  if (cancelIndex) {
+                    return coefficient.toString();
                   }
-                  return result + " · " + toPotential(parameters, index);
+                  if (cancelCoefficient) {
+                    return toPotential(parameters, index);
+                  }
+                  return coefficient + " · " + toPotential(parameters, index);
                 })
             .collect(Collectors.joining(" + "));
 

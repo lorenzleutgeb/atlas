@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.atlas.module;
 
+import static java.nio.file.FileVisitOption.FOLLOW_LINKS;
 import static java.util.Collections.synchronizedMap;
 import static java.util.Optional.ofNullable;
 import static java.util.function.Predicate.not;
@@ -145,7 +146,8 @@ public class Loader {
             home,
             8,
             ((path, basicFileAttributes) ->
-                path.getFileName().toString().endsWith(DOT_EXTENSION) && Util.goodForReading(path)))
+                path.getFileName().toString().endsWith(DOT_EXTENSION) && Util.goodForReading(path)),
+            FOLLOW_LINKS)
         .flatMap(
             path -> {
               try {

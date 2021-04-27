@@ -244,13 +244,17 @@
             virtualbox = {
               vmName = "atlas";
               vmFileName = "atlas.ova";
-              #params = { usb = "off"; };
+              params = {
+                usb = "on";
+                usbehci = "off";
+                vram = 48;
+              };
             };
             environment.systemPackages = utils
-              ++ [ self.packages.${system}.atlas pkgs.evince ];
+              ++ [ self.packages.${system}.atlas pkgs.evince pkgs.vim ];
             networking.hostName = "atlas";
             users.users = {
-              atlas = {
+              evaluator = {
                 isNormalUser = true;
                 extraGroups = [ "wheel" ];
                 uid = 1000;
@@ -259,31 +263,44 @@
               };
               root.initialHashedPassword = "";
             };
-            home-manager.users.atlas.home = {
+            home-manager.users.evaluator.home = {
               file = let
                 referText = ''
-                  Please refer to
+                  To prepare evaluation, please open a terminal and execute
 
-                    /home/atlas/atlas/ARTIFACT.md
-                    (artifact information)
+                    /home/evaluator/prepare-evaluation.sh
 
-                    /home/atlas/${submission}
-                    (associated paper)
+                  This will mount an overlay filesystem at
+
+                    /home/evaluator/atlas
+
+                  Then, please refer to
+
+                    /home/evaluator/atlas/ARTIFACT.md
 
                   Note that `atlas` (command) is in `$PATH`, it can be executed in a terminal.
+
+                  Note that the associated paper is available at
+
+                    /home/evaluator/${submission}
                 '';
                 pdf = (self.packages.${system}.atlas-cav + "/" + submission);
               in {
-                "atlas".source = self.packages.${system}.atlas-src;
-
                 ${submission}.source = pdf;
                 "README.md".text = referText;
 
                 "Desktop/README.md".text = referText;
                 "Desktop/${submission}".source = pdf;
+
+                "prepare-evaluation.sh".source = pkgs.writeScript "prepare-evaluation" '' 
+                  #! ${pkgs.bash}/bin/bash
+                  set -xeuo pipefail
+                  mkdir --verbose --parents $HOME/.overlay/{upper,work} $HOME/atlas
+                  sudo mount --verbose --types overlay overlay --options upperdir=$HOME/.overlay/upper,workdir=$HOME/.overlay/work,lowerdir=${self.packages.${system}.atlas-src} $HOME/atlas
+                '';
               };
               stateVersion = "20.09";
-              sessionVariables.LAC_HOME = "${examples}";
+              sessionVariables.ATLAS_HOME = "${examples}";
             };
             security.sudo.wheelNeedsPassword = false;
             services = {
@@ -298,7 +315,7 @@
                 displayManager = {
                   autoLogin = {
                     enable = true;
-                    user = "atlas";
+                    user = "evaluator";
                   };
                   defaultSession = "xfce";
                 };

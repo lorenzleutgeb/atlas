@@ -3,4 +3,9 @@
 # This script is called whenever we need to know
 # the current version of the project.
 
-git describe --tags --always --dirty=-dirty
+if [ -x "$(command -v git)" ]
+then
+	git describe --tags --always --dirty=-dirty
+else
+	echo "v0"
+fi

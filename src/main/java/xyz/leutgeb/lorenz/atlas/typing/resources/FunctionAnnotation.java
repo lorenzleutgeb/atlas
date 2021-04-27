@@ -36,6 +36,14 @@ public class FunctionAnnotation {
   }
 
   public String getBound(List<String> arguments) {
-    return Annotation.subtract(from, to).toLongString(arguments);
+    if (from.size() == to.size()) {
+      return Annotation.subtract(from, to).toLongString(arguments);
+    }
+
+    final var right = to.toLongString();
+    if ("0".equals(right)) {
+      return from.toLongString(arguments);
+    }
+    return from.toLongString(arguments) + " - [" + to.toLongString() + "]";
   }
 }
