@@ -193,12 +193,18 @@ public class Program {
             this.condensation,
             (scc) ->
                 () -> {
-                  final var prover = new Prover(name + randomHex(), null, basePath);
-
                   Set<FunctionDefinition> fds =
                       scc.vertexSet().stream()
                           .map(functionDefinitions::get)
                           .collect(Collectors.toSet());
+
+                  final var sccName =
+                      fds.stream()
+                          .map(FunctionDefinition::getFullyQualifiedName)
+                          .map(Util::fqnToFlatFilename)
+                          .collect(joining("+"));
+
+                  final var prover = new Prover(sccName, null, basePath);
 
                   // Stub annotations.
                   for (var fd : fds) {

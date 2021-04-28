@@ -509,7 +509,7 @@ public class Prover {
       Set<Constraint> outsideConstraints, List<UnknownCoefficient> target) {
     return ConstraintSystemSolver.solve(
         Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
-        basePath,
+        basePath.resolve(name),
         target);
   }
 
