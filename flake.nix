@@ -15,9 +15,14 @@
       url = "github:tadfisher/gradle2nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    lean = {
+      url = "github:leanprover/lean4";
+      inputs.nixpkgs.follows = "nixpkgs";
+      # Use lean.packages.${system}.lean
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, gradle2nix, examples }:
+  outputs = { self, nixpkgs, home-manager, gradle2nix, examples, lean }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
@@ -37,6 +42,7 @@
           z3
           pkgs.dot2tex
           pkgs.graphviz
+          pkgs.ott
           gradle2nix.packages.${system}.gradle2nix
         ];
       };
