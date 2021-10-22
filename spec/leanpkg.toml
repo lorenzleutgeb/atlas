@@ -1,0 +1,7 @@
+[package]
+name = "atlas"
+version = "0.1"
+lean_version = "leanprover-community/lean:3.33.0"
+
+[dependencies]
+mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "1ec385dfbb6a259cf4cd87e0072d0614bcb6531e"}
