@@ -1,6 +1,6 @@
 ## Default target: run ott, and typeset the spec.
-default: ott ps pdf
-all: default coq-def isa-def
+default: ps pdf
+all: default isa-def
 ## Run ott, and compile the spec in proof assistants (Coq, HOL and Isabelle).
 ## Build everything. Requires Coq, Isabelle, and HOL.
 ## See hol/README for HOL version requirement.
@@ -13,11 +13,11 @@ world: all
 separate_ott_runs =
 
 #### General targets ####
-ott: splay.tex splay.v splay.thy
+tex: splay.tex
 ps: splay.ps
 pdf: splay.pdf
-coq-def: splay.vo
-isa-def: splay.isa
+coq-def: splay.vo splay.v
+isa-def: splay.isa splay.thy
 coq: coq-def
 isa: isa-def
 
@@ -37,10 +37,10 @@ DVIPS = dvips
 DVIPSFLAGS = -Ppdf -j0 -G0
 LATEX = latex
 OTT = ott
-OTT_COMMON_FLAGS = -pp_grammar -tex_show_categories true -coq_expand_list_types false -isa_generate_lemmas false
+OTT_COMMON_FLAGS = -pp_grammar -tex_show_categories true -isa_generate_lemmas true
 ## Run `make OTT_VERBOSITY_FLAGS= target' to cause ott to spew out a
 ## lot of debugging output.
-OTT_VERBOSITY_FLAGS = -show_defns false  -tex_show_categories true
+OTT_VERBOSITY_FLAGS = -show_defns false -tex_show_categories true
 #-show_post_sort false
 OTT_FLAGS = -no_rbcatn true $(OTT_COMMON_FLAGS) $(OTT_VERBOSITY_FLAGS)
 # -lem_debug true
@@ -70,35 +70,35 @@ splay_module_typedef_%.ott: %.ott
 splay_%.ott: splay_%_syntax.ott # TODO splay_%_typing.ott splay_%_reduction.ott ;
 
 #### Ott ####
-splay%.rawtex: splay%_syntax.ott splay%_typing.ott splay%_reduction.ott $(OTT)
+splay%.rawtex: splay%_syntax.ott splay%_typing.ott splay%_reduction.ott
 	$(OTT) $(OTT_FLAGS) -o $@ $(@:.tex=)_syntax.ott $(@:.tex=)_typing.ott $(@:.tex=)_reduction.ott
 #	mv -f $@.tmp $@
 
-full_splay%.thy: splay%_syntax.ott splay%_typing.ott splay%_reduction.ott $(OTT)
+full_splay%.thy: splay%_syntax.ott splay%_typing.ott splay%_reduction.ott
 	# Note: no protection against interruptions, because ott requires
 	# a file name ending in .thy.
 	$(OTT) $(OTT_FLAGS) -o $@ $(@:.thy=)_syntax.ott $(@:.thy=)_typing.ott $(@:.thy=)_reduction.ott
 
-splay.thy: splay.ott $(OTT)
+splay.thy: splay.ott
 	$(OTT) $(OTT_FLAGS) -o $@ $(@:.thy=).ott
 
-splay%.v: splay%_syntax.ott splay%_typing.ott splay%_reduction.ott $(OTT)
+splay.tex: splay.ott
+	$(OTT) $(OTT_FLAGS) -o $@ $(@:.tex=).ott
+
+splay%.v: splay%_syntax.ott splay%_typing.ott splay%_reduction.ott
 	$(OTT) $(OTT_FLAGS) -coq_expand_list_types false -o $@ $(@:.v=)_syntax.ott $(@:.v=)_typing.ott $(@:.v=)_reduction.ott
 #	mv -f $@.tmp $@
 
-splay%.grammar: splay%_syntax.ott $(OTT) # splay%_typing.ott splay%_reduction.ott $(OTT)
+splay%.grammar: splay%_syntax.ott # splay%_typing.ott splay%_reduction.ott
 	$(OTT) $(OTT_FLAGS) -writesys $@.tmp $(@:.grammar=)_syntax.ott # $(@:.grammar=)_typing.ott $(@:.grammar=)_reduction.ott
 	mv -f $@.tmp $@
-
-$(OTT): %:
-#	cd $(@D) && $(MAKE) $(@F)
 
 ## Generate all combinations
 splay_combinations.dvi: $(splay_combinations:=.dvi) ;
 splay_combinations.pdf: $(splay_combinations:=.pdf) ;
 splay_combinations.ps: $(splay_combinations:=.ps) ;
 splay_combinations.tex: $(splay_combinations:=.tex) ;
-caml_combinations.thy: $(caml_combinations:=.thy) ;
+splay_combinations.thy: $(splay_combinations:=.thy) ;
 splay_combinations.v: $(splay_combinations:=.v) ;
 
 #### TeX ####
@@ -136,10 +136,10 @@ clean:
 	rm -f *.grammar *.rawtex
 	rm -f *.aux *.dvi *.lof *.log *.lot *.ps *.pdf *.toc
 	rm -f *.vo *.ui *.uo *.isa
-	rm -f $(caml_combinations:=_syntax.ott) $(caml_combinations:=_typing.ott) $(caml_combinations:=_reduction.ott)
-	rm -f $(caml_combinations:=.tex) $(caml_combinations:=Script.sml) $(caml_combinations:=.thy) $(caml_combinations:=.v)
+	rm -f $(splay_combinations:=_syntax.ott) $(splay_combinations:=_typing.ott) $(splay_combinations:=_reduction.ott)
+	rm -f $(splay_combinations:=.tex) $(splay_combinations:=Script.sml) $(splay_combinations:=.thy) $(splay_combinations:=.v)
 	rm -f *Theory.sig *Theory.sml
-	rm -f *.tmp tmp.* hol_caml
+	rm -f *.tmp tmp.* hol_splay
 	rm -rf .HOLMK
 	rm -rf *~
 

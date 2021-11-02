@@ -1,0 +1,11 @@
+chapter ATLAS
+
+session ATLAS = "HOL-Library" +
+  options [timeout = 600]
+  sessions
+    Pairing_Heap
+    Skew_Heap
+    Splay_Tree
+    Amortized_Complexity
+  theories
+    Lemmas_Log
