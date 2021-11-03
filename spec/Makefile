@@ -81,6 +81,8 @@ full_splay%.thy: splay%_syntax.ott splay%_typing.ott splay%_reduction.ott
 
 splay.thy: splay.ott
 	$(OTT) $(OTT_FLAGS) -o $@ $(@:.thy=).ott
+	sed -e 's/imports Main/imports Main "HOL-Library.Tree"/' $@ >$(@:.thy=).tmp
+	mv -f $(@:.thy=).tmp $@
 
 splay.tex: splay.ott
 	$(OTT) $(OTT_FLAGS) -o $@ $(@:.tex=).ott

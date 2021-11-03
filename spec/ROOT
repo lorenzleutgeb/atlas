@@ -8,4 +8,4 @@ session ATLAS = "HOL-Library" +
     Splay_Tree
     Amortized_Complexity
   theories
-    Lemmas_Log
+    Scratch

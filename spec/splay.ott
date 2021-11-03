@@ -20,64 +20,29 @@ embed
 \renewcommand{\ottkw}{\texttt}
 }}
 
-embed
-{{ coq
-Require Ascii.
-Require Import BinInt.
-Require String.
-From Coq Require Import Lists.ListSet.
-From Coq Require Import Strings.String.
-Require Import Zdiv.
-Require Import Ott.ott_list.
-Require Import Sorting.Permutation.
-
-Hint Resolve Ascii.ascii_dec bool_dec String.string_dec : ott_coq_equality.
-
-Section ZArith_extra.
-
-Lemma positive_eq_dec: forall (x y : positive), {x = y} + {x <> y}.
-Proof.
-  intros. destruct (Z.eq_dec (Zpos x) (Zpos y)).
-  injection e; auto.
-  assert (x <> y). intro. rewrite H in n; auto. auto.
-Qed.
-
-End ZArith_extra.
-
-Hint Resolve positive_eq_dec : ott_coq_equality.
-}}
-
 indexvar n ::=
-      {{ lex numeral }}
-      {{ coq nat }}
-      {{ isa nat }}
-      {{ coq-equality }}
-      {{ com index variables (subscripts) }}
+  {{ lex numeral }}
+  {{ isa nat }}
+  {{ com index variables (subscripts) }}
 
 metavar k, l ::=
   {{ lex numeral }}
-  {{ coq nat }}
-      {{ isa nat }}
+  {{ isa nat }}
 
 metavar ident, x, y, f ::=
-      {{ lex alphanum }}
-      {{ coq string }}
-      {{ isa string }}
+  {{ lex alphanum }}
+  {{ isa string }}
 
 metavar integer ::=
-      {{ lex numeral }}
-      {{ coq Z }}
-      {{ coq-equality }}
-      {{ isa int }}
+  {{ lex numeral }}
+  {{ isa int }}
 
 grammar
-  program, P {{ tex \mathsf{P} }} :: P ::=
+  program, Prog {{ tex \ensuremath{\mathsf{P} } }} :: P ::=
     {{ isa (ident*(ident list)*expr) }}
     | def1 ... defn :: :: defs
- %%{{ com List.concat [[F1 Fn]] }}
   definition, def :: D ::= 
     | f x1 .. xn = e :: :: ef
-%%{{ com [([[f]], (List.concat [[x1 xn]]), [[e]])] }} {{ com empty program }}
   value, v :: Val ::=
     | tree :: :: Tree
     | base :: :: Base
@@ -86,15 +51,16 @@ grammar
     | box :: :: Box
     {{ tex \Box }}
   tree, t :: TreeVal ::=
-    | vleaf :: :: Leaf
+    {{ isa base tree }}
+    % We use an instance of Isabelle's native tree type.
+    | ( ) :: :: Leaf
     {{ tex \textsf{leaf} }}
     | ( t1 , base , t2 ) :: :: Node
   bool :: BoolVal ::=
-    {{ isa bool }}
-    | yep :: :: True
-    {{ tex \textsf{true} }}
-    | nop :: :: False
-    {{ tex \textsf{false} }}
+    {{ phantom }}
+    % We use Isabelle's native bool type as representaion.
+    | yep :: :: True {{ tex \textsf{true} }}
+    | nop :: :: False {{ tex \textsf{false} }}
   cmp :: Cmp ::=
     {{ tex \circ }}
     {{ com comparison operators }}
@@ -106,61 +72,84 @@ grammar
     | Bool :: :: Bool {{ tex \textsf{Bool} }}
     | Tree :: :: Tree {{ tex \textsf{Tree} }}
     | Base :: :: Base {{ tex \textsf{Base} }}
+  annotation, Q, P, R :: Annotation ::=
+    {{ isa ((nat list) * ((((nat list) * nat) * nat) list)) }}
+  atype :: AnnotatedType ::=
+    {{ isa type * annotation }}
+    {{ tex \tau \mid Q' }}
+    | type | annotation :: :: Annotated
+    {{ isa ([[type]], [[annotation]]) }}
+    | type              :: :: Zero
+    {{ isa (zero_type [[type]]) }}
   constant , c :: Const ::=
-    | false                                             :: :: False {{ com false }}
-    | true                                              :: :: True {{ com true }}
-    | leaf                                               :: :: Leaf {{ com leaf }}
+    | false :: :: False {{ com false }}
+    | true  :: :: True  {{ com true }}
+    | leaf  :: :: Leaf  {{ com leaf }}
   expr, e  :: Exp ::= {{ com expressions in normal form }}
-    | x                        ::   :: Id
-    | constant                     ::   :: Const
-    | lpar e rpar                        :: S :: Paren
-       {{ isa [[e]] }}
-       {{ coq [[e]] }}
-    | nodelpar x1 nodecomma x2 nodecomma x3 noderpar             ::   :: Node {{ com node }}
-    | f x1 ... xn              ::   :: App
+    | x           ::   :: Id
+    | constant    ::   :: Const
+    | lpar e rpar :: S :: Paren
+    {{ isa [[e]] }}
+    | f x1 ... xn ::   :: App
+    | nodelpar x1 nodecomma x2 nodecomma x3 noderpar ::   :: Node {{ com node }}
+    | let x = e1 in e2             ::   :: Let
     | if x then e1 else e2         ::   :: IfId
     | if c then e1 else e2         ::   :: IfConst
     | if x1 cmp x2 then e3 else e4 ::   :: IfCmp
     | match x0 with
       pipe leaf to e1
       pipe nodelpar x1 nodecomma x2 nodecomma x3 noderpar to e2   ::   :: Match
-    | let x = e1 in e2             ::   :: Let
   relaxed_expr, re :: RelExp ::= {{ com expressions with syntactic sugar }}
-    | x                        ::   :: Id
-    | constant                     ::   :: Const
-    | lpar re rpar                        :: S :: Paren
-       {{ isa [[re]] }}
-       {{ coq [[re]] }}
-    | nodelpar re1 nodecomma re2 nodecomma re3 noderpar             ::   :: Node {{ com node }}
-    | f re1 ... ren              ::   :: App
-    | if re1 then re2 else re3        ::   :: IfExp
+    | x                      ::   :: Id
+    | constant               ::   :: Const
+    | lpar re rpar           :: S :: Paren
+    {{ isa [[re]] }}
+    | nodelpar re1 nodecomma re2 nodecomma re3 noderpar ::   :: Node {{ com node }}
+    | f re1 ... ren                    ::   :: App
+    | let x = re1 in re2               ::   :: Let
+    | if re1 then re2 else re3         ::   :: IfExp
     | if re1 cmp re2 then re3 else re4 ::   :: IfCmp
     | match re1 with
       pipe leaf to re2
-      pipe nodelpar x1 nodecomma x2 nodecomma x3 noderpar to re3   ::   :: Match
-    | let x = re1 in re2             ::   :: Let
+      pipe nodelpar x1 nodecomma x2 nodecomma x3 noderpar to re3 ::   :: Match
   environment {{ tex \sigma }} , E {{ tex \sigma }} :: Env ::=
-    | empty                                             ::   :: Empty
-    | [ x1 |-> v1 , .. , xn |-> vn ]     :: I :: Lit
-%Lit {{ coq [([[x1]], [[v1]]) .. ([[xn]], [[vn]])]}}
-%    | E , x |-> v                                :: I :: Cons
-    | E [ x1 |-> v1 , .. , xn |-> vn ]     :: I :: App
+    {{ isa ident => value option }}
+    | empty                            ::   :: Empty
+    | [ x1 |-> v1 , .. , xn |-> vn ]   :: I :: Lit
+    | E [ x1 |-> v1 , .. , xn |-> vn ] :: I :: App
+  signature, F {{ tex \mathcal{F} }} :: F_ ::= {{ com signatures: }}
+    {{ isa (ident*(type list)*type) list }} 
+    | empty :: :: empty {{ com empty signature }}
+    {{ isa Nil }}
+  context, G {{ tex \Gamma }} :: G_ ::=                      {{ com contexts: }}
+    {{ isa (ident*type) list }} 
+    | empty         :: :: empty {{ com empty context }}
+    {{ isa Nil }}
+    | G , x : alpha :: :: vn    {{ com term variable binding }}
+    {{ isa ([[x]],[[alpha]])#[[G]] }}
+  acontext :: AnnotatedContext ::=
+    {{ isa context * annotation }}
+    {{ tex \Gamma \mid Q }}
+    | context | annotation :: :: Annotated
+    {{ isa ([[context]], [[annotation]]) }}
+    | context              :: :: Zero
+    {{ isa (zero_context ([[context]])) }}
   formula :: 'formula_' ::= {{ com semantic judgements and their side conditions }}
     | judgement :: :: judgement
     | formula1 .. formulan :: :: dots
     | x elemof dom( E )  :: :: indom
     {{ ic indom [[x]] [[E]] }}
     {{ tex [[x]] \in \mathrm{dom}([[E]]) }}
-    | E ( x ) = v :: :: assign {{ ic [[v]] = substitute [[E]] [[x]] }}
+    | E ( x ) = v :: :: assign {{ ic [[E]] [[x]] = Some [[v]] }}
     | k = k1 + k2 :: :: add {{ ic [[k]] = [[k1]] + [[k2]] }}
-    | args ( P , x ) = x1 .. xn :: :: args {{ ic (args [[P]] [[x]]) = [[x1 .. xn]] }}
+    | args ( Prog , x ) = x1 .. xn :: :: args {{ ic (args [[Prog]] [[x]]) = [[x1 .. xn]] }}
     | F(f) = alpha1 * .. * alphan -> beta :: :: foo
     %{{ tex [[F]]([[f]]) = [[alpha1]] \times \dots \times [[alphan]] \to [[beta]] }}
     {{ isa (sig [[F]] [[x]]) = ([[alpha1 .. alphan]], [[beta]]) }}
-    | P ( f ) = e [ x1 , .. , xn ] :: :: body {{ ic (def [[P]] [[f]]) = ([[e]],[[x1 .. xn]]) }}
+    | Prog ( f ) = e [ x1 , .. , xn ] :: :: body {{ ic (def [[Prog]] [[f]]) = ([[e]],[[x1 .. xn]]) }}
     | E = [ x1 |-> v1 , .. , xn |-> vn ] :: :: Alias {{ ic [[E]] = EnvLit [] }}
   terminals :: terminals_ ::=
-      {{ com prettyprinting specifications }}
+    {{ com prettyprinting specifications }}
 %   | %prim  :: :: prim         {{ tex \ottkw{\%prim} }}
 %   | *      :: :: star         {{ tex \ast }}
 %   | --->   :: :: vararrow     {{ tex \rightarrow }}
@@ -176,110 +165,61 @@ grammar
 %   | forall :: :: forall       {{ tex \forall }}
 %   | gives  :: :: gives        {{ tex \;\vartriangleright\;\ottmaybebreakline }}
 %   | notin  :: :: notin        {{ tex \notin }}
-    | elemof :: :: elemof           {{ tex \in }}
+    | elemof :: :: elemof       {{ tex \in }}
 %   | noteq  :: :: noteq        {{ tex \not = }}
     | |-     :: :: turnstile    {{ tex \vdash }}
     | pipe   :: :: pipe         {{ tex \texttt{|} }}
-    | |->    :: :: mapsto       {{ tex  \mapsto }}
+    | |->    :: :: mapsto       {{ tex \mapsto }}
 %   | ~-     :: :: uminus       {{ tex \mathrel{\sim\!\!-} }}
     | empty  :: :: empty        {{ tex \emptyset }}
     | =>     :: :: leadstof     {{ tex \Rightarrow }}
     | lpar   :: :: lpar         {{ tex \texttt{(} }}
     | rpar   :: :: rpar         {{ tex \texttt{)} }}
     | comma  :: :: comma        {{ tex \texttt{,} }}
-    | nodelpar   :: :: nodelpar         {{ tex \constructor{(} }} {{com opening parenthesis in the context of a node constructor }}
-    | noderpar   :: :: noderpar         {{ tex \constructor{)} }} {{com closing parenthesis in the context of a node constructor }}
-    | nodecomma  :: :: nodecomma        {{ tex \constructor{,} }} {{com comma in the context of a node constructor }}
-    | let    :: :: let        {{ tex \li{let} }}
-    | in    :: :: in        {{ tex \li{in} }}
-    | if    :: :: if        {{ tex \ite{if} }}
-    | then    :: :: then        {{ tex \ite{then} }}
-    | else    :: :: else        {{ tex \ite{else} }}
-    | match    :: :: match        {{ tex \mw{match} }}
-    | with    :: :: with        {{ tex \mw{with} }}
-    %| true    :: :: true        {{ tex \constructor{true} }}
-    %| false    :: :: false        {{ tex \constructor{false} }}
-    %| leaf    :: :: leaf        {{ tex \constructor{leaf} }}
-
-grammar
-G {{ tex \Gamma }} :: G_ ::=                      {{ com contexts: }}
-        {{ isa (ident*type) list }} 
-        {{ coq list (ident*type) }}
-  | empty                        ::   :: empty      {{ com empty context }}
-        {{ isa Nil }}
-        {{ coq nil }}
-  | G , x : alpha                    ::   :: vn         {{ com term variable binding }}
-        {{ isa ([[x]],[[alpha]])#[[G]] }}
-        {{ coq (cons ([[x]],[[alpha]]) [[G]]) }}
-
-grammar
-F {{ tex \mathcal{F} }} :: F_ ::= {{ com signatures: }}
-    {{ isa (ident*(type list)*type) list }} 
-    {{ coq list (ident*(type list)*type) }}
-  | empty :: :: empty {{ com empty signature }}
-    {{ isa Nil }}
-    {{ coq nil }}
+    | let    :: :: let          {{ tex \li{let} }}
+    | in     :: :: in           {{ tex \li{in} }}
+    | if     :: :: if           {{ tex \ite{if} }}
+    | then   :: :: then         {{ tex \ite{then} }}
+    | else   :: :: else         {{ tex \ite{else} }}
+    | match  :: :: match        {{ tex \mw{match} }}
+    | with   :: :: with         {{ tex \mw{with} }}
+    | nodelpar   :: :: nodelpar  {{ tex \constructor{(} }} {{com opening parenthesis in the context of a node constructor }}
+    | noderpar   :: :: noderpar  {{ tex \constructor{)} }} {{com closing parenthesis in the context of a node constructor }}
+    | nodecomma  :: :: nodecomma {{ tex \constructor{,} }} {{com comma in the context of a node constructor }}
 
 embed
 {{ isa
 
-fun sig :: "F => ident => ((type list)*type)"
+fun sig :: "signature => ident => ((type list) * type)"
 where
 "sig x y = ([TypeTree], TypeTree)"
 
-fun def :: "program ⇒ ident ⇒ (expr*(ident list))"
+fun def :: "program ⇒ ident ⇒ (expr * (ident list))"
 where
 "def p x = (ExpConst ConstLeaf, [])"
-}}
 
-% (Here we represent type environments with proof assistant lists. One could
-%  instead use the Ott free type, or proof assistant finite maps or what have you.)
+fun is_tree :: "type \<Rightarrow> bool" where
+"is_tree TypeTree = True" |
+"is_tree _ = False"
 
-% (The TAPL version has an implicit convention that the assumptions in G
-%  are for distinct variables.  Here instead we always look up the
-%  rightmost assumption in a G.  One could equally well add an explicit
-%  well-formedness condition to the T_Var rule.)
+fun tree_count_context :: "context \<Rightarrow> nat" where
+"tree_count_context c = sum_list (map (%(_,t). case t of TypeTree => 1 | _ => 0) c)"
 
-embed
-{{ coq
-Definition bound x T0 G :=
-  exists G1, exists G2,
-    (G = G1 ++ (x,T0)::G2)%list /\
-    ~In x (List.map (@fst expr type) G1).
+fun repeat :: "'a \<Rightarrow> nat \<Rightarrow> ('a list)" where
+"repeat _ 0 = []" |
+"repeat x n = (x#(repeat x (n - 1)))"
 
-Definition indom (x : ident) (E : environment) := 0 = 0.
-Definition substitute (e : environment) (x : ident) := ValNil.
-Definition formula_assign (v : value) (x : ident) := ValNil.
+fun zero_context :: "context \<Rightarrow> acontext" where
+"zero_context c = (c, ((repeat 0 (tree_count_context c)), []))"
 
-Definition ident_to_expr := ExpId.
-Coercion ident_to_expr : ident >-> expr.
+fun zero_type :: "type \<Rightarrow> atype" where
+"zero_type t = (t, if is_tree t then ([0], []) else ([], []))"
 
-(*
-Definition IdInt' : nat -> expr := IdInt.
-
-(* Constants *)
-Coercion ConstInt : intn >-> constant.
-Definition ConstInt' : Z -> constant := ConstInt.
-
-Coercion ConstInt' : Z >-> constant.
-Definition ConstBool (b:bool) := if b then ConstTrue else ConstFalse.
-Coercion ConstBool : bool >-> constant.
-*)
-
-Definition id_true :=  "true"%string.
-Definition id_false := "false"%string.
-Definition id_nil : ident := "nil"%string.
-Definition short_match (scrutinee: ident) (x1 x2 x3 : ident) (e : expr) := ExpMatch scrutinee id_nil x1 x2 x3 e.
-
-Definition args (P : program) (f : ident) : list ident := "x"%string :: nil.
-Definition body (P : program) (f : ident) : expr := id_nil.
-}}
-
-embed
-{{ isa
 lemma list_all_id_map: "list_all id (map f xs) = list_all f xs"
   by (simp add: list.pred_map)
+
 }}
+{{ tex \newpage }}
 
 grammar
 
@@ -287,122 +227,125 @@ defns
 typing_judgement :: '' ::=
 
 defn
-F , G |- e : type :: :: typing :: Typ
-{{ tex [[G]] \vdash [[e]] : [[type]] }}
-{{ com Typing ($\mathcal{F}$ is passed implicitly) }} by
+F , acontext |- k e : atype :: :: typing :: Typ
+{{ tex [[acontext]] \vdash^{[[k]]} [[e]] : [[atype]] }}
+{{ com Typing (
+$\mathcal{F}$ is passed implicitly. $\vdash^{1}$ is normal typing $\vdash^{0}$ is cost-free typing.
+) }} by
 
-------------------- :: True
-F, G |- true : Bool
+----- :: True
+F, G |-k true : Bool
 
--------------------- :: False
-F, G |- false : Bool
+----- :: False
+F, G |-k false : Bool
 
-------------------- :: Nil
-F, G |- leaf : Tree
+----- :: Nil
+F, G |-k  leaf : Tree
 
-F, G |- x1 : Tree
-F, G |- x2 : Base
-F, G |- x3 : Tree
---------------------------- :: Node
-F, G |- nodelpar x1 nodecomma x2 nodecomma x3 noderpar : Tree
+F, G |-k x1 : Tree
+F, G |-k x2 : Base
+F, G |-k x3 : Tree
+----- :: Node
+F, G |-k nodelpar x1 nodecomma x2 nodecomma x3 noderpar : Tree
 
-F, G                                  |- x : Tree
-F, G                                  |- e1 : alpha
-F, G, x1 : Tree, x2 : Base, x3 : Tree |- e2 : alpha
------------------------------------------------------------ :: Match
-F, G |- match x with pipe leaf to e1 pipe nodelpar x1 nodecomma x2 nodecomma x3 noderpar to e2 : alpha
+F, G                                  |-k x : Tree
+F, G                                  |-k e1 : alpha
+F, G, x1 : Tree, x2 : Base, x3 : Tree |-k e2 : alpha
+----- :: Match
+F, G |-k match x with pipe leaf to e1 pipe nodelpar x1 nodecomma x2 nodecomma x3 noderpar to e2 : alpha
 
-F, G            |- e1 : alpha
-F, G, x : alpha |- e2 : beta
------------------------------- :: Let
-F, G |- let x = e1 in e2 : beta
+F, G            |-k e1 : alpha
+F, G, x : alpha |-k e2 : beta
+----- :: Let
+F, G |-k let x = e1 in e2 : beta
 
-F, G |- e1 : alpha
-F, G |- e2 : alpha
-F, G |- x  : Bool
------------------------------------- :: IfId
-F, G |- if x then e1 else e2 : alpha
+F, G |-k e1 : alpha
+F, G |-k e2 : alpha
+F, G |-k x  : Bool
+----- :: IfId
+F, G |-k if x then e1 else e2 : alpha
 
-F, G |- e1 : alpha
-F, G |- e2 : alpha
-F, G |- c : Bool
------------------------------------- :: IfConst
-F, G |- if c then e1 else e2 : alpha
+F, G |-k e1 : alpha
+F, G |-k e2 : alpha
+F, G |-k c : Bool
+----- :: IfConst
+F, G |-k if c then e1 else e2 : alpha
 
-F, G |- x1 : alpha 
-F, G |- x2 : alpha
-F, G |- e1 : beta
-F, G |- e2 : beta
-------------------------------------------- :: IfCmp
-F, G |- if x1 cmp x2 then e1 else e2 : beta
+F, G |-k x1 : alpha 
+F, G |-k x2 : alpha
+F, G |-k e1 : beta
+F, G |-k e2 : beta
+----- :: IfCmp
+F, G |-k if x1 cmp x2 then e1 else e2 : beta
 
 F(f) = alpha1 * .. * alphan -> beta
-F, G |- x1 : alpha1 .. F, G |- xn : alphan
------------------------------------------- :: Call
-F, G |- f x1 .. xn : beta
+F, G |-k x1 : alpha1 .. F, G |-k xn : alphan
+----- :: Call
+F, G |-k f x1 .. xn : beta
 
 embed
 {{ isa monos list.pred_mono list_all_id_map[unfolded id_def]}}
+{{ tex \newpage }}
 
 defns
 reduction_judgement :: '' ::=
 
 defn
-P , E |- k e => v :: :: reduction :: Red
-{{ com Reduction ([[P]] is passed implicitly) }}
+Prog , E |- k e => v :: :: reduction :: Red
+{{ com Reduction ([[Prog]] is passed implicitly) }}
 {{ tex [[E]] \sststile{}{[[k]]} [[e]] \Rightarrow [[v]] }} by
 
--------------------- :: True
-P, E |-0 true => yep
+----- :: True
+Prog, E |-0 true => yep
 
---------------------- :: False
-P, E |-0 false => nop
+----- :: False
+Prog, E |-0 false => nop
 
----------------------- :: Nil
-P, E |-0 leaf => vleaf
+----- :: Nil
+Prog, E |-0 leaf => ( )
 
 E(x1) = t1
 E(x2) = box
 E(x3) = t2
----------------------------------------------------------------------------- :: Node
-P, E |-0 nodelpar x1 nodecomma x2 nodecomma x3 noderpar => ( t1 , box , t2 )
+----- :: Node
+Prog, E |-0 nodelpar x1 nodecomma x2 nodecomma x3 noderpar => ( t1 , box , t2 )
 
 E(x) = v
---------------- :: Id
-P, E |-0 x => v
+----- :: Id
+Prog, E |-0 x => v
 
-P, E |-0 x  => yep
-P, E |-k e1 => v
-------------------------------- :: IfIdTrue
-P, E |-k if x then e1 else e2 => v
+Prog, E |-0 x  => yep
+Prog, E |-k e1 => v
+----- :: IfIdTrue
+Prog, E |-k if x then e1 else e2 => v
 
-P, E |-0 x  => nop
-P, E |-k e2 => v
-------------------------------- :: IfIdFalse
-P, E |-k if x then e1 else e2 => v
+Prog, E |-0 x  => nop
+Prog, E |-k e2 => v
+----- :: IfIdFalse
+Prog, E |-k if x then e1 else e2 => v
 
-P, E |-k' e1 => v1
-P, E [ x |-> v1 ] |-k'' e2  => v2
+Prog, E |-k' e1 => v1
+Prog, E [ x |-> v1 ] |-k'' e2  => v2
 k = k' + k''
----------------------------- :: Let
-P, E |-k let x = e1 in e2 => v2
+----- :: Let
+Prog, E |-k let x = e1 in e2 => v2
 
-P, E |-0 x  => vleaf
-P, E |-k e1 => v
------------------------------------------------------------- :: MatchNil
-P, E |-k match x with pipe leaf to e1 pipe nodelpar x1 nodecomma x2 nodecomma x3 noderpar to e2 => v
+Prog, E |-0 x  => ( ) 
+Prog, E |-k e1 => v
+----- :: MatchNil
+Prog, E |-k match x with pipe leaf to e1 pipe nodelpar x1 nodecomma x2 nodecomma x3 noderpar to e2 => v
 
-P, E                                        |-0 x  => ( t1 , box , t2 )
-P, E [ x1 |-> t1 , x2 |-> box , x3 |-> t2 ] |-k e2 => v
------------------------------------------------------------- :: MatchNode
-P, E |-k match x with pipe leaf to e1 pipe nodelpar x1 nodecomma x2 nodecomma x3 noderpar to e2 => v
+Prog, E                                        |-0 x  => ( t1 , box , t2 )
+Prog, E [ x1 |-> t1 , x2 |-> box , x3 |-> t2 ] |-k e2 => v
+----- :: MatchNode
+Prog, E |-k match x with pipe leaf to e1 pipe nodelpar x1 nodecomma x2 nodecomma x3 noderpar to e2 => v
 
-P(f) = e [ y1 , .. , yn ]
-P, E |-0 x1 => v1 .. P, E |-0 xn => vn
-P, [ y1 |-> v1 , .. , yn |-> vn ] |-k' e => v
+Prog(f) = e [ y1 , .. , yn ]
+Prog, E |-0 x1 => v1 .. Prog, E |-0 xn => vn
+Prog, [ y1 |-> v1 , .. , yn |-> vn ] |-k' e => v
 k = k' + 1
------------------------- :: Call
-P, E |-k f x1 .. xn => v
+----- :: Call
+Prog, E |-k f x1 .. xn => v
 
 embed
 {{ isa monos list.pred_mono list_all_id_map[unfolded id_def] }}
