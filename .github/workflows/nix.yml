@@ -1,4 +1,4 @@
-name: Build atlas
+name: Build atlas using Nix
 on: [push]
 jobs:
   build:
@@ -77,8 +77,8 @@ jobs:
         nix log   .#packages.x86_64-linux.$PKG > log/${PKG}.txt
         RESULT=$(nix path-info .#packages.x86_64-linux.$PKG)
         echo "::set-output name=result::$RESULT"
-        RESULT_JACOCO=$(nix path-info .#packages.x86_64-linux.$PKG.jacoco)
-        echo "::set-output name=result-jacoco::$RESULT_JACOCO"
+        #RESULT_JACOCO=$(nix path-info .#packages.x86_64-linux.$PKG.jacoco)
+        #echo "::set-output name=result-jacoco::$RESULT_JACOCO"
     - name: Build 'atlas-docker'
       id: atlas-docker
       run: |
@@ -107,9 +107,9 @@ jobs:
         docker push -q lorenzleutgeb/atlas-shell:$GITHUB_SHA
         docker push -q ghcr.io/lorenzleutgeb/atlas/atlas:$GITHUB_SHA
         docker push -q ghcr.io/lorenzleutgeb/atlas/atlas-shell:$GITHUB_SHA
-    - uses: codecov/codecov-action@v1
-      with:
-        files:  ${{ steps.atlas.outputs.result-jacoco }}
+   #- uses: codecov/codecov-action@v1
+   #  with:
+   #    files:  ${{ steps.atlas.outputs.result-jacoco }}
    #- name: Package TACAS Artifact
    #  run: ./tacas.sh
    #- uses: actions/upload-artifact@v2
