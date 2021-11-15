@@ -97,6 +97,7 @@
         };
 
         atlas = (pkgs.callPackage ./gradle-env.nix { inherit gradleGen; }) {
+          buildJdk = jdk;
           envSpec = ./gradle-env.json;
 
           src = ./.;
@@ -107,8 +108,12 @@
           LANG = "en_US.UTF-8";
           LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
           LD_LIBRARY_PATH = "${z3.lib}/lib";
-          gradleFlags = [ "jacocoTestReport" "nativeImage" ];
-          outputs = [ "out" "jacoco" ];
+          gradleFlags = [ "nativeImage" ];
+          outputs = [ "out" ];
+
+          # JaCoCo broken with JDK 17.
+          #gradleFlags = [ "jacocoTestReport" "nativeImage" ];
+          #outputs = [ "out" "jacoco" ];
 
           configurePhase = ''
             locale
@@ -131,7 +136,9 @@
               build/native-image/atlas
 
             cp -v build/native-image/atlas $out/bin/atlas
-            cp -v build/reports/jacoco/test/jacocoTestReport.xml $jacoco
+
+            # JaCoCo broken with JDK 17.
+            #cp -v build/reports/jacoco/test/jacocoTestReport.xml $jacoco
 
             chmod ug+w $out/var/atlas/atlas.properties
             echo "xyz.leutgeb.lorenz.atlas.module.Loader.defaultHome=$out/var/atlas/resources/examples" >> $out/var/atlas/atlas.properties
@@ -148,6 +155,7 @@
                    `/bin/atlas` and auxiliary files under `/var/atlas`.
                 2. The output 'jacoco' which contains a test coverage
                    report in XML format.
+                   JaCoCo broken with JDK 17.
             '';
           };
         };
