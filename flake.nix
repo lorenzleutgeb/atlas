@@ -21,7 +21,7 @@
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
-      jdk = pkgs.graalvm11-ce;
+      jdk = pkgs.graalvm17-ce;
       z3 = pkgs.z3.override {
         inherit jdk;
         javaBindings = true;
