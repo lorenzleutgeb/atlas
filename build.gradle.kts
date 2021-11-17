@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import java.nio.charset.StandardCharsets
 
 val rootPackage = "xyz.leutgeb.lorenz.atlas"
 val rootPackagePath = rootPackage.replace(".", "/")
@@ -151,8 +152,8 @@ dependencies {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 tasks.withType<AntlrTask> {
@@ -188,6 +189,7 @@ tasks.create<JavaExec>("generateExamples") {
 }
 
 tasks.withType<JavaCompile> {
+    options.encoding = StandardCharsets.UTF_8.name()
     options.compilerArgs.addAll(arrayOf("-Xlint:unchecked", "-Xlint:deprecation", "-Aproject=atlas", "-Averbose=true"))
 }
 

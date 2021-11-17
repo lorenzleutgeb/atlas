@@ -29,10 +29,9 @@ public class ProductType implements Type {
 
   @Override
   public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
-    if (!(b instanceof ProductType)) {
+    if (!(b instanceof ProductType pt)) {
       throw new TypeMismatch(this, b);
     }
-    var pt = (ProductType) b;
     if (pt.size() != elements.size()) {
       throw new TypeMismatch(this, b);
     }

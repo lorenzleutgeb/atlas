@@ -198,8 +198,7 @@ public class LetExpression extends Expression {
       return;
     }
 
-    if (value instanceof NodeExpression) {
-      final var node = (NodeExpression) value;
+    if (value instanceof final NodeExpression node) {
       sizeGraph.addVertex(declared);
       sizeGraph.addVertex((Identifier) node.getLeft());
       sizeGraph.addVertex((Identifier) node.getRight());
@@ -207,8 +206,7 @@ public class LetExpression extends Expression {
       sizeGraph.addEdge(declared, (Identifier) node.getRight(), SizeEdge.gt());
     }
 
-    if (value instanceof Identifier) {
-      final var identifier = (Identifier) value;
+    if (value instanceof final Identifier identifier) {
       sizeGraph.addVertex(declared);
       sizeGraph.addVertex(identifier);
       sizeGraph.addEdge(declared, identifier, SizeEdge.eq());

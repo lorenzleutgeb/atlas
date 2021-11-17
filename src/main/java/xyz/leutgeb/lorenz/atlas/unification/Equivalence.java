@@ -44,11 +44,10 @@ public class Equivalence {
         continue;
       }
 
-      if (!(e.getLeft() instanceof UnificationVariable)) {
+      if (!(e.getLeft() instanceof UnificationVariable left)) {
         continue;
       }
 
-      var left = (UnificationVariable) e.getLeft();
       e.occurs();
 
       // Substitute

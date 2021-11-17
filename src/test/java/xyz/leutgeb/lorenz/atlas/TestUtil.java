@@ -1,7 +1,6 @@
 package xyz.leutgeb.lorenz.atlas;
 
 import static java.util.Collections.emptyList;
-import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.common.collect.Streams;
@@ -59,7 +58,7 @@ public class TestUtil {
             .map(Map.Entry::getKey)
             .sorted(Annotation.INDEX_COMPARATOR)
             .distinct()
-            .collect(toUnmodifiableList());
+            .toList();
 
     Stream<Column<?>> columns =
         Stream.concat(

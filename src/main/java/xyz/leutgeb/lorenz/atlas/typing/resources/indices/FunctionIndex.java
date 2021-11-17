@@ -6,8 +6,8 @@ import xyz.leutgeb.lorenz.atlas.ast.Identifier;
 import xyz.leutgeb.lorenz.atlas.util.Util;
 
 public class FunctionIndex implements Index {
-  Function<Identifier, Integer> associatedIndices;
-  Integer offsetIndex;
+  final Function<Identifier, Integer> associatedIndices;
+  final Integer offsetIndex;
 
   public FunctionIndex(Function<Identifier, Integer> associatedIndices, Integer offsetIndex) {
     this.associatedIndices = associatedIndices;

@@ -27,14 +27,13 @@ public class Leaf implements Rule {
   public Rule.ApplicationResult apply(
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = obligation.getExpression();
-    if (!(expression instanceof Identifier)) {
+    if (!(expression instanceof final Identifier id)) {
       throw bug(
           "cannot apply (leaf) to identifier expression that is not identifier 'leaf' (it is '"
               + expression.terminalOrBox()
               + "')");
     }
 
-    final var id = (Identifier) expression;
     if (!id.getName().equals(LEAF_NAME)) {
       throw bug("cannot apply (leaf) to identifier 'leaf' (it is '" + id.getName() + "')");
     }

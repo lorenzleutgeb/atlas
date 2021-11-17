@@ -1,7 +1,6 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources;
 
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toUnmodifiableList;
 import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
 
 import java.util.ArrayList;
@@ -191,8 +190,7 @@ public class AnnotatingContext {
   }
 
   public String potentialString() {
-    return annotation.toLongString(
-        ids.stream().map(Object::toString).collect(toUnmodifiableList()));
+    return annotation.toLongString(ids.stream().map(Object::toString).toList());
   }
 
   public String toShortPotentialString() {
@@ -210,8 +208,7 @@ public class AnnotatingContext {
     if (reorderedIds.equals(ids)) {
       return this;
     }
-    final var reorderedIndices =
-        ids.stream().map(reorderedIds::indexOf).collect(toUnmodifiableList());
+    final var reorderedIndices = ids.stream().map(reorderedIds::indexOf).toList();
     if (reorderedIndices.contains(-1)) {
       throw new IllegalArgumentException();
     }
@@ -227,8 +224,7 @@ public class AnnotatingContext {
     if (reorderedIds.size() != ids.size()) {
       throw new IllegalArgumentException();
     }
-    final var idStrings =
-        ids.stream().map(Object::toString).collect(Collectors.toUnmodifiableList());
+    final var idStrings = ids.stream().map(Object::toString).toList();
     return reorderedIds.stream()
         .map(
             idString ->
@@ -236,15 +232,14 @@ public class AnnotatingContext {
                     .filter((Identifier id) -> id.getName().equals(idString))
                     .findFirst()
                     .get())
-        .collect(toUnmodifiableList());
+        .toList();
   }
 
   public AnnotatingContext reorderByName(List<String> reorderedIds) {
     if (reorderedIds.size() != ids.size()) {
       throw new IllegalArgumentException();
     }
-    final var idStrings =
-        ids.stream().map(Object::toString).collect(Collectors.toUnmodifiableList());
+    final var idStrings = ids.stream().map(Object::toString).toList();
     if (reorderedIds.equals(idStrings)) {
       return this;
     }
@@ -252,8 +247,7 @@ public class AnnotatingContext {
     final var reorderedIndices =
         idStrings.stream().map(reorderedIds::indexOf).collect(toUnmodifiableList());
      */
-    final var reorderedIndices =
-        reorderedIds.stream().map(idStrings::indexOf).collect(toUnmodifiableList());
+    final var reorderedIndices = reorderedIds.stream().map(idStrings::indexOf).toList();
     if (reorderedIndices.contains(-1)) {
       throw new IllegalArgumentException();
     }
@@ -265,13 +259,12 @@ public class AnnotatingContext {
                         .filter((Identifier id) -> id.getName().equals(idString))
                         .findFirst()
                         .get())
-            .collect(toUnmodifiableList()),
+            .toList(),
         annotation.reorder(reorderedIndices));
   }
 
   public AnnotatingContext reorderLexicographically() {
-    return reorderByName(
-        ids.stream().map(Identifier::getName).sorted().collect(toUnmodifiableList()));
+    return reorderByName(ids.stream().map(Identifier::getName).sorted().toList());
   }
 
   public Coefficient getCoefficientOrDefine(Index index) {

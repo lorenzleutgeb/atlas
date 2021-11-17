@@ -8,7 +8,6 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toUnmodifiableList;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.INDEX_COMPARATOR;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.constantIndex;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.nonRankIndices;
@@ -221,7 +220,7 @@ public class W implements Rule {
       log.info("(w) --- " + left.getId() + " <= " + right.getId() + " --- ");
       log.info("pot: " + potentialFunctions);
       log.info("ids: " + identifiers);
-      log.info("one: " + knowOne.stream().map(identifiers::get).collect(toUnmodifiableList()));
+      log.info("one: " + knowOne.stream().map(identifiers::get).toList());
       log.info("lemma2XY:");
       lemma2XYInstances.forEach(
           instance ->
@@ -574,10 +573,7 @@ public class W implements Rule {
   }
 
   private static List<Integer> atIndex(int size, int index, int value) {
-    return IntStream.rangeClosed(0, size)
-        .map(x -> x == index ? value : 0)
-        .boxed()
-        .collect(toUnmodifiableList());
+    return IntStream.rangeClosed(0, size).map(x -> x == index ? value : 0).boxed().toList();
   }
 
   @Value
@@ -670,7 +666,7 @@ public class W implements Rule {
     final var prod =
         cartesianProduct(potentialFunctions, potentialFunctions).stream()
             .filter(comparison -> !comparison.get(0).equals(comparison.get(1)))
-            .collect(toUnmodifiableList());
+            .toList();
 
     if (treeSize == 0) {
       return prod.stream()
@@ -684,9 +680,7 @@ public class W implements Rule {
       solver.push();
       final IntExpr one = ctx.mkInt(1);
       final List<IntExpr> vars =
-          IntStream.range(0, treeSize)
-              .mapToObj(i -> ctx.mkIntConst("x" + i))
-              .collect(Collectors.toUnmodifiableList());
+          IntStream.range(0, treeSize).mapToObj(i -> ctx.mkIntConst("x" + i)).toList();
 
       for (var x : vars) {
         solver.add(ctx.mkLe(one, x));

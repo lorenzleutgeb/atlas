@@ -19,7 +19,7 @@ public class Var implements Rule {
     final var context = obligation.getContext();
     final var expression = obligation.getExpression();
 
-    if (!(expression instanceof Identifier)) {
+    if (!(expression instanceof final Identifier id)) {
       throw bug("cannot apply (var) to expression that is not an identifier");
     }
 
@@ -33,8 +33,6 @@ public class Var implements Rule {
       return Rule.ApplicationResult.empty();
     }
      */
-
-    final var id = (Identifier) expression;
 
     if (id.getType() instanceof TreeType) {
       if (context.size() != 1) {

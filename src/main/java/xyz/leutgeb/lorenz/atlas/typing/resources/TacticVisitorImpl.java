@@ -90,8 +90,7 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
 
   private List<Obligation> proveInternal(
       Obligation obligation, TacticParser.TacticExpressionContext immediateContext) {
-    if (immediateContext instanceof TacticParser.FixContext) {
-      final var fixedAnnotationContext = (TacticParser.FixContext) immediateContext;
+    if (immediateContext instanceof final TacticParser.FixContext fixedAnnotationContext) {
       fix(obligation, fixedAnnotationContext);
       if (RECORDING_ENABLED && fixedAnnotationContext.applicationName != null) {
         prover.record(fixedAnnotationContext.applicationName.getText(), obligation);
@@ -143,8 +142,7 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
       }
       result = emptyList();
     } else {
-      final List<Identifier> redundant =
-          WVar.redundantIds(obligation).collect(Collectors.toUnmodifiableList());
+      final List<Identifier> redundant = WVar.redundantIds(obligation).toList();
       if (obligation.getExpression().isTerminal()
           && !redundant.isEmpty()
           && Set.of("leaf", "node", "var", "app").contains(ruleName)) {
@@ -238,8 +236,7 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
           Annotation.zero(
               size, "fixed at position " + start.getLine() + ":" + start.getCharPositionInLine()));
     }
-    if (annotationContext instanceof TacticParser.NonEmptyAnnotationContext) {
-      final var context = (TacticParser.NonEmptyAnnotationContext) annotationContext;
+    if (annotationContext instanceof final TacticParser.NonEmptyAnnotationContext context) {
       List<Coefficient> rankCoefficients = new ArrayList<>(size);
       for (int i = 0; i < size; i++) {
         rankCoefficients.add(KnownCoefficient.ZERO);
@@ -275,8 +272,7 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
     if (context instanceof TacticParser.NatContext) {
       return new KnownCoefficient(new Fraction(Integer.parseInt(context.getText())));
     }
-    if (context instanceof TacticParser.RatContext) {
-      final var ratContext = (TacticParser.RatContext) context;
+    if (context instanceof final TacticParser.RatContext ratContext) {
       return new KnownCoefficient(
           new Fraction(
               Integer.parseInt(ratContext.numerator.getText()),

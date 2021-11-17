@@ -97,14 +97,10 @@ public class LetTreeCf implements Rule {
     final var prefix = "(let:tree:cf " + x.getName() + ") ";
 
     final var varsForGammaAsList =
-        obligation.getContext().getIds().stream()
-            .filter(varsForGammaAsSet::contains)
-            .collect(Collectors.toUnmodifiableList());
+        obligation.getContext().getIds().stream().filter(varsForGammaAsSet::contains).toList();
 
     final var varsForDeltaAsList =
-        obligation.getContext().getIds().stream()
-            .filter(varsForDeltaAsSet::contains)
-            .collect(Collectors.toUnmodifiableList());
+        obligation.getContext().getIds().stream().filter(varsForDeltaAsSet::contains).toList();
 
     // Construct the context Γ | P
     // P will be defined by Q.
@@ -302,7 +298,7 @@ public class LetTreeCf implements Rule {
                                       .getLeft()
                                       .getContext()
                                       .getCoefficientOrDefine(qEntry))
-                          .collect(Collectors.toUnmodifiableList()),
+                          .toList(),
                       prefix + "q_{(a⃗⃗,b⃗,c)} = Σ_{(d,e)}{p^{(b⃗,d,e)}_{(a⃗⃗,c})}"))
           .forEach(crossConstraints::add);
 
@@ -386,8 +382,8 @@ public class LetTreeCf implements Rule {
 
     final var old = Util.append(List.of(p, r), pbdesOrdered);
     return new ApplicationResult(
-        old.stream().map(Pair::getLeft).collect(Collectors.toUnmodifiableList()),
-        old.stream().map(Pair::getRight).collect(Collectors.toUnmodifiableList()),
+        old.stream().map(Pair::getLeft).toList(),
+        old.stream().map(Pair::getRight).toList(),
         crossConstraints);
   }
 

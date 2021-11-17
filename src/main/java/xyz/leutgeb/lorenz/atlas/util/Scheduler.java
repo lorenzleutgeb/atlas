@@ -55,8 +55,6 @@ public class Scheduler<T, V, E> {
     public static <T> Result<T> fromFuture(Future<T> future) throws InterruptedException {
       try {
         return new Result<>(null, null, future.get());
-      } catch (InterruptedException e) {
-        throw e;
       } catch (ExecutionException e) {
         return new Result<>(e, null, null);
       } catch (CancellationException e) {

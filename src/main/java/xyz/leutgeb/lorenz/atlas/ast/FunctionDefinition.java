@@ -515,9 +515,7 @@ public class FunctionDefinition {
 
   public String getBoundString() {
     final List<String> treeArguments =
-        treeLikeArguments().stream()
-            .map(Identifier::getName)
-            .collect(Collectors.toUnmodifiableList());
+        treeLikeArguments().stream().map(Identifier::getName).toList();
 
     return moduleName
         + "."

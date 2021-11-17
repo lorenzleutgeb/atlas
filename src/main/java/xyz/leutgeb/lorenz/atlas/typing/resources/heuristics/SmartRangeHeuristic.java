@@ -1,7 +1,6 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources.heuristics;
 
 import static com.google.common.collect.Lists.cartesianProduct;
-import static java.util.stream.Collectors.toUnmodifiableList;
 import static java.util.stream.IntStream.range;
 import static java.util.stream.Stream.concat;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.isConstantIndex;
@@ -10,7 +9,6 @@ import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.isUnitIndex;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Data;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
@@ -38,16 +36,12 @@ public class SmartRangeHeuristic implements AnnotationHeuristic {
   @Override
   public Annotation generate(String namePrefix, int size) {
     return new Annotation(
-        size,
-        range(0, size).boxed().collect(toUnmodifiableList()),
-        generate(size).collect(Collectors.toUnmodifiableList()),
-        namePrefix);
+        size, range(0, size).boxed().toList(), generate(size).toList(), namePrefix);
   }
 
   public Stream<List<Integer>> generate(int treeSize) {
     return cartesianProduct(
-            concat(Stream.generate(() -> as).limit(treeSize), Stream.of(bs))
-                .collect(toUnmodifiableList()))
+            concat(Stream.generate(() -> as).limit(treeSize), Stream.of(bs)).toList())
         .stream()
         .filter(Predicate.not(Util::isAllZeroes))
         // TODO: Be smart about when to allow constants, especially 1. Only when there's a leaf?

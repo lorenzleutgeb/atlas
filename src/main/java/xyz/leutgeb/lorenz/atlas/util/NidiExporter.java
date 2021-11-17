@@ -38,8 +38,7 @@ public class NidiExporter<V, E> extends BaseExporter<V, E> {
       T attributed, Optional<Map<String, Attribute>> attributes) {
     for (Map.Entry<String, Attribute> attr : attributes.orElse(Collections.emptyMap()).entrySet()) {
       String name = attr.getKey();
-      if (attr.getValue() instanceof NidiAttribute) {
-        final var attribute = (NidiAttribute) attr.getValue();
+      if (attr.getValue() instanceof final NidiAttribute attribute) {
         // if (name.equals("label")) {
         attributed = attributed.with((Attributes<? extends F>) attribute.getNidi());
         /*} else {

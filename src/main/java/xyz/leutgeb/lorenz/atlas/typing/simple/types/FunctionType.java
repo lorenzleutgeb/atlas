@@ -50,10 +50,9 @@ public class FunctionType implements Type {
   }
 
   public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
-    if (!(b instanceof FunctionType)) {
+    if (!(b instanceof final FunctionType ft)) {
       throw new TypeMismatch(this, b);
     }
-    final var ft = (FunctionType) b;
     // Check lengths of "from" here, to catch errors early. Not strictly necessary, but helps.
     if (from.size() != ft.from.size()) {
       throw new TypeMismatch(from, ft.from);

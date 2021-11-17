@@ -9,7 +9,6 @@ import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toUnmodifiableList;
 import static java.util.stream.IntStream.range;
 import static java.util.stream.Stream.concat;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ONE;
@@ -618,22 +617,21 @@ public class Annotation {
   public EqualsSumConstraint sumAllCoefficients(Coefficient c) {
     return new EqualsSumConstraint(
         c,
-        Stream.concat(rankCoefficients.stream(), coefficients.values().stream())
-            .collect(toUnmodifiableList()),
+        Stream.concat(rankCoefficients.stream(), coefficients.values().stream()).toList(),
         "sum of annotation " + getNameAndId());
   }
 
   public EqualsSumConstraint sumRankCoefficients(Coefficient c) {
     return new EqualsSumConstraint(
         c,
-        rankCoefficients.stream().collect(toUnmodifiableList()),
+        rankCoefficients.stream().toList(),
         "sum of rank coefficients of annotation " + getNameAndId());
   }
 
   public EqualsSumConstraint sumCoefficients(Coefficient c) {
     return new EqualsSumConstraint(
         c,
-        coefficients.values().stream().collect(toUnmodifiableList()),
+        coefficients.values().stream().toList(),
         "sum of rank coefficients of annotation " + getNameAndId());
   }
 

@@ -58,7 +58,7 @@ public class Index implements Runnable {
               + "/^"
               + fd.getName()
               + "/;\"\tline:"
-              + +source.getTree().getStart().getLine()
+              + source.getTree().getStart().getLine()
               + "\tend:"
               + source.getTree().getStop().getLine());
     }

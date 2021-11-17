@@ -4,7 +4,7 @@ import java.util.Objects;
 import org.jgrapht.graph.DefaultEdge;
 
 public class KindedEdge<K> extends DefaultEdge {
-  protected K kind;
+  protected final K kind;
 
   protected KindedEdge(K kind) {
     this.kind = kind;

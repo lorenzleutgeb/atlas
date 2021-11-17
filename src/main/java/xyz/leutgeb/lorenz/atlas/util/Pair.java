@@ -115,8 +115,7 @@ public abstract class Pair<L, R> implements Map.Entry<L, R>, Serializable {
     if (obj == this) {
       return true;
     }
-    if (obj instanceof Map.Entry<?, ?>) {
-      final Map.Entry<?, ?> other = (Map.Entry<?, ?>) obj;
+    if (obj instanceof final Map.Entry<?, ?> other) {
       return Objects.equals(getKey(), other.getKey())
           && Objects.equals(getValue(), other.getValue());
     }

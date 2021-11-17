@@ -81,16 +81,12 @@ public class ConstraintSystemSolver {
     }
 
     public int toExitCode() {
-      switch (status) {
-        case SATISFIABLE:
-          return 0;
-        case UNSATISFIABLE:
-          return 1;
-        case UNKNOWN:
-          return 2;
-        default:
-          throw bug("unexpected status: " + status);
-      }
+      return switch (status) {
+        case SATISFIABLE -> 0;
+        case UNSATISFIABLE -> 1;
+        case UNKNOWN -> 2;
+        default -> throw bug("unexpected status: " + status);
+      };
     }
 
     public static Result unsat() {
@@ -288,16 +284,14 @@ public class ConstraintSystemSolver {
           log.warn("solution for " + e.getValue() + " is not a rational number, it is " + x);
         }
         KnownCoefficient v;
-        if (x instanceof RatNum && Domain.RATIONAL.equals(domain)) {
-          final var xr = (RatNum) x;
+        if (x instanceof final RatNum xr && Domain.RATIONAL.equals(domain)) {
           var num = xr.getNumerator();
           if (num.getBigInteger().intValueExact() == 0) {
             v = KnownCoefficient.ZERO;
           } else {
             v = new KnownCoefficient(Util.toFraction(xr));
           }
-        } else if (x instanceof IntNum && Domain.INTEGER.equals(domain)) {
-          final var xr = (IntNum) x;
+        } else if (x instanceof final IntNum xr && Domain.INTEGER.equals(domain)) {
           if (xr.getBigInteger().intValueExact() == 0) {
             v = KnownCoefficient.ZERO;
           } else {

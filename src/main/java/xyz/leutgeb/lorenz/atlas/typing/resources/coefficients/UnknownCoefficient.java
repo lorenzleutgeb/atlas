@@ -70,8 +70,7 @@ public class UnknownCoefficient implements Coefficient {
     if (negated) {
       throw bug("don't know how to replace negated coefficient");
     }
-    if (target instanceof UnknownCoefficient) {
-      final var unknownCoefficient = (UnknownCoefficient) target;
+    if (target instanceof final UnknownCoefficient unknownCoefficient) {
       if (unknownCoefficient.name.equals(name)) {
         return replacement;
       }

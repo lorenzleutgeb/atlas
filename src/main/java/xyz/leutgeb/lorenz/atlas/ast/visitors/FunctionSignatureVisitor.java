@@ -85,8 +85,7 @@ class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature>
               + ":"
               + start.getCharPositionInLine());
     }
-    if (annotationContext instanceof SplayParser.NonEmptyAnnotationContext) {
-      final var context = (SplayParser.NonEmptyAnnotationContext) annotationContext;
+    if (annotationContext instanceof final SplayParser.NonEmptyAnnotationContext context) {
       List<Coefficient> rankCoefficients = new ArrayList<>(size);
       for (int i = 0; i < size; i++) {
         rankCoefficients.add(KnownCoefficient.ZERO);
@@ -121,8 +120,7 @@ class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature>
     if (context instanceof SplayParser.NatContext) {
       return new KnownCoefficient(new Fraction(Integer.parseInt(context.getText())));
     }
-    if (context instanceof SplayParser.RatContext) {
-      final var ratContext = (SplayParser.RatContext) context;
+    if (context instanceof final SplayParser.RatContext ratContext) {
       return new KnownCoefficient(
           new Fraction(
               Integer.parseInt(ratContext.numerator.getText()),

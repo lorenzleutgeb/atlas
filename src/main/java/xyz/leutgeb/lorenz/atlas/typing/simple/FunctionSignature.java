@@ -128,10 +128,9 @@ public class FunctionSignature {
     if (o == this) {
       return true;
     }
-    if (!(o instanceof FunctionSignature)) {
+    if (!(o instanceof final FunctionSignature other)) {
       return false;
     }
-    final FunctionSignature other = (FunctionSignature) o;
     final Object this$type = this.getType();
     final Object other$type = other.getType();
     if (!Objects.equals(this$type, other$type)) {
@@ -139,16 +138,7 @@ public class FunctionSignature {
     }
     final Object this$constraints = this.getConstraints();
     final Object other$constraints = other.getConstraints();
-    if (!Objects.equals(this$constraints, other$constraints)) {
-      return false;
-    }
-    // final Object this$annotation = this.getAnnotation();
-    // final Object other$annotation = other.getAnnotation();
-    // if (this$annotation == null ? other$annotation != null :
-    // !this$annotation.equals(other$annotation)) {
-    // return false;
-    // }
-    return true;
+    return Objects.equals(this$constraints, other$constraints);
   }
 
   public int hashCode() {

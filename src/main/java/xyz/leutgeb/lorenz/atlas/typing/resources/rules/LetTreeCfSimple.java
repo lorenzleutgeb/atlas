@@ -76,14 +76,10 @@ public class LetTreeCfSimple implements Rule {
     }
 
     final var varsForGammaAsList =
-        obligation.getContext().getIds().stream()
-            .filter(varsForGammaAsSet::contains)
-            .collect(Collectors.toUnmodifiableList());
+        obligation.getContext().getIds().stream().filter(varsForGammaAsSet::contains).toList();
 
     final var varsForDeltaAsList =
-        obligation.getContext().getIds().stream()
-            .filter(varsForDeltaAsSet::contains)
-            .collect(Collectors.toUnmodifiableList());
+        obligation.getContext().getIds().stream().filter(varsForDeltaAsSet::contains).toList();
 
     final var deltax = new ArrayList<>(varsForDeltaAsList);
     deltax.add(x);
@@ -302,8 +298,8 @@ public class LetTreeCfSimple implements Rule {
      */
 
     return new Rule.ApplicationResult(
-        old.stream().map(Pair::getLeft).collect(Collectors.toUnmodifiableList()),
-        old.stream().map(Pair::getRight).collect(Collectors.toUnmodifiableList()),
+        old.stream().map(Pair::getLeft).toList(),
+        old.stream().map(Pair::getRight).toList(),
         crossConstraints);
   }
 

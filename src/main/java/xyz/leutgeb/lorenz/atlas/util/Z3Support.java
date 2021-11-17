@@ -33,17 +33,14 @@ public class Z3Support {
 
     try {
       for (var property : getProperties().entrySet()) {
-        if (!(property.getKey() instanceof String && property.getValue() instanceof String)) {
+        if (!(property.getKey() instanceof final String key
+            && property.getValue() instanceof final String value)) {
           continue;
         }
-
-        final var key = (String) property.getKey();
 
         if (!key.startsWith(PROPERTY_PREFIX)) {
           continue;
         }
-
-        final var value = (String) property.getValue();
 
         final String parameter = key.substring(PROPERTY_PREFIX.length());
         log.trace("Setting Z3 parameter '{}' to '{}'", key, value);

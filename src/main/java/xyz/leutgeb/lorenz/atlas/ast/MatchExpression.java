@@ -109,8 +109,7 @@ public class MatchExpression extends Expression {
     Expression node = this.node;
     Expression nodePattern = this.nodePattern;
 
-    if (nodePattern instanceof Identifier && !this.scrut.equals(this.nodePattern)) {
-      final var nodeId = (Identifier) nodePattern;
+    if (nodePattern instanceof final Identifier nodeId && !this.scrut.equals(this.nodePattern)) {
       final var source = Derived.desugar(this);
 
       if (nodeId.getName().startsWith("_")) {
@@ -278,14 +277,13 @@ public class MatchExpression extends Expression {
     final var newLeaf = leaf.unshare(idGenerator, lazy);
     final var newNode = node.unshare(idGenerator, lazy);
 
-    if (!(scrut instanceof Identifier)) {
+    if (!(scrut instanceof final Identifier testName)) {
       throw new IllegalStateException("anf required");
     }
 
     final Set<Identifier> freeLeaf = newLeaf.freeVariables();
     final Set<Identifier> freeNode = newNode.freeVariables();
 
-    final var testName = ((Identifier) scrut);
     if (freeLeaf.contains(testName) || (!isPassthru() && freeNode.contains(testName))) {
       throw new IllegalStateException(
           "test variable is destructed, so it cannot occur freely in any case expression");

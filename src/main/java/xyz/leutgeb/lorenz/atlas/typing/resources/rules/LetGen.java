@@ -128,7 +128,7 @@ public class LetGen implements Rule {
                             deltaxr.getCoefficientOrDefine(qEntry),
                             qEntry.getValue(),
                             "(let:gen) ∀ b⃗ ≠ 0⃗ . r_{(b⃗,c)} = q_{(0⃗,b⃗,c)}"))
-                .collect(Collectors.toUnmodifiableList()));
+                .toList());
 
     return new Rule.ApplicationResult(
         List.of(p.getLeft(), r.getLeft()), List.of(p.getRight(), r.getRight()), crossConstraints);

@@ -30,11 +30,9 @@ public class TreeType implements Type {
 
   @Override
   public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
-    if (!(b instanceof TreeType)) {
+    if (!(b instanceof final TreeType tree)) {
       throw new TypeMismatch(this, b);
     }
-
-    final var tree = (TreeType) b;
 
     if (!elementType.equals(tree.elementType)) {
       return Collections.singletonList(new Equivalence(elementType, tree.elementType));
