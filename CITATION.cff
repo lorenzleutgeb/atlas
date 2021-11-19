@@ -1,0 +1,35 @@
+# https://citation-file-format.github.io/
+cff-version: 1.2.0
+
+title: "ATLAS"
+abstract: "A tool for automated logarithmic amortised analysis."
+
+authors:
+- family-names: "Leutgeb"
+  given-names: "Lorenz"
+  affiliation: "Max-Planck-Institute for Informatics"
+  orcid: "https://orcid.org/0000-0003-0391-3430"
+
+license: "GPL-3.0"
+repository-code: "https://github.com/lorenzleutgeb/atlas"
+doi: "10.5281/zenodo.4122491"
+
+message: "If you use this software, please cite both the article from preferred-citation and the software itself."
+
+preferred-citation:
+  title: "ATLAS: Automated Amortised Complexity Analysis of Self-adjusting Data Structures"
+  type: conference-paper
+  authors:
+  - family-names: "Leutgeb"
+    given-names: "Lorenz"
+    affiliation: "Max-Planck-Institute for Informatics"
+    orcid: "https://orcid.org/0000-0003-0391-3430"
+  - family-names: "Moser"
+    given-names: "Georg"
+    affiliation: "University of Innsbruck"
+    orcid: "https://orcid.org/0000-0001-9240-6128"
+  - family-names: "Zuleger"
+    given-names: "Florian"
+    affiliation: "TU Wien"
+    orcid: "https://orcid.org/0000-0003-1468-8398"
+  doi: "10.1007/978-3-030-81688-9_5"
