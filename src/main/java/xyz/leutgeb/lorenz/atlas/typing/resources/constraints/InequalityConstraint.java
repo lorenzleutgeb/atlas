@@ -3,9 +3,9 @@ package xyz.leutgeb.lorenz.atlas.typing.resources.constraints;
 import static guru.nidi.graphviz.model.Link.to;
 
 import com.google.common.collect.BiMap;
-import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
 
 @Value
 @Slf4j
@@ -39,12 +38,8 @@ public class InequalityConstraint extends Constraint {
     this.right = right;
   }
 
-  public BoolExpr encode(
-      Context ctx,
-      BiMap<UnknownCoefficient, ArithExpr> coefficients,
-      ConstraintSystemSolver.Domain domain) {
-    return ctx.mkNot(
-        ctx.mkEq(left.encode(ctx, coefficients, domain), right.encode(ctx, coefficients, domain)));
+  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, RealExpr> coefficients) {
+    return ctx.mkNot(ctx.mkEq(left.encode(ctx, coefficients), right.encode(ctx, coefficients)));
   }
 
   @Override

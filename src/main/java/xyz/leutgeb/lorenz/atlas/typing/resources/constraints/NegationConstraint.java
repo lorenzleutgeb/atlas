@@ -1,9 +1,9 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources.constraints;
 
 import com.google.common.collect.BiMap;
-import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
 import java.util.Map;
@@ -12,7 +12,6 @@ import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
 
 @Value
 @Slf4j
@@ -25,11 +24,8 @@ public class NegationConstraint extends Constraint {
   }
 
   @Override
-  public BoolExpr encode(
-      Context ctx,
-      BiMap<UnknownCoefficient, ArithExpr> coefficients,
-      ConstraintSystemSolver.Domain domain) {
-    return ctx.mkNot(element.encode(ctx, coefficients, domain));
+  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, RealExpr> coefficients) {
+    return ctx.mkNot(element.encode(ctx, coefficients));
   }
 
   @Override

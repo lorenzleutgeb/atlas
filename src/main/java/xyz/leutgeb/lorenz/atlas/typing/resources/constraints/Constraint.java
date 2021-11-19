@@ -7,9 +7,9 @@ import static xyz.leutgeb.lorenz.atlas.util.Util.output;
 import static xyz.leutgeb.lorenz.atlas.util.Util.rawObjectNode;
 
 import com.google.common.collect.BiMap;
-import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.attribute.Label;
 import guru.nidi.graphviz.attribute.Records;
 import guru.nidi.graphviz.engine.Engine;
@@ -33,7 +33,6 @@ import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
 
 @Slf4j
 public abstract class Constraint {
@@ -112,10 +111,7 @@ public abstract class Constraint {
     return reason;
   }
 
-  public abstract BoolExpr encode(
-      Context ctx,
-      BiMap<UnknownCoefficient, ArithExpr> coefficients,
-      ConstraintSystemSolver.Domain domain);
+  public abstract BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, RealExpr> coefficients);
 
   /**
    * Edge colors:

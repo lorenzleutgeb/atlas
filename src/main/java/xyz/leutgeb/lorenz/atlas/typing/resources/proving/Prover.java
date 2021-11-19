@@ -521,18 +521,6 @@ public class Prover {
         target);
   }
 
-  public ConstraintSystemSolver.Result solve(
-      Set<Constraint> outsideConstraints,
-      List<UnknownCoefficient> target,
-      String suffix,
-      ConstraintSystemSolver.Domain domain) {
-    return ConstraintSystemSolver.solve(
-        Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
-        basePath.resolve(suffix),
-        target,
-        domain);
-  }
-
   public Obligation weaken(Obligation obligation) {
     final var result = apply(obligation, weakenRule);
     if (result.size() != 1) {

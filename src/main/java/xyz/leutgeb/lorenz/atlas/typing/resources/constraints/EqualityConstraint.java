@@ -5,9 +5,9 @@ import static java.util.Collections.singleton;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ZERO;
 
 import com.google.common.collect.BiMap;
-import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
@@ -29,7 +29,6 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
 
 @Data
 @Slf4j
@@ -131,12 +130,8 @@ public class EqualityConstraint extends Constraint {
     return result;
   }
 
-  public BoolExpr encode(
-      Context ctx,
-      BiMap<UnknownCoefficient, ArithExpr> coefficients,
-      ConstraintSystemSolver.Domain domain) {
-    return ctx.mkEq(
-        left.encode(ctx, coefficients, domain), right.encode(ctx, coefficients, domain));
+  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, RealExpr> coefficients) {
+    return ctx.mkEq(left.encode(ctx, coefficients), right.encode(ctx, coefficients));
   }
 
   @Override

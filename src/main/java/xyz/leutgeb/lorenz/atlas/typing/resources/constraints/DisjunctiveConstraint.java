@@ -4,9 +4,9 @@ import static java.util.stream.Collectors.toSet;
 import static xyz.leutgeb.lorenz.atlas.util.Util.pick;
 
 import com.google.common.collect.BiMap;
-import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
 import java.util.List;
@@ -19,7 +19,6 @@ import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
 
 @Value
 @Slf4j
@@ -33,19 +32,16 @@ public class DisjunctiveConstraint extends Constraint {
   }
 
   @Override
-  public BoolExpr encode(
-      Context ctx,
-      BiMap<UnknownCoefficient, ArithExpr> coefficients,
-      ConstraintSystemSolver.Domain domain) {
+  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, RealExpr> coefficients) {
     if (elements.isEmpty()) {
       return ctx.mkFalse();
     }
     if (elements.size() == 1) {
-      return pick(elements).encode(ctx, coefficients, domain);
+      return pick(elements).encode(ctx, coefficients);
     }
     return ctx.mkOr(
         elements.stream()
-            .map(element -> element.encode(ctx, coefficients, domain))
+            .map(element -> element.encode(ctx, coefficients))
             .toArray(BoolExpr[]::new));
   }
 

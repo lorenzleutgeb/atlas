@@ -13,6 +13,7 @@ import com.google.common.collect.BiMap;
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Link;
@@ -27,7 +28,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
 
 @Value
 @EqualsAndHashCode(callSuper = true)
@@ -49,19 +49,15 @@ public class EqualsProductConstraint extends Constraint {
   }
 
   @Override
-  public BoolExpr encode(
-      Context ctx,
-      BiMap<UnknownCoefficient, ArithExpr> coefficients,
-      ConstraintSystemSolver.Domain domain) {
+  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, RealExpr> coefficients) {
     if (product.size() == 1) {
-      return ctx.mkEq(
-          left.encode(ctx, coefficients, domain), pick(product).encode(ctx, coefficients, domain));
+      return ctx.mkEq(left.encode(ctx, coefficients), pick(product).encode(ctx, coefficients));
     }
 
     final ArithExpr[] encodedSum =
-        product.stream().map(c -> c.encode(ctx, coefficients, domain)).toArray(ArithExpr[]::new);
+        product.stream().map(c -> c.encode(ctx, coefficients)).toArray(ArithExpr[]::new);
 
-    return ctx.mkEq(left.encode(ctx, coefficients, domain), ctx.mkMul(encodedSum));
+    return ctx.mkEq(left.encode(ctx, coefficients), ctx.mkMul(encodedSum));
   }
 
   @Override

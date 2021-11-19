@@ -13,14 +13,13 @@ import static xyz.leutgeb.lorenz.atlas.util.Util.randomHex;
 import static xyz.leutgeb.lorenz.atlas.util.Z3Support.load;
 
 import com.google.common.collect.HashBiMap;
-import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Expr;
-import com.microsoft.z3.IntNum;
 import com.microsoft.z3.Model;
 import com.microsoft.z3.Optimize;
 import com.microsoft.z3.RatNum;
+import com.microsoft.z3.RealExpr;
 import com.microsoft.z3.Solver;
 import com.microsoft.z3.Statistics;
 import com.microsoft.z3.Status;
@@ -44,7 +43,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
@@ -130,20 +128,15 @@ public class ConstraintSystemSolver {
   }
 
   public static Result solve(Set<Constraint> constraints) {
-    return solve(constraints, Paths.get("out", randomHex()), emptyList(), Domain.INTEGER);
+    return solve(constraints, Paths.get("out", randomHex()), emptyList());
   }
 
   public static Result solve(Set<Constraint> constraints, Path outPath) {
-    return solve(constraints, outPath, emptyList(), Domain.INTEGER);
+    return solve(constraints, outPath, emptyList());
   }
 
   public static Result solve(
       Set<Constraint> constraints, Path outPath, List<UnknownCoefficient> target) {
-    return solve(constraints, outPath, target, Domain.RATIONAL);
-  }
-
-  public static Result solve(
-      Set<Constraint> constraints, Path outPath, List<UnknownCoefficient> target, Domain domain) {
     load(outPath.resolve("z3.log"));
 
     final var dump = flag(ConstraintSystemSolver.class, emptyMap(), "dump");
@@ -160,7 +153,7 @@ public class ConstraintSystemSolver {
 
       final Optimize opt = optimize ? ctx.mkOptimize() : null;
 
-      final var generatedCoefficients = HashBiMap.<ArithExpr, UnknownCoefficient>create();
+      final var generatedCoefficients = HashBiMap.<RealExpr, UnknownCoefficient>create();
 
       final var coefficients = new HashSet<Coefficient>();
       for (Constraint constraint : constraints) {
@@ -179,15 +172,9 @@ public class ConstraintSystemSolver {
           continue;
         }
         if (!generatedCoefficients.inverse().containsKey(unknownCoefficient)) {
-          final var it =
-              Domain.INTEGER.equals(domain)
-                  ? ctx.mkIntConst(unknownCoefficient.getName())
-                  : ctx.mkRealConst(unknownCoefficient.getName());
+          final var it = ctx.mkRealConst(unknownCoefficient.getName());
           if (!unknownCoefficient.isMaybeNegative()) {
-            final var positive =
-                ctx.mkGe(
-                    (Expr) it,
-                    (Expr) (Domain.INTEGER.equals(domain) ? ctx.mkInt(0) : ctx.mkReal(0)));
+            final var positive = ctx.mkGe(it, ctx.mkReal(0));
             if (optimize) {
               opt.Add(positive);
             } else {
@@ -216,14 +203,13 @@ public class ConstraintSystemSolver {
 
       for (Constraint c : constraints) {
         if (optimize) {
-          opt.Add(c.encode(ctx, generatedCoefficients.inverse(), domain));
+          opt.Add(c.encode(ctx, generatedCoefficients.inverse()));
         } else {
           if (unsatCore) {
             solver.assertAndTrack(
-                c.encode(ctx, generatedCoefficients.inverse(), domain),
-                ctx.mkBoolConst(c.getTracking()));
+                c.encode(ctx, generatedCoefficients.inverse()), ctx.mkBoolConst(c.getTracking()));
           } else {
-            solver.add(c.encode(ctx, generatedCoefficients.inverse(), domain));
+            solver.add(c.encode(ctx, generatedCoefficients.inverse()));
           }
         }
       }
@@ -280,22 +266,16 @@ public class ConstraintSystemSolver {
       final var solution = new HashMap<Coefficient, KnownCoefficient>();
       for (final var e : generatedCoefficients.entrySet()) {
         var x = model.getConstInterp(e.getKey());
-        if (Domain.RATIONAL.equals(domain) && !x.isRatNum()) {
+        if (!x.isRatNum()) {
           log.warn("solution for " + e.getValue() + " is not a rational number, it is " + x);
         }
         KnownCoefficient v;
-        if (x instanceof final RatNum xr && Domain.RATIONAL.equals(domain)) {
+        if (x instanceof final RatNum xr) {
           var num = xr.getNumerator();
           if (num.getBigInteger().intValueExact() == 0) {
             v = KnownCoefficient.ZERO;
           } else {
             v = new KnownCoefficient(Util.toFraction(xr));
-          }
-        } else if (x instanceof final IntNum xr && Domain.INTEGER.equals(domain)) {
-          if (xr.getBigInteger().intValueExact() == 0) {
-            v = KnownCoefficient.ZERO;
-          } else {
-            v = new KnownCoefficient(new Fraction(xr.getInt()));
           }
         } else {
           throw bug("interpretation contains constant of unknown or unexpected type");
@@ -383,20 +363,5 @@ public class ConstraintSystemSolver {
             .collect(Collectors.joining("\n")));
 
     return Pair.of(status, empty());
-  }
-
-  public enum Domain {
-    RATIONAL(empty()),
-    INTEGER(Optional.of("QF_LIA"));
-
-    private final Optional<String> logic;
-
-    Domain(Optional<String> logic) {
-      this.logic = logic;
-    }
-
-    public Optional<String> getLogic() {
-      return logic;
-    }
   }
 }

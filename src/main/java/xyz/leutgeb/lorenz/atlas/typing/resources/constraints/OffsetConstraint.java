@@ -6,9 +6,9 @@ import static xyz.leutgeb.lorenz.atlas.util.Util.objectNode;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.Sets;
-import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
@@ -21,7 +21,6 @@ import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -43,18 +42,14 @@ public class OffsetConstraint extends EqualityConstraint {
   }
 
   @Override
-  public BoolExpr encode(
-      Context ctx,
-      BiMap<UnknownCoefficient, ArithExpr> coefficients,
-      ConstraintSystemSolver.Domain domain) {
+  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, RealExpr> coefficients) {
     if (offset instanceof KnownCoefficient
         && ((KnownCoefficient) offset).getValue().getDenominator() != 1) {
       throw bug("oops");
     }
     return ctx.mkEq(
-        left.encode(ctx, coefficients, domain),
-        ctx.mkAdd(
-            right.encode(ctx, coefficients, domain), offset.encode(ctx, coefficients, domain)));
+        left.encode(ctx, coefficients),
+        ctx.mkAdd(right.encode(ctx, coefficients), offset.encode(ctx, coefficients)));
   }
 
   @Override

@@ -1,16 +1,12 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources.coefficients;
 
-import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
-import static xyz.leutgeb.lorenz.atlas.util.Util.isInteger;
-
-import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.RealExpr;
 import java.util.Map;
 import java.util.function.Predicate;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.hipparchus.fraction.Fraction;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
 
 @Value
 @EqualsAndHashCode
@@ -35,17 +31,8 @@ public class KnownCoefficient implements Coefficient {
     this(new Fraction(value));
   }
 
-  public ArithExpr encode(
-      Context context,
-      Map<UnknownCoefficient, ArithExpr> coefficients,
-      ConstraintSystemSolver.Domain domain) {
-    if (isInteger(value) && ConstraintSystemSolver.Domain.INTEGER.equals(domain)) {
-      return context.mkInt(value.getNumerator());
-    }
-    if (ConstraintSystemSolver.Domain.RATIONAL.equals(domain)) {
-      return context.mkReal(value.getNumerator(), value.getDenominator());
-    }
-    throw bug("cannot encode constant");
+  public RealExpr encode(Context context, Map<UnknownCoefficient, RealExpr> coefficients) {
+    return context.mkReal(value.getNumerator(), value.getDenominator());
   }
 
   @Override

@@ -3,9 +3,9 @@ package xyz.leutgeb.lorenz.atlas.typing.resources.constraints;
 import static guru.nidi.graphviz.model.Link.to;
 
 import com.google.common.collect.BiMap;
-import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.RealExpr;
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Node;
@@ -17,7 +17,6 @@ import lombok.NonNull;
 import lombok.Value;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
 
 /** @see GreaterThanOrEqualConstraint */
 @Value
@@ -33,12 +32,8 @@ public class LessThanOrEqualConstraint extends Constraint {
   }
 
   @Override
-  public BoolExpr encode(
-      Context ctx,
-      BiMap<UnknownCoefficient, ArithExpr> coefficients,
-      ConstraintSystemSolver.Domain domain) {
-    return ctx.mkLe(
-        smaller.encode(ctx, coefficients, domain), bigger.encode(ctx, coefficients, domain));
+  public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, RealExpr> coefficients) {
+    return ctx.mkLe(smaller.encode(ctx, coefficients), bigger.encode(ctx, coefficients));
   }
 
   @Override

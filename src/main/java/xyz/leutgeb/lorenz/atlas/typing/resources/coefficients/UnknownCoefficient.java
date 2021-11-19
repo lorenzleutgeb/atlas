@@ -5,12 +5,13 @@ import static xyz.leutgeb.lorenz.atlas.util.Util.randomHex;
 
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.RealExpr;
+import com.microsoft.z3.RealSort;
 import java.util.Map;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
 
 @Value
 @EqualsAndHashCode
@@ -57,10 +58,7 @@ public class UnknownCoefficient implements Coefficient {
     return (negated ? "-" : "") + name;
   }
 
-  public ArithExpr encode(
-      Context ctx,
-      Map<UnknownCoefficient, ArithExpr> coefficients,
-      ConstraintSystemSolver.Domain domain) {
+  public ArithExpr<RealSort> encode(Context ctx, Map<UnknownCoefficient, RealExpr> coefficients) {
     final var inner = coefficients.get(this.canonical());
     return negated ? ctx.mkUnaryMinus(inner) : inner;
   }

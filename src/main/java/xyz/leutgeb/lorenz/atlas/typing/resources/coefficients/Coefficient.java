@@ -2,9 +2,10 @@ package xyz.leutgeb.lorenz.atlas.typing.resources.coefficients;
 
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.Context;
+import com.microsoft.z3.RealExpr;
+import com.microsoft.z3.RealSort;
 import java.util.Map;
 import org.hipparchus.fraction.Fraction;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
 
 public interface Coefficient {
   static KnownCoefficient of(int value) {
@@ -19,10 +20,7 @@ public interface Coefficient {
     return new KnownCoefficient(fraction);
   }
 
-  ArithExpr encode(
-      Context ctx,
-      Map<UnknownCoefficient, ArithExpr> coefficients,
-      ConstraintSystemSolver.Domain domain);
+  ArithExpr<RealSort> encode(Context ctx, Map<UnknownCoefficient, RealExpr> coefficients);
 
   Coefficient replace(Coefficient target, Coefficient replacement);
 
