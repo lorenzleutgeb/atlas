@@ -79,18 +79,18 @@ configurations {
 
 configurations.all {
     resolutionStrategy {
-        force("org.antlr:antlr4-runtime:4.9")
-        force("org.antlr:antlr4-tool:4.9")
+        force("org.antlr:antlr4-runtime:4.9.3")
+        force("org.antlr:antlr4-tool:4.9.3")
     }
 }
 
 dependencies {
-    val antlrVersion = "4.9"
+    val antlrVersion = "4.9.3"
     antlr("org.antlr:antlr4:$antlrVersion")
     compileOnly("org.antlr:antlr4:$antlrVersion")
     runtimeOnly("org.antlr:antlr4-runtime:$antlrVersion")
 
-    implementation("com.google.guava:guava:28.2-jre")
+    implementation("com.google.guava:guava:31.0.1-jre")
     implementation("org.hipparchus:hipparchus-core:1.8")
 
     // Lombok
@@ -107,23 +107,23 @@ dependencies {
     implementation(jgrapht("io"))
 
     // Commandline Parameters
-    implementation("info.picocli:picocli:4.6.1")
-    annotationProcessor("info.picocli:picocli-codegen:4.6.1")
+    implementation("info.picocli:picocli:4.6.2")
+    annotationProcessor("info.picocli:picocli-codegen:4.6.2")
 
     // Testing
-    implementation(enforcedPlatform("org.junit:junit-bom:5.7.1"))
+    implementation(enforcedPlatform("org.junit:junit-bom:5.8.1"))
     fun jupiter(x: String): String {
-        return "org.junit.jupiter:junit-jupiter$x:5.7.1"
+        return "org.junit.jupiter:junit-jupiter$x:5.8.1"
     }
     testImplementation(jupiter("-params"))
     testRuntimeOnly(jupiter(""))
-    testImplementation("tech.tablesaw:tablesaw-core:0.38.2")
+    testImplementation("tech.tablesaw:tablesaw-core:0.42.0")
 
     // The Z3 Theorem Prover
     implementation("org.sosy-lab:javasmt-solver-z3:4.8.10:com.microsoft.z3@jar")
 
     // Graph output
-    implementation("guru.nidi:graphviz-java:0.18.0") {
+    implementation("guru.nidi:graphviz-java:0.18.1") {
         // NOTE: Somehow JUnit ends up on the classpath...
         exclude("org.junit.platform")
         exclude(group = "net.arnx", module = "nashorn-promise")
@@ -131,13 +131,12 @@ dependencies {
     }
 
     // Logging
-    implementation("org.slf4j:slf4j-simple:1.7.30")
+    implementation("org.slf4j:slf4j-simple:1.7.32")
 
     // Native Image
-    compileOnly("org.graalvm.nativeimage:svm:21.0.0")
+    compileOnly("org.graalvm.nativeimage:svm:21.3.0")
 
-    implementation("com.google.googlejavaformat:google-java-format:1.12.0")
-    implementation("io.github.classgraph:classgraph:4.8.102")
+    implementation("io.github.classgraph:classgraph:4.8.133")
 
     // JSON Binding
     // See https://javaee.github.io/jsonb-spec/getting-started.html
@@ -164,7 +163,7 @@ tasks.withType<AntlrTask> {
             "-no-listener",
             "-long-messages",
             "-package", "$rootPackage.antlr",
-            // "-Werror",
+            "-Werror",
             "-Xlog",
             "-lib", "src/main/antlr/$rootPackagePath/antlr"
         )
@@ -220,12 +219,6 @@ tasks.shadowJar {
     manifest {
         attributes["Main-Class"] = "$rootPackage.Main"
     }
-
-    /* TODO: Minimization removes too many classes, like those related to JSON.
-    minimize {
-        exclude(dependency("org.glassfish:jakarta.json:.*"))
-    }
-     */
 }
 
 tasks.create<Exec>("nativeImage") {
@@ -244,8 +237,6 @@ tasks.create<Exec>("nativeImage") {
 }
 
 tasks.build.get().dependsOn(tasks.get("nativeImage"))
-
-// tasks.compileJava.get().dependsOn(tasks.spotlessApply.get())
 
 spotless {
     java {
