@@ -44,7 +44,7 @@ public class Util {
   private static final Random RANDOM = new Random(0L);
   private static final String LIBRARY_PATH = "java.library.path";
   private static final String LIBRARY_PATH_PREFIX =
-      "./:./lib/:../lib:/usr/lib/x86_64-linux-gnu/jni";
+      "./:./lib/:../lib:/usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu/jni";
 
   public static String generateSubscriptIndex(List<Integer> index) {
     return index.stream().map(Util::generateSubscript).collect(joining(" ", "₍", "₎"));
