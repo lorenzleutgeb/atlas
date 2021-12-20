@@ -33,6 +33,7 @@ plugins {
     id("com.diffplug.spotless") version "6.0.0"
     id("com.github.jk1.dependency-license-report") version "1.13"
     id("com.github.johnrengelman.shadow") version "5.2.0"
+    id("org.graalvm.buildtools.native") version "0.9.8"
 }
 
 repositories {
@@ -236,11 +237,31 @@ tasks.create<Exec>("nativeImage") {
     )
 }
 
+graalvmNative {
+	binaries {
+		named("main") {
+			imageName.set("atlas")
+			mainClass.set("$rootPackage.Main")
+			sharedLibrary.set(false)
+			buildArgs.addAll(
+				"--no-fallback",
+				"-H:Log=registerResource",
+				"-H:+ReportExceptionStackTraces",
+				"--report-unsupported-elements-at-runtime"
+			)
+			javaLauncher.set(javaToolchains.launcherFor {
+				languageVersion.set(JavaLanguageVersion.of(17))
+				vendor.set(JvmVendorSpec.matching("GraalVM"))
+			})
+		}
+	}
+}
+
 tasks.build.get().dependsOn(tasks.get("nativeImage"))
 
 spotless {
     java {
-        googleJavaFormat("1.12.0")
+        googleJavaFormat("1.13.0")
         target("src/**/*.java")
     }
     kotlinGradle {
