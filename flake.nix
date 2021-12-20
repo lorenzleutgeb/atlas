@@ -11,23 +11,24 @@
       url = "github:lorenzleutgeb/atlas-examples";
       flake = false;
     };
+    /*
     gradle2nix = {
       url = "github:tadfisher/gradle2nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    */
   };
 
-  outputs = { self, nixpkgs, home-manager, gradle2nix, examples }:
+  outputs = { self, nixpkgs, home-manager, /*gradle2nix,*/ examples }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
-      jdk = pkgs.graalvm17-ce;
+      jdk = pkgs.jdk17;
       z3 = pkgs.z3.override {
         inherit jdk;
-        javaBindings = true;
       };
-      gradleGen = pkgs.gradleGen.override { java = jdk; };
-      gradle = gradleGen.gradle_latest;
+      graal = pkgs.graalvm17-ce;
+      gradle = pkgs.gradle_7.override { javaToolchains = [ graal ]; };
       solvers = with pkgs; [ alt-ergo cvc4 yices opensmt ];
       atlasEnv = pkgs.buildEnv {
         name = "atlas-env";
@@ -37,7 +38,7 @@
           z3
           pkgs.dot2tex
           pkgs.graphviz
-          gradle2nix.packages.${system}.gradle2nix
+          #gradle2nix.packages.${system}.gradle2nix
         ];
       };
       utils = with pkgs; [
@@ -61,8 +62,8 @@
         shellHook = ''
           export LD_LIBRARY_PATH="${z3.lib}/lib:$LD_LIBRARY_PATH"
 
-          export GRAAL_HOME="${jdk}"
-          export JAVA_HOME="$GRAAL_HOME"
+          export GRAAL_HOME="${graal}"
+          #export JAVA_HOME="$GRAAL_HOME"
           export GRADLE_HOME="${gradle}"
 
           $JAVA_HOME/bin/java -version
@@ -73,7 +74,7 @@
         '';
       };
 
-      defaultPackage.${system} = packages.${system}.atlas;
+      #defaultPackage.${system} = packages.${system}.atlas;
 
       packages.${system} = rec {
         atlas-cav = pkgs.fetchurl {
@@ -96,7 +97,7 @@
           };
         };
 
-        atlas = (pkgs.callPackage ./gradle-env.nix { inherit gradleGen; }) {
+        atlas = (pkgs.callPackage ./gradle-env.nix { }) {
           buildJdk = jdk;
           envSpec = ./gradle-env.json;
 
@@ -205,7 +206,7 @@
         atlas-nix = pkgs.stdenv.mkDerivation {
           name = "atlas-nix";
           src = ./.;
-          buildInputs = [ jdk gradle2nix.packages.${system}.gradle2nix ];
+          buildInputs = [ jdk ]; #gradle2nix.packages.${system}.gradle2nix ];
           buildPhase = ''
             gradle2nix --gradle-version 7.0 
           '';
