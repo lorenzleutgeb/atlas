@@ -2,7 +2,7 @@
   description = "atlas";
 
   inputs = {
-    nixpkgs = { url = "nixpkgs/nixos-unstable"; };
+    nixpkgs.url = "nixpkgs/nixos-unstable";
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -11,34 +11,33 @@
       url = "github:lorenzleutgeb/atlas-examples";
       flake = false;
     };
-    /*
     gradle2nix = {
-      url = "github:tadfisher/gradle2nix";
+      url = "github:lorenzleutgeb/gradle2nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    */
   };
 
-  outputs = { self, nixpkgs, home-manager, /*gradle2nix,*/ examples }:
+  outputs = { self, nixpkgs, home-manager, gradle2nix, examples }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
       jdk = pkgs.jdk17;
       z3 = pkgs.z3.override {
         inherit jdk;
+        javaBindings = true;
       };
       graal = pkgs.graalvm17-ce;
-      gradle = pkgs.gradle_7.override { javaToolchains = [ graal ]; };
+      javaToolchains = [ graal ];
+      gradle = (pkgs.gradle_7.override { inherit javaToolchains; });
       solvers = with pkgs; [ alt-ergo cvc4 yices opensmt ];
       atlasEnv = pkgs.buildEnv {
         name = "atlas-env";
         paths = [
           gradle
-          jdk
           z3
           pkgs.dot2tex
           pkgs.graphviz
-          #gradle2nix.packages.${system}.gradle2nix
+          gradle2nix.packages.${system}.gradle2nix
         ];
       };
       utils = with pkgs; [
@@ -62,13 +61,13 @@
         shellHook = ''
           export LD_LIBRARY_PATH="${z3.lib}/lib:$LD_LIBRARY_PATH"
 
+          export JAVA_HOME="${jdk}"
           export GRAAL_HOME="${graal}"
-          #export JAVA_HOME="$GRAAL_HOME"
-          export GRADLE_HOME="${gradle}"
 
           $JAVA_HOME/bin/java -version
           $GRAAL_HOME/bin/gu list
-          $GRADLE_HOME/bin/gradle -version
+
+          gradle -version
           z3 --version
           dot2tex --version
         '';
@@ -98,7 +97,9 @@
         };
 
         atlas = (pkgs.callPackage ./gradle-env.nix { }) {
+          inherit javaToolchains;
           buildJdk = jdk;
+
           envSpec = ./gradle-env.json;
 
           src = ./.;
@@ -109,7 +110,7 @@
           LANG = "en_US.UTF-8";
           LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
           LD_LIBRARY_PATH = "${z3.lib}/lib";
-          gradleFlags = [ "nativeImage" ];
+          gradleFlags = [ "nativeCompile" ];
           outputs = [ "out" ];
 
           # JaCoCo broken with JDK 17.
@@ -134,9 +135,9 @@
               --add-needed libz3.so \
               --add-needed libz3java.so \
               --set-rpath ${pkgs.glibc}/lib:${z3.lib}/lib \
-              build/native-image/atlas
+              build/native/nativeCompile/atlas
 
-            cp -v build/native-image/atlas $out/bin/atlas
+            cp -v build/native/nativeCompile/atlas $out/bin/atlas
 
             # JaCoCo broken with JDK 17.
             #cp -v build/reports/jacoco/test/jacocoTestReport.xml $jacoco
@@ -171,15 +172,14 @@
           ];
           config = { Entrypoint = [ "${pkgs.bash}/bin/bash" ]; };
 
-          /*
-          meta = {
-            inherit maintainers;
+          /* meta = {
+               inherit maintainers;
 
-            longDescription = ''
-              A Docker image that contains atlas, alongside some useful tools,
-              the associated paper, and sources.
-            '';
-          };
+               longDescription = ''
+                 A Docker image that contains atlas, alongside some useful tools,
+                 the associated paper, and sources.
+               '';
+             };
           */
         };
 
@@ -189,14 +189,13 @@
           contents = [ packages.${system}.atlas ];
           config.Entrypoint = [ (packages.${system}.atlas + "/bin/atlas") ];
 
-          /*
-          meta = {
-            inherit maintainers;
-            longDescription = ''
-              A Docker image that contains atlas (but not much more),
-              and will run it by default.
-            '';
-          };
+          /* meta = {
+               inherit maintainers;
+               longDescription = ''
+                 A Docker image that contains atlas (but not much more),
+                 and will run it by default.
+               '';
+             };
           */
         };
 
@@ -206,7 +205,7 @@
         atlas-nix = pkgs.stdenv.mkDerivation {
           name = "atlas-nix";
           src = ./.;
-          buildInputs = [ jdk ]; #gradle2nix.packages.${system}.gradle2nix ];
+          buildInputs = [ jdk ]; # gradle2nix.packages.${system}.gradle2nix ];
           buildPhase = ''
             gradle2nix --gradle-version 7.0 
           '';
@@ -301,12 +300,15 @@
                 "Desktop/README.md".text = referText;
                 "Desktop/${submission}".source = pdf;
 
-                "prepare-evaluation.sh".source = pkgs.writeScript "prepare-evaluation" '' 
-                  #! ${pkgs.bash}/bin/bash
-                  set -xeuo pipefail
-                  mkdir --verbose --parents $HOME/.overlay/{upper,work} $HOME/atlas
-                  sudo mount --verbose --types overlay overlay --options upperdir=$HOME/.overlay/upper,workdir=$HOME/.overlay/work,lowerdir=${self.packages.${system}.atlas-src} $HOME/atlas
-                '';
+                "prepare-evaluation.sh".source =
+                  pkgs.writeScript "prepare-evaluation" ''
+                    #! ${pkgs.bash}/bin/bash
+                    set -xeuo pipefail
+                    mkdir --verbose --parents $HOME/.overlay/{upper,work} $HOME/atlas
+                    sudo mount --verbose --types overlay overlay --options upperdir=$HOME/.overlay/upper,workdir=$HOME/.overlay/work,lowerdir=${
+                      self.packages.${system}.atlas-src
+                    } $HOME/atlas
+                  '';
               };
               stateVersion = "20.09";
               sessionVariables.ATLAS_HOME = "${examples}";
