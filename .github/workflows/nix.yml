@@ -6,65 +6,22 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        #submodules: recursive
         fetch-depth: 0
-   #- name: Cache Nix Store
-   #  uses: actions/cache@v2
-   #  id: cache-nix
-   #  with:
-   #    path: nix-store.nar
-   #    key: nix-${{ runner.os }}-${{ github.sha }}
-   #    restore-keys: |
-   #      nix-${{ runner.os }}-
-   #- name: Cache Gradle Caches
-   #  uses: actions/cache@preview
-   #  id: cache-gradle
-   #  with:
-   #    path: ~/.gradle/caches
-   #    key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts') }}
-   #    restore-keys: |
-   #      gradle-${{ runner.os }}-
-   #- name: Enable Core Dumps
-   #  run: |
-   #    ulimit -c unlimited
-   #    cat /etc/security/limits.conf
-   #    echo "* - core unlimited" | sudo tee /etc/security/limits.conf
-   #    ulimit -a
-   #    echo "$PWD/corefile-%e-%p-%t" | sudo tee /proc/sys/kernel/core_pattern
     - uses: cachix/install-nix-action@v12
       with:
         install_url: https://releases.nixos.org/nix/nix-2.5.1/install
         nix_path: nixpkgs=channel:nixos-unstable
         extra_nix_config: |
           experimental-features = nix-command flakes
-    - run: nix --version
-    - run: nix show-config
+    - run: |
+        nix --version
+        nix show-config
     - uses: cachix/cachix-action@v8
       with:
         name: lorenzleutgeb-public
         signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
-   #- run: nix-build -A mypackage.components.all
-   #- name: Import Nix Store
-   #  if: steps.cache-nix.outputs.cache-hit
-   #  run: nix-store --import < nix-store.nar
-   #- run: |
-   #    ulimit -a
-   #    cat /proc/sys/kernel/core_pattern
-   #    nix flake check
-   #- run: "eval \"$(nix print-dev-env)\""
-   #- name: Compute Closure
-   #  run: nix path-info --recursive --inputs-from . .#packages.x86_64-linux.atlas | tee closure.txt
-   #- name: Export Nix Store
-   #  run: xargs --arg-file=closure.txt nix-store --export > nix-store.nar
-    - name: Make Directories
-      run: mkdir -v log
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
-    - name: Login to Docker Hub
-      uses: docker/login-action@v1.6.0
-      with:
-        username: ${{ secrets.DOCKER_HUB_USERNAME }}
-        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v1.6.0
       with:
@@ -75,9 +32,8 @@ jobs:
       id: atlas
       run: |
         PKG=atlas
-        nix build .#packages.x86_64-linux.$PKG --no-link --print-build-logs --json
-        nix log   .#packages.x86_64-linux.$PKG > log/${PKG}.txt
-        RESULT=$(nix path-info .#packages.x86_64-linux.$PKG)
+        nix build .#$PKG --no-link --print-build-logs --json
+        RESULT=$(nix path-info .#$PKG)
         echo "::set-output name=result::$RESULT"
         #RESULT_JACOCO=$(nix path-info .#packages.x86_64-linux.$PKG.jacoco)
         #echo "::set-output name=result-jacoco::$RESULT_JACOCO"
@@ -85,9 +41,8 @@ jobs:
       id: atlas-docker
       run: |
         PKG=atlas-docker
-        nix build .#packages.x86_64-linux.$PKG --no-link --print-build-logs --json
-        nix log   .#packages.x86_64-linux.$PKG > log/${PKG}.txt
-        RESULT=$(nix path-info .#packages.x86_64-linux.$PKG)
+        nix build .#$PKG --no-link --print-build-logs --json
+        RESULT=$(nix path-info .#$PKG)
         docker load < $RESULT
         docker tag atlas:latest lorenzleutgeb/atlas:$GITHUB_SHA
         docker tag atlas:latest ghcr.io/lorenzleutgeb/atlas/atlas:$GITHUB_SHA
@@ -96,38 +51,19 @@ jobs:
       id: atlas-shell-docker
       run: |
         PKG=atlas-shell-docker
-        nix build .#packages.x86_64-linux.$PKG --no-link --print-build-logs --json
-        nix log   .#packages.x86_64-linux.$PKG > log/${PKG}.txt
-        RESULT=$(nix path-info .#packages.x86_64-linux.$PKG)
+        nix build .#$PKG --no-link --print-build-logs --json
+        RESULT=$(nix path-info .#$PKG)
         docker load < $RESULT
         docker tag atlas-shell:latest lorenzleutgeb/atlas-shell:$GITHUB_SHA
         docker tag atlas-shell:latest ghcr.io/lorenzleutgeb/atlas/atlas-shell:$GITHUB_SHA
         echo "::set-output name=result::$RESULT"
     - name: Push Docker Images
       run: |
-        docker push -q lorenzleutgeb/atlas:$GITHUB_SHA
-        docker push -q lorenzleutgeb/atlas-shell:$GITHUB_SHA
         docker push -q ghcr.io/lorenzleutgeb/atlas/atlas:$GITHUB_SHA
         docker push -q ghcr.io/lorenzleutgeb/atlas/atlas-shell:$GITHUB_SHA
    #- uses: codecov/codecov-action@v1
    #  with:
    #    files:  ${{ steps.atlas.outputs.result-jacoco }}
-   #- name: Package TACAS Artifact
-   #  run: ./tacas.sh
-   #- uses: actions/upload-artifact@v2
-   #  with:
-   #    name: tacas
-   #    path: build/distributions/tacas.zip
-   #- uses: actions/upload-artifact@v2
-   #  with:
-   #    name: nix
-   #    path: |
-   #      nix-store.nar
-   #      closure.txt
-    - uses: actions/upload-artifact@v2
-      with:
-        name: log
-        path: log
     - uses: actions/upload-artifact@v2
       with:
         name: atlas
@@ -140,8 +76,3 @@ jobs:
       with:
         name: atlas-shell-docker
         path: ${{ steps.atlas-shell-docker.outputs.result }}
-   #- uses: actions/upload-artifact@v2
-   #  if: ${{ failure() }}
-   #  with:
-   #    name: corefiles
-   #    path: corefile-*
