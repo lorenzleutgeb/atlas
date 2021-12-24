@@ -35,8 +35,10 @@
         paths = [
           gradle
           z3
+
           pkgs.dot2tex
           pkgs.graphviz
+
           gradle2nix.packages.${system}.gradle2nix
         ];
       };
@@ -73,7 +75,7 @@
         '';
       };
 
-      #defaultPackage.${system} = packages.${system}.atlas;
+      defaultPackage.${system} = packages.${system}.atlas;
 
       packages.${system} = rec {
         atlas-cav = pkgs.fetchurl {
@@ -119,7 +121,6 @@
 
           configurePhase = ''
             locale
-            patchShebangs version.sh
             rm -rvf src/test/resources/examples
             ln -svn ${examples} src/test/resources/examples
           '';
@@ -200,20 +201,6 @@
         };
 
         atlas-ova = nixosConfigurations.atlas.config.system.build.virtualBoxOVA;
-
-        # TODO: Does not work because there's no internet access in sandbox.
-        atlas-nix = pkgs.stdenv.mkDerivation {
-          name = "atlas-nix";
-          src = ./.;
-          buildInputs = [ jdk ]; # gradle2nix.packages.${system}.gradle2nix ];
-          buildPhase = ''
-            gradle2nix --gradle-version 7.0 
-          '';
-          installPhase = ''
-            mkdir $out
-            cp gradle-env.* $out
-          '';
-        };
 
         atlas-src = pkgs.stdenv.mkDerivation {
           name = "atlas-src";

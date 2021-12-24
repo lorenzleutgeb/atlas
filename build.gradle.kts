@@ -18,12 +18,6 @@ fun run(command: String, workingDir: File = file("./")): String {
     return proc.inputStream.bufferedReader().readText().trim()
 }
 
-version = run("./version.sh")
-
-task("printVersion") {
-    doLast { println(project.version) }
-}
-
 plugins {
     java
     application
@@ -33,6 +27,7 @@ plugins {
     id("com.diffplug.spotless") version "6.0.0"
     id("com.github.jk1.dependency-license-report") version "1.13"
     id("com.github.johnrengelman.shadow") version "5.2.0"
+    id("org.ajoberstar.reckon") version "0.13.1"
     id("org.graalvm.buildtools.native") version "0.9.8"
 }
 
@@ -57,6 +52,15 @@ buildscript {
 
 dependencyLocking {
     lockAllConfigurations()
+}
+
+reckon {
+    scopeFromProp()
+    stageFromProp("rc")
+}
+
+task("printVersion") {
+    doLast { println(project.version) }
 }
 
 // See https://github.com/gradle/gradle/issues/820
@@ -290,3 +294,4 @@ tasks.test {
 tasks.jacocoTestReport {
     dependsOn(tasks.test) // tests are required to run before generating the report
 }
+
