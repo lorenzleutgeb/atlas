@@ -242,23 +242,25 @@ tasks.create<Exec>("nativeImage") {
 }
 
 graalvmNative {
-	binaries {
-		named("main") {
-			imageName.set("atlas")
-			mainClass.set("$rootPackage.Main")
-			sharedLibrary.set(false)
-			buildArgs.addAll(
-				"--no-fallback",
-				"-H:Log=registerResource",
-				"-H:+ReportExceptionStackTraces",
-				"--report-unsupported-elements-at-runtime"
-			)
-			javaLauncher.set(javaToolchains.launcherFor {
-				languageVersion.set(JavaLanguageVersion.of(17))
-				vendor.set(JvmVendorSpec.matching("GraalVM"))
-			})
-		}
-	}
+    binaries {
+        named("main") {
+            imageName.set("atlas")
+            mainClass.set("$rootPackage.Main")
+            sharedLibrary.set(false)
+            buildArgs.addAll(
+                "--no-fallback",
+                "-H:Log=registerResource",
+                "-H:+ReportExceptionStackTraces",
+                "--report-unsupported-elements-at-runtime"
+            )
+            javaLauncher.set(
+                javaToolchains.launcherFor {
+                    languageVersion.set(JavaLanguageVersion.of(17))
+                    vendor.set(JvmVendorSpec.matching("GraalVM"))
+                }
+            )
+        }
+    }
 }
 
 tasks.build.get().dependsOn(tasks.get("nativeImage"))
@@ -294,4 +296,3 @@ tasks.test {
 tasks.jacocoTestReport {
     dependsOn(tasks.test) // tests are required to run before generating the report
 }
-
