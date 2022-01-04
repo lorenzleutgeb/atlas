@@ -11,7 +11,7 @@
             (match (* bl, zig zig *)
               (let:tree:cf leaf (let:tree:cf node (w{mono} node)))
               (w{mono l2xy} (let:tree:cf
-                app (* splay_eq a bl *)
+                (tick app) (* splay_eq a bl *)
                 (match
                   leaf
                   (let:tree:cf node (let:tree:cf node (w{mono} node)))
@@ -21,7 +21,7 @@
             (match (* br, zig zag *)
               (let:tree:cf leaf (let:tree:cf node (w{mono} node)))
               (w{mono l2xy} (let:tree:cf
-                app (* splay_eq a br *)
+                (tick app) (* splay_eq a br *)
                 (match
                   (w{mono} leaf)
                   (w{l2xy} (let:tree:cf node (let:tree:cf node node)))
@@ -39,7 +39,7 @@
             (match (* bl, zag zig *)
               (let:tree:cf leaf (let:tree:cf node (w{mono} node)))
               (w{mono l2xy} (let:tree:cf
-                app (* splay_eq a bl *)
+                (tick app) (* splay_eq a bl *)
                 (match
                   (w{mono} leaf)
                   (w{l2xy} (let:tree:cf node (let:tree:cf node node)))
@@ -49,7 +49,7 @@
             (match (* br, zag zag *)
               (let:tree:cf (w node) (let:tree:cf leaf (w{mono} node)))
               (w{l2xy mono} (let:tree:cf
-                app (* splay_eq a br *)
+                (tick app) (* splay_eq a br *)
                 (match
                   leaf
                   (let:tree:cf node (let:tree:cf node (w{mono} node)))

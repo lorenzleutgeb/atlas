@@ -1,10 +1,10 @@
 (match
   (w{size l2xy} leaf)
   (w{size l2xy} (let:tree:cf
-    (w{size l2xy} app)
+    (w{size l2xy} (tick app))
     (w{size l2xy} (let:tree:cf
       node
-      (w{size l2xy} app)
+      (w{size l2xy} (tick app))
     ))
   ))
 )

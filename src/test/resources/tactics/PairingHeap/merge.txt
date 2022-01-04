@@ -8,7 +8,7 @@
         (w node)
         (let:tree:cf
           (w node)
-          (w{l2xy size} app)
+          (w{l2xy size} (tick app))
         )
       ))
     )

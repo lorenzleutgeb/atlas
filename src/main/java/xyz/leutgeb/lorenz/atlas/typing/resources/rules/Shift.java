@@ -1,26 +1,15 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources.rules;
 
-import java.util.ArrayList;
+import static xyz.leutgeb.lorenz.atlas.util.Util.append;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
-import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
-import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
 
-/*
-\infer[\ruleshift]{
-  \tjudge{\Gamma}{Q+K}{e}{\alpha}{Q'+K}
-}{%
-  \tjudge{\Gamma}{Q}{e}{\alpha}{Q'}
-  &
-  K \geqslant 0
-}
- */
-
-@Deprecated
 public class Shift implements Rule {
   public static final Shift INSTANCE = new Shift();
 
@@ -30,18 +19,10 @@ public class Shift implements Rule {
     final var qk = obligation.getContext().getAnnotation();
     final var qpk = obligation.getAnnotation();
 
-    final var k = qk.getUnitCoefficientOrZero();
-    final var kp = qpk.getUnitCoefficientOrZero();
-
-    final var constraints = new ArrayList<Constraint>();
-
-    constraints.add(new EqualityConstraint(k, kp, getName()));
-
     final var q = globals.getHeuristic().generate("shiftedQ", qk.size());
     final var qp = globals.getHeuristic().generate("shiftedQp", qpk.size());
 
-    constraints.addAll(obligation.getContext().getAnnotation().increment(q, k, "(shift1j)"));
-    constraints.addAll(obligation.getAnnotation().increment(qp, k, "(shift2)"));
+    final var k = UnknownCoefficient.unknown("k");
 
     return new ApplicationResult(
         List.of(
@@ -51,7 +32,7 @@ public class Shift implements Rule {
                 qp,
                 obligation.getCost(),
                 Optional.of(obligation))),
-        List.of(constraints));
+        List.of(append(qk.increment(q, k, "(shift)"), qpk.increment(qp, k, "(shift)"))));
   }
 
   @Override

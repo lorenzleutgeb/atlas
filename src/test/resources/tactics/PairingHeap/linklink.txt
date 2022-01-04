@@ -1,4 +1,4 @@
 (w{mono l2xy} (let:tree:cf
-  (w{mono l2xy} app) (* link *)
-  (w{mono l2xy} app) (* link *)
+  (w{mono l2xy} (tick app)) (* link *)
+  (w{mono l2xy} (tick app)) (* link *)
 ))

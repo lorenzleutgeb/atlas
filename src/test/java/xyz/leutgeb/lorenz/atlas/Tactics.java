@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.hipparchus.fraction.Fraction;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -35,8 +34,12 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 
-@Disabled
+// @Disabled
 public class Tactics {
+  static {
+    System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "trace");
+  }
+
   @BeforeAll
   public static void beforeAll() {
     load();

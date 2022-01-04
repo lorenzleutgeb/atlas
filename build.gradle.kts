@@ -170,7 +170,8 @@ tasks.withType<AntlrTask> {
             "-package", "$rootPackage.antlr",
             "-Werror",
             "-Xlog",
-            "-lib", "src/main/antlr/$rootPackagePath/antlr"
+            "-lib", "src/main/antlr/$rootPackagePath/antlr",
+            "-encoding", "UTF-8"
         )
     )
 }

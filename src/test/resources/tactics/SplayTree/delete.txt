@@ -1,12 +1,12 @@
 (let:tree:cf
-  app (* splay a t *)
+  (tick app) (* splay a t *)
   (match
     (w leaf)
     (ite (* a == a1 *)
       (match (* l *)
         (w var)
         (w{mono l2xy} (let:tree:cf
-          app
+          (tick app)
           (match (* splay_max l *)
             leaf
             (w node)

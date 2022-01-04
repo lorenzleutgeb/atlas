@@ -4,7 +4,6 @@ src/main/gen
 *.svg
 *.smt
 *.hs
-gradle.properties
 
 # ANTLR
 *.tokens
@@ -14,7 +13,7 @@ gradle.properties
 *.jar
 *.so
 *.dll
-atlas
+/atlas
 
 # Nix
 result
@@ -23,6 +22,10 @@ result-*
 # JetBrains IDEA
 .idea/checkstyle-idea.xml
 .idea/libraries-with-intellij-classes.xml
+
+# Gradle Wrapper
+gradlew*
+gradle/wrapper
 
 # Created by https://www.gitignore.io/api/java,linux,gradle,intellij,latex,haskell
 # Edit at https://www.gitignore.io/?templates=java,linux,gradle,intellij,latex,haskell

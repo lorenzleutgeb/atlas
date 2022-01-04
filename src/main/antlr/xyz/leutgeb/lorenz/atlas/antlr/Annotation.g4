@@ -22,7 +22,7 @@ index : NUMBER # rankIndex
 // NUMBER : ('0' .. '9' );
 NUMBER : '0' | ('1'..'9') ('0'..'9')*;
 SLASH : '/' ;
-TIMES : '*';
+// TIMES : '*';
 CURLY_OPEN : '{';
 CURLY_CLOSE : '}';
 SQUARE_OPEN : '[';

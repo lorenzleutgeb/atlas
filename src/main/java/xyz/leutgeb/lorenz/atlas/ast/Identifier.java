@@ -27,9 +27,11 @@ import xyz.leutgeb.lorenz.atlas.util.Util;
 
 public class Identifier extends Expression {
   public static final String LEAF_NAME = "leaf";
+  public static final String COIN_NAME = "coin";
   private static final Identifier UNDERSCORE = new Identifier(Predefined.INSTANCE, "_");
   private static final Set<String> BOOLEAN_NAMES = Set.of("true", "false");
-  private static final Set<String> CONSTANT_NAMES = Sets.union(BOOLEAN_NAMES, singleton(LEAF_NAME));
+  private static final Set<String> SPECIAL_NAMES =
+      Sets.union(BOOLEAN_NAMES, Set.of(LEAF_NAME, COIN_NAME));
 
   @NonNull @Getter private final String name;
   @Getter private Intro intro;
@@ -75,8 +77,8 @@ public class Identifier extends Expression {
     return new Identifier(source, name);
   }
 
-  private static boolean isConstant(String name) {
-    return CONSTANT_NAMES.contains(name);
+  private static boolean isSpecial(String name) {
+    return SPECIAL_NAMES.contains(name);
   }
 
   public static Expression anonymous(Source source, IntIdGenerator idGenerator) {
@@ -102,7 +104,7 @@ public class Identifier extends Expression {
     if (name.equals(LEAF_NAME)) {
       return new TreeType(context.fresh());
     }
-    if (BOOLEAN_NAMES.contains(name)) {
+    if (BOOLEAN_NAMES.contains(name) || name.equals(COIN_NAME)) {
       return BoolType.INSTANCE;
     }
     if (name.startsWith("_")) {
@@ -147,19 +149,19 @@ public class Identifier extends Expression {
 
   @Override
   public Set<Identifier> freeVariables() {
-    if (!(type instanceof TreeType) || isConstant()) {
+    if (!(type instanceof TreeType) || isSpecial()) {
       return Collections.emptySet();
     }
     return singleton(this);
   }
 
-  private boolean isConstant() {
-    return isConstant(name);
+  private boolean isSpecial() {
+    return isSpecial(name);
   }
 
   @Override
   public boolean isImmediate() {
-    return !isConstant();
+    return !isSpecial();
   }
 
   @Override

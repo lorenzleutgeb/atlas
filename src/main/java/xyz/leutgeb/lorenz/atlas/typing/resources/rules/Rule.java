@@ -55,6 +55,10 @@ public interface Rule extends BiFunction<Obligation, AnnotatingGlobals, Rule.App
       return new ApplicationResult(emptyList(), emptyList(), emptyList());
     }
 
+    public static ApplicationResult noop(Obligation obligation) {
+      return new ApplicationResult(List.of(obligation), List.of(List.of()), List.of());
+    }
+
     public static ApplicationResult onlyConstraints(List<Constraint> constraints) {
       if (constraints.isEmpty()) {
         return empty();

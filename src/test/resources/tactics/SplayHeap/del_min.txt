@@ -5,7 +5,7 @@
     (match (* ta *)
       (w{mono} node)
       (w{mono l2xy} (let:tree:cf
-        app
+        (tick app)
         (let:tree:cf node node)
       ))
     )

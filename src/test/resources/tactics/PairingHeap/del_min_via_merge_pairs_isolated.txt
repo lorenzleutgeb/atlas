@@ -1,4 +1,4 @@
 (match
   (w leaf)
-  (w{mono} app)
+  (w{mono} (tick (shift app)))
 )

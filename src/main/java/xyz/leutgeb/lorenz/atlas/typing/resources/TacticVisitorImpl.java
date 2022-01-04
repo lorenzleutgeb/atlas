@@ -145,10 +145,11 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
       final List<Identifier> redundant = WVar.redundantIds(obligation).toList();
       if (obligation.getExpression().isTerminal()
           && !redundant.isEmpty()
-          && Set.of("leaf", "node", "var", "app").contains(ruleName)) {
+          && Set.of("leaf", "node", "var", "app", "tick").contains(ruleName)) {
         log.debug(
-            "Automatically applying (w:var) to remove leftover variables {} on line {}.",
+            "Automatically applying (w:var) to remove leftover variables {} before applying {} on line {}.",
             redundant,
+            ruleName,
             start.getLine());
         // prover.setLogApplications(true);
         obligation = prover.weakenVariables(obligation);

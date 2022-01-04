@@ -6,14 +6,14 @@
       (w{mono l2xy} (let:tree:cf (w{mono l2xy} leaf) (w{mono l2xy size} (let:tree:cf (w{mono l2xy} node) (w{mono l2xy} (let:tree:cf (w{mono l2xy} leaf) (w{mono l2xy} node)))))))
       (ite
         (w{mono l2xy} (let:tree:cf
-          app (* partition d p tc *)
+          (tick app) (* partition d p tc *)
           (match
             ? (* leaf *)
             (w{mono l2xy} (let:tree:cf (w{mono l2xy} node) (w{mono l2xy} (let:tree:cf (w{mono l2xy} node) (w{mono l2xy} node)))))
           )
         ))
         ? (*w{mono l2xy} (let:tree:cf
-          app (* partition d p tb *)
+          (tick app) (* partition d p tb *)
           (match
             (w{mono} leaf)
             ? (*let:tree:cf node (let:tree:cf node (w{l2xy} node))*)
@@ -25,14 +25,14 @@
       ? (*let:tree:cf leaf (let:tree:cf leaf (w{size} (let:tree:cf node node)))*)
       (ite
         (w{mono l2xy} (let:tree:cf
-          app (* partition d p tb *)
+          (tick app) (* partition d p tb *)
           (match
             (w{mono} leaf)
             (let:tree:cf node (let:tree:cf node (w{l2xy} node)))
           )
         ))
         (w{mono l2xy} (let:tree:cf
-          app (* partition d p tc *)
+          (tick app) (* partition d p tc *)
           (match
             leaf
             (let:tree:cf node (let:tree:cf node (w{mono} node)))
