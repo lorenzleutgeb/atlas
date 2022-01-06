@@ -80,7 +80,7 @@ public class NidiExporter<V, E> extends BaseExporter<V, E> {
 
       /*
       if (v instanceof Obligation obligation) {
-        if (obligation.getCost() == 0) {
+        if (!obligation.isCost()) {
           skipEdges = true;
         }
       }

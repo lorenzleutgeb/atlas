@@ -168,7 +168,7 @@ public class LetTreeCfSimple implements Rule {
                     .generateContext("letcf " + x + " b is " + key, varsForGammaAsList),
                 value,
                 globals.getHeuristic().generate("letcf' " + x + " b is " + key, value),
-                0,
+                false,
                 Optional.of(obligation));
 
     gammaDeltaQ

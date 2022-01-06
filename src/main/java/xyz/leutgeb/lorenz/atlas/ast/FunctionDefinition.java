@@ -316,7 +316,7 @@ public class FunctionDefinition {
         inferredSignature.getType().getFrom().variables());
   }
 
-  public Obligation getTypingObligation(int cost) {
+  public Obligation getTypingObligation(boolean cost) {
     return new Obligation(
         new AnnotatingContext(
             treeLikeArguments(), inferredSignature.getAnnotation().get().withCost.from),

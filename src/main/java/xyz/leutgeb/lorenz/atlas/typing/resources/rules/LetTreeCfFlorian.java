@@ -197,7 +197,7 @@ public class LetTreeCfFlorian implements Rule {
                 value,
                 // globals.getHeuristic().generate("P'(" + x + ")(" + key + ")", value),
                 new Annotation(1, "P'(" + x + ")(" + key + ")"),
-                0,
+                false,
                 Optional.of(obligation));
 
     gammaDeltaQ

@@ -265,7 +265,7 @@ public class LetTreeCf implements Rule {
                       new AnnotatingContext(varsForGammaAsList, "P(" + x + ")(" + key + ")"),
                       value,
                       new Annotation(1, "P'(" + x + ")(" + key + ")"),
-                      0,
+                      false,
                       Optional.of(obligation)),
                   new ArrayList<>());
 

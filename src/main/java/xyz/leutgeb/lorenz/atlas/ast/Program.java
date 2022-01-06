@@ -243,7 +243,7 @@ public class Program {
                         new AnnotatingGlobals(functionAnnotations, fd.getSizeAnalysis(), heuristic);
                     prover.setGlobals(globals);
 
-                    Obligation typingObligation = fd.getTypingObligation(1);
+                    Obligation typingObligation = fd.getTypingObligation(true);
 
                     if (tactics.containsKey(fd.getFullyQualifiedName())) {
                       try {
@@ -268,7 +268,7 @@ public class Program {
                               cfAnnotation.from,
                               fd.getBody(),
                               cfAnnotation.to,
-                              0,
+                              false,
                               empty());
 
                       if (tactics.containsKey(fd.getFullyQualifiedName())) {
@@ -391,7 +391,7 @@ public class Program {
               new AnnotatingGlobals(functionAnnotations, fd.getSizeAnalysis(), heuristic);
           prover.setGlobals(globals);
 
-          Obligation typingObligation = fd.getTypingObligation(1);
+          Obligation typingObligation = fd.getTypingObligation(true);
 
           if (tactics.containsKey(fd.getFullyQualifiedName())) {
             try {
@@ -424,7 +424,7 @@ public class Program {
                     cfAnnotation.from,
                     fd.getBody(),
                     cfAnnotation.to,
-                    0,
+                    false,
                     empty());
 
             if (tactics.containsKey(fd.getFullyQualifiedName())) {

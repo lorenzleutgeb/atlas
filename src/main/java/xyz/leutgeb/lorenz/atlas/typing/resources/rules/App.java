@@ -28,7 +28,7 @@ public class App implements Rule {
 
   private static String ruleName(Obligation obligation) {
     return "(app"
-        + (obligation.getCost() == 0 ? ":cf" : "")
+        + (obligation.isCost() ? "" : ":cf")
         + " "
         + obligation.getExpression().terminalOrBox()
         + ")";
@@ -114,7 +114,7 @@ public class App implements Rule {
     final var expression = (CallExpression) obligation.getExpression();
     final var annotation = globals.getSignature(expression.getFullyQualifiedName());
     return Rule.ApplicationResult.onlyConstraints(
-        obligation.getCost() == 1
+        obligation.isCost()
             ? appMinusWithCfIncludingShift(obligation, annotation, arguments)
             : costFree(obligation, annotation.withoutCost, arguments));
   }

@@ -28,14 +28,14 @@ public class Obligation {
   AnnotatingContext context;
   Expression expression;
   Annotation annotation;
-  int cost;
+  boolean cost;
   Optional<Obligation> parent;
 
   public Obligation(
       AnnotatingContext context,
       Expression expression,
       Annotation annotation,
-      int cost,
+      boolean cost,
       Optional<Obligation> parent) {
     this.context = context;
     this.expression = expression;
@@ -46,9 +46,6 @@ public class Obligation {
     }
 
     this.annotation = annotation;
-    if (cost != 0 && cost != 1) {
-      throw new IllegalArgumentException("cost must be 0 or 1");
-    }
     this.cost = cost;
     this.parent = parent;
   }
@@ -59,7 +56,7 @@ public class Obligation {
       Expression expression,
       Annotation annotation,
       Optional<Obligation> parent) {
-    this(contextIds, contextAnnotation, expression, annotation, 1, parent);
+    this(contextIds, contextAnnotation, expression, annotation, true, parent);
   }
 
   public Obligation(
@@ -67,7 +64,7 @@ public class Obligation {
       Annotation contextAnnotation,
       Expression expression,
       Annotation annotation,
-      int cost,
+      boolean cost,
       Optional<Obligation> parent) {
     this(
         new AnnotatingContext(contextIds, contextAnnotation), expression, annotation, cost, parent);
@@ -128,7 +125,7 @@ public class Obligation {
 
     return contextStr
         + "  ⊦"
-        + Util.generateSubscript(cost)
+        + Util.generateSubscript(cost ? 1 : 0)
         + "  "
         + expression
         + " | "

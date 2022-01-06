@@ -46,7 +46,7 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
       if (rule.ruleName.getText().equals("let:tree:cf")) {
         final ArrayList<Obligation> remains = new ArrayList<>(remaining.size());
         for (int i = 0; i < remaining.size(); i++) {
-          if (remaining.get(i).getCost() == 0 && i > 1) {
+          if (!remaining.get(i).isCost() && i > 1) {
             proveInternalAny(remaining.get(i), list.elements.get(0));
             continue;
           }
@@ -108,7 +108,7 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
 
     if (RECORDING_ENABLED
         && annotatedTacticExpression.applicationName != null
-        && obligation.getCost() > 0) {
+        && obligation.isCost()) {
       prover.record(annotatedTacticExpression.applicationName.getText(), obligation);
     }
 
