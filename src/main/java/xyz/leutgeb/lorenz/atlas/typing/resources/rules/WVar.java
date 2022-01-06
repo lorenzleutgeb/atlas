@@ -105,9 +105,4 @@ public class WVar implements Rule {
         singletonList(obligation.keepAnnotationAndCost(gammaR, obligation.getExpression())),
         singletonList(constraints));
   }
-
-  @Override
-  public String getName() {
-    return "w:var";
-  }
 }

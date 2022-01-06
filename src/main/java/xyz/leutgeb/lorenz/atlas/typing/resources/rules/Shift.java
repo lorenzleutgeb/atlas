@@ -34,9 +34,4 @@ public class Shift implements Rule {
                 Optional.of(obligation))),
         List.of(append(qk.increment(q, k, "(shift)"), qpk.increment(qp, k, "(shift)"))));
   }
-
-  @Override
-  public String getName() {
-    return "shift";
-  }
 }

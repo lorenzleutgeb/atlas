@@ -174,9 +174,4 @@ public class Match implements Rule {
             obligation.keepAnnotationAndCost(gammaxsr, expression.getNode())),
         List.of(pConstraints, rConstraints));
   }
-
-  @Override
-  public String getName() {
-    return "match";
-  }
 }

@@ -133,9 +133,4 @@ public class LetGen implements Rule {
     return new Rule.ApplicationResult(
         List.of(p.getLeft(), r.getLeft()), List.of(p.getRight(), r.getRight()), crossConstraints);
   }
-
-  @Override
-  public String getName() {
-    return "let:gen";
-  }
 }

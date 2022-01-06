@@ -386,9 +386,4 @@ public class LetTreeCf implements Rule {
         old.stream().map(Pair::getRight).toList(),
         crossConstraints);
   }
-
-  @Override
-  public String getName() {
-    return "let:tree:cf";
-  }
 }

@@ -11,9 +11,4 @@ public class Cmp implements Rule {
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     return Rule.ApplicationResult.empty();
   }
-
-  @Override
-  public String getName() {
-    return "cmp";
-  }
 }

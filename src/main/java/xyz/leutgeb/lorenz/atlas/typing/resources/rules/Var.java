@@ -51,9 +51,4 @@ public class Var implements Rule {
     return Rule.ApplicationResult.onlyConstraints(
         EqualityConstraint.eq(context.getAnnotation(), obligation.getAnnotation(), "(var)"));
   }
-
-  @Override
-  public String getName() {
-    return "var";
-  }
 }

@@ -44,14 +44,14 @@ public class WeakeningTest {
             Identifier.get("a", null),
             Annotation.zero(1));
     final var result = W.INSTANCE.apply(o, AnnotatingGlobals.empty());
-    assertEquals(1, result.getObligations().size());
+    assertEquals(1, result.obligations().size());
 
     Set<Constraint> constraints = new HashSet<>();
     result.collectInto(constraints);
 
     constraints.addAll(
         EqualityConstraint.eq(
-            result.getObligations().get(0).getContext().getAnnotation(),
+            result.obligations().get(0).getContext().getAnnotation(),
             Annotation.constant(1, "expected", ONE),
             "test"));
 

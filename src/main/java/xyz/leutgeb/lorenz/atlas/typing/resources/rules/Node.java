@@ -88,9 +88,4 @@ public class Node implements Rule {
 
     return Rule.ApplicationResult.onlyConstraints(constraints);
   }
-
-  @Override
-  public String getName() {
-    return "node";
-  }
 }

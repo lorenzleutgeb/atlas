@@ -10,9 +10,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
-import lombok.NonNull;
-import lombok.Value;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
@@ -26,14 +26,28 @@ public interface Rule extends BiFunction<Obligation, AnnotatingGlobals, Rule.App
   ApplicationResult apply(
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments);
 
-  String getName();
+  default String getName() {
+    String text = this.getClass().getSimpleName();
+    Matcher m = Pattern.compile("[a-z][A-Z]").matcher(text);
 
-  @Value
-  class ApplicationResult {
-    @NonNull List<Obligation> obligations;
-    @NonNull List<List<Constraint>> constraints;
-    @NonNull List<Constraint> generalConstraints;
+    StringBuilder sb = new StringBuilder();
+    int last = 0;
+    while (m.find()) {
+      sb.append(text, last, m.start());
+      sb.append(m.group(0).charAt(0));
+      sb.append(":");
+      sb.append(Character.toLowerCase(m.group(0).charAt(1)));
+      last = m.end();
+    }
+    sb.append(text.substring(last));
 
+    return sb.toString().toLowerCase();
+  }
+
+  record ApplicationResult(
+      List<Obligation> obligations,
+      List<List<Constraint>> constraints,
+      List<Constraint> generalConstraints) {
     public ApplicationResult(List<Obligation> obligations, List<List<Constraint>> constraints) {
       this(obligations, constraints, emptyList());
     }

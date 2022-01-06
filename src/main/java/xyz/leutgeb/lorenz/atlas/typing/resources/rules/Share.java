@@ -192,9 +192,4 @@ public class Share implements Rule {
             });
      */
   }
-
-  @Override
-  public String getName() {
-    return "share";
-  }
 }

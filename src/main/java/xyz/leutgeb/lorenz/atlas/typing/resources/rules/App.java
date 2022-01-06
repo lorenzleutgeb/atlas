@@ -118,9 +118,4 @@ public class App implements Rule {
             ? appMinusWithCfIncludingShift(obligation, annotation, arguments)
             : costFree(obligation, annotation.withoutCost, arguments));
   }
-
-  @Override
-  public String getName() {
-    return "app";
-  }
 }

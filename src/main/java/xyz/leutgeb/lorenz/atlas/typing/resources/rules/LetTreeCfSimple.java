@@ -322,9 +322,4 @@ public class LetTreeCfSimple implements Rule {
   public static Constraint allZero(Collection<Coefficient> coefficients) {
     return new EqualsSumConstraint(ZERO, coefficients, "allzero");
   }
-
-  @Override
-  public String getName() {
-    return "let:tree:cf";
-  }
 }

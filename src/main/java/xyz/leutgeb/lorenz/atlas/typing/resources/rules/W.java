@@ -736,9 +736,4 @@ public class W implements Rule {
       return result;
     }
   }
-
-  @Override
-  public String getName() {
-    return "w";
-  }
 }

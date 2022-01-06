@@ -45,9 +45,4 @@ public class Ite implements Rule {
             obligation.keepContextAndAnnotationAndCost(expression.getTruthy()),
             obligation.keepContextAndAnnotationAndCost(expression.getFalsy())));
   }
-
-  @Override
-  public String getName() {
-    return "ite";
-  }
 }

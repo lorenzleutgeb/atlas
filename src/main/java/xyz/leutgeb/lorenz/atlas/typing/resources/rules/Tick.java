@@ -21,9 +21,4 @@ public class Tick implements Rule {
         List.of(obligation.keepCost(obligation.getContext(), obligation.getExpression(), q)),
         List.of(q.increment(annotation, 1, "(tick)")));
   }
-
-  @Override
-  public String getName() {
-    return "tick";
-  }
 }
