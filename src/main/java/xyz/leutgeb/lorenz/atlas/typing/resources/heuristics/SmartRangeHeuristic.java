@@ -34,12 +34,12 @@ public class SmartRangeHeuristic implements AnnotationHeuristic {
   }
 
   @Override
-  public Annotation generate(String namePrefix, int size) {
+  public Annotation generate(String name, int size) {
     return new Annotation(
-        size, range(0, size).boxed().toList(), generate(size).toList(), namePrefix);
+        size, range(0, size).boxed().toList(), generateInternal(size).toList(), name);
   }
 
-  public Stream<List<Integer>> generate(int treeSize) {
+  public Stream<List<Integer>> generateInternal(int treeSize) {
     return cartesianProduct(
             concat(Stream.generate(() -> as).limit(treeSize), Stream.of(bs)).toList())
         .stream()

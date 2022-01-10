@@ -3,7 +3,6 @@ package xyz.leutgeb.lorenz.atlas.typing.resources.coefficients;
 import com.microsoft.z3.Context;
 import com.microsoft.z3.RealExpr;
 import java.util.Map;
-import java.util.function.Predicate;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.hipparchus.fraction.Fraction;
@@ -13,13 +12,14 @@ import org.hipparchus.fraction.Fraction;
 public class KnownCoefficient implements Coefficient {
   public static final KnownCoefficient ZERO = new KnownCoefficient(Fraction.ZERO);
   public static final KnownCoefficient ONE = new KnownCoefficient(Fraction.ONE);
+  public static final KnownCoefficient ONE_BY_TWO = new KnownCoefficient(1, 2);
   public static final KnownCoefficient TWO = new KnownCoefficient(Fraction.TWO);
-  public static final KnownCoefficient THREE = new KnownCoefficient(new Fraction(3));
+  public static final KnownCoefficient THREE = new KnownCoefficient(3);
+  public static final KnownCoefficient THREE_BY_TWO = new KnownCoefficient(3, 2);
   public static final KnownCoefficient MINUS_TWO = new KnownCoefficient(Fraction.TWO.negate());
   public static final KnownCoefficient MINUS_ONE = new KnownCoefficient(Fraction.ONE.negate());
-  public static final KnownCoefficient ONE_BY_TWO = new KnownCoefficient(new Fraction(1, 2));
-  public static final KnownCoefficient THREE_BY_TWO = new KnownCoefficient(new Fraction(3, 2));
-  public static final KnownCoefficient FIVE_BY_TWO = new KnownCoefficient(new Fraction(5, 2));
+  public static final KnownCoefficient FIVE_BY_TWO = new KnownCoefficient(5, 2);
+  public static final KnownCoefficient THREE_BY_FOUR = new KnownCoefficient(3, 4);
 
   Fraction value;
 
@@ -27,7 +27,11 @@ public class KnownCoefficient implements Coefficient {
     this.value = value;
   }
 
-  public KnownCoefficient(int value) {
+  private KnownCoefficient(int num, int den) {
+    this(new Fraction(num, den));
+  }
+
+  KnownCoefficient(int value) {
     this(new Fraction(value));
   }
 
@@ -54,6 +58,4 @@ public class KnownCoefficient implements Coefficient {
   public String toString() {
     return value.toString();
   }
-
-  public static final Predicate<Coefficient> IS = x -> x instanceof KnownCoefficient;
 }

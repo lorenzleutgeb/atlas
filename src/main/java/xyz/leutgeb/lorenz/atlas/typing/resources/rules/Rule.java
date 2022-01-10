@@ -28,7 +28,7 @@ public interface Rule extends BiFunction<Obligation, AnnotatingGlobals, Rule.App
 
   default String getName() {
     String text = this.getClass().getSimpleName();
-    Matcher m = Pattern.compile("[a-z][A-Z]").matcher(text);
+    Matcher m = Pattern.compile("(^[A-Z]|[a-z])[A-Z]").matcher(text);
 
     StringBuilder sb = new StringBuilder();
     int last = 0;

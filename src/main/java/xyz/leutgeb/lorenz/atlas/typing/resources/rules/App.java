@@ -48,8 +48,8 @@ public class App implements Rule {
                         IntStream.rangeClosed(0, readM(arguments))
                             .mapToObj(
                                 i -> {
-                                  final var from = candidate.from.multiply(Coefficient.of(i));
-                                  final var to = candidate.to.multiply(Coefficient.of(i));
+                                  final var from = candidate.from.multiply(Coefficient.known(i));
+                                  final var to = candidate.to.multiply(Coefficient.known(i));
 
                                   return (Constraint)
                                       new ConjunctiveConstraint(
@@ -80,8 +80,8 @@ public class App implements Rule {
                         IntStream.rangeClosed(0, readM(arguments))
                             .mapToObj(
                                 i -> {
-                                  final var from = candidate.from.multiply(Coefficient.of(i));
-                                  final var to = candidate.to.multiply(Coefficient.of(i));
+                                  final var from = candidate.from.multiply(Coefficient.known(i));
+                                  final var to = candidate.to.multiply(Coefficient.known(i));
 
                                   final var addFrom =
                                       Annotation.add(annotation.withCost.from, from.getLeft());
@@ -91,22 +91,29 @@ public class App implements Rule {
                                   return (Constraint)
                                       new ConjunctiveConstraint(
                                           append(
-                                              append(
-                                                  append(from.getRight(), to.getRight()),
-                                                  append(addFrom.getRight(), addTo.getRight())),
+                                              List.of(
+                                                  new ConjunctiveConstraint(
+                                                      append(
+                                                          append(from.getRight(), to.getRight()),
+                                                          append(
+                                                              addFrom.getRight(),
+                                                              addTo.getRight())),
+                                                      "(app) K * P + Q")),
                                               append(
                                                   EqualityConstraint.eq(
                                                       addFrom.getLeft(),
                                                       obligation.getContext().getAnnotation(),
-                                                      "(app) Q"),
+                                                      "(app) " + i + " * P + Qsig = Qctx"),
                                                   EqualityConstraint.eq(
                                                       addTo.getLeft(),
                                                       obligation.getAnnotation(),
-                                                      "(app) Q' from signature = Q' from context"))),
-                                          "(app)");
+                                                      "(app) " + i + " * P' + Qsig' = Qctx'"))),
+                                          "(app) " + obligation.getExpression());
                                 }))
                 .toList(),
-            "(app)"));
+            "(app `"
+                + obligation.getExpression()
+                + "`)" /*+ " on line " + obligation.getExpression().getSource().getRoot()*/));
   }
 
   public Rule.ApplicationResult apply(

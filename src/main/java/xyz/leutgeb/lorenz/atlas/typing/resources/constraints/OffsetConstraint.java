@@ -1,7 +1,6 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources.constraints;
 
 import static guru.nidi.graphviz.model.Link.to;
-import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
 import static xyz.leutgeb.lorenz.atlas.util.Util.objectNode;
 
 import com.google.common.collect.BiMap;
@@ -43,10 +42,12 @@ public class OffsetConstraint extends EqualityConstraint {
 
   @Override
   public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, RealExpr> coefficients) {
+    /*
     if (offset instanceof KnownCoefficient
         && ((KnownCoefficient) offset).getValue().getDenominator() != 1) {
       throw bug("oops");
     }
+     */
     return ctx.mkEq(
         left.encode(ctx, coefficients),
         ctx.mkAdd(right.encode(ctx, coefficients), offset.encode(ctx, coefficients)));

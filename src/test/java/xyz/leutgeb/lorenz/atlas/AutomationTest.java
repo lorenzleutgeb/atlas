@@ -16,7 +16,7 @@ public class AutomationTest {
     final var program = loadAndNormalizeAndInferAndUnshare(fqn);
     final var annotations = Map.of(fqn, combinedFunctionAnnotation);
     final var result =
-        program.solve(annotations, Collections.emptyMap(), true, Collections.emptySet());
+        program.solve(annotations, Collections.emptyMap(), true, false, Collections.emptySet());
     assertTrue(result.isSatisfiable());
     program.printAllInferredSignaturesInOrder(System.out);
   }

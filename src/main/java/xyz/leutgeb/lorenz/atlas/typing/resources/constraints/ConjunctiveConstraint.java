@@ -71,7 +71,9 @@ public class ConjunctiveConstraint extends Constraint {
     if (elements.isEmpty()) {
       return "true";
     }
-    return elements.stream().map(Object::toString).collect(Collectors.joining(" ∧ ", "(", ")"));
+    return elements.stream()
+        .map(Constraint::toStringWithReason)
+        .collect(Collectors.joining("\n\t∧ ", "(\n\t", "\n\n)"));
   }
 
   @Override

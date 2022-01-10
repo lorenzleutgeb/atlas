@@ -35,7 +35,7 @@ public class ShareExpression extends Expression {
     super(Derived.unshare(source));
     this.up = up;
     this.down = down;
-    // TODO(lorenz.leutgeb): Prettify...
+    // TODO(lorenzleutgeb): Prettify...
     /*
     this.down =
         Pair.of(

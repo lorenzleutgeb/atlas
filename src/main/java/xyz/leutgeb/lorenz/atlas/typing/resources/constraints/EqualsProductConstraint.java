@@ -6,6 +6,7 @@ import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toSet;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ONE;
+import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ZERO;
 import static xyz.leutgeb.lorenz.atlas.util.Util.objectNode;
 import static xyz.leutgeb.lorenz.atlas.util.Util.pick;
 
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
+import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
 
 @Value
@@ -40,12 +42,16 @@ public class EqualsProductConstraint extends Constraint {
     if (product.isEmpty()) {
       product = singletonList(ONE);
     }
+    if (product.contains(KnownCoefficient.ZERO)) {
+      product = singletonList(ZERO);
+    }
     this.left = left;
     this.product = product;
   }
 
   public String toString() {
-    return left + " = Π" + product;
+    return left + " = " + product.stream().map(Object::toString).collect(Collectors.joining(" ⋅ "));
+    // return left + " = Π" + product;
   }
 
   @Override

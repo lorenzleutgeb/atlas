@@ -34,6 +34,7 @@ public interface Index {
   }
 
   default boolean agreeOnAssociatedIndices(Index other, Set<Identifier> identifiers) {
+    // NOTE: If there are no associated indices for given identifiers, then this evaluates to true!
     return identifiers.stream()
         .allMatch(id -> getAssociatedIndex(id).equals(other.getAssociatedIndex(id)));
   }

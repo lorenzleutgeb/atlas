@@ -44,12 +44,16 @@ public class ModuleTest {
         Arguments.of(Set.of("SplayTree.insert", "SplayTree.delete"), true));
   }
 
+  private static Stream<Arguments> rand() {
+    return Stream.of(Arguments.of(Set.of("SplayTree.splay", "SplayTree.delete"), true));
+  }
+
   private static Stream<Arguments> table() {
     return Stream.of(Arguments.of(Set.of("SplayTree.splay"), false));
   }
 
   @ParameterizedTest
-  @MethodSource({"modulesWithTactics", "modulesWithoutTactics"})
+  @MethodSource({"modulesWithTactics" /*, "modulesWithoutTactics"*/})
   public void test(Set<String> fqns, boolean useTactics)
       throws UnificationError, TypeError, IOException {
     final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqns);
@@ -57,6 +61,7 @@ public class ModuleTest {
         program.solve(
             new HashMap<>(),
             useTactics ? program.lookupTactics(emptyMap(), TACTICS) : emptyMap(),
+            true,
             true,
             emptySet());
     assertTrue(result.isSatisfiable());

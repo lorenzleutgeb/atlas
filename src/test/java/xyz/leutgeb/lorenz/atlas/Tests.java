@@ -45,11 +45,10 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.InequalityConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.LessThanOrEqualConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.OffsetConstraint;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
+import xyz.leutgeb.lorenz.atlas.typing.resources.solving.Solver;
 import xyz.leutgeb.lorenz.atlas.typing.simple.FunctionSignature;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.BoolType;
@@ -211,8 +210,8 @@ public class Tests {
     assertEquals(expectedSignature, definition.getAnnotatedSignature(), "annotated signature");
     assertEquals(expectedSignature, definition.getInferredSignature(), "inferred signature");
 
-    final ConstraintSystemSolver.Result result =
-        program.solve(new HashMap<>(), emptyMap(), true, new HashSet<>());
+    final Solver.Result result =
+        program.solve(new HashMap<>(), emptyMap(), true, false, new HashSet<>());
     assertTrue(result.isSatisfiable());
     program.printAllInferredSignaturesInOrder(System.out);
   }
@@ -222,7 +221,7 @@ public class Tests {
   @MethodSource("infiniteCostDefinitions")
   void infiniteCost(String fqn) throws Exception {
     final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
-    final var solution = program.solve(new HashMap<>(), emptyMap(), true, new HashSet<>());
+    final var solution = program.solve(new HashMap<>(), emptyMap(), true, false, new HashSet<>());
     program.printAllInferredSignaturesInOrder(System.out);
     assertTrue(solution.getSolution().isEmpty());
   }
@@ -237,7 +236,7 @@ public class Tests {
 
     assertEquals(expectedSignature, definition.getInferredSignature());
 
-    final var solution = program.solve(new HashMap<>(), emptyMap(), true, new HashSet<>());
+    final var solution = program.solve(new HashMap<>(), emptyMap(), true, false, new HashSet<>());
     program.printAllInferredSignaturesInOrder(System.out);
     assertTrue(solution.getSolution().isEmpty());
   }
@@ -263,8 +262,8 @@ public class Tests {
 
     // If there are problems with one test case, use this snippet to check for satisfiability.
 
-    final var inferredInput = new UnknownCoefficient("inferredInput");
-    final var inferredResult = new UnknownCoefficient("inferredResult");
+    final var inferredInput = Coefficient.unknown("inferredInput");
+    final var inferredResult = Coefficient.unknown("inferredResult");
     final var inferred = new HashMap<String, CombinedFunctionAnnotation>();
     inferred.put(
         fqn,
@@ -279,15 +278,15 @@ public class Tests {
                     returnsTree ? Map.of(unitIndex(1), inferredResult) : emptyMap(),
                     "inferredReturn")),
             emptySet()));
-    final var inferredSolution = program.solve(inferred, emptyMap(), true, emptySet());
+    final var inferredSolution = program.solve(inferred, emptyMap(), true, false, emptySet());
     assertTrue(inferredSolution.getSolution().isPresent());
     program.printAllInferredSignaturesInOrder(System.out);
 
     // We show that it is possible to type the function in such a way that the difference between
     // the potential of the arguments and the potential of the result is exactly the cost that we
     // expect.
-    final var tightInput = new UnknownCoefficient("tightInput");
-    final var tightResult = new UnknownCoefficient("tightResult");
+    final var tightInput = Coefficient.unknown("tightInput");
+    final var tightResult = Coefficient.unknown("tightResult");
     final var tight = new HashMap<String, CombinedFunctionAnnotation>();
     tight.put(
         fqn,
@@ -309,6 +308,7 @@ public class Tests {
                 tight,
                 emptyMap(),
                 true,
+                false,
                 singleton(
                     new OffsetConstraint(
                         tightInput, tightResult, new Fraction(constantCost), "outside")))
@@ -318,7 +318,7 @@ public class Tests {
     if (constantCost > 0) {
       // We show that it is impossible to type the function in such a way that the the potential of
       // the arguments is less than we expect.
-      final var tooSmallInput = new UnknownCoefficient("tightInput");
+      final var tooSmallInput = Coefficient.unknown("tightInput");
       final var tooSmall = new HashMap<String, CombinedFunctionAnnotation>();
       final var costKnownCoefficient = new KnownCoefficient(new Fraction(constantCost - 1));
       tooSmall.put(
@@ -343,6 +343,7 @@ public class Tests {
                   tooSmall,
                   emptyMap(),
                   true,
+                  false,
                   singleton(
                       new LessThanOrEqualConstraint(
                           tooSmallInput, costKnownCoefficient, "outside constraint")))
@@ -358,8 +359,8 @@ public class Tests {
 
     // We show that it is impossible to type the function in such a way that the the potential of
     // the arguments is less than the potential of the result.
-    final var generatorInput = new UnknownCoefficient("generatorInput");
-    final var generatorResult = new UnknownCoefficient("generatorResult");
+    final var generatorInput = Coefficient.unknown("generatorInput");
+    final var generatorResult = Coefficient.unknown("generatorResult");
     final var symbolicGenerator = new HashMap<String, CombinedFunctionAnnotation>();
     symbolicGenerator.put(
         fqn,
@@ -382,6 +383,7 @@ public class Tests {
             symbolicGenerator,
             emptyMap(),
             true,
+            false,
             Set.of(
                 new LessThanOrEqualConstraint(
                     generatorInput, generatorResult, "outside constraint"),

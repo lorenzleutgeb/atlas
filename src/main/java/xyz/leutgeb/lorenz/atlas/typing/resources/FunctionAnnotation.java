@@ -23,8 +23,17 @@ public class FunctionAnnotation {
     return from.isUnknown() || to.isUnknown();
   }
 
+  public FunctionAnnotation(
+      List<Coefficient> rankCoefficients, Map<List<Integer>, Coefficient> coefficients) {
+    this(new Annotation(rankCoefficients, coefficients, "unknownfunctionannotation"));
+  }
+
   public FunctionAnnotation substitute(Map<Coefficient, KnownCoefficient> solution) {
     return new FunctionAnnotation(from.substitute(solution), to.substitute(solution));
+  }
+
+  public FunctionAnnotation(Annotation annotation) {
+    this(annotation, annotation);
   }
 
   public boolean isNonInteger() {

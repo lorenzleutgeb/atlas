@@ -19,7 +19,9 @@ import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Link;
 import guru.nidi.graphviz.model.LinkTarget;
 import guru.nidi.graphviz.model.Node;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -33,12 +35,21 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient
 @EqualsAndHashCode(callSuper = true)
 public class EqualsSumConstraint extends Constraint {
   Coefficient left;
-  Collection<Coefficient> sum;
+  List<Coefficient> sum;
 
-  public EqualsSumConstraint(Coefficient left, Collection<Coefficient> sum, String reason) {
+  public EqualsSumConstraint(
+      Coefficient left, Collection<Coefficient> sumCollection, String reason) {
     super(reason);
+    List<Coefficient> sum = new ArrayList<>(sumCollection);
     if (sum.isEmpty()) {
       sum = singletonList(ZERO);
+    }
+    if (sum.size() == 2) {
+      if (ZERO.equals(sum.get(0))) {
+        sum = List.of(sum.get(1));
+      } else if (ZERO.equals(sum.get(1))) {
+        sum = List.of(sum.get(0));
+      }
     }
     this.left = left;
     this.sum = sum;
@@ -46,7 +57,8 @@ public class EqualsSumConstraint extends Constraint {
 
   @Override
   public String toString() {
-    return left + " = Σ" + sum;
+    return left + " = " + sum.stream().map(Object::toString).collect(Collectors.joining(" + "));
+    // return left + " = Σ" + sum;
   }
 
   @Override

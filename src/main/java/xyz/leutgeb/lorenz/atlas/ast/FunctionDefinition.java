@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.jgrapht.nio.AttributeType;
@@ -63,6 +64,7 @@ import xyz.leutgeb.lorenz.atlas.util.NidiExporter;
 import xyz.leutgeb.lorenz.atlas.util.SizeEdge;
 
 @Data
+@EqualsAndHashCode(doNotUseGetters = true)
 @Slf4j
 public class FunctionDefinition {
   private final String moduleName;
@@ -73,6 +75,7 @@ public class FunctionDefinition {
   private FunctionSignature annotatedSignature;
 
   private org.jgrapht.Graph<Identifier, SizeEdge> sizeAnalysis = null;
+  private Obligation typingObligation;
 
   public FunctionDefinition(
       String moduleName,
@@ -109,7 +112,7 @@ public class FunctionDefinition {
           arguments.get(i), inferredSignature.getType().getFrom().getElements().get(i), null);
     }
 
-    // TODO(lorenz.leutgeb): Maybe do this in stub?
+    // TODO(lorenzleutgeb): Maybe do this in stub?
     if (annotatedSignature != null) {
       if (annotatedSignature.getType().getFrom().getElements().size() != arguments.size()) {
         throw new TypeError("expected " + arguments.size() + " for " + getFullyQualifiedName());
@@ -117,12 +120,13 @@ public class FunctionDefinition {
       for (int i = 0; i < arguments.size(); i++) {
         Type ty = annotatedSignature.getType().getFrom().getElements().get(i);
         Type var = inferredSignature.getType().getFrom().getElements().get(i);
-        sub.addIfNotEqual(var, ty);
+        sub.addEquivalenceIfNotEqual(var, ty);
       }
-      sub.addIfNotEqual(inferredSignature.getType().getTo(), annotatedSignature.getType().getTo());
+      sub.addEquivalenceIfNotEqual(
+          inferredSignature.getType().getTo(), annotatedSignature.getType().getTo());
     }
 
-    sub.addIfNotEqual(inferredSignature.getType().getTo(), body.infer(sub));
+    sub.addEquivalenceIfNotEqual(inferredSignature.getType().getTo(), body.infer(sub));
   }
 
   public void resolve(Substitution solution, FunctionSignature signature)
@@ -158,6 +162,23 @@ public class FunctionDefinition {
   }
 
   public List<Identifier> treeLikeArguments() {
+    /*
+    if (annotatedSignature != null) {
+      final var from = annotatedSignature.getType().getFrom();
+      final var result = new ArrayList<Identifier>((int) from.treeSize());
+      for (int i = 0; i < arguments.size(); i++) {
+        if (from.getElements().get(i) instanceof TreeType) {
+          result.add(new Identifier(
+                  body.getSource(),
+                  arguments.get(i),
+                  from.getElements().get(i),
+                  new SourceIntro(getFullyQualifiedName(), body)
+          ));
+        }
+      }
+      return result;
+    }
+     */
     if (inferredSignature == null) {
       throw new IllegalStateException();
     }
@@ -245,8 +266,8 @@ public class FunctionDefinition {
     if (predefined == null) {
       var inferredAnnotation =
           new FunctionAnnotation(
-              heuristic.generate("args", treeLikeArguments.size()),
-              heuristic.generate("return", returnsTree() ? 1 : 0));
+              heuristic.generate(getName() + treeLikeArguments(), treeLikeArguments.size()),
+              heuristic.generate(getName() + "[_]", returnsTree() ? 1 : 0));
 
       Set<FunctionAnnotation> cfAnnotations = new HashSet<>();
 
@@ -262,8 +283,9 @@ public class FunctionDefinition {
       for (int i = 1; i <= cf; i++) {
         cfAnnotations.add(
             new FunctionAnnotation(
-                heuristic.generate("Qcf" + i, inferredAnnotation.from),
-                heuristic.generate("Qcf" + i + "'", inferredAnnotation.to)));
+                heuristic.generate(
+                    getName() + treeLikeArguments() + "cf" + i, inferredAnnotation.from),
+                heuristic.generate(getName() + "[_]" + "cf" + i, inferredAnnotation.to)));
       }
 
       final var combined =
@@ -316,14 +338,20 @@ public class FunctionDefinition {
         inferredSignature.getType().getFrom().variables());
   }
 
-  public Obligation getTypingObligation(boolean cost) {
-    return new Obligation(
-        new AnnotatingContext(
-            treeLikeArguments(), inferredSignature.getAnnotation().get().withCost.from),
-        body,
-        inferredSignature.getAnnotation().get().withCost.to,
-        cost,
-        Optional.empty());
+  public Obligation getTypingObligation() {
+    if (typingObligation != null) {
+      return typingObligation;
+    }
+    typingObligation =
+        new Obligation(
+            new AnnotatingContext(
+                treeLikeArguments(), inferredSignature.getAnnotation().get().withCost.from),
+            body,
+            inferredSignature.getAnnotation().get().withCost.to,
+            true,
+            Optional.empty());
+
+    return typingObligation;
   }
 
   public String getInferredSignatureString() {

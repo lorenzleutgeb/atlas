@@ -2,11 +2,7 @@ package xyz.leutgeb.lorenz.atlas.typing.resources;
 
 import static java.util.function.Predicate.not;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Value;
@@ -19,6 +15,25 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 public class CombinedFunctionAnnotation {
   public FunctionAnnotation withCost;
   public Set<FunctionAnnotation> withoutCost;
+
+  public static CombinedFunctionAnnotation of(
+      FunctionAnnotation withCost, FunctionAnnotation... withoutCost) {
+    final var withoutCostSet = new HashSet<>(Arrays.asList(withoutCost));
+    return new CombinedFunctionAnnotation(withCost, Collections.unmodifiableSet(withoutCostSet));
+  }
+
+  public static CombinedFunctionAnnotation of(Annotation withCostFrom, Annotation withCostTo) {
+    return new CombinedFunctionAnnotation(
+        new FunctionAnnotation(withCostFrom, withCostTo), Set.of());
+  }
+
+  public static CombinedFunctionAnnotation of(
+      Annotation withCostFrom, Annotation withCostTo, FunctionAnnotation... withoutCost) {
+    final var withoutCostSet = new HashSet<>(Arrays.asList(withoutCost));
+    return new CombinedFunctionAnnotation(
+        new FunctionAnnotation(withCostFrom, withCostTo),
+        Collections.unmodifiableSet(withoutCostSet));
+  }
 
   public static CombinedFunctionAnnotation of(
       Annotation withCostFrom, Annotation withCostTo, Annotation... withoutCost) {

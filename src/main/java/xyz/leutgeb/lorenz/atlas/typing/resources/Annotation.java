@@ -62,6 +62,20 @@ public class Annotation {
 
   @Getter private final int id;
 
+  /**
+   * Use with caution: If you set the wrong ID here, you might alias another existing annotation!
+   */
+  private Annotation(
+      List<Coefficient> rankCoefficients,
+      Map<List<Integer>, Coefficient> coefficients,
+      String name,
+      int id) {
+    this.rankCoefficients = rankCoefficients;
+    this.coefficients = coefficients;
+    this.name = name;
+    this.id = id;
+  }
+
   public Annotation(int size, String name) {
     this.name = name;
     this.id = COUNT.getAndIncrement();
@@ -134,7 +148,7 @@ public class Annotation {
 
   /** Constructs an annotation of given size that has a constant but unknown potential. */
   public static Annotation constant(int size, String name) {
-    return constant(size, name, UnknownCoefficient.unknown("constant"));
+    return constant(size, name, Coefficient.unknownFromPrefix("constant"));
   }
 
   /** Constructs an annotation of given size that has zero potential. */
@@ -169,7 +183,7 @@ public class Annotation {
   }
 
   private UnknownCoefficient unknown(String suffix) {
-    return new UnknownCoefficient(id + suffix);
+    return Coefficient.unknown(getNameAndId() + suffix);
   }
 
   public static boolean isConstantIndex(List<Integer> index) {
@@ -289,7 +303,8 @@ public class Annotation {
                         entry.getValue() instanceof KnownCoefficient
                             ? entry.getValue()
                             : solution.getOrDefault(entry.getValue(), ZERO))),
-        getNameAndId());
+        this.name,
+        this.id);
   }
 
   public Coefficient getCoefficientOrDefine(List<Integer> index) {
@@ -640,12 +655,12 @@ public class Annotation {
   }
 
   public List<Constraint> abs(UnknownCoefficient sum) {
-    final var x = UnknownCoefficient.unknown("x");
-    final var y = UnknownCoefficient.unknown("y");
+    final var x = Coefficient.unknownFromPrefix("x");
+    final var y = Coefficient.unknownFromPrefix("y");
     return List.of(
         sumRankCoefficients(x),
         sumCoefficients(y),
-        new EqualsSumConstraint(sum, List.of(x, y), "(opt)"));
+        new EqualsSumConstraint(sum, List.of(x, y), "(opt) abs"));
   }
 
   public boolean isUnknown() {
@@ -710,7 +725,7 @@ public class Annotation {
         continue;
       }
 
-      final var ci = UnknownCoefficient.unknown("x");
+      final var ci = Coefficient.unknownFromPrefix("x");
       constraints.add(new EqualsSumConstraint(ci, List.of(ai, bi), "(add)"));
       rankCoefficients.add(ci);
     }
@@ -732,7 +747,7 @@ public class Annotation {
                 return;
               }
 
-              UnknownCoefficient ci = UnknownCoefficient.unknown("x");
+              UnknownCoefficient ci = Coefficient.unknownFromPrefix("x");
               constraints.add(new EqualsSumConstraint(ci, List.of(ai, bi), "(add)"));
               coefficients.put(i, ci);
             });
@@ -768,7 +783,7 @@ public class Annotation {
       }
 
       rankCoefficients.add(
-          Coefficient.of(
+          Coefficient.known(
               ((KnownCoefficient) ai).getValue().subtract(((KnownCoefficient) bi).getValue())));
     }
 
@@ -795,7 +810,7 @@ public class Annotation {
 
               coefficients.put(
                   i,
-                  Coefficient.of(
+                  Coefficient.known(
                       ((KnownCoefficient) ai)
                           .getValue()
                           .subtract(((KnownCoefficient) bi).getValue())));
@@ -870,8 +885,9 @@ public class Annotation {
         .allMatch(x -> x == null || ZERO.equals(x));
   }
 
-  public Pair<Annotation, List<Constraint>> multiply(KnownCoefficient factor) {
-    if (factor.getValue().equals(Fraction.ONE)) {
+  public Pair<Annotation, List<Constraint>> multiply(Coefficient factor) {
+    if (factor instanceof KnownCoefficient
+        && ((KnownCoefficient) factor).getValue().equals(Fraction.ONE)) {
       return Pair.of(this, emptyList());
     }
 
@@ -883,7 +899,7 @@ public class Annotation {
       if (rankCoefficient == null) {
         resultRankCoefficients.add(null);
       } else {
-        final var x = UnknownCoefficient.unknown("x");
+        final var x = Coefficient.unknownFromPrefix("x");
         constraints.add(new EqualsProductConstraint(x, List.of(rankCoefficient, factor), "(mul)"));
         resultRankCoefficients.add(x);
       }
@@ -891,7 +907,7 @@ public class Annotation {
 
     final var resultCoefficients = new HashMap<List<Integer>, Coefficient>(coefficients.size());
     for (final var entry : coefficients.entrySet()) {
-      final var x = UnknownCoefficient.unknown("x");
+      final var x = Coefficient.unknownFromPrefix("x");
       constraints.add(new EqualsProductConstraint(x, List.of(entry.getValue(), factor), "(mul)"));
       resultCoefficients.put(entry.getKey(), x);
     }

@@ -4,9 +4,7 @@ import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.unitIndex;
-import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ONE;
-import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.TWO;
-import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ZERO;
+import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.*;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -14,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
+import org.hipparchus.fraction.Fraction;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
@@ -25,12 +24,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 import xyz.leutgeb.lorenz.atlas.ast.Identifier;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.rules.W;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
+import xyz.leutgeb.lorenz.atlas.typing.resources.solving.Solver;
 import xyz.leutgeb.lorenz.atlas.util.SizeEdge;
 
 @DisplayName("Weakening")
@@ -55,7 +55,7 @@ public class WeakeningTest {
             Annotation.constant(1, "expected", ONE),
             "test"));
 
-    final var solverResult = ConstraintSystemSolver.solve(constraints);
+    final var solverResult = Solver.solve(constraints);
     assertTrue(solverResult.isSatisfiable());
   }
 
@@ -84,8 +84,8 @@ public class WeakeningTest {
         new Annotation(
             List.of(ZERO, ZERO),
             Map.of(
-                List.of(0, 1, 0), new KnownCoefficient(a2), // biggerTree
-                List.of(1, 0, 0), new KnownCoefficient(a1) // smallerTree
+                List.of(0, 1, 0), Coefficient.known(a2), // biggerTree
+                List.of(1, 0, 0), Coefficient.known(a1) // smallerTree
                 ),
             "smallerPotential");
 
@@ -93,13 +93,13 @@ public class WeakeningTest {
         new Annotation(
             List.of(ZERO, ZERO),
             Map.of(
-                List.of(0, 1, 0), new KnownCoefficient(b2), // biggerTree
-                List.of(1, 0, 0), new KnownCoefficient(b1) // smallerTree
+                List.of(0, 1, 0), Coefficient.known(b2), // biggerTree
+                List.of(1, 0, 0), Coefficient.known(b1) // smallerTree
                 ),
             "biggerPotential");
 
     final var solverResult =
-        ConstraintSystemSolver.solve(
+        Solver.solve(
             new HashSet<>(
                 W.compareCoefficientsLessOrEqualUsingFarkas(
                     List.of(smallerTree, biggerTree),
@@ -122,17 +122,63 @@ public class WeakeningTest {
     sizeAnalysis.addVertex(cr);
     sizeAnalysis.addVertex(bl);
     sizeAnalysis.addVertex(br);
-    // sizeAnalysis.addEdge(t, cr, SizeEdge.gt());
 
     // P <= Q
     final Annotation P = Annotation.zero(3);
     final Annotation Q = Annotation.zero(3);
 
     final var solverResult =
-        ConstraintSystemSolver.solve(
+        Solver.solve(
             new HashSet<>(
                 W.compareCoefficientsLessOrEqualUsingFarkas(
                     List.of(cr, bl, br), P, Q, sizeAnalysis, emptyMap())));
+
+    assertTrue(solverResult.isSatisfiable());
+  }
+
+  @Test
+  void probabilsticZigZig() {
+    final var t = Identifier.predefinedTree("t");
+    final var br = Identifier.predefinedTree("br");
+    final var cr = Identifier.predefinedTree("cr");
+
+    final var sizeAnalysis = new DirectedMultigraph<Identifier, SizeEdge>(SizeEdge.class);
+    sizeAnalysis.addVertex(t);
+    sizeAnalysis.addVertex(br);
+    sizeAnalysis.addVertex(cr);
+
+    final Annotation Q =
+        new Annotation(
+            List.of(THREE_BY_FOUR, THREE_BY_FOUR, THREE_BY_FOUR),
+            Map.of(
+                List.of(0, 0, 1, 0), THREE_BY_FOUR,
+                List.of(1, 1, 0, 0), THREE_BY_FOUR,
+                List.of(0, 1, 0, 0), THREE_BY_FOUR,
+                List.of(1, 0, 0, 0), THREE_BY_FOUR,
+                List.of(1, 1, 1, 0), new KnownCoefficient(new Fraction(9, 8)),
+                unitIndex(3), ONE),
+            "Q");
+
+    // Q >= P
+
+    final Annotation P =
+        new Annotation(
+            List.of(THREE_BY_FOUR, THREE_BY_FOUR, THREE_BY_FOUR),
+            Map.of(
+                List.of(0, 0, 1, 0), THREE_BY_FOUR,
+                List.of(1, 1, 0, 0), THREE_BY_FOUR,
+                List.of(0, 1, 0, 0), THREE_BY_FOUR,
+                List.of(0, 1, 1, 0), new KnownCoefficient(new Fraction(3, 8)),
+                List.of(1, 0, 0, 0), new KnownCoefficient(new Fraction(9, 8)),
+                List.of(1, 1, 1, 0), new KnownCoefficient(new Fraction(3, 8)),
+                unitIndex(3), new KnownCoefficient(new Fraction(7, 4))),
+            "P");
+
+    final var solverResult =
+        Solver.solve(
+            Set.copyOf(
+                W.compareCoefficientsLessOrEqualUsingFarkas(
+                    List.of(t, br, cr), P, Q, sizeAnalysis, Map.of("l2xy", "true"))));
 
     assertTrue(solverResult.isSatisfiable());
   }
@@ -155,7 +201,7 @@ public class WeakeningTest {
     final Annotation Q = new Annotation(List.of(ZERO, ZERO), Map.of(List.of(1, 1, 0), TWO), "Q");
 
     final var solverResult =
-        ConstraintSystemSolver.solve(
+        Solver.solve(
             Set.copyOf(
                 W.compareCoefficientsLessOrEqualUsingFarkas(
                     List.of(x, y), P, Q, sizeAnalysis, Map.of("l2xy", "true"))));
@@ -179,7 +225,7 @@ public class WeakeningTest {
         new Annotation(List.of(ZERO, ZERO), Map.of(List.of(0, 1, 0), ONE, unitIndex(2), ONE), "Q");
 
     final var solverResult =
-        ConstraintSystemSolver.solve(
+        Solver.solve(
             Set.copyOf(
                 W.compareCoefficientsLessOrEqualUsingFarkas(
                     List.of(x, y), P, Q, sizeAnalysis, Map.of("lp1y", "true"))));
@@ -209,7 +255,7 @@ public class WeakeningTest {
         new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE, unitIndex(1), ONE), "Q");
 
     final var solverResult =
-        ConstraintSystemSolver.solve(
+        Solver.solve(
             Set.copyOf(
                 W.compareCoefficientsLessOrEqualUsingFarkas(
                     List.of(x), P, Q, sizeAnalysis, Map.of("lp1", "true"))));
@@ -236,7 +282,7 @@ public class WeakeningTest {
   void bug(Annotation p, Annotation q) {
     // P <= Q
     final var solverResult =
-        ConstraintSystemSolver.solve(
+        Solver.solve(
             new HashSet<>(
                 W.compareCoefficientsLessOrEqualUsingFarkas(
                     List.of(Identifier.predefinedTree("_")),

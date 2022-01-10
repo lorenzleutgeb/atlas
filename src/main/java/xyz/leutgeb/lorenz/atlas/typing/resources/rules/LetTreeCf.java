@@ -94,7 +94,7 @@ public class LetTreeCf implements Rule {
       throw bug("shared variables in let expression when attempting to generate constraints");
     }
 
-    final var prefix = "(let:tree:cf " + x.getName() + ") ";
+    final var prefix = "(let:tree:cf `" + x.getName() + "`) ";
 
     final var varsForGammaAsList =
         obligation.getContext().getIds().stream().filter(varsForGammaAsSet::contains).toList();
@@ -140,6 +140,8 @@ public class LetTreeCf implements Rule {
                     entry -> {
                       final int c = entry.getOffsetIndex();
                       if (varsForGammaAsList.isEmpty()) {
+                        // TODO(lorenzleutgeb): Clarify what 2 does here. Maybe it is handled by
+                        // "move const"?
                         return c != 0 && c != 2;
                       }
                       if (c == 0 || c == 2) {
@@ -215,13 +217,13 @@ public class LetTreeCf implements Rule {
               .filter(entry -> entry.getOffsetIndex() == 0)
               .filter(
                   entry ->
-                      // Ensure that a is zero or empty.
+                      // Ensure that a is empty or zero.
                       entry.allAssociatedIndicesMatch(varsForGammaAsList, a -> a == 0))
               .filter(
                   entry ->
-                      // Ensure that b is nonempty and nonzero.
-                      !varsForDeltaAsList.isEmpty()
-                          && !entry.allAssociatedIndicesMatch(varsForDeltaAsList, b -> b == 0))
+                      // Ensure that b is empty or nonzero.
+                      varsForDeltaAsList.isEmpty()
+                          || !entry.allAssociatedIndicesMatch(varsForDeltaAsList, b -> b == 0))
               .map(
                   entry ->
                       new EqualityConstraint(
@@ -230,7 +232,7 @@ public class LetTreeCf implements Rule {
                           prefix
                               + "r_{(b⃗,0,0)} = q_{(0⃗,b⃗,0)} with (b⃗,0) = "
                               + entry.toIndexString()))
-              .collect(toList()));
+              .toList());
 
       // Find all indices (\vec{b}, d, e) such that \vec{b} \neq \vec{0}.
       final List<Index> bdes =
@@ -238,6 +240,7 @@ public class LetTreeCf implements Rule {
               .streamNonRank()
               .filter(
                   entry ->
+                      // Ensure that bi is empty or nonzero.
                       varsForDeltaAsList.isEmpty()
                           || !entry.allAssociatedIndicesMatch(varsForDeltaAsList, b -> b == 0))
               .flatMap(
@@ -273,18 +276,22 @@ public class LetTreeCf implements Rule {
           .streamNonRank()
           .filter(
               entry -> {
-                // If a is empty or zero, then c must be non-zero
+                // If a is empty or zero, then c must be non-zero.
                 if (entry.allAssociatedIndicesMatch(varsForGammaAsList, a -> a == 0)) {
                   return entry.getOffsetIndex() > 0;
                 }
-                // If c is zero, then a must be non-empty and non-zero
+                // If c is zero, then a must be non-empty (and non-zero, but we already know that it
+                // isn't).
                 if (entry.getOffsetIndex() == 0) {
-                  return !varsForGammaAsList.isEmpty()
-                      && !entry.allAssociatedIndicesMatch(varsForGammaAsList, a -> a == 0);
+                  return !varsForGammaAsList.isEmpty();
                 }
                 return true;
               })
-          .filter(entry -> !entry.allAssociatedIndicesMatch(varsForDeltaAsList, b -> b == 0))
+          .filter(
+              entry ->
+                  // b is empty, or it's non-zero
+                  varsForDeltaAsList.isEmpty()
+                      || !entry.allAssociatedIndicesMatch(varsForDeltaAsList, b -> b == 0))
           .map(
               qEntry ->
                   new EqualsSumConstraint(
@@ -345,7 +352,7 @@ public class LetTreeCf implements Rule {
                 .map(Map.Entry::getValue)
                 .collect(Collectors.toList());
 
-        UnknownCoefficient u = UnknownCoefficient.unknown("lemma14guardsum" + x);
+        UnknownCoefficient u = Coefficient.unknownFromPrefix("lemma14guardsum" + x);
 
         cfconstraints.add(new EqualsSumConstraint(u, lemma14guard, prefix + "lemma14guard"));
         cfconstraints.add(

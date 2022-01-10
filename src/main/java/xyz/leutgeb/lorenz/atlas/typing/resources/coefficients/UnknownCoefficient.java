@@ -1,7 +1,6 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources.coefficients;
 
 import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
-import static xyz.leutgeb.lorenz.atlas.util.Util.randomHex;
 
 import com.microsoft.z3.ArithExpr;
 import com.microsoft.z3.Context;
@@ -12,40 +11,33 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 
 @Value
 @EqualsAndHashCode
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
 public class UnknownCoefficient implements Coefficient {
+  private static final IntIdGenerator ID_GENERATOR = IntIdGenerator.fromOneInclusive();
+
   String name;
   boolean negated;
   boolean maybeNegative;
 
-  public UnknownCoefficient(String name) {
+  public static UnknownCoefficient raw(String name) {
+    return new UnknownCoefficient(name);
+  }
+
+  public static UnknownCoefficient fromPrefix(String prefix) {
+    return new UnknownCoefficient(prefix + ID_GENERATOR.next());
+  }
+
+  private UnknownCoefficient(String name) {
     if (name == null || name.isBlank()) {
       throw new IllegalArgumentException("name cannot be null or blank");
     }
     this.name = name;
     this.negated = false;
     this.maybeNegative = false;
-  }
-
-  private UnknownCoefficient(String name, boolean negated) {
-    this.name = name;
-    this.negated = negated;
-    this.maybeNegative = false;
-  }
-
-  public static UnknownCoefficient maybeNegative(String name) {
-    return new UnknownCoefficient(name, false, true);
-  }
-
-  public static UnknownCoefficient maybeNegativeUnknown(String namePrefix) {
-    return new UnknownCoefficient(namePrefix + randomHex(), false, true);
-  }
-
-  public static UnknownCoefficient unknown(String namePrefix) {
-    return new UnknownCoefficient(namePrefix + randomHex());
   }
 
   @Override

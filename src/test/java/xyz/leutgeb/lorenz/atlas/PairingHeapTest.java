@@ -28,7 +28,7 @@ public class PairingHeapTest {
   public void merge() throws UnificationError, TypeError, IOException {
 
     final Annotation qp =
-        new Annotation(List.of(Coefficient.of(1, 2)), Map.of(unitIndex(1), ONE), "Q'");
+        new Annotation(List.of(Coefficient.known(1, 2)), Map.of(unitIndex(1), ONE), "Q'");
     // SmartRangeHeuristic.DEFAULT.generate("merges", 1);
 
     final var mergeSig =
@@ -112,7 +112,7 @@ public class PairingHeapTest {
                             "resources",
                             "tactics",
                             entry.getValue().tactic.get() + ".txt")));
-    final var result = program.solve(annotations, tactics, true, emptySet());
+    final var result = program.solve(annotations, tactics, true, true, emptySet());
     assertTrue(result.getSolution().isPresent());
     program.printAllInferredSignaturesInOrder(System.out);
   }

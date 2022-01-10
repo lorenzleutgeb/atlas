@@ -39,7 +39,7 @@ public class NodeExpression extends Expression implements MatchPattern {
   }
 
   public NodeExpression(Source source, List<Expression> elements, Type type) {
-    // TODO(lorenz.leutgeb): This constructor was made public for testing purposes only. Make it
+    // TODO(lorenzleutgeb): This constructor was made public for testing purposes only. Make it
     // private again?
     super(source, type);
     if (elements.size() != 3) {
@@ -85,9 +85,9 @@ public class NodeExpression extends Expression implements MatchPattern {
   public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
     var elementType = context.fresh();
     var result = new TreeType(elementType);
-    context.addIfNotEqual(result, getLeft().infer(context).wiggle(context));
-    context.addIfNotEqual(elementType, getMiddle().infer(context).wiggle(context));
-    context.addIfNotEqual(result, getRight().infer(context).wiggle(context));
+    context.addEquivalenceIfNotEqual(result, getLeft().infer(context).wiggle(context));
+    context.addEquivalenceIfNotEqual(elementType, getMiddle().infer(context).wiggle(context));
+    context.addEquivalenceIfNotEqual(result, getRight().infer(context).wiggle(context));
     return result;
   }
 
@@ -105,7 +105,7 @@ public class NodeExpression extends Expression implements MatchPattern {
 
   @Override
   public Expression rename(Map<String, String> renaming) {
-    // TODO(lorenz.leutgeb): Only create new expression if renaming is necessary!
+    // TODO(lorenzleutgeb): Only create new expression if renaming is necessary!
     return new NodeExpression(
         Derived.rename(this),
         elements.stream().map(e -> e.rename(renaming)).collect(Collectors.toList()),

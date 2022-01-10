@@ -70,10 +70,7 @@ public class WVar implements Rule {
                 remainingIds,
                 context,
                 gammaR,
-                "(w:var) q_i = r_i when removing "
-                    + idToWeaken
-                    + " for expression "
-                    + obligation.getExpression()),
+                "(w:var) q_i = r_i removing " + idToWeaken + " from " + obligation.getExpression()),
             context
                 .streamNonRank()
                 .filter(entry -> entry.getAssociatedIndex(idToWeaken) == 0)
@@ -83,9 +80,9 @@ public class WVar implements Rule {
                       return new EqualityConstraint(
                           entry.getValue(),
                           gammaR.getCoefficientOrDefine(entry),
-                          "(w:var) r_{(a⃗⃗, b)} = q_{(a⃗⃗, 0, b)} when removing "
+                          "(w:var) r_{(a⃗⃗, b)} = q_{(a⃗⃗, 0, b)} removing "
                               + idToWeaken
-                              + " for expression "
+                              + " from "
                               + obligation.getExpression()
                               + ""
                           // + "` with (a⃗⃗, b) = "

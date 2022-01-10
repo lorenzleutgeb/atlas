@@ -26,7 +26,7 @@ class TypeVisitor extends SourceNameAwareVisitor<Type> {
 
   @Override
   public Type visitProductType(SplayParser.ProductTypeContext ctx) {
-    // TODO(lorenz.leutgeb): Namings.
+    // TODO(lorenzleutgeb): Namings.
     return new ProductType(ctx.items.stream().map(this::visit).collect(Collectors.toList()));
   }
 

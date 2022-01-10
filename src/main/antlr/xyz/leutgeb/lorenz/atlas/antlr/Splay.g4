@@ -59,6 +59,8 @@ expression : identifier # variableExpression
            | PAREN_OPEN expression PAREN_CLOSE # parenthesizedExpression
            | NUMBER # constant
            | left=expression op right=expression # comparison
+           | TILDE (numerator=NUMBER)? (denominator=NUMBER)? expression # tickExpression
+           | UNDERSCORE # holeExpression
            ;
 
 op : EQ | NE | LT | LE | GT | GE ;
@@ -74,9 +76,10 @@ node: PAREN_OPEN left=expression COMMA middle=expression COMMA right=expression 
 
 identifier : LEAF | IDENTIFIER ;
 
-maybeAnonymousIdentifier : IDENTIFIER | ANONYMOUS_IDENTIFIER ;
+maybeAnonymousIdentifier : IDENTIFIER | UNDERSCORE ;
 
-ANONYMOUS_IDENTIFIER : '_';
+TILDE : '~';
+UNDERSCORE : '_';
 DOT : '.';
 COMMA : ',';
 DOUBLECOLON : '::' | '∷';

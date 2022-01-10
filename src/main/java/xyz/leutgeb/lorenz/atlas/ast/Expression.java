@@ -26,7 +26,7 @@ import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.atlas.util.SizeEdge;
 
-// TODO(lorenz.leutgeb): Maybe #canCarryPotential would be helpful? Expressions that only contain
+// TODO(lorenzleutgeb): Maybe #canCarryPotential would be helpful? Expressions that only contain
 // subexpressions of type Base/Bool and are of type Base/Bool cannot have any non-zero
 // potential, so when normalizing/renaming they should be much simpler to handle.
 public abstract class Expression extends Syntax {

@@ -54,15 +54,15 @@ public class IfThenElseExpression extends Expression {
   public xyz.leutgeb.lorenz.atlas.typing.simple.types.Type inferInternal(UnificationContext context)
       throws UnificationError, TypeError {
     var result = context.fresh();
-    context.addIfNotEqual(result, truthy.infer(context));
-    context.addIfNotEqual(result, falsy.infer(context));
-    context.addIfNotEqual(BoolType.INSTANCE, condition.infer(context));
+    context.addEquivalenceIfNotEqual(result, truthy.infer(context));
+    context.addEquivalenceIfNotEqual(result, falsy.infer(context));
+    context.addEquivalenceIfNotEqual(BoolType.INSTANCE, condition.infer(context));
     return result;
   }
 
   @Override
   public Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
-    // TODO(lorenz.leutgeb): Only create a new expression if normalization actually changes
+    // TODO(lorenzleutgeb): Only create a new expression if normalization actually changes
     // something!
     return new IfThenElseExpression(
         Derived.anf(this),
@@ -74,7 +74,7 @@ public class IfThenElseExpression extends Expression {
 
   @Override
   public Expression rename(Map<String, String> renaming) {
-    // TODO(lorenz.leutgeb): Only create new expression if a rename is really necessary!
+    // TODO(lorenzleutgeb): Only create new expression if a rename is really necessary!
     return new IfThenElseExpression(
         Derived.rename(this),
         condition.rename(renaming),

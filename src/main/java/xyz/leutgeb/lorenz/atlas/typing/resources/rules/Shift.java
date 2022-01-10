@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
-import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
+import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
 
 public class Shift implements Rule {
@@ -19,10 +19,10 @@ public class Shift implements Rule {
     final var qk = obligation.getContext().getAnnotation();
     final var qpk = obligation.getAnnotation();
 
-    final var q = globals.getHeuristic().generate("shiftedQ", qk.size());
-    final var qp = globals.getHeuristic().generate("shiftedQp", qpk.size());
+    final var q = globals.getHeuristic().generate("s" + qk.getName(), qk.size());
+    final var qp = globals.getHeuristic().generate("s" + qpk.getName(), qpk.size());
 
-    final var k = UnknownCoefficient.unknown("k");
+    final var k = Coefficient.unknownFromPrefix("k");
 
     return new ApplicationResult(
         List.of(

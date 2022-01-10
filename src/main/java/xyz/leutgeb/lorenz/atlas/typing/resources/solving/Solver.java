@@ -20,7 +20,6 @@ import com.microsoft.z3.Model;
 import com.microsoft.z3.Optimize;
 import com.microsoft.z3.RatNum;
 import com.microsoft.z3.RealExpr;
-import com.microsoft.z3.Solver;
 import com.microsoft.z3.Statistics;
 import com.microsoft.z3.Status;
 import com.microsoft.z3.Z3Exception;
@@ -51,7 +50,7 @@ import xyz.leutgeb.lorenz.atlas.util.Pair;
 import xyz.leutgeb.lorenz.atlas.util.Util;
 
 @Slf4j
-public class ConstraintSystemSolver {
+public class Solver {
 
   @Value
   public static class Result {
@@ -139,15 +138,16 @@ public class ConstraintSystemSolver {
       Set<Constraint> constraints, Path outPath, List<UnknownCoefficient> target) {
     load(outPath.resolve("z3.log"));
 
-    final var dump = flag(ConstraintSystemSolver.class, emptyMap(), "dump");
-    final var optimize = !target.isEmpty() && !dump;
-    final var unsatCore = !optimize && !dump;
+    final var dump = flag(Solver.class, emptyMap(), "dump");
+    final var wantCore = false;
+    final var optimize = wantCore ? false : !target.isEmpty() && !dump;
+    final var unsatCore = wantCore ? true : !optimize && !dump;
 
     // This allows more accurate memory measurements, but is dangerous when running in parallel.
     // Native.resetMemory();
 
     try (final var ctx = new Context(z3Config(unsatCore))) {
-      final Solver solver = ctx.mkSolver();
+      final com.microsoft.z3.Solver solver = ctx.mkSolver();
       // final Solver solver = ctx.mkTactic("qflia").getSolver();
       // /*domain.getLogic()*/Optional.of("LIA").map(ctx::mkSolver).orElseGet(ctx::mkSolver);
 
@@ -160,8 +160,7 @@ public class ConstraintSystemSolver {
         coefficients.addAll(constraint.occurringCoefficients());
       }
 
-      final var trackNonNegative =
-          flag(ConstraintSystemSolver.class, emptyMap(), "trackNonNegative");
+      final var trackNonNegative = flag(Solver.class, emptyMap(), "trackNonNegative");
 
       for (var coefficient : coefficients) {
         if (!(coefficient instanceof UnknownCoefficient)) {
@@ -214,17 +213,20 @@ public class ConstraintSystemSolver {
         }
       }
 
-      log.info("atlas Coefficients: " + generatedCoefficients.keySet().size());
-      log.info("atlas Constraints:  " + constraints.size());
-      log.info("Z3  Scopes:       " + (optimize ? "?" : solver.getNumScopes()));
-      log.info("Z3  Assertions:   " + (optimize ? "?" : solver.getNumAssertions()));
+      log.info(
+          "Size: "
+              + generatedCoefficients.keySet().size()
+              + " Coefficients, "
+              + constraints.size()
+              + " Constraints"
+              + (optimize ? "" : (", " + solver.getNumScopes() + " Scopes"))
+              + (optimize ? "" : (", " + solver.getNumAssertions() + " Assertions")));
 
       final Path smtFile = outPath.resolve("instance.smt");
 
       try (final var out = new PrintWriter(output(smtFile))) {
         out.println(optimize ? opt : solver);
-        log.debug("Wrote SMT instance to {}.", smtFile);
-        log.info("Wrote SMT instance to " + smtFile);
+        log.info("See {}", smtFile);
       } catch (IOException ioException) {
         log.warn("Failed to write SMT instance to {}.", smtFile, ioException);
         ioException.printStackTrace();
@@ -247,7 +249,7 @@ public class ConstraintSystemSolver {
 
       if (optimize && result.getLeft().equals(SATISFIABLE)) {
         for (Expr objective : opt.getObjectives()) {
-          log.debug("Objective: " + objective + " = " + opt.getModel().getConstInterp(objective));
+          log.trace("Objective: " + objective + " = " + opt.getModel().getConstInterp(objective));
         }
       }
 
@@ -302,12 +304,6 @@ public class ConstraintSystemSolver {
         for (var entry : statistics.getEntries()) {
           final var value = entry.getValueString();
           result.put(entry.Key, value);
-          if ("max memory".equals(entry.Key)) {
-            log.info("Max. Memory: " + entry.getValueString() + " MiB");
-          }
-          if ("memory".equals(entry.Key)) {
-            log.info("     Memory: " + entry.getValueString() + " MiB");
-          }
           log.trace("{}={}", entry.Key, value);
           printer.println(entry.Key + "=" + value);
         }
@@ -325,7 +321,7 @@ public class ConstraintSystemSolver {
       boolean unsatCore,
       Supplier<String> program) {
     final var start = Instant.now();
-    log.debug("Solving start: " + start);
+    log.trace("Solving start: " + start);
     Status status = UNKNOWN;
     try {
       status = check.get();
@@ -337,7 +333,6 @@ public class ConstraintSystemSolver {
     }
     final var stop = Instant.now();
     log.info("Solving duration: " + (Duration.between(start, stop)));
-    log.debug("Solving duratio: " + (Duration.between(start, stop)));
     if (SATISFIABLE.equals(status)) {
       return Pair.of(status, Optional.of(getModel.get()));
     } else if (UNKNOWN.equals(status)) {

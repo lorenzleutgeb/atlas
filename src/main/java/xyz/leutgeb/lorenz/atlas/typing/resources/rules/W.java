@@ -11,14 +11,13 @@ import static java.util.stream.Collectors.toList;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.INDEX_COMPARATOR;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.constantIndex;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.nonRankIndices;
+import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient.unknownMaybeNegative;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.MINUS_ONE;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.MINUS_TWO;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.TWO;
-import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient.maybeNegative;
 import static xyz.leutgeb.lorenz.atlas.util.Util.append;
 import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
 import static xyz.leutgeb.lorenz.atlas.util.Util.flag;
-import static xyz.leutgeb.lorenz.atlas.util.Util.randomHex;
 
 import com.google.common.collect.Streams;
 import com.microsoft.z3.ArithExpr;
@@ -32,13 +31,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import lombok.AllArgsConstructor;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
@@ -54,12 +50,15 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsProductConstr
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.LessThanOrEqualConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
+import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.atlas.util.Pair;
 import xyz.leutgeb.lorenz.atlas.util.SizeEdge;
 
 @Slf4j
 public class W implements Rule {
   public static final W INSTANCE = new W();
+
+  private static final IntIdGenerator ID = IntIdGenerator.fromZeroInclusive();
 
   private static final Map<List<List<Integer>>, List<LessThanOrEqual<List<Integer>>>> MONO_CACHE =
       new HashMap<>();
@@ -72,8 +71,8 @@ public class W implements Rule {
     final var q = obligation.getContext().getAnnotation();
     final var qp = obligation.getAnnotation();
 
-    final var p = globals.getHeuristic().generate("weaken p", q);
-    final var pp = globals.getHeuristic().generate("weaken p'", qp);
+    final var p = globals.getHeuristic().generate("w" + q.getName(), q);
+    final var pp = globals.getHeuristic().generate("w" + qp.getName(), qp);
 
     final List<Identifier> ids = obligation.getContext().getIds();
 
@@ -127,7 +126,7 @@ public class W implements Rule {
     // right is Q in paper.
 
     final List<Constraint> constraints = new ArrayList<>();
-    // TODO(lorenz.leutgeb): Exploit |t| > |t'| ==> rk(t) > rk(t')
+    // TODO(lorenzleutgeb): Exploit |t| > |t'| ==> rk(t) > rk(t')
     IntStream.range(0, left.size())
         .mapToObj(
             i ->
@@ -266,16 +265,14 @@ public class W implements Rule {
       return compareCoefficientsLessOrEqual(left, right, "fallback");
     }
 
-    final var wid = randomHex();
+    final var wid = "w" + ID.next();
 
-    final var p = potentialFunctions.stream().map(left::getCoefficientOrZero).collect(toList());
-    final var q = potentialFunctions.stream().map(right::getCoefficientOrZero).collect(toList());
+    final var p = potentialFunctions.stream().map(left::getCoefficientOrZero).toList();
+    final var q = potentialFunctions.stream().map(right::getCoefficientOrZero).toList();
 
     // NOTE: We do not add constraints saying f ≥ 0. This is generated for all unknown coefficients!
     final var f =
-        IntStream.range(0, m)
-            .mapToObj(i -> new UnknownCoefficient(wid + ".f[" + i + "]"))
-            .collect(toList());
+        IntStream.range(0, m).mapToObj(i -> Coefficient.unknown(wid + ".f[" + i + "]")).toList();
 
     final List<List<Coefficient>> sumByColumn = new ArrayList<>(potentialFunctions.size());
     for (int column = 0; column < potentialFunctions.size(); column++) {
@@ -292,7 +289,7 @@ public class W implements Rule {
           final var knowledgeRow = monotonyInstances.get(row);
           if (potentialFunction.equals(knowledgeRow.smaller)) {
             sum.add(f.get(row));
-          } else if (potentialFunction.equals(knowledgeRow.larger)) {
+          } else if (potentialFunction.equals(knowledgeRow.greater)) {
             sum.add(f.get(row).negate());
           }
         }
@@ -315,14 +312,16 @@ public class W implements Rule {
             sum.add(fi);
           } else if (potentialFunction.equals(knowledgeRow.get(2))) {
             // fi corresponds to log(x + y)
-            UnknownCoefficient prod = maybeNegative(wid + ".lxy2.prod[" + column + "," + row + "]");
+            UnknownCoefficient prod =
+                unknownMaybeNegative(wid + ".lxy2.prod[" + column + "," + row + "]");
             constraints.add(
                 new EqualsProductConstraint(
                     prod, List.of(MINUS_TWO, fi), "(w) lxy2" + prod + " = (-2) * " + fi));
             sum.add(prod);
           } else if (Annotation.isUnitIndex(potentialFunction)) {
             // fi corresponds to log(2) = 1
-            UnknownCoefficient prod = maybeNegative(wid + ".lxy2.prod[" + column + "," + row + "]");
+            UnknownCoefficient prod =
+                unknownMaybeNegative(wid + ".lxy2.prod[" + column + "," + row + "]");
             constraints.add(
                 new EqualsProductConstraint(
                     prod, List.of(TWO, fi), "(w) lxy2 const: " + prod + " = (2) * " + fi));
@@ -342,7 +341,7 @@ public class W implements Rule {
           final var fi = f.get(row + lemmaOffset);
           if (potentialFunction.equals(knowledgeRow.getLeft())) {
             // fi corresponds to log(x)
-            final var prod = maybeNegative(wid + ".lp1.prod[" + column + "," + row + "]");
+            final var prod = unknownMaybeNegative(wid + ".lp1.prod[" + column + "," + row + "]");
             constraints.add(
                 new EqualsProductConstraint(
                     prod, List.of(MINUS_ONE, fi), "(w) lp1 log(x): " + prod + " = (-1) * " + fi));
@@ -352,7 +351,7 @@ public class W implements Rule {
             sum.add(fi);
           } else if (Annotation.isUnitIndex(potentialFunction)) {
             // fi corresponds to log(2) = 1
-            final var prod = maybeNegative(wid + ".lp1.prod[" + column + "," + row + "]");
+            final var prod = unknownMaybeNegative(wid + ".lp1.prod[" + column + "," + row + "]");
             constraints.add(
                 new EqualsProductConstraint(
                     prod, List.of(MINUS_ONE, fi), "(w) lp1 const: " + prod + " = (-1) * " + fi));
@@ -373,7 +372,7 @@ public class W implements Rule {
           final var fi = f.get(row + lemmaOffset);
           if (potentialFunction.equals(knowledgeRow.getLeft())) {
             // fi corresponds to log(x)
-            final var prod = maybeNegative(wid + ".lp2.prod[" + column + "," + row + "]");
+            final var prod = unknownMaybeNegative(wid + ".lp2.prod[" + column + "," + row + "]");
             constraints.add(
                 new EqualsProductConstraint(
                     prod, List.of(MINUS_ONE, fi), "(w) lp2 log(x): " + prod + " = (-1) * " + fi));
@@ -383,7 +382,7 @@ public class W implements Rule {
             sum.add(fi);
           } else if (Annotation.isUnitIndex(potentialFunction)) {
             // fi corresponds to log(2) = 1
-            final var prod = maybeNegative(wid + ".lp2.prod[" + column + "," + row + "]");
+            final var prod = unknownMaybeNegative(wid + ".lp2.prod[" + column + "," + row + "]");
             constraints.add(
                 new EqualsProductConstraint(
                     prod, List.of(MINUS_TWO, fi), "(w) lp2 const: " + prod + " = (-2) * " + fi));
@@ -395,7 +394,7 @@ public class W implements Rule {
 
     // p ≤ fA + q (Note: fA is computed using matrix multiplication WITH f FROM THE LEFT.)
     for (int i = 0; i < potentialFunctions.size(); i++) {
-      final var x = maybeNegative(wid + ".sum[" + i + "]");
+      final var x = unknownMaybeNegative(wid + ".sum[" + i + "]");
       constraints.add(
           new EqualsSumConstraint(
               x,
@@ -429,12 +428,8 @@ public class W implements Rule {
     return constraints;
   }
 
-  @Value
-  private static class ReducedSizeAnalysis {
-    public Set<LessThan<Integer>> knowLt;
-    public Set<Equal<Integer>> knowEq;
-    public Set<Integer> knowOne;
-  }
+  private record ReducedSizeAnalysis(
+      Set<LessThan<Integer>> knowLt, Set<Equal<Integer>> knowEq, Set<Integer> knowOne) {}
 
   private static ReducedSizeAnalysis reduceSizeAnalysis(
       List<Identifier> identifiers, Graph<Identifier, SizeEdge> sizeAnalysis) {
@@ -576,51 +571,24 @@ public class W implements Rule {
     return IntStream.rangeClosed(0, size).map(x -> x == index ? value : 0).boxed().toList();
   }
 
-  @Value
-  @AllArgsConstructor
-  public static class Equal<T> {
-    public T left;
-    public T right;
-
+  private record Equal<T>(T left, T right) {
     @Override
     public String toString() {
       return left + " = " + right;
     }
+  }
 
-    public <U> Equal<U> map(Function<T, U> f) {
-      return new Equal<>(f.apply(left), f.apply(right));
+  private record LessThanOrEqual<T>(T smaller, T greater) {
+    @Override
+    public String toString() {
+      return smaller + " <= " + greater;
     }
   }
 
-  @Value
-  @AllArgsConstructor
-  public static class LessThanOrEqual<T> {
-    public T smaller;
-    public T larger;
-
+  private record LessThan<T>(T smaller, T greater) {
     @Override
     public String toString() {
-      return smaller + " <= " + larger;
-    }
-
-    public <U> LessThanOrEqual<U> map(Function<T, U> f) {
-      return new LessThanOrEqual<>(f.apply(smaller), f.apply(larger));
-    }
-  }
-
-  @Value
-  @AllArgsConstructor
-  public static class LessThan<T> {
-    public T smaller;
-    public T larger;
-
-    @Override
-    public String toString() {
-      return smaller + " < " + larger;
-    }
-
-    public <U> LessThan<U> map(Function<T, U> f) {
-      return new LessThan<>(f.apply(smaller), f.apply(larger));
+      return smaller + " < " + greater;
     }
   }
 
@@ -686,7 +654,7 @@ public class W implements Rule {
         solver.add(ctx.mkLe(one, x));
       }
       for (var pair : knowLt) {
-        solver.add(ctx.mkLt(vars.get(pair.smaller), vars.get(pair.larger)));
+        solver.add(ctx.mkLt(vars.get(pair.smaller), vars.get(pair.greater)));
       }
       for (var pair : knowEq) {
         solver.add(ctx.mkEq(vars.get(pair.left), vars.get(pair.right)));

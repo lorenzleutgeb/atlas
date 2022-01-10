@@ -8,16 +8,29 @@ import java.util.Map;
 import org.hipparchus.fraction.Fraction;
 
 public interface Coefficient {
-  static KnownCoefficient of(int value) {
+
+  static KnownCoefficient known(int value) {
     return new KnownCoefficient(value);
   }
 
-  static KnownCoefficient of(int numerator, int denominator) {
+  static KnownCoefficient known(int numerator, int denominator) {
     return new KnownCoefficient(new Fraction(numerator, denominator));
   }
 
-  static KnownCoefficient of(Fraction fraction) {
+  static KnownCoefficient known(Fraction fraction) {
     return new KnownCoefficient(fraction);
+  }
+
+  static UnknownCoefficient unknownMaybeNegative(String name) {
+    return new UnknownCoefficient(name, false, true);
+  }
+
+  static UnknownCoefficient unknownFromPrefix(String namePrefix) {
+    return UnknownCoefficient.fromPrefix(namePrefix);
+  }
+
+  static UnknownCoefficient unknown(String name) {
+    return UnknownCoefficient.raw(name);
   }
 
   ArithExpr<RealSort> encode(Context ctx, Map<UnknownCoefficient, RealExpr> coefficients);

@@ -88,6 +88,8 @@ public class NidiExporter<V, E> extends BaseExporter<V, E> {
 
       Node node = renderAttributes(Factory.node(getVertexId(v)), getVertexAttributes(v));
 
+      // TODO(lorenzleutgeb): Support ports, see https://graphviz.org/docs/attr-types/portPos/
+
       if (!skipEdges) {
         for (E e : g.outgoingEdgesOf(v)) {
           var target = getVertexId(g.getEdgeTarget(e));

@@ -69,17 +69,6 @@ public class EvalTable {
 
     final var constraints = new HashSet<Constraint>();
     // constraints.addAll(program.rightSide(Qp));
-    /*
-    constraints.addAll(
-        Optimization.forceRank(
-            program
-                .getFunctionDefinitions()
-                .get(fqn)
-                .getInferredSignature()
-                .getAnnotation()
-                .get()
-                .withCost));
-     */
 
     // final var target = Optimization.standard(program);
     // constraints.addAll(target.constraints);
@@ -88,6 +77,7 @@ public class EvalTable {
         program.solve(
             new HashMap<>(),
             useTactics ? program.lookupTactics(emptyMap(), TACTICS) : emptyMap(),
+            true,
             true,
             constraints);
 

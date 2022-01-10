@@ -62,8 +62,8 @@ public class BooleanExpression extends Expression {
     // context.add(left.infer(context), BaseType.INSTANCE);
 
     var ty = context.fresh();
-    context.addIfNotEqual(right.infer(context), ty);
-    context.addIfNotEqual(left.infer(context), ty);
+    context.addEquivalenceIfNotEqual(right.infer(context), ty);
+    context.addEquivalenceIfNotEqual(left.infer(context), ty);
 
     TypeClass tc =
         Set.of(ComparisonOperator.EQ, ComparisonOperator.NE).contains(operator)
@@ -84,7 +84,7 @@ public class BooleanExpression extends Expression {
 
   @Override
   public Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
-    // TODO(lorenz.leutgeb): Only create new expression if necessary!
+    // TODO(lorenzleutgeb): Only create new expression if necessary!
     return new BooleanExpression(
         Derived.anf(this),
         left.normalize(context, idGenerator),

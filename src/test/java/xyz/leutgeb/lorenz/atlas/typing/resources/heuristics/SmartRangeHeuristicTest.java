@@ -11,7 +11,7 @@ class SmartRangeHeuristicTest {
   @Test
   void generateSize() {
     int treeSize = 2;
-    Stream<List<Integer>> stream = SmartRangeHeuristic.DEFAULT.generate(treeSize);
+    Stream<List<Integer>> stream = SmartRangeHeuristic.DEFAULT.generateInternal(treeSize);
     assertAll(stream.map(index -> () -> assertEquals(treeSize + 1, index.size())));
   }
 }

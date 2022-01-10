@@ -5,10 +5,7 @@ import static java.util.Collections.synchronizedMap;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.Optional.empty;
 import static java.util.stream.Collectors.joining;
-import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
-import static xyz.leutgeb.lorenz.atlas.util.Util.flatten;
-import static xyz.leutgeb.lorenz.atlas.util.Util.output;
-import static xyz.leutgeb.lorenz.atlas.util.Util.randomHex;
+import static xyz.leutgeb.lorenz.atlas.util.Util.*;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -45,7 +42,7 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.atlas.typing.resources.optimiziation.Optimization;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Prover;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
+import xyz.leutgeb.lorenz.atlas.typing.resources.solving.Solver;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.atlas.unification.Equivalence;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
@@ -56,6 +53,9 @@ import xyz.leutgeb.lorenz.atlas.util.Util;
 
 @Slf4j
 public class Program {
+  private static final boolean FORCE_RANK_EQUAL = false;
+  private static final boolean FORCE_RESULT_PER_MODULE = false;
+
   @Getter private final Map<String, FunctionDefinition> functionDefinitions;
 
   // Note that this could also be List<Set<...>> since the order of nodes within the same
@@ -172,15 +172,16 @@ public class Program {
     return functionDefinitions.get(fqn);
   }
 
-  public ConstraintSystemSolver.Result solve(
+  public Solver.Result solve(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       Map<String, Path> tactics,
       boolean infer,
+      boolean forceResultPerModule,
       Set<Constraint> externalConstraints) {
     if (functionDefinitions.values().stream()
         .map(FunctionDefinition::runaway)
         .anyMatch(Predicate.not(Set::isEmpty))) {
-      return new ConstraintSystemSolver.Result(Status.UNSATISFIABLE, empty(), emptyMap(), empty());
+      return new Solver.Result(Status.UNSATISFIABLE, empty(), emptyMap(), empty());
     }
 
     final var heuristic = SmartRangeHeuristic.DEFAULT;
@@ -219,22 +220,44 @@ public class Program {
                   external.addAll(externalConstraints);
                   Set<String> refresh = new HashSet<>();
 
-                  // Set right sides equal.
+                  // TODO: This is for "interacting functions", i.e. multiple functions on the same
+                  // data stucture.
                   for (var fd : fds) {
+                    if (FORCE_RANK_EQUAL) {
+                      System.out.println("!!! FORCING RANK");
+                      external.add(
+                          new EqualityConstraint(
+                              fd.getInferredSignature()
+                                  .getAnnotation()
+                                  .get()
+                                  .withCost
+                                  .from
+                                  .getRankCoefficient(),
+                              fd.getInferredSignature()
+                                  .getAnnotation()
+                                  .get()
+                                  .withCost
+                                  .to
+                                  .getRankCoefficient(),
+                              "(force)"));
+                    }
                     if (!fd.returnsTree()) {
                       continue;
                     }
-                    final var module = fd.getModuleName();
-                    external.addAll(
-                        EqualityConstraint.eq(
-                            fd.getInferredSignature().getAnnotation().get().withCost.to,
-                            rightSidesPerModule.computeIfAbsent(
-                                module,
-                                (x) -> {
-                                  refresh.add(module);
-                                  return SmartRangeHeuristic.DEFAULT.generate(module, 1);
-                                }),
-                            "(fix) right side for " + fd.getFullyQualifiedName()));
+                    // Set right sides equal.
+                    if (forceResultPerModule) {
+                      final var module = fd.getModuleName();
+                      external.addAll(
+                          EqualityConstraint.eq(
+                              fd.getInferredSignature().getAnnotation().get().withCost.to,
+                              rightSidesPerModule.computeIfAbsent(
+                                  module,
+                                  (x) -> {
+                                    refresh.add(module);
+                                    return SmartRangeHeuristic.DEFAULT.generate(module, 1);
+                                  }),
+                              "(fix) right side for " + fd.getFullyQualifiedName()));
+                    }
                   }
 
                   // Solve.
@@ -243,7 +266,7 @@ public class Program {
                         new AnnotatingGlobals(functionAnnotations, fd.getSizeAnalysis(), heuristic);
                     prover.setGlobals(globals);
 
-                    Obligation typingObligation = fd.getTypingObligation(true);
+                    Obligation typingObligation = fd.getTypingObligation();
 
                     if (tactics.containsKey(fd.getFullyQualifiedName())) {
                       try {
@@ -253,6 +276,14 @@ public class Program {
                       }
                     } else {
                       prover.prove(typingObligation);
+                    }
+
+                    try (final var out =
+                        output(
+                            basePath
+                                .resolve("tactics")
+                                .resolve(fqnToFlatFilename(fd.getName()) + ".txt"))) {
+                      prover.printTactic(typingObligation, out, true);
                     }
 
                     for (var cfAnnotation :
@@ -284,12 +315,21 @@ public class Program {
                     }
                   }
 
-                  final var optimization = Optimization.standard(fds);
-                  external.addAll(optimization.getConstraints());
+                  Solver.Result result;
+                  if (infer) {
+                    final var optimization = Optimization.standard(fds);
+                    external.addAll(optimization.getConstraints());
+                    result = prover.solve(external, List.of(optimization.target));
+                  } else {
+                    result = prover.solve(external);
+                  }
 
-                  final var result = prover.solve(external, List.of(optimization.target));
                   if (!result.isSatisfiable()) {
                     return result;
+                  } else {
+                    /*for (var fd : fds) {
+                      prover.plotWithSolution(result.getSolution().get(), fd.getTypingObligation(), false);
+                    }*/
                   }
 
                   for (var module : refresh) {
@@ -310,11 +350,11 @@ public class Program {
                     // printAllInferredSignaturesInOrder(System.out);
                     // printAllBoundsInOrder(System.out);
                   }
-                  log.info("Done solving for {}", scc.vertexSet());
+                  log.debug("Done solving SCC {}", scc.vertexSet());
                   return result;
                 });
 
-    Map<Graph<String, DependencyEdge>, Scheduler.Result<ConstraintSystemSolver.Result>> result;
+    Map<Graph<String, DependencyEdge>, Scheduler.Result<Solver.Result>> result;
     try {
       result = scheduler.run(8, Integer.MAX_VALUE, TimeUnit.DAYS);
     } catch (InterruptedException e) {
@@ -323,7 +363,7 @@ public class Program {
 
     final var aggregate =
         result.values().stream()
-            .reduce((a, b) -> Scheduler.Result.merge(a, b, ConstraintSystemSolver.Result::merge));
+            .reduce((a, b) -> Scheduler.Result.merge(a, b, Solver.Result::merge));
 
     if (aggregate.isEmpty()) {
       throw bug("could not aggregate results");
@@ -391,7 +431,7 @@ public class Program {
               new AnnotatingGlobals(functionAnnotations, fd.getSizeAnalysis(), heuristic);
           prover.setGlobals(globals);
 
-          Obligation typingObligation = fd.getTypingObligation(true);
+          Obligation typingObligation = fd.getTypingObligation();
 
           if (tactics.containsKey(fd.getFullyQualifiedName())) {
             try {
@@ -452,6 +492,14 @@ public class Program {
       return;
     }
     forEach(FunctionDefinition::normalize);
+
+    final var target = basePath.resolve("normalized.ml");
+    try (final var out = output(target)) {
+      forEach(fd -> fd.printTo(out));
+      log.info("See {}", target);
+    } catch (IOException e) {
+      log.warn("Ignoring I/O exception when writing normalized program.", e);
+    }
 
     normalized = true;
   }
@@ -549,10 +597,19 @@ public class Program {
     }
 
     try (final var stream = new PrintStream(output(path))) {
-      stream.println("import java.util.Objects;");
       stream.println("import xyz.leutgeb.lorenz.atlas.Tree;");
+
+      // Used by comparison operators.
+      stream.println("import java.util.Objects;");
+
+      // Used by node expression.
       stream.println("import static xyz.leutgeb.lorenz.atlas.Tree.node;");
+
+      // Used by the special identifier `leaf`.
       stream.println("import static xyz.leutgeb.lorenz.atlas.Tree.leaf;");
+
+      // Used by the special identifier `coin`.
+      stream.println("import static xyz.leutgeb.lorenz.atlas.Builtin.coin;");
 
       for (var e : output.keySet()) {
         var lastModulePart = e.substring(Math.max(0, e.lastIndexOf(".")));

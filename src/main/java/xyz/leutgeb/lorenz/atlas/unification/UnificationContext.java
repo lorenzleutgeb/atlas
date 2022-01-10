@@ -235,12 +235,12 @@ public class UnificationContext {
     signatures.put(fullyQualifiedName, functionSignature);
   }
 
-  // TODO(lorenz.leutgeb): Find out why exactly we need this method.
+  // TODO(lorenzleutgeb): Find out why exactly we need this method.
   public boolean hasSignature(String fqn) {
     return signatures.containsKey(fqn);
   }
 
-  public void addIfNotEqual(Type a, Type b) {
+  public void addEquivalenceIfNotEqual(Type a, Type b) {
     Objects.requireNonNull(a);
     Objects.requireNonNull(b);
     if (!a.equals(b)) {

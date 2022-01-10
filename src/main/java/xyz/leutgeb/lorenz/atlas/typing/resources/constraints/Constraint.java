@@ -169,6 +169,10 @@ public abstract class Constraint {
   }
 
   public String toStringWithReason() {
-    return toString() + " because " + reason;
+    return toString() + " ∵ " + reason;
+  }
+
+  public String toRecord() {
+    return toStringWithReason();
   }
 }

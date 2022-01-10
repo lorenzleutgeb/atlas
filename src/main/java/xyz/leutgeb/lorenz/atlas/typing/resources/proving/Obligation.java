@@ -1,9 +1,10 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources.proving;
 
+import static guru.nidi.graphviz.attribute.Label.html;
 import static java.util.stream.Collectors.joining;
 import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
 
-import guru.nidi.graphviz.attribute.Label;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,7 +23,7 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.atlas.util.NidiAttribute;
 import xyz.leutgeb.lorenz.atlas.util.Util;
 
-// TODO(lorenz.leutgeb): Maybe we need to navigate around obligations in a DAG/proof tree?
+// TODO(lorenzleutgeb): Maybe we need to navigate around obligations in a DAG/proof tree?
 @Value
 public class Obligation {
   AnnotatingContext context;
@@ -96,22 +97,64 @@ public class Obligation {
         context.substitute(solution), expression, annotation.substitute(solution), cost, parent);
   }
 
-  public Map<String, Attribute> attributes(List<Constraint> generalConstraints) {
+  public Map<String, Attribute> attributes(Prover.ProofVertexData proofVertexData) {
+    final var rule = proofVertexData != null ? proofVertexData.schedule().rule() : null;
+    final List<Constraint> generalConstraints =
+        proofVertexData != null ? proofVertexData.generalConstraints() : List.of();
+    final var haveGeneralConstraints = !generalConstraints.isEmpty();
     final var generalConstraintsString =
-        generalConstraints.isEmpty()
+        !haveGeneralConstraints
             ? ""
             : generalConstraints.stream()
-                .map(Constraint::toStringWithReason)
-                .collect(Collectors.joining("<br />"));
+                .map(Constraint::toString)
+                .collect(Collectors.joining("<br />"))
+                .replace("\n", "<br />");
+
+    final var obligationLabel =
+        toString().replace("<", "&lt;").replace(">", "&gt;").replace("|", "&#124;");
+
+    final var haveArgs = !proofVertexData.schedule().arguments().isEmpty();
+
+    final var ruleName =
+        (rule == null ? "?" : rule.getName())
+            + (haveArgs
+                ? ("<br/>"
+                    + proofVertexData.schedule().arguments().entrySet().stream()
+                        .map(Object::toString)
+                        .collect(Collectors.joining(", ")))
+                : "");
+
+    final var constraintsLabel =
+        (proofVertexData == null
+            ? (new ArrayList<List<Constraint>>())
+            : Util.truncate(
+                proofVertexData.constraints().stream()
+                    .map(
+                        constraints ->
+                            constraints.stream()
+                                .map(Constraint::toString)
+                                .map(x -> x.replace(">", "&gt;").replace("<", "&lt;"))
+                                .collect(Collectors.joining("<br />"))
+                                .replace("\n", "<br />"))
+                    .collect(Collectors.joining("|")),
+                16000));
+
+    final var label =
+        html(
+            "{"
+                + ("".equals(constraintsLabel) ? "" : constraintsLabel + "|")
+                + (haveGeneralConstraints ? "General:<br/>" + generalConstraintsString + "|" : "")
+                + "{"
+                + obligationLabel
+                + "|"
+                + ruleName
+                + "}}");
+
     return Map.of(
         "shape",
-        new DefaultAttribute<>("none", AttributeType.STRING),
+        new DefaultAttribute<>("record", AttributeType.STRING),
         "label",
-        new NidiAttribute<>(
-            Label.html(
-                toString().replace("<", "&lt;").replace(">", "&gt;")
-                    + (generalConstraints.isEmpty() ? "" : "<br />- - -<br />")
-                    + generalConstraintsString)));
+        new NidiAttribute<>(label));
   }
 
   @Override

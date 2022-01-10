@@ -27,10 +27,11 @@ public class SplayHeapTest {
     final var fixed =
         CombinedFunctionAnnotation.of(
             new Annotation(
-                List.of(Coefficient.of(1, 2)),
-                Map.of(unitIndex(1), ONE, List.of(1, 0), Coefficient.of(1, 2), List.of(1, 1), ONE),
+                List.of(Coefficient.known(1, 2)),
+                Map.of(
+                    unitIndex(1), ONE, List.of(1, 0), Coefficient.known(1, 2), List.of(1, 1), ONE),
                 "Q"),
-            new Annotation(List.of(Coefficient.of(1, 2)), Map.of(unitIndex(1), ONE), "Q'"),
+            new Annotation(List.of(Coefficient.known(1, 2)), Map.of(unitIndex(1), ONE), "Q'"),
             SmartRangeHeuristic.DEFAULT.generate("splaycf", 1),
             SmartRangeHeuristic.DEFAULT.generate("splaycf'", 1));
 
@@ -89,7 +90,7 @@ public class SplayHeapTest {
                             "resources",
                             "tactics",
                             entry.getValue().tactic.get() + ".txt")));
-    final var result = program.solve(annotations, tactics, true, Collections.emptySet());
+    final var result = program.solve(annotations, tactics, true, true, Collections.emptySet());
     assertTrue(result.getSolution().isPresent());
     program.printAllInferredSignaturesInOrder(System.out);
   }

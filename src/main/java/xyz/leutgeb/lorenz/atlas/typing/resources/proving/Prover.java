@@ -6,135 +6,108 @@ import static java.util.Collections.emptySet;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 import static xyz.leutgeb.lorenz.atlas.ast.Identifier.LEAF_NAME;
-import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
-import static xyz.leutgeb.lorenz.atlas.util.Util.flag;
-import static xyz.leutgeb.lorenz.atlas.util.Util.output;
-import static xyz.leutgeb.lorenz.atlas.util.Util.stack;
-import static xyz.leutgeb.lorenz.atlas.util.Util.supply;
-import static xyz.leutgeb.lorenz.atlas.util.Util.undefinedText;
+import static xyz.leutgeb.lorenz.atlas.util.Util.*;
 import static xyz.leutgeb.lorenz.atlas.util.Z3Support.load;
 
 import com.google.common.collect.Sets;
-import com.google.common.collect.Streams;
-import guru.nidi.graphviz.attribute.Label;
 import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
 import guru.nidi.graphviz.engine.GraphvizCmdLineEngine;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.jgrapht.graph.AsSubgraph;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedAcyclicGraph;
-import org.jgrapht.nio.Attribute;
 import org.jgrapht.nio.AttributeType;
 import org.jgrapht.nio.DefaultAttribute;
 import xyz.leutgeb.lorenz.atlas.antlr.TacticLexer;
 import xyz.leutgeb.lorenz.atlas.antlr.TacticParser;
-import xyz.leutgeb.lorenz.atlas.ast.BooleanExpression;
-import xyz.leutgeb.lorenz.atlas.ast.CallExpression;
-import xyz.leutgeb.lorenz.atlas.ast.Expression;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
-import xyz.leutgeb.lorenz.atlas.ast.IfThenElseExpression;
-import xyz.leutgeb.lorenz.atlas.ast.LetExpression;
-import xyz.leutgeb.lorenz.atlas.ast.MatchExpression;
-import xyz.leutgeb.lorenz.atlas.ast.NodeExpression;
-import xyz.leutgeb.lorenz.atlas.ast.ShareExpression;
+import xyz.leutgeb.lorenz.atlas.ast.*;
+import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
-import xyz.leutgeb.lorenz.atlas.typing.resources.TacticVisitorImpl;
+import xyz.leutgeb.lorenz.atlas.typing.resources.Tactic;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.rules.*;
 import xyz.leutgeb.lorenz.atlas.typing.resources.rules.Rule.ApplicationResult;
-import xyz.leutgeb.lorenz.atlas.typing.resources.solving.ConstraintSystemSolver;
+import xyz.leutgeb.lorenz.atlas.typing.resources.solving.Solver;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.TreeType;
-import xyz.leutgeb.lorenz.atlas.util.NidiAttribute;
 import xyz.leutgeb.lorenz.atlas.util.NidiExporter;
-import xyz.leutgeb.lorenz.atlas.util.Pair;
 import xyz.leutgeb.lorenz.atlas.util.Util;
 
 @Slf4j
 public class Prover {
-  private static final Rule letTreeCfPaperRule = LetTreeCf.INSTANCE;
-  private static final Rule letTreeCfFlorianRule = LetTreeCfFlorian.INSTANCE;
-  private static final Rule letTreeCfSimpleRule = LetTreeCfSimple.INSTANCE;
-  private static final Rule letGenRule = LetGen.INSTANCE;
-  private static final Rule letTreeRule = LetTree.INSTANCE;
-  private static final Rule applicationRule = App.INSTANCE;
-  private static final Rule comparisonRule = Cmp.INSTANCE;
-  private static final Rule ifThenElseRule = Ite.INSTANCE;
-  private static final Rule matchRule = Match.INSTANCE;
-  private static final Rule nodeRule = Node.INSTANCE;
-  private static final Rule shareRule = Share.INSTANCE;
-  private static final Rule variableRule = Var.INSTANCE;
-  private static final Rule weakenVariableRule = WVar.INSTANCE;
-  private static final Rule weakenRule = W.INSTANCE;
-  private static final Rule leafRule = Leaf.INSTANCE;
-  private static final Rule shiftRule = Shift.INSTANCE;
-  private static final Rule tickRule = Tick.INSTANCE;
-  public static final Rule LET_TREE_CF = letTreeCfPaperRule;
+  private static final Rule RULE_LET_TREE_CF = LetTreeCf.INSTANCE;
+  // private static final Rule RULE_LET_TREE_CF = LetTreeCfFlorian.INSTANCE;
+  private static final Rule RULE_APP = App.INSTANCE;
+  private static final Rule RULE_CMP = Cmp.INSTANCE;
+  private static final Rule RULE_ITE = Ite.INSTANCE;
+  private static final Rule RULE_MATCH = Match.INSTANCE;
+  private static final Rule RULE_NODE = Node.INSTANCE;
+  private static final Rule RULE_SHARE = Share.INSTANCE;
+  private static final Rule RULE_VAR = Var.INSTANCE;
+  private static final Rule RULE_W_VAR = WVar.INSTANCE;
+  private static final Rule RULE_W = W.INSTANCE;
+  private static final Rule RULE_LEAF = Leaf.INSTANCE;
+  private static final Rule RULE_SHIFT = Shift.INSTANCE;
+  private static final Rule RULE_TICK = Tick.INSTANCE;
 
   private static final Map<String, Rule> RULES_BY_NAME =
       Stream.of(
-              LET_TREE_CF,
-              letTreeCfFlorianRule,
-              letGenRule,
-              letTreeRule,
-              applicationRule,
-              comparisonRule,
-              ifThenElseRule,
-              matchRule,
-              nodeRule,
-              shareRule,
-              variableRule,
-              weakenVariableRule,
-              weakenRule,
-              leafRule,
-              shiftRule,
-              tickRule)
+              RULE_LET_TREE_CF,
+              RULE_APP,
+              RULE_CMP,
+              RULE_ITE,
+              RULE_MATCH,
+              RULE_NODE,
+              RULE_SHARE,
+              RULE_VAR,
+              RULE_W_VAR,
+              RULE_W,
+              RULE_LEAF,
+              RULE_SHIFT,
+              RULE_TICK)
           .collect(toUnmodifiableMap(Rule::getName, identity()));
 
   private static final boolean DEFAULT_WEAKEN_AGGRESSIVELY = false;
   private static final boolean DEFAULT_WEAKEN_BEFORE_TERMINAL = true;
 
+  private static final boolean TICK_BEFORE_APP = false;
+
   private final String name;
   private final Path basePath;
+
+  public record ProofVertexData(
+      RuleSchedule schedule,
+      List<List<Constraint>> constraints,
+      List<Constraint> generalConstraints) {}
 
   @Getter
   private final DirectedAcyclicGraph<Obligation, DefaultEdge> proof =
       new DirectedAcyclicGraph<>(DefaultEdge.class);
 
-  private final Map<DefaultEdge, Map<String, Attribute>> edgeAttributes = new HashMap<>();
+  private final Map<Obligation, ProofVertexData> vertexAttributes = new HashMap<>();
 
   @Getter private final Set<Constraint> accumulatedConstraints = new HashSet<>();
 
-  // TODO(lorenz.leutgeb): Find a better way to handle globals...
+  // TODO(lorenzleutgeb): Find a better way to handle globals...
   @Getter @Setter private AnnotatingGlobals globals;
 
   @Getter @Setter private boolean weakenAggressively = DEFAULT_WEAKEN_AGGRESSIVELY;
   @Getter @Setter private boolean weakenBeforeTerminal = DEFAULT_WEAKEN_BEFORE_TERMINAL;
 
   @Getter private final Map<String, Obligation> named = new LinkedHashMap<>();
-
-  private final Map<Obligation, RuleApplication> results = new LinkedHashMap<>();
 
   @Getter @Setter private boolean logApplications = true;
 
@@ -144,19 +117,7 @@ public class Prover {
 
   private final boolean naive;
 
-  @Value
-  @AllArgsConstructor
-  private static class RuleApplication {
-    Rule rule;
-    ApplicationResult result;
-  }
-
-  @Value
-  @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  private static class RuleSchedule {
-    Rule rule;
-    Map<String, String> arguments;
-
+  public record RuleSchedule(Rule rule, Map<String, String> arguments) {
     public static RuleSchedule schedule(Rule rule) {
       return new RuleSchedule(rule, emptyMap());
     }
@@ -180,27 +141,24 @@ public class Prover {
     if (expression.isTerminal()) {
       final Stack<RuleSchedule> todo = new Stack<>();
       todo.push(RuleSchedule.schedule(chooseRule(expression)));
-      if (expression instanceof CallExpression) {
+      if (expression instanceof CallExpression && TICK_BEFORE_APP) {
         log.trace("Automatically applying (tick) to expression `{}`!", expression);
-        todo.push(RuleSchedule.schedule(tickRule));
+        todo.push(RuleSchedule.schedule(RULE_TICK));
       }
       if (weakenBeforeTerminal || weakenAggressively) {
-        todo.push(RuleSchedule.schedule(weakenRule));
+        todo.push(RuleSchedule.schedule(RULE_W));
       }
-      final var wvars = WVar.redundantIds(obligation).collect(Collectors.toUnmodifiableList());
-      for (int i = 0; i < wvars.size(); i++) {
-        todo.push(RuleSchedule.schedule(weakenVariableRule));
-      }
-      if (wvars.size() > 0) {
-        todo.push(RuleSchedule.schedule(weakenRule));
+      int beforeWeakeningVars = todo.size();
+      scheduleWeakenVariables(obligation, todo);
+      if (todo.size() > beforeWeakeningVars) {
+        todo.push(RuleSchedule.schedule(RULE_W));
       }
       return todo;
     } else if (weakenAggressively) {
       log.trace(
           "Automatically applying (w) to expression `{}` because aggressive weakening is enabled!",
           expression);
-      return stack(
-          RuleSchedule.schedule(weakenRule), RuleSchedule.schedule(chooseRule(expression)));
+      return stack(RuleSchedule.schedule(RULE_W), RuleSchedule.schedule(chooseRule(expression)));
     } else {
       return stack(RuleSchedule.schedule(chooseRule(expression)));
     }
@@ -209,34 +167,28 @@ public class Prover {
   /** Chooses which rule should be applied next to given expression. */
   private Rule chooseRule(Expression e) {
     if (e instanceof BooleanExpression) {
-      return comparisonRule;
+      return RULE_CMP;
     } else if (e instanceof NodeExpression) {
-      return nodeRule;
+      return RULE_NODE;
     } else if (e instanceof CallExpression) {
-      return applicationRule;
-    } else if (e instanceof Identifier) {
-      if (LEAF_NAME.equals(((Identifier) e).getName())) {
-        return leafRule;
-      } else {
-        return variableRule;
-      }
+      return RULE_APP;
+    } else if (e instanceof Identifier identifier) {
+      return LEAF_NAME.equals(identifier.getName()) ? RULE_LEAF : RULE_VAR;
     } else if (e instanceof IfThenElseExpression) {
-      return ifThenElseRule;
+      return RULE_ITE;
     } else if (e instanceof MatchExpression) {
-      return matchRule;
-    } else if (e instanceof LetExpression) {
-      if (((LetExpression) e).getValue().getType() instanceof TreeType) {
-        // TODO(lorenz.leutgeb): When can we apply let:tree?
-        return LET_TREE_CF;
-      } else {
-        return letGenRule;
+      return RULE_MATCH;
+    } else if (e instanceof LetExpression letExpression) {
+      if (letExpression.getValue().getType() instanceof TreeType) {
+        // TODO(lorenzleutgeb): When can we apply let:tree?
+        return RULE_LET_TREE_CF;
       }
     } else if (e instanceof ShareExpression) {
-      return shareRule;
-    } else {
-      throw bug(
-          "could not choose a rule for expression of type " + e.getClass().getCanonicalName());
+      return RULE_SHARE;
+    } else if (e instanceof TickExpression) {
+      return RULE_TICK;
     }
+    throw bug("could not choose a rule for expression of type " + e.getClass().getCanonicalName());
   }
 
   private Stack<RuleSchedule> chooseRuleSmart(Obligation obligation) {
@@ -249,21 +201,23 @@ public class Prover {
               .orElse(false);
 
       final Stack<RuleSchedule> todo = new Stack<>();
-      todo.push(RuleSchedule.schedule(applicationRule));
-      todo.push(RuleSchedule.schedule(shiftRule));
-      log.trace("Automatically applying (tick) to expression `{}`!", e);
-      todo.push(RuleSchedule.schedule(tickRule));
-      weakenVariables(obligation, todo);
+      todo.push(RuleSchedule.schedule(RULE_APP));
+      todo.push(RuleSchedule.schedule(RULE_SHIFT));
+      if (TICK_BEFORE_APP) {
+        log.trace("Automatically applying (tick) to expression `{}`!", e);
+        todo.push(RuleSchedule.schedule(RULE_TICK));
+      }
+      scheduleWeakenVariables(obligation, todo);
       if (!isInLet) {
-        todo.push(RuleSchedule.schedule(weakenRule, Map.of("l2xy", "true")));
+        todo.push(RuleSchedule.schedule(RULE_W, Map.of("l2xy", "true")));
       }
       return todo;
-    } else if (e instanceof Identifier) {
-      final var isLeaf = ((Identifier) e).getName().equals("leaf");
+    } else if (e instanceof final Identifier identifier) {
+      final var isLeaf = identifier.getName().equals("leaf");
       final Stack<RuleSchedule> todo = new Stack<>();
-      todo.push(RuleSchedule.schedule(isLeaf ? leafRule : variableRule));
-      weakenVariables(obligation, todo);
-      todo.push(RuleSchedule.schedule(weakenRule, Map.of("mono", "true")));
+      todo.push(RuleSchedule.schedule(isLeaf ? RULE_LEAF : RULE_VAR));
+      scheduleWeakenVariables(obligation, todo);
+      todo.push(RuleSchedule.schedule(RULE_W, Map.of("mono", "true")));
       return todo;
     } else if (e instanceof NodeExpression) {
       final var lastInChain =
@@ -276,34 +230,37 @@ public class Prover {
               .orElse(false);
       // Covers outermost node of a tree construction.
       final Stack<RuleSchedule> todo = new Stack<>();
-      todo.push(RuleSchedule.schedule(nodeRule));
-      weakenVariables(obligation, todo);
+      todo.push(RuleSchedule.schedule(RULE_NODE));
+      scheduleWeakenVariables(obligation, todo);
       todo.push(
           RuleSchedule.schedule(
-              weakenRule, lastInChain ? Map.of("l2xy", "true") : Map.of("mono", "true")));
+              RULE_W, lastInChain ? Map.of("l2xy", "true") : Map.of("mono", "true")));
       return todo;
-    } else if (e instanceof LetExpression) {
-      final var let = (LetExpression) e;
-      if (let.getValue() instanceof CallExpression) {
-        // Makes sure we apply (w{l2xy}) right before (app).
+    } else if (e instanceof final LetExpression letExpression) {
+      final var value = letExpression.getValue();
+      if (value instanceof CallExpression || value instanceof TickExpression) {
+        // Makes sure we apply (w{l2xy}) right before (app) or (tick).
         return stack(
-            RuleSchedule.schedule(weakenRule, Map.of("l2xy", "true", "mono", "true")),
-            RuleSchedule.schedule(LET_TREE_CF));
-      } else if (let.isTreeConstruction()) {
-        if (let.getValue() instanceof NodeExpression) {
+            RuleSchedule.schedule(RULE_W, Map.of("l2xy", "true", "mono", "true")),
+            RuleSchedule.schedule(RULE_LET_TREE_CF));
+      } else if (letExpression.isTreeConstruction()) {
+        if (letExpression.getValue() instanceof NodeExpression) {
           // Makes sure we apply (w{size}) if we're constructing a tree.
           return stack(
-              RuleSchedule.schedule(weakenRule, Map.of("size", "true")),
-              RuleSchedule.schedule(LET_TREE_CF));
+              RuleSchedule.schedule(RULE_W, Map.of("size", "true")),
+              RuleSchedule.schedule(RULE_LET_TREE_CF));
         }
       }
+    } else if (e instanceof TickExpression) {
+      return stack(
+          RuleSchedule.schedule(RULE_W, Map.of("l2xy", "true")), RuleSchedule.schedule(RULE_TICK));
     }
     return stack(RuleSchedule.schedule(chooseRule(e)));
   }
 
   private ApplicationResult applyInternal(Obligation obligation, RuleSchedule schedule) {
     if (logApplications && obligation.isCost()) {
-      log.info(
+      log.trace(
           "{}{}: {}",
           String.format("%-12s", schedule.rule.getName()),
           schedule.arguments,
@@ -314,7 +271,7 @@ public class Prover {
     if (result == null) {
       throw bug("typing rule implementation returned null");
     }
-    ingest(obligation, schedule.rule, result);
+    ingest(obligation, schedule, result);
     return result;
   }
 
@@ -371,12 +328,17 @@ public class Prover {
     }
   }
 
-  private void ingest(Obligation previous, Rule rule, ApplicationResult ruleResult) {
-    results.put(previous, new RuleApplication(rule, ruleResult));
-
+  private void ingest(Obligation previous, RuleSchedule schedule, ApplicationResult ruleResult) {
     if (!proof.containsVertex(previous)) {
       proof.addVertex(previous);
     }
+
+    if (vertexAttributes.containsKey(previous)) {
+      throw bug("one obligation is reached from multiple places");
+    }
+    vertexAttributes.put(
+        previous,
+        new ProofVertexData(schedule, ruleResult.constraints(), ruleResult.generalConstraints()));
 
     ruleResult
         .obligations()
@@ -390,50 +352,106 @@ public class Prover {
     if (ruleResult.obligations().size() == 1 && previous == ruleResult.obligations().get(0)) {
       log.warn(
           "Detected a noop generated by rule "
-              + rule.getName()
+              + schedule.rule.getName()
               + " for an obligation with"
               + (previous.isCost() ? "" : "out")
               + " cost ");
       return;
     }
 
-    Streams.zip(ruleResult.obligations().stream(), ruleResult.constraints().stream(), Pair::of)
-        .forEach(
-            o -> {
-              final var edge = proof.addEdge(previous, o.getLeft());
-              edgeAttributes.put(
-                  edge,
-                  Map.of(
-                      "label",
-                      new NidiAttribute<>(
-                          Label.html(
-                              Util.truncate(
-                                  "("
-                                      + rule.getName()
-                                      + ")"
-                                      + "<br />"
-                                      + (!rule.equals(weakenRule) || o.getRight().size() <= 32
-                                          ? (o.getRight().isEmpty()
-                                              ? "No constraints."
-                                              : (o.getRight().stream()
-                                                  .map(Constraint::toStringWithReason)
-                                                  .collect(Collectors.joining("<br />"))))
-                                          : "Constraints omitted.")
-                                      // .replace("|", "_")
-                                      // .replace("[", "_")
-                                      // .replace("]", "_")
-                                      // .replace("=", "_")
-                                      // .replace("Σ", "_")
-                                      // .replace("≤", "_")
-                                      // .replace("≥", "_")
-                                      + " ",
-                                  16000)))));
-            });
+    for (Obligation obligation : ruleResult.obligations()) {
+      proof.addEdge(previous, obligation);
+    }
 
     ruleResult.collectInto(accumulatedConstraints);
   }
 
-  public void plot() {
+  public void printTactic(Obligation root, PrintStream out, boolean withCostOnly) {
+
+    if (!proof.containsVertex(root)) {
+      // throw new IllegalArgumentException("unknown obligation");
+      return;
+    }
+
+    metaToTactic(root, withCostOnly, out, 0);
+
+    out.println();
+  }
+
+  private void metaToTactic(
+      Obligation obligation, boolean costOnly, PrintStream out, int indentation) {
+    if (costOnly && !obligation.isCost()) {
+      return;
+    }
+    final var meta = vertexAttributes.get(obligation);
+    if (meta == null) {
+      return;
+    }
+    final var args = meta.schedule().arguments();
+    final var leaf = meta.constraints.isEmpty();
+    final var manyDescendants = proof.getDescendants(obligation).size() > 4;
+    final var compress = !manyDescendants;
+    final var rule = meta.schedule().rule();
+    // final var skip = rule instanceof WVar;
+
+    indent(out, indentation);
+    if (!leaf) {
+      out.print("(");
+    }
+
+    out.print(rule.getName());
+
+    if (!args.isEmpty()) {
+      out.print(
+          args.entrySet().stream()
+              .map(Object::toString)
+              .map(s -> s.replaceAll("=true$", ""))
+              .collect(Collectors.joining(" ", "{", "}")));
+    }
+
+    if (obligation.getExpression() instanceof IfThenElseExpression ifThenElseExpression) {
+      if (ifThenElseExpression.getCondition().isTerminal()) {
+        out.print(" (* " + ifThenElseExpression.getCondition() + " *)");
+      }
+    } else if (obligation.getExpression() instanceof MatchExpression matchExpression) {
+      if (matchExpression.getScrut().getSource() instanceof Derived derived) {
+        out.print(" (* " + derived.getParent() + " *)");
+      } else if (matchExpression.getScrut().isTerminal()) {
+        out.print(" (* " + matchExpression.getScrut() + " *)");
+      }
+    }
+
+    if (!compress && !leaf) {
+      out.println();
+    }
+
+    if (compress && !leaf) {
+      out.print(" ");
+    }
+
+    final var outgoing = List.copyOf(proof.outgoingEdgesOf(obligation));
+    for (int i = 0; i < outgoing.size(); i++) {
+      final var edge = outgoing.get(i);
+      metaToTactic(proof.getEdgeTarget(edge), costOnly, out, compress ? 0 : indentation + 1);
+      if (compress && !leaf && i < outgoing.size() - 1) {
+        out.print(" ");
+      }
+    }
+
+    if (!leaf) {
+      if (!compress) {
+        indent(out, indentation);
+      }
+      out.print(")");
+      // if (!compress) {
+      if (indentation > 0) {
+        out.println();
+      }
+      // }
+    }
+  }
+
+  public void plot(Obligation root) {
     if (basePath == null) {
       log.warn("Cannot plot without base path.");
       return;
@@ -442,89 +460,95 @@ public class Prover {
     try {
       final NidiExporter<Obligation, DefaultEdge> exporter = new NidiExporter<>(Util::stamp);
       exporter.setVertexAttributeProvider(
-          obligation -> {
-            var result = results.get(obligation);
-            final List<Constraint> generalConstraints =
-                result != null ? result.result.generalConstraints() : emptyList();
-            return obligation.attributes(generalConstraints);
-          });
-      exporter.setEdgeAttributeProvider(edgeAttributes::get);
+          obligation -> obligation.attributes(vertexAttributes.get(obligation)));
       exporter.setGraphAttributeProvider(
           supply(Map.of("rankdir", new DefaultAttribute<>("BT", AttributeType.STRING))));
 
       Graphviz transformed = Graphviz.fromGraph(exporter.transform(proof));
 
-      final var target = basePath.resolve(name + "-proof.svg");
+      final var target = basePath.resolve("proof").resolve(name + ".svg");
       transformed.render(Format.SVG).toOutputStream(output(target));
-      log.info("Proof plotted to {}", target);
+      log.info("See {}", target);
 
+      /*
       final var dotTarget = basePath.resolve(name + "-proof.dot");
       transformed.render(Format.DOT).toOutputStream(output(dotTarget));
       log.info("Proof exported to {}", dotTarget);
+       */
     } catch (Throwable e) {
       log.warn("Non-critical exception thrown.", e);
     }
   }
 
-  public void plotWithSolution(Map<Coefficient, KnownCoefficient> solution) {
+  public void plotWithSolution(
+      Map<Coefficient, KnownCoefficient> solution, Obligation root, boolean costOnly) {
     if (basePath == null) {
       return;
     }
+    if (!proof.containsVertex(root)) {
+      throw new IllegalArgumentException("unknown root obligation");
+    }
     try {
+      final var descendants = proof.getDescendants(root);
+      final var filtered =
+          costOnly
+              ? new AsSubgraph<>(
+                  proof,
+                  costOnly
+                      ? descendants.stream().filter(Obligation::isCost).collect(Collectors.toSet())
+                      : descendants)
+              : proof;
+
       final NidiExporter<Obligation, DefaultEdge> exporter = new NidiExporter<>(Util::stamp);
       exporter.setVertexAttributeProvider(
-          obligation -> {
-            var result = results.get(obligation);
-            final List<Constraint> generalConstraints =
-                result != null ? result.result.generalConstraints() : emptyList();
-            return (obligation.substitute(solution)).attributes(generalConstraints);
-          });
-      exporter.setEdgeAttributeProvider(edgeAttributes::get);
+          obligation ->
+              (obligation.substitute(solution)).attributes(vertexAttributes.get(obligation)));
       exporter.setGraphAttributeProvider(
           () -> Map.of("rankdir", new DefaultAttribute<>("BT", AttributeType.STRING)));
 
-      Graphviz transformed = Graphviz.fromGraph(exporter.transform(proof));
+      Graphviz transformed = Graphviz.fromGraph(exporter.transform(filtered));
 
       Graphviz.useEngine(new GraphvizCmdLineEngine());
 
+      /*
       final var dotTarget = basePath.resolve(name + "-proof.xdot");
       transformed.render(Format.XDOT).toOutputStream(output(dotTarget));
       log.info("Proof exported to {}", dotTarget);
+       */
 
-      final var target = basePath.resolve(name + "-proof.svg");
+      final var target = basePath.resolve("proof").resolve(name + ".svg");
       transformed.render(Format.SVG).toOutputStream(output(target));
-      log.info("Proof plotted to {}", target);
+      log.info("See {}", target);
     } catch (Exception e) {
       log.warn("Non-critical exception thrown.", e);
     }
   }
 
-  public ConstraintSystemSolver.Result solve() {
+  public Solver.Result solve() {
     return solve(emptySet(), emptyList());
   }
 
-  public ConstraintSystemSolver.Result solve(Set<Constraint> outsideConstraints) {
+  public Solver.Result solve(Set<Constraint> outsideConstraints) {
     return solve(outsideConstraints, emptyList());
   }
 
-  public ConstraintSystemSolver.Result solve(
-      Set<Constraint> outsideConstraints, List<UnknownCoefficient> target) {
-    return ConstraintSystemSolver.solve(
+  public Solver.Result solve(Set<Constraint> outsideConstraints, List<UnknownCoefficient> target) {
+    return Solver.solve(
         Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
         basePath.resolve(name),
         target);
   }
 
-  public ConstraintSystemSolver.Result solve(
+  public Solver.Result solve(
       Set<Constraint> outsideConstraints, List<UnknownCoefficient> target, String suffix) {
-    return ConstraintSystemSolver.solve(
+    return Solver.solve(
         Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
         basePath.resolve(suffix),
         target);
   }
 
   public Obligation weaken(Obligation obligation) {
-    final var result = apply(obligation, weakenRule);
+    final var result = apply(obligation, RULE_W);
     if (result.size() != 1) {
       throw bug("(w) did not produce exactly one new obligation!");
     }
@@ -548,22 +572,22 @@ public class Prover {
     this.named.put(name, obligation);
   }
 
-  public void weakenVariables(Obligation obligation, Stack<RuleSchedule> todo) {
-    final var wvars = WVar.redundantIds(obligation).collect(Collectors.toUnmodifiableList());
+  public void scheduleWeakenVariables(Obligation obligation, Stack<RuleSchedule> todo) {
+    final var wvars = WVar.redundantIds(obligation).toList();
     for (int i = 0; i < wvars.size(); i++) {
-      todo.push(RuleSchedule.schedule(weakenVariableRule));
+      todo.push(RuleSchedule.schedule(RULE_W_VAR));
     }
   }
 
   public Obligation weakenVariables(Obligation obligation) {
     if (WVar.redundantId(obligation).isPresent()) {
-      return weakenVariables(apply(obligation, weakenVariableRule).get(0));
+      return weakenVariables(apply(obligation, RULE_W_VAR).get(0));
     }
     return obligation;
   }
 
   public void read(Obligation root, Path path) throws IOException {
-    final var visitor = new TacticVisitorImpl(this, root);
+    final var visitor = new Tactic(this, root);
     visitor.visitTactic(
         new TacticParser(new CommonTokenStream(new TacticLexer(CharStreams.fromPath(path))))
             .tactic());

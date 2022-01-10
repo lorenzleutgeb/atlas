@@ -11,7 +11,6 @@ import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoeffi
 import com.microsoft.z3.RatNum;
 import guru.nidi.graphviz.model.Node;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -98,6 +97,9 @@ public class Util {
   }
 
   public static void indent(PrintStream out, int indentation) {
+    if (indentation == 0) {
+      return;
+    }
     for (int i = 0; i < indentation; i++) {
       out.print("  ");
     }
@@ -344,9 +346,9 @@ public class Util {
     return stream::iterator;
   }
 
-  public static OutputStream output(Path path) throws IOException {
+  public static PrintStream output(Path path) throws IOException {
     Files.createDirectories(path.getParent());
-    return Files.newOutputStream(path);
+    return new PrintStream(Files.newOutputStream(path));
   }
 
   public static boolean haveClass(String className) {

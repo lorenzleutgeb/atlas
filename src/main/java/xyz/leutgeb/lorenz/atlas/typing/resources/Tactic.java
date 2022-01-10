@@ -29,7 +29,7 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.rules.WVar;
 
 @Value
 @Slf4j
-public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
+public class Tactic extends TacticBaseVisitor<Object> {
   Prover prover;
   Obligation obligation;
 
@@ -146,7 +146,7 @@ public class TacticVisitorImpl extends TacticBaseVisitor<Object> {
       if (obligation.getExpression().isTerminal()
           && !redundant.isEmpty()
           && Set.of("leaf", "node", "var", "app", "tick").contains(ruleName)) {
-        log.debug(
+        log.trace(
             "Automatically applying (w:var) to remove leftover variables {} before applying {} on line {}.",
             redundant,
             ruleName,

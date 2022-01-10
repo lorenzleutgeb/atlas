@@ -41,7 +41,7 @@ public class LetExpression extends Expression {
 
   public LetExpression(
       Source source, Identifier declared, Expression value, Expression body, Type type) {
-    // TODO(lorenz.leutgeb): This constructor was made public only for testing purposes. Make it
+    // TODO(lorenzleutgeb): This constructor was made public only for testing purposes. Make it
     // private again?
     super(source, type);
     this.declared = declared;
@@ -67,13 +67,13 @@ public class LetExpression extends Expression {
   @Override
   public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
     var declaredType = context.fresh();
-    context.addIfNotEqual(declaredType, value.infer(context).wiggle(context));
+    context.addEquivalenceIfNotEqual(declaredType, value.infer(context).wiggle(context));
     var sub = context.child();
     sub.putType(declared.getName(), declaredType, this);
-    sub.addIfNotEqual(declaredType, declared.infer(sub).wiggle(context));
+    sub.addEquivalenceIfNotEqual(declaredType, declared.infer(sub).wiggle(context));
 
     var result = context.fresh();
-    sub.addIfNotEqual(result, body.infer(sub).wiggle(context));
+    sub.addEquivalenceIfNotEqual(result, body.infer(sub).wiggle(context));
     return result;
   }
 

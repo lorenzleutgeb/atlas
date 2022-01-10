@@ -9,8 +9,10 @@ import xyz.leutgeb.lorenz.atlas.ast.IfThenElseExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
 
 public class Ite implements Rule {
@@ -33,7 +35,8 @@ public class Ite implements Rule {
       final var u2 = globals.getHeuristic().generate("u2", u);
 
       final var p = KnownCoefficient.ONE_BY_TWO;
-      final var negp = KnownCoefficient.ONE_BY_TWO;
+      // final var p = KnownCoefficient.ONE;
+      final var negp = Coefficient.unknownFromPrefix("negp");
 
       final var pu1 = u1.multiply(p);
       final var pu2 = u2.multiply(negp);
@@ -57,7 +60,10 @@ public class Ite implements Rule {
                   new AnnotatingContext(obligation.getContext().getIds(), u2),
                   expression.getFalsy())),
           List.of(pu1.getRight(), pu2.getRight()),
-          append(sum.getRight(), EqualityConstraint.eq(u, sum.getLeft(), "(ite:coin)")));
+          append(
+              append(sum.getRight(), EqualityConstraint.eq(u, sum.getLeft(), "(ite:coin)")),
+              List.of(
+                  new EqualsSumConstraint(KnownCoefficient.ONE, List.of(p, negp), "(ite:coin)"))));
     }
 
     // NOTE: We do not need to remove x from the context, since it must be a

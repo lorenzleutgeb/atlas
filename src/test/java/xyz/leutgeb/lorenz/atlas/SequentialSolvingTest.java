@@ -60,6 +60,6 @@ public class SequentialSolvingTest {
                             "tactics",
                             entry.getValue().tactic.get() + ".txt")));
 
-    program.solve(annotations, tactics, true, Collections.emptySet());
+    program.solve(annotations, tactics, true, true, Collections.emptySet());
   }
 }

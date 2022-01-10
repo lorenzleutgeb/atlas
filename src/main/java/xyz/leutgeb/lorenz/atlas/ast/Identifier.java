@@ -110,7 +110,6 @@ public class Identifier extends Expression {
     if (name.startsWith("_")) {
       return context.fresh();
     }
-
     if (context.hasSignature(this.name)) {
       return context.getSignatures().get(this.name).getType();
     }
@@ -192,6 +191,8 @@ public class Identifier extends Expression {
   public void printJavaTo(PrintStream out, int indentation, String currentFunction) {
     if (name.equals((LEAF_NAME))) {
       out.print("Tree.<" + type.variables().iterator().next() + ">leaf()");
+    } else if (name.equals((COIN_NAME))) {
+      out.print("coin()");
     } else {
       out.print(name);
     }

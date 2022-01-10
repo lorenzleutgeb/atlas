@@ -108,7 +108,7 @@ public class CallExpression extends Expression {
     }
 
     var result = context.fresh();
-    context.addIfNotEqual(fTy, new FunctionType(xTy, result).wiggle(context));
+    context.addEquivalenceIfNotEqual(fTy, new FunctionType(xTy, result).wiggle(context));
     return result;
   }
 

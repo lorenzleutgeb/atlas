@@ -1,0 +1,4 @@
+(ite (* coin *)
+  (tick var)
+  var
+ )

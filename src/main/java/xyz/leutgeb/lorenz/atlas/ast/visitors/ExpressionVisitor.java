@@ -5,16 +5,9 @@ import static java.util.stream.Collectors.toList;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.atlas.antlr.SplayParser;
-import xyz.leutgeb.lorenz.atlas.ast.BooleanExpression;
-import xyz.leutgeb.lorenz.atlas.ast.CallExpression;
-import xyz.leutgeb.lorenz.atlas.ast.ComparisonOperator;
-import xyz.leutgeb.lorenz.atlas.ast.Expression;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
-import xyz.leutgeb.lorenz.atlas.ast.IfThenElseExpression;
-import xyz.leutgeb.lorenz.atlas.ast.LetExpression;
-import xyz.leutgeb.lorenz.atlas.ast.MatchExpression;
-import xyz.leutgeb.lorenz.atlas.ast.NodeExpression;
+import xyz.leutgeb.lorenz.atlas.ast.*;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 
 class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
@@ -22,6 +15,20 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
 
   public ExpressionVisitor(String moduleName, Path path) {
     super(moduleName, path);
+  }
+
+  @Override
+  public Expression visitTickExpression(SplayParser.TickExpressionContext ctx) {
+    final var numerator = ctx.numerator == null ? 1 : Integer.parseInt(ctx.numerator.getText());
+    final var denominator =
+        ctx.denominator == null ? 1 : Integer.parseInt(ctx.denominator.getText());
+    final var cost = new Fraction(numerator, denominator);
+    return new TickExpression(getSource(ctx), visit(ctx.expression()), cost);
+  }
+
+  @Override
+  public Expression visitHoleExpression(SplayParser.HoleExpressionContext ctx) {
+    return new HoleExpression(getSource(ctx));
   }
 
   @Override
@@ -92,7 +99,7 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
 
   @Override
   public Expression visitMaybeAnonymousIdentifier(SplayParser.MaybeAnonymousIdentifierContext ctx) {
-    if (ctx.ANONYMOUS_IDENTIFIER() != null) {
+    if (ctx.UNDERSCORE() != null) {
       return Identifier.anonymous(getSource(ctx), idGenerator);
     }
     return Identifier.get(ctx.IDENTIFIER().getText(), getSource(ctx));

@@ -82,13 +82,13 @@ public class MatchExpression extends Expression {
     final var result = context.fresh();
 
     final var scrutType = context.fresh();
-    context.addIfNotEqual(scrutType, scrut.infer(context).wiggle(context));
+    context.addEquivalenceIfNotEqual(scrutType, scrut.infer(context).wiggle(context));
 
     final Supplier<UnificationContext> sub = () -> context.hide(((Identifier) scrut).getName());
 
     // Case: leaf
     var subLeaf = sub.get();
-    subLeaf.addIfNotEqual(result, leaf.infer(subLeaf).wiggle(subLeaf));
+    subLeaf.addEquivalenceIfNotEqual(result, leaf.infer(subLeaf).wiggle(subLeaf));
 
     // Case: node
     var subNode = passthru ? context : sub.get();
@@ -98,8 +98,8 @@ public class MatchExpression extends Expression {
           subNode.fresh(),
           this);
     }
-    subNode.addIfNotEqual(scrutType, nodePattern.infer(subNode).wiggle(subNode));
-    subNode.addIfNotEqual(result, node.infer(subNode).wiggle(subNode));
+    subNode.addEquivalenceIfNotEqual(scrutType, nodePattern.infer(subNode).wiggle(subNode));
+    subNode.addEquivalenceIfNotEqual(result, node.infer(subNode).wiggle(subNode));
 
     return result;
   }
@@ -151,7 +151,7 @@ public class MatchExpression extends Expression {
 
   @Override
   public MatchExpression rename(Map<String, String> renaming) {
-    // TODO(lorenz.leutgeb): Create new expression only if necessary.
+    // TODO(lorenzleutgeb): Create new expression only if necessary.
     return new MatchExpression(
         Derived.rename(this),
         scrut.rename(renaming),
@@ -329,9 +329,6 @@ public class MatchExpression extends Expression {
           (Identifier) scrut,
           (Identifier) ((NodeExpression) nodePattern).getRight(),
           SizeEdge.gt());
-    } /* else if (nodePattern instanceof Identifier && nodePattern.equals(scrut)) {
-        sizeGraph.addVertex((Identifier) nodePattern);
-        sizeGraph.addEdge((Identifier) nodePattern, (Identifier) scrut, SizeEdge.eq());
-      }*/
+    }
   }
 }

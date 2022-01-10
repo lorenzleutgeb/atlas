@@ -211,6 +211,8 @@ public class Loader {
       throw new RuntimeException("Could not load " + dangling);
     }
 
+    log.info("Loaded: {}", g.vertexSet());
+
     final var reachable =
         new AsSubgraph<>(
             g,
@@ -228,6 +230,8 @@ public class Loader {
             new KosarajuStrongConnectivityInspector<>(reachable).getCondensation());
 
     addSyntheticEdges(condensation);
+
+    log.info("Reachable: {}", reachable.vertexSet());
 
     return new Program(
         reachable.vertexSet().stream()
@@ -260,21 +264,13 @@ public class Loader {
         if (affectedModules(r).contains(fd.getModuleName())) {
           log.info("adding artificial edge from " + r + " to " + nr);
 
-          // NOTE: It's possible that adding this edge introduces a cycle, which would violate
-          // assumptions down
-          // the road. It might be possible to refresh the ConnectivityInspector (just inform it
-          // about the newly
-          // added edge), but I didn't get that to work right away.
-          // There's a cycle check both before and after modifications, so overall such a bug should
-          // be easy to
-          // detect.
-
+          // NOTE(lorenzleutgeb): It's possible that adding this edge introduces a cycle,
+          // which would violate assumptions down the road. It might be possible to refresh the
+          // ConnectivityInspector (just inform it about the newly added edge), but I didn't
+          // get that to work right away.
+          // There's a cycle check both before and after modifications,
+          // so overall such a bug should be easy to detect.
           condensation.addEdge(r, nr, DependencyEdge.synthetic());
-          /*
-          connectivity.edgeAdded(
-              new GraphEdgeChangeEvent<>(
-                  condensation, GraphEdgeChangeEvent.EDGE_ADDED, edge, r, nr));
-           */
         }
       }
     }
@@ -364,7 +360,7 @@ public class Loader {
   }
 
   private void ingest(Phaser phaser, FunctionDefinition definition) throws IOException {
-    log.debug("Loaded {}", definition.getFullyQualifiedName());
+    log.trace("Loaded {}", definition.getFullyQualifiedName());
     functionDefinitions.putIfAbsent(definition.getFullyQualifiedName(), definition);
     synchronized (g) {
       if (!g.containsVertex(definition.getFullyQualifiedName())) {

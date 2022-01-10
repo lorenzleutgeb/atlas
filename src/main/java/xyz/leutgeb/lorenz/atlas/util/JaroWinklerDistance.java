@@ -65,7 +65,7 @@ public class JaroWinklerDistance {
       throw new IllegalArgumentException("CharSequences must not be null");
     }
 
-    // TODO(lorenz.leutgeb): replace the rest of the code by this in 2.0, see TEXT-104
+    // TODO(lorenzleutgeb): replace the rest of the code by this in 2.0, see TEXT-104
     //
     // JaroWinklerSimilarity similarity = new JaroWinklerSimilarity();
     // return 1 - similarity.apply(left, right);

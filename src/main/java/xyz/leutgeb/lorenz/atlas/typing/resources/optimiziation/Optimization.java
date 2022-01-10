@@ -79,21 +79,21 @@ public class Optimization {
               }
                */
 
-              final var diff = UnknownCoefficient.unknown("x");
+              final var diff = Coefficient.unknownFromPrefix("x");
               constraints.add(
                   new EqualsSumConstraint(
                       diff, List.of(pair.getLeft(), pair.getRight().negate()), "(opt)"));
 
-              final var weightedDiff = UnknownCoefficient.unknown("x");
+              final var weightedDiff = Coefficient.unknownFromPrefix("x");
               constraints.add(
                   new EqualsProductConstraint(
                       weightedDiff,
-                      List.of(diff, Coefficient.of(weight.apply(e.getKey()))),
+                      List.of(diff, Coefficient.known(weight.apply(e.getKey()))),
                       "(opt) weightedComponentWiseDifference"));
               diffSum.add(weightedDiff);
             });
 
-    UnknownCoefficient diffsumVar = UnknownCoefficient.unknown("x");
+    UnknownCoefficient diffsumVar = Coefficient.unknownFromPrefix("x");
     constraints.add(
         new EqualsSumConstraint(diffsumVar, diffSum, "(opt) weightedComponentWiseDifference"));
     return Optional.of(new UniTarget(diffsumVar, constraints));
@@ -123,7 +123,7 @@ public class Optimization {
               }
               final var c = e.getKey().get(e.getKey().size() - 1);
 
-              final var diff = UnknownCoefficient.unknown("x");
+              final var diff = Coefficient.unknownFromPrefix("x");
 
               constraints.add(
                   new EqualsSumConstraint(
@@ -131,18 +131,18 @@ public class Optimization {
                       List.of(e.getValue(), annotation.to.getCoefficientOrZero(List.of(a, c))),
                       "(opt) logs"));
 
-              final var weightedDiff = UnknownCoefficient.unknown("x");
+              final var weightedDiff = Coefficient.unknownFromPrefix("x");
 
               constraints.add(
                   new EqualsProductConstraint(
                       weightedDiff,
-                      List.of(diff, Coefficient.of(weight.apply(List.of(a, c)))),
+                      List.of(diff, Coefficient.known(weight.apply(List.of(a, c)))),
                       "(opt) logs"));
 
               sum.add(weightedDiff);
             });
 
-    final var target = UnknownCoefficient.unknown("x");
+    final var target = Coefficient.unknownFromPrefix("x");
     constraints.add(new EqualsSumConstraint(target, sum, "(opt) logs"));
 
     return Optional.of(new UniTarget(target, constraints));
@@ -157,7 +157,7 @@ public class Optimization {
     final Set<Constraint> constraints = new HashSet<>();
     final var sumElements = new ArrayList<Coefficient>();
     for (int i = 0; i < annotation.from.size(); i++) {
-      final var diff = UnknownCoefficient.unknown("x");
+      final var diff = Coefficient.unknownFromPrefix("x");
       sumElements.add(diff);
       constraints.add(
           new EqualsSumConstraint(
@@ -167,7 +167,7 @@ public class Optimization {
                   annotation.to.getRankCoefficientOrZero().negate()),
               "(opt) rank"));
     }
-    final UnknownCoefficient diffsumVar = UnknownCoefficient.unknown("x");
+    final UnknownCoefficient diffsumVar = Coefficient.unknownFromPrefix("x");
     constraints.add(new EqualsSumConstraint(diffsumVar, sumElements, "(opt) rank"));
     return Optional.of(new UniTarget(diffsumVar, constraints));
   }
@@ -177,7 +177,7 @@ public class Optimization {
       return Optional.empty();
     }
 
-    final var target = UnknownCoefficient.unknown("x");
+    final var target = Coefficient.unknownFromPrefix("x");
     final var constraints =
         Collections.<Constraint>singleton(
             new EqualsSumConstraint(
@@ -220,7 +220,7 @@ public class Optimization {
       sum.add(annotation.from.getRankCoefficientOrZero(i));
     }
     annotation.from.streamNonRankCoefficients().map(Map.Entry::getValue).forEach(sum::add);
-    UnknownCoefficient sumVar = UnknownCoefficient.unknown("x");
+    UnknownCoefficient sumVar = Coefficient.unknownFromPrefix("x");
     constraints.add(new EqualsSumConstraint(sumVar, sum, "(opt)"));
     return Optional.of(new UniTarget(sumVar, constraints));
   }
@@ -258,16 +258,16 @@ public class Optimization {
           constraints.addAll(it.get().constraints);
         }
       }
-      final var levelSum = UnknownCoefficient.unknown("levelsum");
+      final var levelSum = Coefficient.unknownFromPrefix("levelsum");
 
       constraints.add(new EqualsSumConstraint(levelSum, sumAtLayer, "ssss"));
-      final var multied = UnknownCoefficient.unknown("multied");
+      final var multied = Coefficient.unknownFromPrefix("multied");
       constraints.add(
           new EqualsProductConstraint(
-              multied, List.of(Coefficient.of(weights.get(i)), levelSum), "ooo"));
+              multied, List.of(Coefficient.known(weights.get(i)), levelSum), "ooo"));
       sumOverall.add(multied);
     }
-    final var overall = UnknownCoefficient.unknown("overall");
+    final var overall = Coefficient.unknownFromPrefix("overall");
     constraints.add(new EqualsSumConstraint(overall, sumOverall, "(foo)"));
 
     return new UniTarget(overall, constraints);
@@ -352,7 +352,7 @@ public class Optimization {
       }
     }
 
-    final var x = UnknownCoefficient.unknown("x");
+    final var x = Coefficient.unknownFromPrefix("x");
     constraints.add(new EqualsSumConstraint(x, targetSum, "(opt) combine"));
 
     return new UniTarget(x, constraints);
