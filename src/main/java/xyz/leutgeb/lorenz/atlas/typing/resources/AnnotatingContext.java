@@ -22,7 +22,6 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.indices.Index;
 import xyz.leutgeb.lorenz.atlas.typing.resources.indices.MapIndex;
-import xyz.leutgeb.lorenz.atlas.typing.simple.types.TreeType;
 
 @Slf4j
 @Data
@@ -47,12 +46,6 @@ public class AnnotatingContext {
     this.ids = ids;
     checkIds();
     this.annotation = annotation;
-  }
-
-  private static void ensureAllTrees(Collection<Identifier> ids) {
-    if (ids.stream().anyMatch(id -> !(id.getType() instanceof TreeType))) {
-      throw new IllegalArgumentException();
-    }
   }
 
   private void checkIds() {

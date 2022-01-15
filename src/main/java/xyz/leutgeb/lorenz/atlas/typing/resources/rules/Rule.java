@@ -5,6 +5,7 @@ import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableList;
 import static java.util.stream.Collectors.toList;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -80,12 +81,11 @@ public interface Rule extends BiFunction<Obligation, AnnotatingGlobals, Rule.App
       return new ApplicationResult(emptyList(), emptyList(), constraints);
     }
 
-    public static ApplicationResult onlyObligations(List<Obligation> obligations) {
+    public static ApplicationResult onlyObligations(Obligation... obligations) {
+      final var list = Arrays.asList(obligations);
       return new ApplicationResult(
-          obligations,
-          Stream.generate(Collections::<Constraint>emptyList)
-              .limit(obligations.size())
-              .collect(toList()),
+          list,
+          Stream.generate(Collections::<Constraint>emptyList).limit(list.size()).collect(toList()),
           emptyList());
     }
 

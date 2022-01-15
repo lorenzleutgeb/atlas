@@ -241,6 +241,24 @@ public class Loader {
         condensation);
   }
 
+  private void addModuleEdges(Graph<String, DependencyEdge> graph) {
+    final var connectivity = new ConnectivityInspector<>(graph);
+
+    for (final var a : functionDefinitions.values()) {
+      final var aname = a.getFullyQualifiedName();
+      for (final var b : functionDefinitions.values()) {
+        final var bname = b.getFullyQualifiedName();
+        if (a.getModuleName().equals(b.getModuleName())) {
+          if (connectivity.pathExists(aname, bname) || connectivity.pathExists(bname, aname)) {
+            continue;
+          }
+          g.addEdge(aname, bname);
+          g.addEdge(bname, aname);
+        }
+      }
+    }
+  }
+
   private void addSyntheticEdges(
       Graph<Graph<String, DependencyEdge>, DependencyEdge> condensation) {
     final var before = new CycleDetector<>(condensation);
@@ -256,12 +274,12 @@ public class Loader {
       (isRecursive(g) ? recursive : nonRecursive).add(g);
     }
     for (var nr : nonRecursive) {
-      var fd = functionDefinitions.get(Util.pick(nr.vertexSet()));
+      final var moduleName = functionDefinitions.get(Util.pick(nr.vertexSet())).getModuleName();
       for (var r : recursive) {
         if (connectivity.pathExists(r, nr) || connectivity.pathExists(nr, r)) {
           continue;
         }
-        if (affectedModules(r).contains(fd.getModuleName())) {
+        if (affectedModules(r).contains(moduleName)) {
           log.info("adding artificial edge from " + r + " to " + nr);
 
           // NOTE(lorenzleutgeb): It's possible that adding this edge introduces a cycle,

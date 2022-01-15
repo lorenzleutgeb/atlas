@@ -5,6 +5,7 @@ import static java.util.Collections.singleton;
 import jakarta.json.Json;
 import jakarta.json.JsonString;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.Equivalence;
@@ -77,6 +78,11 @@ public class TypeVariable implements Type {
   @Override
   public JsonString toJson() {
     return Json.createValue(name);
+  }
+
+  @Override
+  public Optional<Integer> countTrees() {
+    return Optional.of(0);
   }
 
   @Override

@@ -38,6 +38,15 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   }
 
   @Override
+  public Expression visitMatchTupleExpression(SplayParser.MatchTupleExpressionContext ctx) {
+    return new MatchTupleExpression(
+        getSource(ctx),
+        visit(ctx.test),
+        visit(ctx.body),
+        (TupleExpression) visit(ctx.tuplePattern()));
+  }
+
+  @Override
   public Expression visitComparison(SplayParser.ComparisonContext ctx) {
     var l = ExpressionVisitor.this.visit(ctx.left);
     var r = ExpressionVisitor.this.visit(ctx.right);
@@ -47,7 +56,7 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
 
   @Override
   public Expression visitMatchExpression(SplayParser.MatchExpressionContext ctx) {
-    return new MatchExpression(
+    return new MatchTreeExpression(
         getSource(ctx),
         visit(ctx.test),
         ctx.leafCase != null ? visit(ctx.leafCase) : Identifier.leaf(),
@@ -92,6 +101,15 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   }
 
   @Override
+  public TupleExpression visitTuple(SplayParser.TupleContext ctx) {
+    var elements = new ArrayList<Expression>(ctx.expression().size());
+    for (int i = 0; i < ctx.expression().size(); i++) {
+      elements.add(visit(ctx.expression(i)));
+    }
+    return new TupleExpression(getSource(ctx), elements);
+  }
+
+  @Override
   public Expression visitDeconstructionPattern(SplayParser.DeconstructionPatternContext ctx) {
     return new NodeExpression(
         getSource(ctx), List.of(visit(ctx.left), visit(ctx.middle), visit(ctx.right)));
@@ -108,6 +126,15 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   @Override
   public Expression visitAliasingPattern(SplayParser.AliasingPatternContext ctx) {
     return visitMaybeAnonymousIdentifier(ctx.maybeAnonymousIdentifier());
+  }
+
+  @Override
+  public Expression visitTuplePattern(SplayParser.TuplePatternContext ctx) {
+    var elements = new ArrayList<Expression>(ctx.identifier().size());
+    for (int i = 0; i < ctx.identifier().size(); i++) {
+      elements.add(visit(ctx.identifier(i)));
+    }
+    return new TupleExpression(getSource(ctx), elements);
   }
 
   @Override

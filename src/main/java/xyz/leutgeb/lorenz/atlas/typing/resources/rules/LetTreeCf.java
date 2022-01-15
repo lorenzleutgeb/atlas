@@ -34,7 +34,6 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.LessThanOrEqualCons
 import xyz.leutgeb.lorenz.atlas.typing.resources.indices.Index;
 import xyz.leutgeb.lorenz.atlas.typing.resources.indices.MapIndex;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
-import xyz.leutgeb.lorenz.atlas.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.atlas.util.Pair;
 import xyz.leutgeb.lorenz.atlas.util.Util;
 
@@ -69,7 +68,7 @@ public class LetTreeCf implements Rule {
     final var body = expression.getBody();
     final List<Constraint> crossConstraints = new ArrayList<>();
 
-    if (!(value.getType() instanceof TreeType)) {
+    if (value.getType().countTrees().get() != 1) {
       throw bug("cannot apply (let:tree:cf) to a variable that is not a tree");
     }
 

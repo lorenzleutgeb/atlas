@@ -4,6 +4,7 @@ import jakarta.json.Json;
 import jakarta.json.JsonValue;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
@@ -79,6 +80,11 @@ public class TreeType implements Type {
     builder.add("arguments", argumentsBuilder.build());
 
     return builder.build();
+  }
+
+  @Override
+  public Optional<Integer> countTrees() {
+    return Optional.of(1);
   }
 
   @Override

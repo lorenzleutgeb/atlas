@@ -26,8 +26,8 @@ import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.atlas.util.Util;
 
 public class Identifier extends Expression {
-  public static final String LEAF_NAME = "leaf";
-  public static final String COIN_NAME = "coin";
+  private static final String LEAF_NAME = "leaf";
+  private static final String COIN_NAME = "coin";
   private static final Identifier UNDERSCORE = new Identifier(Predefined.INSTANCE, "_");
   private static final Set<String> BOOLEAN_NAMES = Set.of("true", "false");
   private static final Set<String> SPECIAL_NAMES =
@@ -114,7 +114,7 @@ public class Identifier extends Expression {
       return context.getSignatures().get(this.name).getType();
     }
     this.intro = context.getIntro(this.name);
-    return context.getType(this.name);
+    return context.getType(this.name, source);
   }
 
   @Override
@@ -160,7 +160,7 @@ public class Identifier extends Expression {
 
   @Override
   public boolean isImmediate() {
-    return !isSpecial();
+    return !LEAF_NAME.equals(name);
   }
 
   @Override
@@ -211,5 +211,10 @@ public class Identifier extends Expression {
   public static boolean isLeaf(Expression identifier) {
     return identifier instanceof Identifier
         && LEAF_NAME.equals(((Identifier) identifier).getName());
+  }
+
+  public static boolean isCoin(Expression identifier) {
+    return identifier instanceof Identifier
+        && COIN_NAME.equals(((Identifier) identifier).getName());
   }
 }

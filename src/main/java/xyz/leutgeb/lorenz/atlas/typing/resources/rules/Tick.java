@@ -18,7 +18,7 @@ public class Tick implements Rule {
     if (expression instanceof TickExpression tickExpression) {
       if (!obligation.isCost()) {
         return ApplicationResult.onlyObligations(
-            List.of(obligation.keepContextAndAnnotationAndCost(tickExpression.getBody())));
+            obligation.keepContextAndAnnotationAndCost(tickExpression.getBody()));
       }
       final var annotation = obligation.getAnnotation();
       final var q = globals.getHeuristic().generate("w" + annotation.getName(), annotation);

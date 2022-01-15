@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.atlas.typing.simple.types;
 
 import jakarta.json.JsonValue;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.atlas.unification.*;
@@ -28,4 +29,8 @@ public interface Type {
   String toJava();
 
   JsonValue toJson();
+
+  default Optional<Integer> countTrees() {
+    return Optional.empty();
+  }
 }

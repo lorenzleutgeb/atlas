@@ -21,7 +21,6 @@ import xyz.leutgeb.lorenz.atlas.typing.simple.FunctionSignature;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.FunctionType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.ProductType;
-import xyz.leutgeb.lorenz.atlas.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 
 class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature> {
@@ -47,25 +46,24 @@ class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature>
             : Collections.emptySet();
     Optional<CombinedFunctionAnnotation> annotation = Optional.empty();
 
-    final ProductType from = (ProductType) typeVisitor.visitProductType(ctx.from);
+    final ProductType from = (ProductType) typeVisitor.visitNoParenProduct(ctx.from);
     final Type to = typeVisitor.visit(ctx.to);
 
     if (ctx.annotatedAnnotation != null) {
-
       annotation =
           Optional.of(
               new CombinedFunctionAnnotation(
                   new FunctionAnnotation(
-                      convert((int) from.treeSize(), ctx.annotatedAnnotation.with.from),
-                      convert(to instanceof TreeType ? 1 : 0, ctx.annotatedAnnotation.with.to)),
+                      convert(from.countTrees().get(), ctx.annotatedAnnotation.with.from),
+                      convert(to.countTrees().get(), ctx.annotatedAnnotation.with.to)),
 
                   // TODO: Parse cf-annotations.
                   ctx.annotatedAnnotation.without.stream()
                       .map(
                           cf ->
                               new FunctionAnnotation(
-                                  convert((int) from.treeSize(), cf.from),
-                                  convert(to instanceof TreeType ? 1 : 0, cf.to)))
+                                  convert(from.countTrees().get(), cf.from),
+                                  convert(to.countTrees().get(), cf.to)))
                       .collect(Collectors.toSet())));
     }
 

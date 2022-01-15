@@ -34,6 +34,7 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.atlas.ast.Identifier;
+import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 
 @Slf4j
@@ -43,7 +44,7 @@ public class Util {
   private static final Random RANDOM = new Random(0L);
   private static final String LIBRARY_PATH = "java.library.path";
   private static final String LIBRARY_PATH_PREFIX =
-      "./:./lib/:../lib:/usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu/jni";
+      "/nix/store/b2jbdw1ylw2m4m3zhwdz134p255fff88-z3-4.8.12-lib/lib:./:./lib/:../lib:/usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu/jni";
 
   public static String generateSubscriptIndex(List<Integer> index) {
     return index.stream().map(Util::generateSubscript).collect(joining(" ", "₍", "₎"));
@@ -127,13 +128,15 @@ public class Util {
   }
 
   public static String undefinedText(String undefined, Iterable<String> defined) {
-    return undefinedText(undefined, defined.iterator());
+    return undefinedText(undefined, defined.iterator(), null);
   }
 
-  public static String undefinedText(String undefined, Iterator<String> defined) {
+  public static String undefinedText(String undefined, Iterator<String> defined, Source source) {
     return "'"
         + undefined
-        + "' is not defined. (Did you mean "
+        + "' (used at "
+        + source
+        + ") is not defined. (Did you mean "
         + Util.similar(undefined, defined, 0.5, 4)
         + "?)";
   }
@@ -269,6 +272,7 @@ public class Util {
     return new String(new char[times]).replace("\0", str);
   }
 
+  @Deprecated
   @SafeVarargs
   public static <T> Stack<T> stack(T... elements) {
     final var result = new Stack<T>();

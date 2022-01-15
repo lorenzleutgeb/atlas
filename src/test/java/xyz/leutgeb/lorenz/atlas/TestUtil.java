@@ -1,6 +1,7 @@
 package xyz.leutgeb.lorenz.atlas;
 
 import static java.util.Collections.emptyList;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.common.collect.Streams;
@@ -141,16 +142,19 @@ public class TestUtil {
     return result;
   }
 
-  public static Program loadAndNormalizeAndInferAndUnshare(String... fqns)
-      throws UnificationError, TypeError, IOException {
+  public static Program loadAndNormalizeAndInferAndUnshare(String... fqns) {
     return loadAndNormalizeAndInferAndUnshare(Set.of(fqns));
   }
 
-  public static Program loadAndNormalizeAndInferAndUnshare(Collection<String> fqns)
-      throws UnificationError, TypeError, IOException {
-    final var result = loader().load(Set.copyOf(fqns));
+  public static Program loadAndNormalizeAndInferAndUnshare(Collection<String> fqns) {
+    final Program result;
+    try {
+      result = loader().load(Set.copyOf(fqns));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     result.normalize();
-    result.infer();
+    assertTrue(result.infer());
     result.unshare(true);
     result.analyzeSizes();
     return result;

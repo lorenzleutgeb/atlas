@@ -19,6 +19,7 @@ import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.atlas.ast.Expression;
 import xyz.leutgeb.lorenz.atlas.ast.SourceIntro;
+import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.FunctionSignature;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.FunctionType;
@@ -129,15 +130,15 @@ public class UnificationContext {
   }
 
   /** Recursively looks up the signature of some identifier (given as {@link String}). */
-  public @Nonnull Type getType(final String id) throws TypeError {
+  public @Nonnull Type getType(final String id, Source source) throws TypeError {
     if (isHiddenRecursive(id)) {
-      throw new TypeError("'" + id + "' is out of scope.");
+      throw new TypeError("'" + id + "' is out of scope at " + source + ".");
     }
     Type t = getTypeRecursive(id);
     if (t != null) {
       return t;
     }
-    throw new TypeError(Util.undefinedText(id, iterateIdentifiers()));
+    throw new TypeError(Util.undefinedText(id, iterateIdentifiers(), source.getRoot()));
   }
 
   public SourceIntro getIntro(final String id) {
@@ -150,7 +151,7 @@ public class UnificationContext {
       return t;
     }
 
-    throw new TypeError(Util.undefinedText(fqn, iterateIdentifiers()));
+    throw new TypeError(Util.undefinedText(fqn, iterateIdentifiers(), null));
   }
 
   private Type getTypeInternal(final String key) {

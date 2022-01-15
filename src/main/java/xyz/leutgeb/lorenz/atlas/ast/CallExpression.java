@@ -82,9 +82,21 @@ public class CallExpression extends Expression {
         context.getSignature(getFullyQualifiedName()).wiggle(new Substitution(), context);
 
     final var fTy = signature.getType();
+    final var expectedArgCount = fTy.getFrom().getElements().size();
+    final var given = parameters.size();
 
-    if (fTy.getFrom().getElements().size() != parameters.size()) {
-      throw new TypeError();
+    if (expectedArgCount != given) {
+      throw new TypeError(
+          "Function `"
+              + getFullyQualifiedName()
+              + "` takes "
+              + expectedArgCount
+              + " arguments, but "
+              + given
+              + " w"
+              + (given == 1 ? "as" : "ere")
+              + " given at "
+              + getSource());
     }
 
     List<Type> xTy = new ArrayList<>(parameters.size());

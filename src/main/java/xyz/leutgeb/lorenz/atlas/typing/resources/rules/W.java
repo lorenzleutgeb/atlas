@@ -87,7 +87,7 @@ public class W implements Rule {
         emptyList());
   }
 
-  private static List<Constraint> compareCoefficientsLessOrEqual(
+  public static List<Constraint> compareCoefficientsLessOrEqual(
       Annotation left, Annotation right, String reason) {
     return compareCoefficients(
         left,
@@ -140,10 +140,10 @@ public class W implements Rule {
 
     final var all = flag(W.class, arguments, "all");
     final var lemma2xy = flag(W.class, arguments, "l2xy") || all;
-    final var lemmap1 = flag(W.class, arguments, "lp1");
-    final var lemmap1y = flag(W.class, arguments, "lp1y");
-    final boolean size = flag(W.class, arguments, "size") || lemmap1y || all;
-    final boolean mono = flag(W.class, arguments, "mono") || size || all;
+    final var lemmap1 = flag(W.class, arguments, "lp1") || all;
+    final var size = flag(W.class, arguments, "size") || all;
+    final var lemmap1y = flag(W.class, arguments, "lp1y") || size || all;
+    final var mono = flag(W.class, arguments, "mono") || size || all;
 
     final ReducedSizeAnalysis reducedSizeAnalysis;
     final Set<LessThan<Integer>> knowLt;

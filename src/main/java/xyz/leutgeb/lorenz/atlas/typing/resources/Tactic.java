@@ -19,6 +19,7 @@ import org.antlr.v4.runtime.Token;
 import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.atlas.antlr.TacticBaseVisitor;
 import xyz.leutgeb.lorenz.atlas.antlr.TacticParser;
+import xyz.leutgeb.lorenz.atlas.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.atlas.ast.Identifier;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
@@ -32,6 +33,7 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.rules.WVar;
 public class Tactic extends TacticBaseVisitor<Object> {
   Prover prover;
   Obligation obligation;
+  FunctionDefinition fd;
 
   private static final boolean FIXING_ENABLED = false;
   private static final boolean RECORDING_ENABLED = true;
@@ -136,7 +138,7 @@ public class Tactic extends TacticBaseVisitor<Object> {
             start.getCharPositionInLine());
         // prover.setLogApplications(true);
       }
-      prover.prove(obligation);
+      prover.prove(obligation, fd);
       if (!auto) {
         prover.setLogApplications(false);
       }

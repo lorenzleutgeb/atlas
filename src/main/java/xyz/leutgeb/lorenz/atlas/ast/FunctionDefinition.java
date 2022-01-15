@@ -114,8 +114,17 @@ public class FunctionDefinition {
 
     // TODO(lorenzleutgeb): Maybe do this in stub?
     if (annotatedSignature != null) {
-      if (annotatedSignature.getType().getFrom().getElements().size() != arguments.size()) {
-        throw new TypeError("expected " + arguments.size() + " for " + getFullyQualifiedName());
+      final var expected = annotatedSignature.getType().getFrom().getElements().size();
+      final var actual = arguments.size();
+      if (expected != actual) {
+        throw new TypeError(
+            "The type declaration for "
+                + getFullyQualifiedName()
+                + " requires "
+                + expected
+                + " arguments, but "
+                + arguments.size()
+                + " are given at definition.");
       }
       for (int i = 0; i < arguments.size(); i++) {
         Type ty = annotatedSignature.getType().getFrom().getElements().get(i);
@@ -162,23 +171,14 @@ public class FunctionDefinition {
   }
 
   public List<Identifier> treeLikeArguments() {
-    /*
-    if (annotatedSignature != null) {
-      final var from = annotatedSignature.getType().getFrom();
-      final var result = new ArrayList<Identifier>((int) from.treeSize());
-      for (int i = 0; i < arguments.size(); i++) {
-        if (from.getElements().get(i) instanceof TreeType) {
-          result.add(new Identifier(
-                  body.getSource(),
-                  arguments.get(i),
-                  from.getElements().get(i),
-                  new SourceIntro(getFullyQualifiedName(), body)
-          ));
-        }
-      }
-      return result;
-    }
-     */
+    // NOTE(lorenzleutgeb): A declared argument that is not used in the body
+    // is missing from the return value of this function, e.g.
+    //
+    //  f ∷ Tree α * α → α
+    //  f t x = x
+    //
+    // will not have `t` as a tree like argument.
+
     if (inferredSignature == null) {
       throw new IllegalStateException();
     }
@@ -249,7 +249,13 @@ public class FunctionDefinition {
   }
 
   public boolean returnsTree() {
-    return body.getType() instanceof TreeType;
+    int treeCount = body.getType().countTrees().get();
+
+    if (treeCount > 1) {
+      throw new UnsupportedOperationException("returning more than one tree is not supported.");
+    }
+
+    return treeCount == 1;
   }
 
   public void stubAnnotations(

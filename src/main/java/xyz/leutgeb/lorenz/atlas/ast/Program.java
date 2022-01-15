@@ -2,13 +2,16 @@ package xyz.leutgeb.lorenz.atlas.ast;
 
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.synchronizedMap;
+import static java.util.Collections.unmodifiableMap;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.Optional.empty;
 import static java.util.stream.Collectors.joining;
+import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ZERO;
 import static xyz.leutgeb.lorenz.atlas.util.Util.*;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Streams;
 import com.microsoft.z3.Status;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -16,6 +19,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -38,10 +43,12 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.InequalityConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.atlas.typing.resources.optimiziation.Optimization;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Prover;
+import xyz.leutgeb.lorenz.atlas.typing.resources.rules.W;
 import xyz.leutgeb.lorenz.atlas.typing.resources.solving.Solver;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.atlas.unification.Equivalence;
@@ -54,7 +61,6 @@ import xyz.leutgeb.lorenz.atlas.util.Util;
 @Slf4j
 public class Program {
   private static final boolean FORCE_RANK_EQUAL = false;
-  private static final boolean FORCE_RESULT_PER_MODULE = false;
 
   @Getter private final Map<String, FunctionDefinition> functionDefinitions;
 
@@ -93,7 +99,7 @@ public class Program {
     this.roots = unmodifiableSet(roots);
   }
 
-  public void infer() throws UnificationError, TypeError {
+  public boolean infer() {
     normalize();
 
     if (isEmpty()) {
@@ -101,18 +107,21 @@ public class Program {
     }
 
     if (inferred) {
-      return;
+      return true;
     }
 
-    inferParallel();
+    if (inferParallel()) {
+      inferred = true;
+      return true;
+    }
 
-    inferred = true;
+    return false;
   }
 
-  private void inferParallel() throws UnificationError, TypeError {
+  private boolean inferParallel() {
     var root = UnificationContext.root();
     var scheduler =
-        new Scheduler<Void, Graph<String, DependencyEdge>, DependencyEdge>(
+        new Scheduler<Optional<TypeError>, Graph<String, DependencyEdge>, DependencyEdge>(
             condensation,
             (alternative) ->
                 () -> {
@@ -132,17 +141,32 @@ public class Program {
                       fd.resolve(solution, ctx.getSignatures().get(fqn));
                       ctx.putSignature(fqn, fd.getInferredSignature());
                     }
-                  } catch (UnificationError | TypeError e) {
-                    throw new RuntimeException(e);
+                  } catch (TypeError e) {
+                    return Optional.of(e);
                   }
-                  return null;
+                  return Optional.empty();
                 });
 
+    boolean ok = true;
     try {
-      scheduler.run(8, 1, TimeUnit.MINUTES);
+      var results = scheduler.run(8, 1, TimeUnit.MINUTES);
+      for (var result : results.values()) {
+        if (result.getExecutionException() != null) {
+          throw new RuntimeException(result.getExecutionException());
+        }
+        if (result.getCancellationException() != null) {
+          throw new RuntimeException(result.getCancellationException());
+        }
+        if (result.getValue().isPresent()) {
+          log.error("Type Error", result.getValue().get());
+          ok = false;
+        }
+      }
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      log.warn("Interrupted", e);
+      return false;
     }
+    return ok;
   }
 
   private void inferSequential() throws UnificationError, TypeError {
@@ -173,7 +197,7 @@ public class Program {
   }
 
   public Solver.Result solve(
-      Map<String, CombinedFunctionAnnotation> functionAnnotations,
+      Map<String, CombinedFunctionAnnotation> annotations,
       Map<String, Path> tactics,
       boolean infer,
       boolean forceResultPerModule,
@@ -183,6 +207,10 @@ public class Program {
         .anyMatch(Predicate.not(Set::isEmpty))) {
       return new Solver.Result(Status.UNSATISFIABLE, empty(), emptyMap(), empty());
     }
+
+    final Map<String, CombinedFunctionAnnotation> benchmark =
+        infer ? unmodifiableMap(annotations) : emptyMap();
+    final Map<String, CombinedFunctionAnnotation> actual = infer ? new HashMap<>() : annotations;
 
     final var heuristic = SmartRangeHeuristic.DEFAULT;
     final var called = calledFunctionNames();
@@ -207,17 +235,47 @@ public class Program {
 
                   final var prover = new Prover(sccName, null, basePath);
 
-                  // Stub annotations.
-                  for (var fd : fds) {
-                    fd.stubAnnotations(
-                        functionAnnotations,
-                        heuristic,
-                        called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
-                        infer);
-                  }
-
                   Set<Constraint> external = new HashSet<>();
                   external.addAll(externalConstraints);
+
+                  // Stub annotations.
+                  for (var fd : fds) {
+                    if (infer && benchmark.containsKey(fd.getFullyQualifiedName())) {
+                      final CombinedFunctionAnnotation annotation =
+                          benchmark.get(fd.getFullyQualifiedName());
+                      fd.stubAnnotations(
+                          actual,
+                          heuristic,
+                          Math.max(
+                              called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
+                              annotation.withoutCost.size()),
+                          infer);
+
+                      final var stubbed = fd.getInferredSignature().getAnnotation().get();
+                      external.addAll(
+                          W.compareCoefficientsLessOrEqual(
+                              stubbed.withCost.from, annotation.withCost.from, "(improve)"));
+                      external.addAll(
+                          W.compareCoefficientsLessOrEqual(
+                              annotation.withCost.to, stubbed.withCost.to, "(improve)"));
+
+                      Streams.zip(
+                              annotation.withoutCost.stream(),
+                              stubbed.withoutCost.stream(),
+                              (a, s) ->
+                                  append(
+                                      W.compareCoefficientsLessOrEqual(s.from, a.from, "(improve)"),
+                                      W.compareCoefficientsLessOrEqual(a.to, s.to, "(improve)")))
+                          .forEach(external::addAll);
+                    } else {
+                      fd.stubAnnotations(
+                          actual,
+                          heuristic,
+                          called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
+                          infer);
+                    }
+                  }
+
                   Set<String> refresh = new HashSet<>();
 
                   // TODO: This is for "interacting functions", i.e. multiple functions on the same
@@ -225,25 +283,53 @@ public class Program {
                   for (var fd : fds) {
                     if (FORCE_RANK_EQUAL) {
                       System.out.println("!!! FORCING RANK");
-                      external.add(
-                          new EqualityConstraint(
-                              fd.getInferredSignature()
-                                  .getAnnotation()
-                                  .get()
-                                  .withCost
-                                  .from
-                                  .getRankCoefficient(),
-                              fd.getInferredSignature()
-                                  .getAnnotation()
-                                  .get()
-                                  .withCost
-                                  .to
-                                  .getRankCoefficient(),
-                              "(force)"));
+                      if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1
+                          && fd.getInferredSignature().getAnnotation().get().withCost.from.size()
+                              == 1) {
+                        external.add(
+                            new EqualityConstraint(
+                                fd.getInferredSignature()
+                                    .getAnnotation()
+                                    .get()
+                                    .withCost
+                                    .from
+                                    .getRankCoefficient(),
+                                fd.getInferredSignature()
+                                    .getAnnotation()
+                                    .get()
+                                    .withCost
+                                    .to
+                                    .getRankCoefficient(),
+                                "(force)"));
+                      }
+
+                      if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1) {
+                        external.add(
+                            new InequalityConstraint(
+                                ZERO,
+                                fd.getInferredSignature()
+                                    .getAnnotation()
+                                    .get()
+                                    .withCost
+                                    .to
+                                    .getRankCoefficient(),
+                                "(force)"));
+                      } else {
+                        external.add(
+                            new EqualityConstraint(
+                                ZERO,
+                                fd.getInferredSignature()
+                                    .getAnnotation()
+                                    .get()
+                                    .withCost
+                                    .to
+                                    .getRankCoefficient(),
+                                "(force)"));
+                      }
                     }
-                    if (!fd.returnsTree()) {
-                      continue;
-                    }
+                    // if (!fd.returnsTree()) {
+                    // continue;
+                    // }
                     // Set right sides equal.
                     if (forceResultPerModule) {
                       final var module = fd.getModuleName();
@@ -261,29 +347,32 @@ public class Program {
                   }
 
                   // Solve.
+                  Instant proveStart = Instant.now();
                   for (var fd : fds) {
                     final var globals =
-                        new AnnotatingGlobals(functionAnnotations, fd.getSizeAnalysis(), heuristic);
+                        new AnnotatingGlobals(actual, fd.getSizeAnalysis(), heuristic);
                     prover.setGlobals(globals);
 
                     Obligation typingObligation = fd.getTypingObligation();
 
                     if (tactics.containsKey(fd.getFullyQualifiedName())) {
                       try {
-                        prover.read(typingObligation, tactics.get(fd.getFullyQualifiedName()));
+                        prover.read(typingObligation, tactics.get(fd.getFullyQualifiedName()), fd);
                       } catch (IOException e) {
                         throw new RuntimeException(e);
                       }
                     } else {
-                      prover.prove(typingObligation);
+                      prover.prove(typingObligation, fd);
                     }
 
-                    try (final var out =
-                        output(
-                            basePath
-                                .resolve("tactics")
-                                .resolve(fqnToFlatFilename(fd.getName()) + ".txt"))) {
+                    final Path tacticsPath =
+                        basePath
+                            .resolve("tactics")
+                            .resolve(fd.getModuleName())
+                            .resolve(fqnToFlatFilename(fd.getName()) + ".txt");
+                    try (final var out = output(tacticsPath)) {
                       prover.printTactic(typingObligation, out, true);
+                      log.info("See {}", tacticsPath);
                     }
 
                     for (var cfAnnotation :
@@ -293,28 +382,21 @@ public class Program {
                         continue;
                       }
 
-                      final var cfRoot =
+                      prover.proveFrom(
                           new Obligation(
                               fd.treeLikeArguments(),
                               cfAnnotation.from,
                               fd.getBody(),
                               cfAnnotation.to,
                               false,
-                              empty());
-
-                      if (tactics.containsKey(fd.getFullyQualifiedName())) {
-                        try {
-                          log.debug("Using tactic to prove cf typing!");
-                          prover.read(cfRoot, tactics.get(fd.getFullyQualifiedName()));
-                        } catch (IOException e) {
-                          throw new RuntimeException(e);
-                        }
-                      } else {
-                        prover.prove(cfRoot);
-                      }
+                              empty()),
+                          fd,
+                          typingObligation);
                     }
                   }
+                  Instant proveStop = Instant.now();
 
+                  Instant solveStart = Instant.now();
                   Solver.Result result;
                   if (infer) {
                     final var optimization = Optimization.standard(fds);
@@ -323,6 +405,16 @@ public class Program {
                   } else {
                     result = prover.solve(external);
                   }
+                  Instant solveStop = Instant.now();
+
+                  log.info(
+                      "STATS for "
+                          + scc
+                          + ":"
+                          + (Duration.between(proveStart, proveStop))
+                          + " proving, and "
+                          + (Duration.between(solveStart, solveStop))
+                          + " solving!");
 
                   if (!result.isSatisfiable()) {
                     return result;
@@ -338,7 +430,7 @@ public class Program {
                   }
 
                   for (var fqn : scc.vertexSet()) {
-                    functionAnnotations.put(
+                    actual.put(
                         fqn,
                         get(fqn)
                             .getInferredSignature()
@@ -435,12 +527,12 @@ public class Program {
 
           if (tactics.containsKey(fd.getFullyQualifiedName())) {
             try {
-              prover.read(typingObligation, tactics.get(fd.getFullyQualifiedName()));
+              prover.read(typingObligation, tactics.get(fd.getFullyQualifiedName()), fd);
             } catch (IOException e) {
               throw new RuntimeException(e);
             }
           } else {
-            prover.prove(typingObligation);
+            prover.prove(typingObligation, fd);
           }
 
           for (var cfAnnotation : fd.getInferredSignature().getAnnotation().get().withoutCost) {
@@ -470,12 +562,12 @@ public class Program {
             if (tactics.containsKey(fd.getFullyQualifiedName())) {
               try {
                 log.debug("Using tactic to prove cf typing!");
-                prover.read(cfRoot, tactics.get(fd.getFullyQualifiedName()));
+                prover.read(cfRoot, tactics.get(fd.getFullyQualifiedName()), fd);
               } catch (IOException e) {
                 throw new RuntimeException(e);
               }
             } else {
-              prover.prove(cfRoot);
+              prover.prove(cfRoot, fd);
             }
           }
         });
@@ -510,6 +602,7 @@ public class Program {
 
   public void unshare(boolean lazy) {
     forEach(x -> x.unshare(lazy));
+    forEach(fd -> fd.getBody().setParents(null));
   }
 
   public void analyzeSizes() {
@@ -584,10 +677,8 @@ public class Program {
   }
 
   public void dumpToJsh(Path path) {
-    try {
-      infer();
-    } catch (UnificationError | TypeError unificationError) {
-      throw new RuntimeException(unificationError);
+    if (!infer()) {
+      return;
     }
 
     Multimap<String, FunctionDefinition> output = ArrayListMultimap.create();

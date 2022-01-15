@@ -10,8 +10,6 @@ import java.nio.file.Path;
 import picocli.CommandLine;
 import xyz.leutgeb.lorenz.atlas.ast.Program;
 import xyz.leutgeb.lorenz.atlas.module.Loader;
-import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 
 @CommandLine.Command(name = "lnf")
 public class LNF implements Runnable {
@@ -40,10 +38,7 @@ public class LNF implements Runnable {
       throw new RuntimeException(e);
     }
     program.normalize();
-    try {
-      program.infer();
-    } catch (UnificationError | TypeError unificationError) {
-      unificationError.printStackTrace();
+    if (!program.infer()) {
       System.exit(1);
     }
     for (var fd : program.getFunctionDefinitions().values()) {

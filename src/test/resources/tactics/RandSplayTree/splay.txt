@@ -22,15 +22,15 @@
               ))
             )
             (match
-              (let:tree:cf leaf (w{mono} (let:tree:cf node (w{l2xy} node))))
+              (let:tree:cf leaf (w{mono} (let:tree:cf node (w{mono} node))))
               (w{mono} (let:tree:cf
                 (tick app)
                 (match
                   (w{mono} leaf)
-                  (ite
-                    (w{l2xy} (tick (let:tree:cf node (let:tree:cf node (w{mono} node)))))
+                  (w{l2xy} (ite
+                    (tick (let:tree:cf node (let:tree:cf node (w{mono} node))))
                     (let:tree:cf node (let:tree:cf node (w node)))
-                  )
+                  ))
                 )
               ))
             )
@@ -49,10 +49,10 @@
                   (tick app)
                   (match
                     (w{mono} leaf)
-                    (ite
-                      (w{l2xy} (tick (let:tree:cf node (let:tree:cf node (w{mono} node)))))
+                    (w{l2xy} (ite
+                      (tick (let:tree:cf node (let:tree:cf node (w{mono} node))))
                       (let:tree:cf node (let:tree:cf node (w{mono} node)))
-                    )
+                    ))
                   )
                 )
               )

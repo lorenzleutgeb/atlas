@@ -11,29 +11,28 @@ program: (func)* EOF;
 // Function declaration (with list of arguments):
 func : signature? name=IDENTIFIER (args+=IDENTIFIER)* ASSIGN body=expression SEMICOLON?;
 
-signature : name=IDENTIFIER DOUBLECOLON (constraints DOUBLE_ARROW)? from=productType ARROW to=namedType (PIPE annotatedAnnotation=combinedFunctionAnnotation)? ;
+signature : name=IDENTIFIER DOUBLECOLON (constraints DOUBLE_ARROW)? from=noParenProduct ARROW to=type (PIPE annotatedAnnotation=combinedFunctionAnnotation)? ;
 
 combinedFunctionAnnotation : SQUARE_OPEN with=functionAnnotation (COMMA CURLY_OPEN (without+=functionAnnotation (COMMA without+=functionAnnotation)*)? CURLY_CLOSE)? SQUARE_CLOSE ;
 
 functionAnnotation : from=annotation ARROW to=annotation ;
 
+type : IDENTIFIER
+     | predefinedType
+     | PAREN_OPEN items+=type (CROSS items+=type)* PAREN_CLOSE
+     ;
+
+noParenProduct : items+=type (CROSS items+=type)*;
+
 variableType : IDENTIFIER ;
+
+predefinedType : BOOL
+               | treeType
+               ;
 
 treeType : TREE variableType ;
 
-// NOTE: This does NOT include product types!
-constructedType : variableType
-                | treeType
-                ;
-
-predefinedType : BOOL ;
-
-unnamedType : constructedType | predefinedType ;
-
-// Optionally named types.
-namedType : (IDENTIFIER DOUBLECOLON)? unnamedType ;
-
-typeClass : TYC_EQ | TYC_ORD;
+typeClass : TYC_EQ | TYC_ORD ;
 
 constraint : typeClass variableType
            | typeClass PAREN_OPEN treeType PAREN_CLOSE
@@ -43,16 +42,11 @@ constraints : items+=constraint
             | PAREN_OPEN items+=constraint (COMMA items+=constraint)* PAREN_CLOSE
             ;
 
-productType : (productTypeNaming DOUBLECOLON)? PAREN_OPEN items+=unnamedType (CROSS items+=unnamedType)* PAREN_CLOSE
-            | (productTypeNaming DOUBLECOLON)? items+=unnamedType (CROSS items+=unnamedType)*
-            ;
-
-productTypeNaming : PAREN_OPEN names+=IDENTIFIER (COMMA names+=IDENTIFIER) PAREN_CLOSE ;
-
 // Expressions
 expression : identifier # variableExpression
            | IF condition=expression THEN truthy=expression ELSE falsy=expression # iteExpression
            | MATCH test=expression WITH (PIPE LEAF ARROW leafCase=expression)? PIPE nodePattern=pattern ARROW nodeCase=expression # matchExpression
+           | MATCH test=expression WITH PIPE tuplePattern ARROW body=expression # matchTupleExpression
            | node # nodeExpression
            | name=IDENTIFIER (params+=expression)* # callExpression
            | LET name=identifier ASSIGN value=expression IN body=expression # letExpression
@@ -61,6 +55,7 @@ expression : identifier # variableExpression
            | left=expression op right=expression # comparison
            | TILDE (numerator=NUMBER)? (denominator=NUMBER)? expression # tickExpression
            | UNDERSCORE # holeExpression
+           | CURLY_OPEN items+=expression (COMMA items+=expression)* CURLY_CLOSE # tuple
            ;
 
 op : EQ | NE | LT | LE | GT | GE ;
@@ -71,6 +66,8 @@ op : EQ | NE | LT | LE | GT | GE ;
 pattern : PAREN_OPEN left=maybeAnonymousIdentifier COMMA middle=maybeAnonymousIdentifier COMMA right=maybeAnonymousIdentifier PAREN_CLOSE # deconstructionPattern
         | maybeAnonymousIdentifier # aliasingPattern
         ;
+
+tuplePattern : CURLY_OPEN items+=identifier (COMMA items+=identifier)* CURLY_CLOSE ;
 
 node: PAREN_OPEN left=expression COMMA middle=expression COMMA right=expression PAREN_CLOSE ;
 

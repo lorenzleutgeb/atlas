@@ -253,11 +253,11 @@ public class Tests {
     assertNotNull(definition);
     assertEquals(expectedSignature, definition.getInferredSignature());
 
-    final var returnsTree = expectedSignature.getType().getTo() instanceof TreeType;
+    final var returnsTree = expectedSignature.getType().getTo().countTrees().get() > 0;
 
     final List<Coefficient> args =
         Stream.generate(() -> ZERO)
-            .limit(expectedSignature.getType().getFrom().treeSize())
+            .limit(expectedSignature.getType().getFrom().countTrees().get())
             .collect(Collectors.toList());
 
     // If there are problems with one test case, use this snippet to check for satisfiability.
@@ -270,7 +270,7 @@ public class Tests {
         new CombinedFunctionAnnotation(
             new FunctionAnnotation(
                 Annotation.constant(
-                    (int) expectedSignature.getType().getFrom().treeSize(),
+                    expectedSignature.getType().getFrom().countTrees().get(),
                     "inferredArgs",
                     inferredInput),
                 new Annotation(
@@ -293,7 +293,7 @@ public class Tests {
         new CombinedFunctionAnnotation(
             new FunctionAnnotation(
                 Annotation.constant(
-                    (int) expectedSignature.getType().getFrom().treeSize(),
+                    expectedSignature.getType().getFrom().countTrees().get(),
                     "expectedArgs",
                     tightInput),
                 new Annotation(
@@ -328,7 +328,7 @@ public class Tests {
                   new Annotation(
                       args,
                       Map.of(
-                          unitIndex((int) expectedSignature.getType().getFrom().treeSize()),
+                          unitIndex(expectedSignature.getType().getFrom().countTrees().get()),
                           tooSmallInput),
                       "expectedArgs"),
                   new Annotation(
@@ -369,7 +369,7 @@ public class Tests {
                 new Annotation(
                     args,
                     Map.of(
-                        unitIndex((int) expectedSignature.getType().getFrom().treeSize()),
+                        unitIndex(expectedSignature.getType().getFrom().countTrees().get()),
                         generatorInput),
                     "expectedGeneratorArgs"),
                 new Annotation(
@@ -460,8 +460,12 @@ public class Tests {
   void fiddle() throws Exception {
     var loader = TestUtil.loader();
     loader.autoload();
-    Program program = loader.loadInline("foo t = (Scratch.empty t)");
-    program.dumpToJsh(new File(OUT, "Dump.jsh").toPath());
+    Program program = loader.loadInline("foo t a = {(Scratch.empty t), a}");
+    program.normalize();
+    program.infer();
+
+    String x = "";
+    // program.dumpToJsh(new File(OUT, "Dump.jsh").toPath());
   }
 
   private enum ExpectedResult {

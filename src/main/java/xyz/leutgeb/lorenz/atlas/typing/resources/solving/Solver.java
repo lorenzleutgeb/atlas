@@ -249,7 +249,7 @@ public class Solver {
 
       if (optimize && result.getLeft().equals(SATISFIABLE)) {
         for (Expr objective : opt.getObjectives()) {
-          log.trace("Objective: " + objective + " = " + opt.getModel().getConstInterp(objective));
+          log.info("Objective: " + objective + " = " + opt.getModel().getConstInterp(objective));
         }
       }
 
@@ -273,19 +273,23 @@ public class Solver {
         }
         KnownCoefficient v;
         if (x instanceof final RatNum xr) {
-          var num = xr.getNumerator();
-          if (num.getBigInteger().intValueExact() == 0) {
-            v = KnownCoefficient.ZERO;
-          } else {
-            v = new KnownCoefficient(Util.toFraction(xr));
+          try {
+            var num = xr.getNumerator();
+            if (num.getBigInteger().intValueExact() == 0) {
+              v = KnownCoefficient.ZERO;
+            } else {
+              v = new KnownCoefficient(Util.toFraction(xr));
+            }
+            if (v.getValue().signum() < 0 && !e.getValue().isMaybeNegative()) {
+              log.warn("Got negative coefficient!");
+            }
+            solution.put(e.getValue(), v);
+          } catch (ArithmeticException ae) {
+            log.error("Ignoring value " + xr, ae);
           }
         } else {
           throw bug("interpretation contains constant of unknown or unexpected type");
         }
-        if (v.getValue().signum() < 0 && !e.getValue().isMaybeNegative()) {
-          log.warn("Got negative coefficient");
-        }
-        solution.put(e.getValue(), v);
       }
 
       if (solution.size() != generatedCoefficients.size()) {

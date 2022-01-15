@@ -1,6 +1,5 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources.rules;
 
-import static xyz.leutgeb.lorenz.atlas.ast.Identifier.LEAF_NAME;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ZERO;
 import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
 
@@ -13,6 +12,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.atlas.ast.Identifier;
+import xyz.leutgeb.lorenz.atlas.ast.TupleExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
@@ -27,15 +27,17 @@ public class Leaf implements Rule {
   public Rule.ApplicationResult apply(
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = obligation.getExpression();
-    if (!(expression instanceof final Identifier id)) {
-      throw bug(
-          "cannot apply (leaf) to identifier expression that is not identifier 'leaf' (it is '"
-              + expression.terminalOrBox()
-              + "')");
-    }
 
-    if (!id.getName().equals(LEAF_NAME)) {
-      throw bug("cannot apply (leaf) to identifier 'leaf' (it is '" + id.getName() + "')");
+    if (expression instanceof final Identifier id) {
+      if (!Identifier.isLeaf(id)) {
+        throw bug("cannot apply (leaf) to identifier '" + id.getName() + "'");
+      }
+    } else if (expression instanceof final TupleExpression tuple) {
+      if (!tuple.getTree().map(Identifier::isLeaf).orElse(false)) {
+        throw bug("cannot apply (leaf) to this tuple");
+      }
+    } else {
+      throw bug("cannot apply (leaf) to expression that is not identifier 'leaf'");
     }
 
     final var context = obligation.getContext();

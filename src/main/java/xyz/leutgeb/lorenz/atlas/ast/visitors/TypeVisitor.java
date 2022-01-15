@@ -1,7 +1,5 @@
 package xyz.leutgeb.lorenz.atlas.ast.visitors;
 
-import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
-
 import java.nio.file.Path;
 import java.util.stream.Collectors;
 import xyz.leutgeb.lorenz.atlas.antlr.SplayParser;
@@ -21,12 +19,30 @@ class TypeVisitor extends SourceNameAwareVisitor<Type> {
     if (ctx.BOOL() != null) {
       return BoolType.INSTANCE;
     }
-    throw bug("unkown predefined type");
+    return visitTreeType(ctx.treeType());
   }
 
   @Override
-  public Type visitProductType(SplayParser.ProductTypeContext ctx) {
-    // TODO(lorenzleutgeb): Namings.
+  public Type visitType(SplayParser.TypeContext ctx) {
+    if (ctx.items != null && !ctx.items.isEmpty()) {
+      return new ProductType(ctx.items.stream().map(this::visit).collect(Collectors.toList()));
+    }
+    if (ctx.IDENTIFIER() != null) {
+      return new TypeVariable(ctx.IDENTIFIER().getText());
+    }
+    if (ctx.predefinedType() != null) {
+      return visitPredefinedType(ctx.predefinedType());
+    }
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Type visitNoParenProduct(SplayParser.NoParenProductContext ctx) {
+    /*
+    if (ctx.items == null) {
+      return visitType(ctx.type);
+    }
+     */
     return new ProductType(ctx.items.stream().map(this::visit).collect(Collectors.toList()));
   }
 

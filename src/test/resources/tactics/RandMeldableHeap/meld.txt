@@ -1,0 +1,49 @@
+(match (* h1 *)
+  (w{mono} (* proof leaf 1 *)
+    var
+  )
+  (match (* h2 *)
+    (w{mono} (* proof leaf 3 *)
+      node
+    )
+    (ite (* h1x ⪲ h2x *)
+      (let:tree:cf
+        node
+        (let:tree:cf
+          node
+          app
+        )
+      )
+      (w{all} (* before ite:coin *) (* coin *)
+        (ite (* coin *)
+          (w{l2xy mono} (* binds a call/tick *)
+            (let:tree:cf
+              (tick
+                (let:tree:cf
+                  node
+                  (w{all} (shift app))
+                )
+              )
+              (w{all} (* proof leaf 2 *)
+                node
+              )
+            )
+          )
+          (w{l2xy mono} (* binds a call/tick *)
+            (let:tree:cf
+              (tick
+                (let:tree:cf
+                  node
+                  (w{all} (shift app))
+                )
+              )
+              (w{mono} (* proof leaf 2 *)
+                node
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)

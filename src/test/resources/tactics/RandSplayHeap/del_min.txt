@@ -1,0 +1,55 @@
+(match (* t *)
+  (w{mono} (* proof leaf 1 *)
+    leaf
+  )
+  (match (* tab *)
+    (w{mono} (* proof leaf 1 *)
+      var
+    )
+    (match (* ta *)
+      (w{mono}
+        (let:tree:cf
+          node
+          (w{mono} (* proof leaf 1 *)
+            var
+          )
+        )
+      )
+      (w{l2xy mono} (* binds a call/tick *)
+        (let:tree:cf
+          (tick
+            app
+          )
+          (match:tuple
+            (w{l2xy} (* before ite:coin *) (* coin *)
+              (ite (* coin *)
+                (w{mono} (* tick outside let *)
+                  (tick
+                    (let:tree:cf
+                      node
+                      (let:tree:cf
+                        node
+                        (w{mono} (* proof leaf 1 *)
+                          var
+                        )
+                      )
+                    )
+                  )
+                )
+                (let:tree:cf
+                  node
+                  (let:tree:cf
+                    node
+                    (w{mono} (* proof leaf 1 *)
+                      var
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)

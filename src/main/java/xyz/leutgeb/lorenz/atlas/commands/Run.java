@@ -19,8 +19,6 @@ import picocli.CommandLine;
 import xyz.leutgeb.lorenz.atlas.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.atlas.ast.Program;
 import xyz.leutgeb.lorenz.atlas.module.Loader;
-import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 
 @CommandLine.Command(name = "run")
 @Slf4j
@@ -86,10 +84,8 @@ public class Run implements Runnable {
 
     program.normalize();
 
-    try {
-      program.infer();
-    } catch (UnificationError | TypeError unificationError) {
-      throw new RuntimeException(unificationError);
+    if (!program.infer()) {
+      return;
     }
     program.analyzeSizes();
     // log.info("Loaded definitions:");

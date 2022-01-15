@@ -3,16 +3,14 @@ package xyz.leutgeb.lorenz.atlas.typing.resources.heuristics;
 import static com.google.common.collect.Lists.cartesianProduct;
 import static java.util.stream.IntStream.range;
 import static java.util.stream.Stream.concat;
-import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.isConstantIndex;
-import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.isUnitIndex;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Data;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
-import xyz.leutgeb.lorenz.atlas.util.Util;
 
 @Data
 public class SmartRangeHeuristic implements AnnotationHeuristic {
@@ -34,17 +32,51 @@ public class SmartRangeHeuristic implements AnnotationHeuristic {
   }
 
   @Override
-  public Annotation generate(String name, int size) {
+  public Annotation generate(String namePrefix, int size) {
     return new Annotation(
-        size, range(0, size).boxed().toList(), generateInternal(size).toList(), name);
+        size, range(0, size).boxed().toList(), generateInternal(size).toList(), namePrefix);
+  }
+
+  @Override
+  public Annotation generate(String namePrefix, Annotation shape) {
+    int size = shape.size();
+    return new Annotation(
+        size,
+        range(0, size).boxed().toList(),
+        Annotation.indexUnion(
+                generateInternal(size).collect(Collectors.toList()),
+                shape
+                    .streamNonRankCoefficients()
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList()))
+            .collect(Collectors.toList()),
+        namePrefix);
   }
 
   public Stream<List<Integer>> generateInternal(int treeSize) {
     return cartesianProduct(
             concat(Stream.generate(() -> as).limit(treeSize), Stream.of(bs)).toList())
         .stream()
-        .filter(Predicate.not(Util::isAllZeroes))
-        // TODO: Be smart about when to allow constants, especially 1. Only when there's a leaf?
-        .filter(index -> !isConstantIndex(index) || isUnitIndex(index));
+        .filter(
+            index -> {
+              // TODO: When to allow constants, especially 1. Only when there's a leaf?
+              boolean hasTree = false;
+              if (index.size() > 1) {
+                for (int i = 0; i < index.size() - 1; i++) {
+                  if (index.get(i) > 0) {
+                    hasTree = true;
+                    break;
+                  }
+                }
+              }
+              final Integer last = index.get(index.size() - 1);
+              if (last == 2) {
+                return !hasTree;
+              }
+              if (last == -1 || last == 0) {
+                return hasTree;
+              }
+              return hasTree;
+            });
   }
 }

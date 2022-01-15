@@ -1,14 +1,14 @@
-(match
+(match (* t *)
   leaf
   (ite
-    (w{mono} (let:tree:cf app (w{mono} node)))
+    (w{mono l2xy} (let:tree:cf app (match:tuple (w{mono} node))))
     (ite
-      (match
+      (match (* cl *)
         (let:tree:cf leaf (w node))
         (ite
-          (w{mono} (let:tree:cf app (let:tree:cf node (w{mono} node))))
+          (w{mono} (let:tree:cf app (match:tuple (let:tree:cf node (w{mono} node)))))
           (ite
-            (match
+            (match (* bl *)
               (let:tree:cf leaf (let:tree:cf node (w{mono} node)))
               (w{l2xy mono}
                 (let:tree:cf
@@ -44,7 +44,7 @@
       (match
         (let:tree:cf leaf (w{mono} node))
         (ite
-          (w{mono} (let:tree:cf app (let:tree:cf node (w{mono} node))))
+          (w{mono} (let:tree:cf app (match:tuple (let:tree:cf node (w{mono} node)))))
           (ite
             (match
               (let:tree:cf leaf (let:tree:cf node (w{mono} node)))

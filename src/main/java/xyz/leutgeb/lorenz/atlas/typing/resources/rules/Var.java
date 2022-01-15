@@ -1,10 +1,13 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources.rules;
 
 import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
+import static xyz.leutgeb.lorenz.atlas.util.Util.pick;
 
 import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.atlas.ast.Identifier;
+import xyz.leutgeb.lorenz.atlas.ast.TupleExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
@@ -17,28 +20,21 @@ public class Var implements Rule {
   public Rule.ApplicationResult apply(
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var context = obligation.getContext();
-    final var expression = obligation.getExpression();
 
-    if (!(expression instanceof final Identifier id)) {
-      throw bug("cannot apply (var) to expression that is not an identifier");
-    }
+    final var target =
+        switch (obligation.getExpression()) {
+          case Identifier id -> id.getType() instanceof TreeType
+              ? Optional.of(id)
+              : Optional.empty();
+          case TupleExpression tuple -> tuple.getTree();
+          default -> Optional.empty();
+        };
 
-    /* DANGER ZONE
-    if (!(expression.getType() instanceof TreeType)) {
-      if (!context.isEmpty()) {
-        throw bug(
-                "cannot apply (var) to identifier that is not of type tree with nonempty context");
-      }
-      log.warn("NOT CONSTRAINING IN VAR");
-      return Rule.ApplicationResult.empty();
-    }
-     */
-
-    if (id.getType() instanceof TreeType) {
+    if (target.isPresent()) {
       if (context.size() != 1) {
         throw bug("cannot apply (var) when context does not have exactly one element");
       }
-      if (!context.getIds().get(0).equals(id)) {
+      if (!pick(context.getIds()).equals(target.get())) {
         throw bug("wrong variable in context");
       }
     } else {

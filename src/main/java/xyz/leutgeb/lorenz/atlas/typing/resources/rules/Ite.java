@@ -22,13 +22,8 @@ public class Ite implements Rule {
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = (IfThenElseExpression) obligation.getExpression();
     final var condition = expression.getCondition();
-    final var isCoin =
-        condition instanceof Identifier
-            && Identifier.COIN_NAME.equals(((Identifier) condition).getName());
 
-    if (isCoin) {
-      // This is a coin flip.
-
+    if (Identifier.isCoin(condition)) {
       final var u = obligation.getContext().getAnnotation();
 
       final var u1 = globals.getHeuristic().generate("u1", u);
@@ -69,8 +64,7 @@ public class Ite implements Rule {
     // NOTE: We do not need to remove x from the context, since it must be a
     // boolean and therefore is not added to the context in the first place.
     return Rule.ApplicationResult.onlyObligations(
-        List.of(
-            obligation.keepContextAndAnnotationAndCost(expression.getTruthy()),
-            obligation.keepContextAndAnnotationAndCost(expression.getFalsy())));
+        obligation.keepContextAndAnnotationAndCost(expression.getTruthy()),
+        obligation.keepContextAndAnnotationAndCost(expression.getFalsy()));
   }
 }

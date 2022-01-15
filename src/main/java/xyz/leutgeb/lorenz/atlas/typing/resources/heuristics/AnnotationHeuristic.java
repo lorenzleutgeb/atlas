@@ -6,21 +6,18 @@ import xyz.leutgeb.lorenz.atlas.ast.Expression;
 import xyz.leutgeb.lorenz.atlas.ast.Identifier;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
-import xyz.leutgeb.lorenz.atlas.typing.simple.types.TreeType;
 
 public interface AnnotationHeuristic {
-  Annotation generate(String name, int size);
+  Annotation generate(String namePrefix, int size);
+
+  Annotation generate(String namePrefix, Annotation shape);
 
   default Annotation generate(int size) {
     return generate("Q", size);
   }
 
-  default Annotation generate(String namePrefix, Annotation annotation) {
-    return generate(namePrefix, annotation.size());
-  }
-
   default Annotation generate(Annotation annotation) {
-    return generate(annotation.size());
+    return generate("Q", annotation);
   }
 
   default Annotation generate(String namePrefix, Collection<?> collection) {
@@ -40,10 +37,10 @@ public interface AnnotationHeuristic {
   }
 
   default Annotation generate(String namePrefix, Expression expression) {
-    return generate(namePrefix, expression.getType() instanceof TreeType ? 1 : 0);
+    return generate(namePrefix, expression.getType().countTrees().get());
   }
 
   default Annotation generate(Expression expression) {
-    return generate(expression.getType() instanceof TreeType ? 1 : 0);
+    return generate(expression.getType().countTrees().get());
   }
 }

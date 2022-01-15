@@ -33,6 +33,7 @@ public abstract class Expression extends Syntax {
   public static final boolean DEFAULT_LAZY = false;
 
   Type type;
+  Expression parent;
 
   Expression(Source source) {
     super(source);
@@ -69,6 +70,10 @@ public abstract class Expression extends Syntax {
       throw new IllegalStateException("type has not been inferred yet");
     }
     return type;
+  }
+
+  public Expression getParent() {
+    return parent;
   }
 
   Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
@@ -170,6 +175,11 @@ public abstract class Expression extends Syntax {
   }
 
   public abstract Expression unshare(IntIdGenerator idGenerator, boolean lazy);
+
+  public void setParents(Expression parent) {
+    this.parent = parent;
+    follow().forEach(e -> e.setParents(this));
+  }
 
   public String terminalOrBox() {
     if (isTerminal()) {

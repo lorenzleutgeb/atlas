@@ -6,18 +6,18 @@
       (match
         (let:tree:cf
           (w{mono} leaf)
-          (let:tree:cf (w{mono} leaf) (w{size} (let:tree:cf (w{mono} node) (w{mono} node))))
+          (let:tree:cf leaf (w{size} (let:tree:cf node node)))
         )
         (ite
-          (w{size} (let:tree:cf (w{mono} node) (w{mono} node)))
+          (w{mono} (let:tree:cf node node))
           (ite
             (match
-              (let:tree:cf (w{mono} leaf) (let:tree:cf (w{mono} leaf) (w{size} (let:tree:cf (w{mono} node) (w{size} (let:tree:cf (w{mono} node) (w{mono} node)))))))
+              (let:tree:cf leaf (let:tree:cf leaf (w{size} (let:tree:cf node (let:tree:cf node node)))))
               (w{l2xy mono}
                 (let:tree:cf
                   (tick app)
                   (match
-                    (w{mono} (w:var (w:var leaf)))
+                    (w leaf)
                     (ite
                       (tick (let:tree:cf node (let:tree:cf node (w{mono} node))))
                       (let:tree:cf node (let:tree:cf node (w node)))
@@ -27,16 +27,16 @@
               )
             )
             (match
-              (let:tree:cf leaf (let:tree:cf leaf (w{size} (let:tree:cf node (w{size} (let:tree:cf node (w{mono} node)))))))
+              (let:tree:cf leaf (let:tree:cf leaf (w{size} (let:tree:cf node (let:tree:cf node (w{mono} node))))))
               (w{l2xy mono}
                 (let:tree:cf
                   (tick app)
                   (match
                     (w{mono} leaf)
-                    (ite
-                      (w{l2xy} (tick (let:tree:cf node (let:tree:cf node (w{mono} node)))))
+                    (w{l2xy} (ite
+                      (tick (let:tree:cf node (let:tree:cf node (w{mono} node))))
                       (let:tree:cf node (let:tree:cf node (w node)))
-                    )
+                    ))
                   )
                 )
               )
@@ -50,22 +50,22 @@
           (let:tree:cf (w{mono} node) (w{mono} node))
           (ite
             (match
-              (let:tree:cf leaf (let:tree:cf leaf (w{size} (let:tree:cf node (w{size} (let:tree:cf node (w{mono} node)))))))
+              (let:tree:cf leaf (let:tree:cf leaf (w{size} (let:tree:cf node (let:tree:cf node (w{mono} node))))))
               (w{l2xy mono}
                 (let:tree:cf
                   (tick app)
                   (match
-                    (w{mono} (w:var (w:var leaf)))
-                    (ite
-                      (w{l2xy} (tick (let:tree:cf node (let:tree:cf node (w{mono} node)))))
+                    (w{mono} leaf)
+                    (w{l2xy} (ite
+                      (tick (let:tree:cf node (let:tree:cf node (w{mono} node))))
                       (let:tree:cf node (let:tree:cf node (w{mono} node)))
-                    )
+                    ))
                   )
                 )
               )
             )
             (match
-              (w{size} (let:tree:cf node (let:tree:cf leaf (let:tree:cf leaf (w{size} (let:tree:cf (w{mono} node) (w{mono} node)))))))
+              (w{mono} (let:tree:cf node (let:tree:cf leaf (w{size mono} (let:tree:cf leaf (w{size mono l2xy} (let:tree:cf node (w{mono} node))))))))
               (w{l2xy mono}
                 (let:tree:cf
                   (tick app)

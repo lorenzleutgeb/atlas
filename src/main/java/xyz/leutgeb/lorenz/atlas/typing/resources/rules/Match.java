@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import xyz.leutgeb.lorenz.atlas.ast.Identifier;
-import xyz.leutgeb.lorenz.atlas.ast.MatchExpression;
+import xyz.leutgeb.lorenz.atlas.ast.MatchTreeExpression;
 import xyz.leutgeb.lorenz.atlas.ast.NodeExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
@@ -25,7 +25,7 @@ public class Match implements Rule {
     return "("
         + getName()
         + " "
-        + ((MatchExpression) obligation.getExpression()).getScrut().terminalOrBox()
+        + ((MatchTreeExpression) obligation.getExpression()).getScrut().terminalOrBox()
         + ")";
   }
 
@@ -51,7 +51,7 @@ public class Match implements Rule {
 
   public Rule.ApplicationResult apply(
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
-    final var expression = (MatchExpression) obligation.getExpression();
+    final var expression = (MatchTreeExpression) obligation.getExpression();
 
     final var x = (Identifier) expression.getScrut();
     final var pattern = expression.getNodePattern();
@@ -71,6 +71,9 @@ public class Match implements Rule {
         .filter(entry -> !gammap.isEmpty() || entry.getOffsetIndex() > 1)
         .forEach(
             entry -> {
+              if (entry.getOffsetIndex() < 0) {
+                return;
+              }
               int c = entry.getAssociatedIndex(x) + entry.getOffsetIndex();
 
               if (gammap.isEmpty() && c == 1) {

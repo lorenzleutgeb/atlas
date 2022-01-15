@@ -30,13 +30,13 @@ import xyz.leutgeb.lorenz.atlas.util.SizeEdge;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Slf4j
-public class MatchExpression extends Expression {
+public class MatchTreeExpression extends Expression {
   private final Expression scrut;
   private final Expression leaf;
   private final Expression node;
   private final Expression nodePattern;
 
-  public MatchExpression(
+  public MatchTreeExpression(
       Source source, Expression scrut, Expression leaf, Expression nodePattern, Expression node) {
     super(source);
     this.scrut = scrut;
@@ -45,7 +45,7 @@ public class MatchExpression extends Expression {
     this.nodePattern = nodePattern;
   }
 
-  private MatchExpression(
+  private MatchTreeExpression(
       Source source,
       Expression scrut,
       Expression leaf,
@@ -133,7 +133,7 @@ public class MatchExpression extends Expression {
     }
 
     if (scrut.isImmediate()) {
-      return new MatchExpression(
+      return new MatchTreeExpression(
           source,
           scrut,
           leaf.normalizeAndBind(idGenerator),
@@ -141,7 +141,7 @@ public class MatchExpression extends Expression {
           node.normalizeAndBind(idGenerator));
     }
 
-    return new MatchExpression(
+    return new MatchTreeExpression(
         Derived.anf(this),
         scrut.forceImmediate(context, idGenerator),
         leaf.normalizeAndBind(idGenerator),
@@ -150,9 +150,9 @@ public class MatchExpression extends Expression {
   }
 
   @Override
-  public MatchExpression rename(Map<String, String> renaming) {
+  public MatchTreeExpression rename(Map<String, String> renaming) {
     // TODO(lorenzleutgeb): Create new expression only if necessary.
-    return new MatchExpression(
+    return new MatchTreeExpression(
         Derived.rename(this),
         scrut.rename(renaming),
         leaf,
@@ -292,13 +292,13 @@ public class MatchExpression extends Expression {
     Sets.SetView<Identifier> intersection = intersection(freeNode, freeLeaf);
 
     if (intersection.isEmpty()) {
-      return new MatchExpression(source, scrut, newLeaf, nodePattern, newNode, type);
+      return new MatchTreeExpression(source, scrut, newLeaf, nodePattern, newNode, type);
     }
 
     if (lazy) {
       // log.info("Did not create sharing expression for {} because unsharing is lazy.",
       // intersection);
-      return new MatchExpression(source, scrut, newLeaf, nodePattern, newNode, type);
+      return new MatchTreeExpression(source, scrut, newLeaf, nodePattern, newNode, type);
     }
 
     Identifier up = pick(intersection);
@@ -306,7 +306,7 @@ public class MatchExpression extends Expression {
     var result = ShareExpression.rename(up, down, Pair.of(newLeaf, newNode));
 
     Expression newThis =
-        new MatchExpression(
+        new MatchTreeExpression(
             Derived.unshare(this), scrut, result.getLeft(), nodePattern, result.getRight(), type);
 
     if (intersection.size() > 1) {

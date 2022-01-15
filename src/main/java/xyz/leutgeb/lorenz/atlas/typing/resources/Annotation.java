@@ -683,6 +683,10 @@ public class Annotation {
         .sorted(INDEX_COMPARATOR);
   }
 
+  public static Stream<List<Integer>> indexUnion(List<List<Integer>> a, List<List<Integer>> b) {
+    return Stream.of(a, b).flatMap(List::stream).distinct().sorted(INDEX_COMPARATOR);
+  }
+
   public Stream<Map.Entry<List<Integer>, Pair<Coefficient, Coefficient>>> union(Annotation other) {
     return indexUnion(this, other)
         .map(

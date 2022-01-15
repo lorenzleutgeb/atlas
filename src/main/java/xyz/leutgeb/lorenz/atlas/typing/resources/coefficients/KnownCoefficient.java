@@ -56,6 +56,6 @@ public class KnownCoefficient implements Coefficient {
 
   @Override
   public String toString() {
-    return value.toString();
+    return value.toString().replace(" / ", "/");
   }
 }

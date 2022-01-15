@@ -1,3 +1,5 @@
 package xyz.leutgeb.lorenz.atlas.unification;
 
-public abstract class UnificationError extends Exception {}
+import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
+
+public abstract class UnificationError extends TypeError {}

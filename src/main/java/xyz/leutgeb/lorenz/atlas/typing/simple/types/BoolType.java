@@ -5,6 +5,7 @@ import jakarta.json.JsonObject;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.atlas.unification.Equivalence;
@@ -62,6 +63,11 @@ public class BoolType implements Type {
   @Override
   public JsonObject toJson() {
     return Json.createObjectBuilder(Map.of("name", "Bool")).build();
+  }
+
+  @Override
+  public Optional<Integer> countTrees() {
+    return Optional.of(0);
   }
 
   @Override

@@ -4,10 +4,12 @@ import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoeffi
 import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
 import static xyz.leutgeb.lorenz.atlas.util.Util.toVectorString;
 
+import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import xyz.leutgeb.lorenz.atlas.ast.Identifier;
 import xyz.leutgeb.lorenz.atlas.ast.NodeExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
@@ -27,11 +29,11 @@ public class Node implements Rule {
     final var leftId = ((Identifier) expression.getLeft());
     final var rightId = ((Identifier) expression.getRight());
 
-    final var expectedSize = leftId.equals(rightId) ? 1 : 2;
     final var qunordered = obligation.getContext();
+    final var missing = Sets.difference(Set.of(leftId, rightId), Set.copyOf(qunordered.getIds()));
 
-    if (qunordered.size() != expectedSize) {
-      throw bug("context was not weakened");
+    if (!missing.isEmpty()) {
+      throw bug("missing variable(s) in context: " + missing);
     }
 
     final var prefix = "(node `" + expression + "`) ";
