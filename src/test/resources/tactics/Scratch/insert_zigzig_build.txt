@@ -1,0 +1,6 @@
+(w{l2xy mono} (* coin *)
+  (ite (* coin *)
+    app
+    app
+  )
+)

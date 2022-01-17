@@ -38,8 +38,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
 import xyz.leutgeb.lorenz.atlas.ast.Program;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.FunctionAnnotation;
@@ -171,9 +171,9 @@ public class Tests {
         arguments("Infinite.infinite_19b"));
   }
 
-  static NidiExporter<Identifier, SizeEdge> exporter() {
+  static NidiExporter<IdentifierExpression, SizeEdge> exporter() {
     final var exporter =
-        new NidiExporter<Identifier, SizeEdge>(
+        new NidiExporter<IdentifierExpression, SizeEdge>(
             identifier ->
                 identifier.getName() + "_" + (identifier.getIntro() == null ? "null" : identifier));
     exporter.setVertexAttributeProvider(
@@ -211,7 +211,7 @@ public class Tests {
     assertEquals(expectedSignature, definition.getInferredSignature(), "inferred signature");
 
     final Solver.Result result =
-        program.solve(new HashMap<>(), emptyMap(), true, false, new HashSet<>());
+        program.solve(new HashMap<>(), emptyMap(), true, false, false, new HashSet<>());
     assertTrue(result.isSatisfiable());
     program.printAllInferredSignaturesInOrder(System.out);
   }
@@ -221,7 +221,8 @@ public class Tests {
   @MethodSource("infiniteCostDefinitions")
   void infiniteCost(String fqn) throws Exception {
     final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
-    final var solution = program.solve(new HashMap<>(), emptyMap(), true, false, new HashSet<>());
+    final var solution =
+        program.solve(new HashMap<>(), emptyMap(), true, false, false, new HashSet<>());
     program.printAllInferredSignaturesInOrder(System.out);
     assertTrue(solution.getSolution().isEmpty());
   }
@@ -236,7 +237,8 @@ public class Tests {
 
     assertEquals(expectedSignature, definition.getInferredSignature());
 
-    final var solution = program.solve(new HashMap<>(), emptyMap(), true, false, new HashSet<>());
+    final var solution =
+        program.solve(new HashMap<>(), emptyMap(), true, false, false, new HashSet<>());
     program.printAllInferredSignaturesInOrder(System.out);
     assertTrue(solution.getSolution().isEmpty());
   }
@@ -278,7 +280,8 @@ public class Tests {
                     returnsTree ? Map.of(unitIndex(1), inferredResult) : emptyMap(),
                     "inferredReturn")),
             emptySet()));
-    final var inferredSolution = program.solve(inferred, emptyMap(), true, false, emptySet());
+    final var inferredSolution =
+        program.solve(inferred, emptyMap(), true, false, false, emptySet());
     assertTrue(inferredSolution.getSolution().isPresent());
     program.printAllInferredSignaturesInOrder(System.out);
 
@@ -308,6 +311,7 @@ public class Tests {
                 tight,
                 emptyMap(),
                 true,
+                false,
                 false,
                 singleton(
                     new OffsetConstraint(
@@ -343,6 +347,7 @@ public class Tests {
                   tooSmall,
                   emptyMap(),
                   true,
+                  false,
                   false,
                   singleton(
                       new LessThanOrEqualConstraint(
@@ -383,6 +388,7 @@ public class Tests {
             symbolicGenerator,
             emptyMap(),
             true,
+            false,
             false,
             Set.of(
                 new LessThanOrEqualConstraint(

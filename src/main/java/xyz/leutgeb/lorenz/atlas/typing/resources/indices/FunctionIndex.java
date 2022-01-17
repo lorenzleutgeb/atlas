@@ -2,20 +2,21 @@ package xyz.leutgeb.lorenz.atlas.typing.resources.indices;
 
 import java.util.Map;
 import java.util.function.Function;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.util.Util;
 
 public class FunctionIndex implements Index {
-  final Function<Identifier, Integer> associatedIndices;
+  final Function<IdentifierExpression, Integer> associatedIndices;
   final Integer offsetIndex;
 
-  public FunctionIndex(Function<Identifier, Integer> associatedIndices, Integer offsetIndex) {
+  public FunctionIndex(
+      Function<IdentifierExpression, Integer> associatedIndices, Integer offsetIndex) {
     this.associatedIndices = associatedIndices;
     this.offsetIndex = offsetIndex;
   }
 
   @Override
-  public Integer getAssociatedIndex(Identifier id) {
+  public Integer getAssociatedIndex(IdentifierExpression id) {
     return associatedIndices.apply(id);
   }
 
@@ -25,7 +26,7 @@ public class FunctionIndex implements Index {
   }
 
   @Override
-  public Index mask(Map<Identifier, Integer> maskMap) {
+  public Index mask(Map<IdentifierExpression, Integer> maskMap) {
     return new FunctionIndex(Util.fallback(maskMap::get, associatedIndices), offsetIndex);
   }
 
@@ -35,7 +36,12 @@ public class FunctionIndex implements Index {
   }
 
   @Override
-  public Index mask(Function<Identifier, Integer> maskFunction) {
+  public Index mask(Function<IdentifierExpression, Integer> maskFunction) {
     return new FunctionIndex(maskFunction, offsetIndex);
+  }
+
+  @Override
+  public Index addToOffset(int x) {
+    throw new UnsupportedOperationException("not implemented");
   }
 }

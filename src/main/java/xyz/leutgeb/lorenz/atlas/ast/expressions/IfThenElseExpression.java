@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.atlas.ast;
+package xyz.leutgeb.lorenz.atlas.ast.expressions;
 
 import static com.google.common.collect.Sets.intersection;
 import static xyz.leutgeb.lorenz.atlas.util.Util.*;
@@ -11,13 +11,13 @@ import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.atlas.ast.Normalization;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.BoolType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.atlas.util.Pair;
 
@@ -52,11 +52,11 @@ public class IfThenElseExpression extends Expression {
 
   @Override
   public xyz.leutgeb.lorenz.atlas.typing.simple.types.Type inferInternal(UnificationContext context)
-      throws UnificationError, TypeError {
+      throws TypeError {
     var result = context.fresh();
-    context.addEquivalenceIfNotEqual(result, truthy.infer(context));
-    context.addEquivalenceIfNotEqual(result, falsy.infer(context));
-    context.addEquivalenceIfNotEqual(BoolType.INSTANCE, condition.infer(context));
+    context.addEquivalenceIfNotEqual(result, truthy.infer(context), source);
+    context.addEquivalenceIfNotEqual(result, falsy.infer(context), source);
+    context.addEquivalenceIfNotEqual(BoolType.INSTANCE, condition.infer(context), source);
     return result;
   }
 
@@ -153,7 +153,7 @@ public class IfThenElseExpression extends Expression {
   @Override
   public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
     /*
-    if (!(condition instanceof Identifier)) {
+    if (!(condition instanceof IdentifierExpression)) {
       throw new IllegalStateException("must be in anf");
     }
      */
@@ -162,9 +162,9 @@ public class IfThenElseExpression extends Expression {
     final var newT = truthy.unshare(idGenerator, lazy);
     final var newF = falsy.unshare(idGenerator, lazy);
 
-    Set<Identifier> freeT = newT.freeVariables();
-    Set<Identifier> freeF = newF.freeVariables();
-    Set<Identifier> cond = condition.freeVariables();
+    Set<IdentifierExpression> freeT = newT.freeVariables();
+    Set<IdentifierExpression> freeF = newF.freeVariables();
+    Set<IdentifierExpression> cond = condition.freeVariables();
 
     var intersection = intersection(freeT, freeF);
 

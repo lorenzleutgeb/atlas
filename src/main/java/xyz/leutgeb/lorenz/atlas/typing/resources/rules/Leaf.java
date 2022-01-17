@@ -11,8 +11,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
-import xyz.leutgeb.lorenz.atlas.ast.TupleExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.TupleExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
@@ -28,12 +28,12 @@ public class Leaf implements Rule {
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = obligation.getExpression();
 
-    if (expression instanceof final Identifier id) {
-      if (!Identifier.isLeaf(id)) {
+    if (expression instanceof final IdentifierExpression id) {
+      if (!IdentifierExpression.isLeaf(id)) {
         throw bug("cannot apply (leaf) to identifier '" + id.getName() + "'");
       }
     } else if (expression instanceof final TupleExpression tuple) {
-      if (!tuple.getTree().map(Identifier::isLeaf).orElse(false)) {
+      if (!tuple.getTree().map(IdentifierExpression::isLeaf).orElse(false)) {
         throw bug("cannot apply (leaf) to this tuple");
       }
     } else {

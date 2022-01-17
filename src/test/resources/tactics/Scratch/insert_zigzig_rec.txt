@@ -1,0 +1,19 @@
+(w{l2xy mono}
+  (let:tree:cf
+    (tick
+      (shift
+        app
+      )
+    )
+    (match (* ~ 1 2 insert_dummy bl *)
+      (w{mono} (* proof leaf 1 *)
+        (w:var
+          (w:var
+            leaf
+          )
+        )
+      )
+      app
+    )
+  )
+)

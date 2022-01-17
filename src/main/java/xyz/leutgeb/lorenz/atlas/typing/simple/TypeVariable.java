@@ -7,6 +7,7 @@ import jakarta.json.JsonString;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
+import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.Equivalence;
 import xyz.leutgeb.lorenz.atlas.unification.Generalizer;
@@ -86,8 +87,8 @@ public class TypeVariable implements Type {
   }
 
   @Override
-  public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
-    throw new TypeMismatch(this, b);
+  public Collection<Equivalence> decompose(Type b, Source source) throws TypeMismatch {
+    throw new TypeMismatch(this, b, source);
   }
 
   @Override

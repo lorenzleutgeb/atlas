@@ -4,11 +4,7 @@ import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -18,6 +14,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
+import javax.annotation.Nonnull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -77,6 +74,20 @@ public class Scheduler<T, V, E> {
       }
 
       return new Result<>(null, null, merge.apply(a.value, b.value));
+    }
+
+    @Nonnull
+    public T orElseThrow() {
+      if (executionException != null) {
+        throw new RuntimeException(executionException);
+      }
+      if (cancellationException != null) {
+        throw new RuntimeException(cancellationException);
+      }
+      if (value == null) {
+        throw new IllegalStateException();
+      }
+      return value;
     }
   }
 

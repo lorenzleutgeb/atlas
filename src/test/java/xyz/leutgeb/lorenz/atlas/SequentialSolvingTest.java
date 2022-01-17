@@ -1,19 +1,14 @@
 package xyz.leutgeb.lorenz.atlas;
 
-import static xyz.leutgeb.lorenz.atlas.TestUtil.loadAndNormalizeAndInferAndUnshare;
+import static xyz.leutgeb.lorenz.atlas.TestUtil.*;
 
-import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
-import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 
 public class SequentialSolvingTest {
   @Test
-  public void sequential() throws UnificationError, TypeError, IOException {
+  public void sequential() {
     final var immutableAnnotations =
         Map.of(
             "SplayTree.insert",
@@ -38,28 +33,12 @@ public class SequentialSolvingTest {
             Config.of("PairingHeap/insert_isolated"));
 
     final var program = loadAndNormalizeAndInferAndUnshare(immutableAnnotations.keySet());
-
-    final var annotations =
-        immutableAnnotations.entrySet().stream()
-            .filter(entry -> entry.getValue().annotation.isPresent())
-            .collect(
-                Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().annotation.get()));
-
-    final var tactics =
-        immutableAnnotations.entrySet().stream()
-            .filter(entry -> entry.getValue().tactic.isPresent())
-            .collect(
-                Collectors.toMap(
-                    Map.Entry::getKey,
-                    entry ->
-                        Paths.get(
-                            ".",
-                            "src",
-                            "test",
-                            "resources",
-                            "tactics",
-                            entry.getValue().tactic.get() + ".txt")));
-
-    program.solve(annotations, tactics, true, true, Collections.emptySet());
+    program.solve(
+        extractAnnotations(immutableAnnotations),
+        extractTactics(immutableAnnotations),
+        true,
+        true,
+        true,
+        Collections.emptySet());
   }
 }

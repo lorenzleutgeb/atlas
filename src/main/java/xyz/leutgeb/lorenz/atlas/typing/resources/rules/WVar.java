@@ -14,8 +14,8 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import xyz.leutgeb.lorenz.atlas.ast.Expression;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.Expression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
@@ -26,19 +26,21 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
 public class WVar implements Rule {
   public static final WVar INSTANCE = new WVar();
 
-  public static Stream<Identifier> redundantIds(Obligation obligation) {
+  public static Stream<IdentifierExpression> redundantIds(Obligation obligation) {
     return redundantIds(obligation.getContext(), obligation.getExpression());
   }
 
-  public static Optional<Identifier> redundantId(Obligation obligation) {
+  public static Optional<IdentifierExpression> redundantId(Obligation obligation) {
     return redundantId(obligation.getContext(), obligation.getExpression());
   }
 
-  public static Stream<Identifier> redundantIds(AnnotatingContext context, Expression expression) {
+  public static Stream<IdentifierExpression> redundantIds(
+      AnnotatingContext context, Expression expression) {
     return context.getIds().stream().filter(not(expression.freeVariables()::contains));
   }
 
-  public static Optional<Identifier> redundantId(AnnotatingContext context, Expression expression) {
+  public static Optional<IdentifierExpression> redundantId(
+      AnnotatingContext context, Expression expression) {
     return redundantIds(context, expression).findFirst();
   }
 

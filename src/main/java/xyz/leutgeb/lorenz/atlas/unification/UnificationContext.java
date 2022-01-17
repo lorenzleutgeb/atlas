@@ -17,8 +17,9 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.atlas.ast.Expression;
 import xyz.leutgeb.lorenz.atlas.ast.SourceIntro;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.Expression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.LetExpression;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.FunctionSignature;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
@@ -34,7 +35,7 @@ public class UnificationContext {
 
   /**
    * Holds types for identifiers. This is extended through {@link #putType(String, Type)}, for
-   * example by walking over {@link xyz.leutgeb.lorenz.atlas.ast.LetExpression}.
+   * example by walking over {@link LetExpression}.
    */
   Map<String, Type> types;
 
@@ -132,26 +133,26 @@ public class UnificationContext {
   /** Recursively looks up the signature of some identifier (given as {@link String}). */
   public @Nonnull Type getType(final String id, Source source) throws TypeError {
     if (isHiddenRecursive(id)) {
-      throw new TypeError("'" + id + "' is out of scope at " + source + ".");
+      throw new TypeError("'" + id + "' is out of scope.", source);
     }
     Type t = getTypeRecursive(id);
     if (t != null) {
       return t;
     }
-    throw new TypeError(Util.undefinedText(id, iterateIdentifiers(), source.getRoot()));
+    throw new TypeError(Util.undefinedText(id, iterateIdentifiers()), source);
   }
 
   public SourceIntro getIntro(final String id) {
     return getIntroRecursive(id);
   }
 
-  public @Nonnull FunctionSignature getSignature(final String fqn) throws TypeError {
+  public @Nonnull FunctionSignature getSignature(final String fqn, Source source) throws TypeError {
     FunctionSignature t = signatures.get(fqn);
     if (t != null) {
       return t;
     }
 
-    throw new TypeError(Util.undefinedText(fqn, iterateIdentifiers(), null));
+    throw new TypeError(Util.undefinedText(fqn, iterateIdentifiers()), source);
   }
 
   private Type getTypeInternal(final String key) {
@@ -210,7 +211,8 @@ public class UnificationContext {
     }
 
     if ("leaf".equals(key)) { // || "_".equals(key)) {
-      // Silently ignore this, since leaf and _ will have a magic type assigned in Identifier.
+      // Silently ignore this, since leaf and _ will have a magic type assigned in
+      // IdentifierExpression.
       return;
     }
 
@@ -241,11 +243,20 @@ public class UnificationContext {
     return signatures.containsKey(fqn);
   }
 
+  @Deprecated
   public void addEquivalenceIfNotEqual(Type a, Type b) {
     Objects.requireNonNull(a);
     Objects.requireNonNull(b);
     if (!a.equals(b)) {
       equivalences.add(new Equivalence(a, b));
+    }
+  }
+
+  public void addEquivalenceIfNotEqual(Type a, Type b, Source source) {
+    Objects.requireNonNull(a);
+    Objects.requireNonNull(b);
+    if (!a.equals(b)) {
+      equivalences.add(new Equivalence(a, b, source));
     }
   }
 

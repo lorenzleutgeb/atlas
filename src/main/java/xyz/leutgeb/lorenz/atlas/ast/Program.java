@@ -21,13 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.Spliterators;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -38,6 +32,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.jgrapht.Graph;
 import org.jgrapht.traverse.TopologicalOrderIterator;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.Expression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
@@ -53,7 +48,6 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.solving.Solver;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.atlas.unification.Equivalence;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 import xyz.leutgeb.lorenz.atlas.util.DependencyEdge;
 import xyz.leutgeb.lorenz.atlas.util.Scheduler;
 import xyz.leutgeb.lorenz.atlas.util.Util;
@@ -118,6 +112,30 @@ public class Program {
     return false;
   }
 
+  @Deprecated
+  private void inferSequential() throws TypeError {
+    var root = UnificationContext.root();
+    for (List<String> component : order) {
+      final var ctx = root.childWithNewProblem();
+      for (var fqn : component) {
+        var fd = get(fqn);
+        ctx.putSignature(fd.getFullyQualifiedName(), fd.stubSignature(ctx));
+      }
+
+      for (var fqn : component) {
+        var fd = get(fqn);
+        fd.infer(ctx);
+      }
+
+      var solution = Equivalence.solve(ctx.getEquivalences());
+      for (var fqn : component) {
+        var fd = get(fqn);
+        fd.resolve(solution, ctx.getSignatures().get(fqn));
+        ctx.putSignature(fqn, fd.getInferredSignature());
+      }
+    }
+  }
+
   private boolean inferParallel() {
     var root = UnificationContext.root();
     var scheduler =
@@ -151,14 +169,9 @@ public class Program {
     try {
       var results = scheduler.run(8, 1, TimeUnit.MINUTES);
       for (var result : results.values()) {
-        if (result.getExecutionException() != null) {
-          throw new RuntimeException(result.getExecutionException());
-        }
-        if (result.getCancellationException() != null) {
-          throw new RuntimeException(result.getCancellationException());
-        }
-        if (result.getValue().isPresent()) {
-          log.error("Type Error", result.getValue().get());
+        final var optionalError = result.orElseThrow();
+        if (optionalError.isPresent()) {
+          log.error("Type Error! {}", optionalError.get().getMessage());
           ok = false;
         }
       }
@@ -169,40 +182,34 @@ public class Program {
     return ok;
   }
 
-  private void inferSequential() throws UnificationError, TypeError {
-    var root = UnificationContext.root();
-    for (List<String> component : order) {
-      final var ctx = root.childWithNewProblem();
-      for (var fqn : component) {
-        var fd = get(fqn);
-        ctx.putSignature(fd.getFullyQualifiedName(), fd.stubSignature(ctx));
-      }
-
-      for (var fqn : component) {
-        var fd = get(fqn);
-        fd.infer(ctx);
-      }
-
-      var solution = Equivalence.solve(ctx.getEquivalences());
-      for (var fqn : component) {
-        var fd = get(fqn);
-        fd.resolve(solution, ctx.getSignatures().get(fqn));
-        ctx.putSignature(fqn, fd.getInferredSignature());
-      }
-    }
-  }
-
   private FunctionDefinition get(String fqn) {
     return functionDefinitions.get(fqn);
   }
 
-  public Solver.Result solve(
+  private Solver.Result solveTogether(
       Map<String, CombinedFunctionAnnotation> annotations,
       Map<String, Path> tactics,
       boolean infer,
       boolean forceResultPerModule,
       Set<Constraint> externalConstraints) {
-    if (functionDefinitions.values().stream()
+    return solveInternal(
+        annotations,
+        tactics,
+        infer,
+        forceResultPerModule,
+        externalConstraints,
+        functionDefinitions.keySet());
+  }
+
+  private Solver.Result solveInternal(
+      Map<String, CombinedFunctionAnnotation> annotations,
+      Map<String, Path> tactics,
+      boolean infer,
+      boolean forceResultPerModule,
+      Set<Constraint> externalConstraints,
+      Set<String> fqns) {
+    if (fqns.stream()
+        .map(functionDefinitions::get)
         .map(FunctionDefinition::runaway)
         .anyMatch(Predicate.not(Set::isEmpty))) {
       return new Solver.Result(Status.UNSATISFIABLE, empty(), emptyMap(), empty());
@@ -217,234 +224,219 @@ public class Program {
 
     final Map<String, Annotation> rightSidesPerModule = synchronizedMap(new HashMap<>());
 
+    Set<FunctionDefinition> fds =
+        fqns.stream().map(functionDefinitions::get).collect(Collectors.toSet());
+
+    final var sccName =
+        fds.stream()
+            .map(FunctionDefinition::getFullyQualifiedName)
+            .map(Util::fqnToFlatFilename)
+            .collect(joining("+"));
+
+    final var prover = new Prover(sccName, null, basePath);
+
+    Set<Constraint> external = new HashSet<>();
+    external.addAll(externalConstraints);
+
+    // Stub annotations.
+    for (var fd : fds) {
+      if (infer && benchmark.containsKey(fd.getFullyQualifiedName())) {
+        final CombinedFunctionAnnotation annotation = benchmark.get(fd.getFullyQualifiedName());
+        fd.stubAnnotations(
+            actual,
+            heuristic,
+            Math.max(
+                called.contains(fd.getFullyQualifiedName()) ? 1 : 0, annotation.withoutCost.size()),
+            infer);
+
+        final var stubbed = fd.getInferredSignature().getAnnotation().get();
+        external.addAll(
+            W.compareCoefficientsLessOrEqual(
+                stubbed.withCost.from, annotation.withCost.from, "(improve)"));
+        external.addAll(
+            W.compareCoefficientsLessOrEqual(
+                annotation.withCost.to, stubbed.withCost.to, "(improve)"));
+
+        Streams.zip(
+                annotation.withoutCost.stream(),
+                stubbed.withoutCost.stream(),
+                (a, s) ->
+                    append(
+                        W.compareCoefficientsLessOrEqual(s.from, a.from, "(improve)"),
+                        W.compareCoefficientsLessOrEqual(a.to, s.to, "(improve)")))
+            .forEach(external::addAll);
+      } else {
+        fd.stubAnnotations(
+            actual, heuristic, called.contains(fd.getFullyQualifiedName()) ? 1 : 0, infer);
+      }
+    }
+
+    Set<String> refresh = new HashSet<>();
+
+    for (var fd : fds) {
+      if (FORCE_RANK_EQUAL) {
+        log.warn("Adding external constraints to force rank!");
+        if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1
+            && fd.getInferredSignature().getAnnotation().get().withCost.from.size() == 1) {
+          external.add(
+              new EqualityConstraint(
+                  fd.getInferredSignature()
+                      .getAnnotation()
+                      .get()
+                      .withCost
+                      .from
+                      .getRankCoefficient(),
+                  fd.getInferredSignature().getAnnotation().get().withCost.to.getRankCoefficient(),
+                  "(force)"));
+        }
+
+        if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1) {
+          external.add(
+              new InequalityConstraint(
+                  ZERO,
+                  fd.getInferredSignature().getAnnotation().get().withCost.to.getRankCoefficient(),
+                  "(force)"));
+        } else {
+          external.add(
+              new EqualityConstraint(
+                  ZERO,
+                  fd.getInferredSignature().getAnnotation().get().withCost.to.getRankCoefficient(),
+                  "(force)"));
+        }
+      }
+
+      // Set right sides equal.
+      if (forceResultPerModule && fd.returnsTree()) {
+        final var module = fd.getModuleName();
+        external.addAll(
+            EqualityConstraint.eq(
+                fd.getInferredSignature().getAnnotation().get().withCost.to,
+                rightSidesPerModule.computeIfAbsent(
+                    module,
+                    (x) -> {
+                      refresh.add(module);
+                      return SmartRangeHeuristic.DEFAULT.generate(module, 1);
+                    }),
+                "(fix) right side for " + fd.getFullyQualifiedName()));
+      }
+    }
+
+    // Solve.
+    Instant proveStart = Instant.now();
+    for (var fd : fds) {
+      final var globals = new AnnotatingGlobals(actual, fd.getSizeAnalysis(), heuristic);
+      prover.setGlobals(globals);
+
+      Obligation typingObligation = fd.getTypingObligation();
+
+      if (tactics.containsKey(fd.getFullyQualifiedName())) {
+        try {
+          prover.read(typingObligation, tactics.get(fd.getFullyQualifiedName()), fd);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      } else {
+        prover.prove(typingObligation, fd);
+      }
+
+      final Path tacticsPath =
+          basePath
+              .resolve("tactics")
+              .resolve(fd.getModuleName())
+              .resolve(fqnToFlatFilename(fd.getName()) + ".txt");
+      try (final var out = output(tacticsPath)) {
+        prover.printTactic(typingObligation, out, true);
+        log.info("See {}", tacticsPath);
+      } catch (IOException e) {
+        log.warn("!", e);
+      }
+
+      for (var cfAnnotation : fd.getInferredSignature().getAnnotation().get().withoutCost) {
+        if (cfAnnotation.isZero()) {
+          log.debug("Skipping cf-Annotation: {}", cfAnnotation);
+          continue;
+        }
+
+        prover.proveFrom(
+            new Obligation(
+                fd.treeLikeArguments(), cfAnnotation.from, fd.getBody(), cfAnnotation.to, false),
+            fd,
+            typingObligation);
+      }
+    }
+    Instant proveStop = Instant.now();
+
+    Instant solveStart = Instant.now();
+    Solver.Result result;
+    if (infer) {
+      final var optimization = Optimization.standard(fds);
+      external.addAll(optimization.getConstraints());
+      result = prover.solve(external, List.of(optimization.target));
+    } else {
+      result = prover.solve(external);
+    }
+    Instant solveStop = Instant.now();
+
+    log.info(
+        "STATS for "
+            + ":"
+            + (Duration.between(proveStart, proveStop))
+            + " proving, and "
+            + (Duration.between(solveStart, solveStop))
+            + " solving!");
+
+    if (!result.isSatisfiable()) {
+      return result;
+    } else {
+      for (var fd : fds) {
+        // prover.plotWithSolution(result.getSolution().get(), fd.getTypingObligation(), false);
+      }
+    }
+
+    for (var module : refresh) {
+      rightSidesPerModule.computeIfPresent(
+          module, (k, v) -> v.substitute(result.getSolution().get()));
+    }
+
+    for (var fqn : fqns) {
+      actual.put(
+          fqn,
+          get(fqn)
+              .getInferredSignature()
+              .getAnnotation()
+              .get()
+              .substitute(result.getSolution().get()));
+      get(fqn).substitute(result.getSolution().get());
+
+      // printAllInferredSignaturesInOrder(System.out);
+      // printAllBoundsInOrder(System.out);
+    }
+    return result;
+  }
+
+  public Solver.Result solve(
+      Map<String, CombinedFunctionAnnotation> annotations,
+      Map<String, Path> tactics,
+      boolean infer,
+      boolean forceResultPerModule,
+      boolean split,
+      Set<Constraint> externalConstraints) {
+    if (!split) {
+      return solveTogether(annotations, tactics, infer, forceResultPerModule, externalConstraints);
+    }
+
     final var scheduler =
         new Scheduler<>(
             this.condensation,
             (scc) ->
-                () -> {
-                  Set<FunctionDefinition> fds =
-                      scc.vertexSet().stream()
-                          .map(functionDefinitions::get)
-                          .collect(Collectors.toSet());
-
-                  final var sccName =
-                      fds.stream()
-                          .map(FunctionDefinition::getFullyQualifiedName)
-                          .map(Util::fqnToFlatFilename)
-                          .collect(joining("+"));
-
-                  final var prover = new Prover(sccName, null, basePath);
-
-                  Set<Constraint> external = new HashSet<>();
-                  external.addAll(externalConstraints);
-
-                  // Stub annotations.
-                  for (var fd : fds) {
-                    if (infer && benchmark.containsKey(fd.getFullyQualifiedName())) {
-                      final CombinedFunctionAnnotation annotation =
-                          benchmark.get(fd.getFullyQualifiedName());
-                      fd.stubAnnotations(
-                          actual,
-                          heuristic,
-                          Math.max(
-                              called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
-                              annotation.withoutCost.size()),
-                          infer);
-
-                      final var stubbed = fd.getInferredSignature().getAnnotation().get();
-                      external.addAll(
-                          W.compareCoefficientsLessOrEqual(
-                              stubbed.withCost.from, annotation.withCost.from, "(improve)"));
-                      external.addAll(
-                          W.compareCoefficientsLessOrEqual(
-                              annotation.withCost.to, stubbed.withCost.to, "(improve)"));
-
-                      Streams.zip(
-                              annotation.withoutCost.stream(),
-                              stubbed.withoutCost.stream(),
-                              (a, s) ->
-                                  append(
-                                      W.compareCoefficientsLessOrEqual(s.from, a.from, "(improve)"),
-                                      W.compareCoefficientsLessOrEqual(a.to, s.to, "(improve)")))
-                          .forEach(external::addAll);
-                    } else {
-                      fd.stubAnnotations(
-                          actual,
-                          heuristic,
-                          called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
-                          infer);
-                    }
-                  }
-
-                  Set<String> refresh = new HashSet<>();
-
-                  // TODO: This is for "interacting functions", i.e. multiple functions on the same
-                  // data stucture.
-                  for (var fd : fds) {
-                    if (FORCE_RANK_EQUAL) {
-                      System.out.println("!!! FORCING RANK");
-                      if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1
-                          && fd.getInferredSignature().getAnnotation().get().withCost.from.size()
-                              == 1) {
-                        external.add(
-                            new EqualityConstraint(
-                                fd.getInferredSignature()
-                                    .getAnnotation()
-                                    .get()
-                                    .withCost
-                                    .from
-                                    .getRankCoefficient(),
-                                fd.getInferredSignature()
-                                    .getAnnotation()
-                                    .get()
-                                    .withCost
-                                    .to
-                                    .getRankCoefficient(),
-                                "(force)"));
-                      }
-
-                      if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1) {
-                        external.add(
-                            new InequalityConstraint(
-                                ZERO,
-                                fd.getInferredSignature()
-                                    .getAnnotation()
-                                    .get()
-                                    .withCost
-                                    .to
-                                    .getRankCoefficient(),
-                                "(force)"));
-                      } else {
-                        external.add(
-                            new EqualityConstraint(
-                                ZERO,
-                                fd.getInferredSignature()
-                                    .getAnnotation()
-                                    .get()
-                                    .withCost
-                                    .to
-                                    .getRankCoefficient(),
-                                "(force)"));
-                      }
-                    }
-                    // if (!fd.returnsTree()) {
-                    // continue;
-                    // }
-                    // Set right sides equal.
-                    if (forceResultPerModule) {
-                      final var module = fd.getModuleName();
-                      external.addAll(
-                          EqualityConstraint.eq(
-                              fd.getInferredSignature().getAnnotation().get().withCost.to,
-                              rightSidesPerModule.computeIfAbsent(
-                                  module,
-                                  (x) -> {
-                                    refresh.add(module);
-                                    return SmartRangeHeuristic.DEFAULT.generate(module, 1);
-                                  }),
-                              "(fix) right side for " + fd.getFullyQualifiedName()));
-                    }
-                  }
-
-                  // Solve.
-                  Instant proveStart = Instant.now();
-                  for (var fd : fds) {
-                    final var globals =
-                        new AnnotatingGlobals(actual, fd.getSizeAnalysis(), heuristic);
-                    prover.setGlobals(globals);
-
-                    Obligation typingObligation = fd.getTypingObligation();
-
-                    if (tactics.containsKey(fd.getFullyQualifiedName())) {
-                      try {
-                        prover.read(typingObligation, tactics.get(fd.getFullyQualifiedName()), fd);
-                      } catch (IOException e) {
-                        throw new RuntimeException(e);
-                      }
-                    } else {
-                      prover.prove(typingObligation, fd);
-                    }
-
-                    final Path tacticsPath =
-                        basePath
-                            .resolve("tactics")
-                            .resolve(fd.getModuleName())
-                            .resolve(fqnToFlatFilename(fd.getName()) + ".txt");
-                    try (final var out = output(tacticsPath)) {
-                      prover.printTactic(typingObligation, out, true);
-                      log.info("See {}", tacticsPath);
-                    }
-
-                    for (var cfAnnotation :
-                        fd.getInferredSignature().getAnnotation().get().withoutCost) {
-                      if (cfAnnotation.isZero()) {
-                        log.debug("Skipping {}", cfAnnotation);
-                        continue;
-                      }
-
-                      prover.proveFrom(
-                          new Obligation(
-                              fd.treeLikeArguments(),
-                              cfAnnotation.from,
-                              fd.getBody(),
-                              cfAnnotation.to,
-                              false,
-                              empty()),
-                          fd,
-                          typingObligation);
-                    }
-                  }
-                  Instant proveStop = Instant.now();
-
-                  Instant solveStart = Instant.now();
-                  Solver.Result result;
-                  if (infer) {
-                    final var optimization = Optimization.standard(fds);
-                    external.addAll(optimization.getConstraints());
-                    result = prover.solve(external, List.of(optimization.target));
-                  } else {
-                    result = prover.solve(external);
-                  }
-                  Instant solveStop = Instant.now();
-
-                  log.info(
-                      "STATS for "
-                          + scc
-                          + ":"
-                          + (Duration.between(proveStart, proveStop))
-                          + " proving, and "
-                          + (Duration.between(solveStart, solveStop))
-                          + " solving!");
-
-                  if (!result.isSatisfiable()) {
-                    return result;
-                  } else {
-                    /*for (var fd : fds) {
-                      prover.plotWithSolution(result.getSolution().get(), fd.getTypingObligation(), false);
-                    }*/
-                  }
-
-                  for (var module : refresh) {
-                    rightSidesPerModule.computeIfPresent(
-                        module, (k, v) -> v.substitute(result.getSolution().get()));
-                  }
-
-                  for (var fqn : scc.vertexSet()) {
-                    actual.put(
-                        fqn,
-                        get(fqn)
-                            .getInferredSignature()
-                            .getAnnotation()
-                            .get()
-                            .substitute(result.getSolution().get()));
-                    get(fqn).substitute(result.getSolution().get());
-
-                    // printAllInferredSignaturesInOrder(System.out);
-                    // printAllBoundsInOrder(System.out);
-                  }
-                  log.debug("Done solving SCC {}", scc.vertexSet());
-                  return result;
-                });
+                () ->
+                    solveInternal(
+                        annotations,
+                        tactics,
+                        infer,
+                        forceResultPerModule,
+                        externalConstraints,
+                        scc.vertexSet()));
 
     Map<Graph<String, DependencyEdge>, Scheduler.Result<Solver.Result>> result;
     try {
@@ -453,126 +445,10 @@ public class Program {
       throw new RuntimeException(e);
     }
 
-    final var aggregate =
-        result.values().stream()
-            .reduce((a, b) -> Scheduler.Result.merge(a, b, Solver.Result::merge));
-
-    if (aggregate.isEmpty()) {
-      throw bug("could not aggregate results");
-    }
-
-    final var aggregateGet = aggregate.get();
-
-    if (aggregateGet.getExecutionException() != null) {
-      throw new RuntimeException(aggregateGet.getExecutionException());
-    }
-
-    if (aggregateGet.getCancellationException() != null) {
-      throw new RuntimeException(aggregateGet.getCancellationException());
-    }
-
-    return aggregateGet.getValue();
-  }
-
-  @Deprecated
-  public Optional<Prover> proveWithTactics(
-      Map<String, CombinedFunctionAnnotation> functionAnnotations,
-      Map<String, Path> tactics,
-      boolean infer) {
-    final var heuristic = SmartRangeHeuristic.DEFAULT;
-    final var prover = new Prover(name + randomHex(), null, basePath);
-
-    if (functionDefinitions.values().stream()
-        .map(FunctionDefinition::runaway)
-        .anyMatch(Predicate.not(Set::isEmpty))) {
-      return empty();
-    }
-
-    final var called = calledFunctionNames();
-    forEach(
-        fd ->
-            fd.stubAnnotations(
-                functionAnnotations,
-                heuristic,
-                called.contains(fd.getFullyQualifiedName()) ? 3 : 0,
-                infer));
-    forEach(
-        fd -> {
-
-          /*
-          if (!functionAnnotations.get(fd.getFullyQualifiedName()).withCost.isUnknown()
-              && functionAnnotations.get(fd.getFullyQualifiedName()).withoutCost.stream()
-                  .noneMatch(FunctionAnnotation::isUnknown)) {
-            log.info(
-                "Skipping type inference for {} because all given annotations are known.",
-                fd.getFullyQualifiedName());
-            return;
-          }
-          */
-          /*
-                 if (!tactics.containsKey(fd.getFullyQualifiedName())) {
-                   log.info(
-                       "Skipping type inference for {} and assuming {} is correct, because no tactics were provided.",
-                       fd.getFullyQualifiedName(),
-                       fd.getAnnotation());
-                   return;
-                 }
-          */
-
-          final var globals =
-              new AnnotatingGlobals(functionAnnotations, fd.getSizeAnalysis(), heuristic);
-          prover.setGlobals(globals);
-
-          Obligation typingObligation = fd.getTypingObligation();
-
-          if (tactics.containsKey(fd.getFullyQualifiedName())) {
-            try {
-              prover.read(typingObligation, tactics.get(fd.getFullyQualifiedName()), fd);
-            } catch (IOException e) {
-              throw new RuntimeException(e);
-            }
-          } else {
-            prover.prove(typingObligation, fd);
-          }
-
-          for (var cfAnnotation : fd.getInferredSignature().getAnnotation().get().withoutCost) {
-            if (cfAnnotation.isZero()) {
-              log.debug("Skipping {}", cfAnnotation);
-              continue;
-            }
-
-            /*
-            if (!cfAnnotation.isUnknown()) {
-              log.info(
-                      "Skipping type inference for {} | {} because all given annotations are known.",
-                      fd.getFullyQualifiedName(), cfAnnotation);
-              return;
-            }
-             */
-
-            final var cfRoot =
-                new Obligation(
-                    fd.treeLikeArguments(),
-                    cfAnnotation.from,
-                    fd.getBody(),
-                    cfAnnotation.to,
-                    false,
-                    empty());
-
-            if (tactics.containsKey(fd.getFullyQualifiedName())) {
-              try {
-                log.debug("Using tactic to prove cf typing!");
-                prover.read(cfRoot, tactics.get(fd.getFullyQualifiedName()), fd);
-              } catch (IOException e) {
-                throw new RuntimeException(e);
-              }
-            } else {
-              prover.prove(cfRoot, fd);
-            }
-          }
-        });
-
-    return Optional.of(prover);
+    return result.values().stream()
+        .reduce((a, b) -> Scheduler.Result.merge(a, b, Solver.Result::merge))
+        .orElseThrow(() -> bug("could not aggregate results"))
+        .orElseThrow();
   }
 
   public boolean isEmpty() {

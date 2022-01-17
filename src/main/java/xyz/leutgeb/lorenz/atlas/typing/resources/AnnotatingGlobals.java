@@ -9,7 +9,7 @@ import lombok.Getter;
 import lombok.Value;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DirectedAcyclicGraph;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.AnnotationHeuristic;
 import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.atlas.util.SizeEdge;
@@ -21,11 +21,11 @@ public class AnnotatingGlobals {
 
   AnnotationHeuristic heuristic;
 
-  Graph<Identifier, SizeEdge> sizeAnalysis;
+  Graph<IdentifierExpression, SizeEdge> sizeAnalysis;
 
   public AnnotatingGlobals(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
-      Graph<Identifier, SizeEdge> sizeAnalysis,
+      Graph<IdentifierExpression, SizeEdge> sizeAnalysis,
       AnnotationHeuristic heuristic) {
     this.functionAnnotations = functionAnnotations;
     this.sizeAnalysis = sizeAnalysis;
@@ -34,7 +34,7 @@ public class AnnotatingGlobals {
 
   public AnnotatingGlobals(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
-      Graph<Identifier, SizeEdge> sizeAnalysis) {
+      Graph<IdentifierExpression, SizeEdge> sizeAnalysis) {
     this(functionAnnotations, sizeAnalysis, SmartRangeHeuristic.DEFAULT);
   }
 

@@ -141,7 +141,7 @@ public class Run implements Runnable {
     System.out.println();
 
     final var result =
-        program.solve(new HashMap<>(), tacticsMap, infer, false, Collections.emptySet());
+        program.solve(new HashMap<>(), tacticsMap, infer, false, true, Collections.emptySet());
     if (!result.isSatisfiable()) {
       System.out.println("UNSAT");
       System.exit(1);

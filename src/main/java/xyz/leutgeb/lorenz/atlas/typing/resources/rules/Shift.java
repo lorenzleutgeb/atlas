@@ -4,7 +4,6 @@ import static xyz.leutgeb.lorenz.atlas.util.Util.append;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
@@ -30,8 +29,7 @@ public class Shift implements Rule {
                 new AnnotatingContext(obligation.getContext().getIds(), q),
                 obligation.getExpression(),
                 qp,
-                obligation.isCost(),
-                Optional.of(obligation))),
+                obligation.isCost())),
         List.of(append(qk.increment(q, k, "(shift)"), qpk.increment(qp, k, "(shift)"))));
   }
 }

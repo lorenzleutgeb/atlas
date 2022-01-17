@@ -5,7 +5,7 @@ import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toUnmodifiableMap;
-import static xyz.leutgeb.lorenz.atlas.ast.Identifier.isLeaf;
+import static xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression.isLeaf;
 import static xyz.leutgeb.lorenz.atlas.util.Util.*;
 import static xyz.leutgeb.lorenz.atlas.util.Z3Support.load;
 
@@ -31,6 +31,7 @@ import org.jgrapht.nio.DefaultAttribute;
 import xyz.leutgeb.lorenz.atlas.antlr.TacticLexer;
 import xyz.leutgeb.lorenz.atlas.antlr.TacticParser;
 import xyz.leutgeb.lorenz.atlas.ast.*;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.*;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Tactic;
@@ -199,8 +200,8 @@ public class Prover {
     } else if (e instanceof CallExpression) {
       return RULE_APP;
     } else if (e instanceof TupleExpression tuple) {
-      return tuple.getTree().map(Identifier::isLeaf).orElse(false) ? RULE_LEAF : RULE_VAR;
-    } else if (e instanceof Identifier identifier) {
+      return tuple.getTree().map(IdentifierExpression::isLeaf).orElse(false) ? RULE_LEAF : RULE_VAR;
+    } else if (e instanceof IdentifierExpression identifier) {
       return isLeaf(identifier) ? RULE_LEAF : RULE_VAR;
     } else if (e instanceof IfThenElseExpression) {
       return RULE_ITE;
@@ -228,12 +229,12 @@ public class Prover {
       return false;
     }
 
-    Identifier returned;
+    IdentifierExpression returned;
     if (parent instanceof MatchTreeExpression match) {
       if (match.getNode() != expression) {
         return false;
       }
-      returned = (Identifier) match.getScrut();
+      returned = (IdentifierExpression) match.getScrut();
     } else {
       return false;
     }
@@ -248,7 +249,7 @@ public class Prover {
     return e instanceof CallExpression;
   }
 
-  private static boolean assignedFromCall(Identifier identifier, Expression context) {
+  private static boolean assignedFromCall(IdentifierExpression identifier, Expression context) {
     final var parent = context.getParent();
 
     if (parent == null) {
@@ -273,7 +274,16 @@ public class Prover {
     boolean size = false;
     boolean mono = false;
     boolean l2xy = false;
+    boolean lp1 = false;
     boolean weaken = false;
+
+    /*
+    if (e == fd.getBody()) {
+      mono = true;
+      lp1 = true;
+    }
+     */
+
     List<String> comments = new ArrayList<>();
 
     if (firstAfterCall(e)) {
@@ -288,21 +298,15 @@ public class Prover {
     }
 
     if (e instanceof CallExpression) {
-      final var isInLet =
-          obligation.getParent().map(x -> x.getExpression() instanceof LetExpression).orElse(false);
-
-      final var isInTick =
-          obligation
-              .getParent()
-              .map(x -> x.getExpression() instanceof TickExpression)
-              .orElse(false);
+      final var isInLet = parent instanceof LetExpression;
+      final var isInTick = parent instanceof TickExpression;
 
       if (!isInLet && !isInTick) {
         comments.add("l2xy for call not in let or tick");
         l2xy = true;
       }
     } else {
-      if (e instanceof Identifier || e instanceof TupleExpression) {
+      if (e instanceof IdentifierExpression || e instanceof TupleExpression) {
         if (!(parent instanceof LetExpression let && let.getValue() == e)) {
           comments.add("proof leaf 1");
           mono = true;
@@ -332,7 +336,7 @@ public class Prover {
             if (parent instanceof LetExpression let && isLeaf(let.getValue())) {
               // Makes sure we apply (w{size}) if we're constructing a tree.
               comments.add("size because binds a leaf");
-              size = true;
+              // TESTING size = true;
               mono = true;
             } else if (parent instanceof MatchTreeExpression
                 || parent instanceof IfThenElseExpression) {
@@ -346,7 +350,8 @@ public class Prover {
           comments.add("tick outside let");
           mono = true;
         }
-      } else if (e instanceof IfThenElseExpression ite && Identifier.isCoin(ite.getCondition())) {
+      } else if (e instanceof IfThenElseExpression ite
+          && IdentifierExpression.isCoin(ite.getCondition())) {
         comments.add("before ite:coin");
         l2xy = true;
       }
@@ -369,7 +374,9 @@ public class Prover {
                   "size",
                   String.valueOf(size),
                   "l2xy",
-                  String.valueOf(l2xy)),
+                  String.valueOf(l2xy),
+                  "lp1",
+                  String.valueOf(lp1)),
               String.join(", ", comments)));
     }
 
@@ -378,9 +385,9 @@ public class Prover {
     }
 
     if (e instanceof CallExpression call) {
-      if (!call.getFullyQualifiedName().equals(fd.getFullyQualifiedName())) {
-        todo.add(RuleSchedule.schedule(RULE_SHIFT));
-      }
+      // if (!call.getFullyQualifiedName().equals(fd.getFullyQualifiedName())) {
+      todo.add(RuleSchedule.schedule(RULE_SHIFT));
+      // }
       if (TICK_BEFORE_APP) {
         log.trace("Automatically applying (tick) to expression `{}`!", e);
         todo.add(RuleSchedule.schedule(RULE_TICK));
@@ -508,8 +515,7 @@ public class Prover {
 
   public void printTactic(Obligation obligation, PrintStream out, boolean costOnly) {
     if (!proof.containsVertex(obligation)) {
-      // throw new IllegalArgumentException("unknown obligation");
-      return;
+      throw new IllegalArgumentException("unknown obligation");
     }
 
     printTactic(obligation, costOnly, out, 0);

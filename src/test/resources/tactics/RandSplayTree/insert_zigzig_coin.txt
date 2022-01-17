@@ -1,0 +1,28 @@
+(w{l2xy mono} (* before ite:coin *) (* coin *)
+  (ite (* coin *)
+    (w{mono} (* tick outside let *)
+      (tick
+        (let:tree:cf
+          node
+          (let:tree:cf
+            node
+            (w{mono} (* proof leaf 2 *)
+              node
+            )
+          )
+        )
+      )
+    )
+    (w{mono} (* first after match *)
+      (let:tree:cf
+        node
+        (let:tree:cf
+          node
+          (w{mono} (* proof leaf 2 *)
+            node
+          )
+        )
+      )
+    )
+  )
+)

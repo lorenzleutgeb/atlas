@@ -6,9 +6,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
-import xyz.leutgeb.lorenz.atlas.ast.MatchTreeExpression;
-import xyz.leutgeb.lorenz.atlas.ast.NodeExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.MatchTreeExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.NodeExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
@@ -29,8 +29,9 @@ public class Match implements Rule {
         + ")";
   }
 
-  public static AnnotatingContext pop(List<Identifier> that, Identifier scrutinee) {
-    final var newIds = new ArrayList<Identifier>(Math.max(that.size() - 1, 0));
+  public static AnnotatingContext pop(
+      List<IdentifierExpression> that, IdentifierExpression scrutinee) {
+    final var newIds = new ArrayList<IdentifierExpression>(Math.max(that.size() - 1, 0));
     for (final var id : that) {
       if (scrutinee.equals(id)) {
         continue;
@@ -41,8 +42,11 @@ public class Match implements Rule {
   }
 
   public static AnnotatingContext extend(
-      List<Identifier> that, Identifier scrutinee, Identifier left, Identifier right) {
-    final var newIds = new ArrayList<Identifier>(2 + that.size());
+      List<IdentifierExpression> that,
+      IdentifierExpression scrutinee,
+      IdentifierExpression left,
+      IdentifierExpression right) {
+    final var newIds = new ArrayList<IdentifierExpression>(2 + that.size());
     newIds.addAll(that);
     newIds.add(left);
     newIds.add(right);
@@ -53,7 +57,7 @@ public class Match implements Rule {
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = (MatchTreeExpression) obligation.getExpression();
 
-    final var x = (Identifier) expression.getScrut();
+    final var x = (IdentifierExpression) expression.getScrut();
     final var pattern = expression.getNodePattern();
 
     final var gammaxq = obligation.getContext();
@@ -68,13 +72,16 @@ public class Match implements Rule {
 
     gammaxq
         .streamNonRank()
-        .filter(entry -> !gammap.isEmpty() || entry.getOffsetIndex() > 1)
         .forEach(
             entry -> {
-              if (entry.getOffsetIndex() < 0) {
+              int a = entry.getAssociatedIndex(x);
+              int b = entry.getOffsetIndex();
+
+              if (b < 0 || a < 0) {
                 return;
               }
-              int c = entry.getAssociatedIndex(x) + entry.getOffsetIndex();
+
+              int c = a + b;
 
               if (gammap.isEmpty() && c == 1) {
                 return;
@@ -120,8 +127,8 @@ public class Match implements Rule {
           List.of(pConstraints, emptyList()));
     }
 
-    final var x1 = (Identifier) ((NodeExpression) pattern).getLeft();
-    final var x3 = (Identifier) ((NodeExpression) pattern).getRight();
+    final var x1 = (IdentifierExpression) ((NodeExpression) pattern).getLeft();
+    final var x3 = (IdentifierExpression) ((NodeExpression) pattern).getRight();
 
     final var gammaxsr = extend(gammap.getIds(), x, x1, x3);
 

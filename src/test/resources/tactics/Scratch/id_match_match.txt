@@ -1,0 +1,13 @@
+(match (* t *)
+  leaf
+  (match (* a *)
+      (let:tree:cf
+        leaf
+          node
+     )
+     (let:tree:cf
+        node
+          node
+     )
+    )
+  )

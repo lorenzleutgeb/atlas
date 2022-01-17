@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.atlas.ast;
+package xyz.leutgeb.lorenz.atlas.ast.expressions;
 
 import static xyz.leutgeb.lorenz.atlas.util.Util.*;
 
@@ -9,12 +9,12 @@ import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.Value;
 import org.hipparchus.fraction.Fraction;
+import xyz.leutgeb.lorenz.atlas.ast.Normalization;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 
 @Value
@@ -47,7 +47,7 @@ public class TickExpression extends Expression {
     return Stream.of(body);
   }
 
-  public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
+  public Type inferInternal(UnificationContext context) throws TypeError {
     return body.infer(context).wiggle(context);
   }
 

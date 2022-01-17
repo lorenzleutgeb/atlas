@@ -4,8 +4,8 @@ import static xyz.leutgeb.lorenz.atlas.util.Util.append;
 
 import java.util.List;
 import java.util.Map;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
-import xyz.leutgeb.lorenz.atlas.ast.IfThenElseExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IfThenElseExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
@@ -23,7 +23,7 @@ public class Ite implements Rule {
     final var expression = (IfThenElseExpression) obligation.getExpression();
     final var condition = expression.getCondition();
 
-    if (Identifier.isCoin(condition)) {
+    if (IdentifierExpression.isCoin(condition)) {
       final var u = obligation.getContext().getAnnotation();
 
       final var u1 = globals.getHeuristic().generate("u1", u);

@@ -10,7 +10,7 @@ import java.util.stream.Stream;
 import org.opentest4j.AssertionFailedError;
 import tech.tablesaw.api.StringColumn;
 import tech.tablesaw.api.Table;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
@@ -62,23 +62,25 @@ class Assertions {
   }
 
   public static <V> V assertContextEquals(
-      List<Identifier> expectedIds, Annotation expectedAnnotation, AnnotatingContext actual) {
+      List<IdentifierExpression> expectedIds,
+      Annotation expectedAnnotation,
+      AnnotatingContext actual) {
     return assertContextEquals(new AnnotatingContext(expectedIds, expectedAnnotation), actual);
   }
 
   public static <V> V assertContextEquals(
-      List<Identifier> expectedIds, Annotation expectedAnnotation, Obligation actual) {
+      List<IdentifierExpression> expectedIds, Annotation expectedAnnotation, Obligation actual) {
     return assertContextEquals(expectedIds, expectedAnnotation, actual.getContext());
   }
 
   public static <V> V assertContextEqualsByPrefixes(
       List<String> expectedIds, Annotation expectedAnnotation, AnnotatingContext actual) {
-    Set<Identifier> actualIds = new HashSet<>(actual.getIds());
-    List<Identifier> matchedIds = new ArrayList<>(actual.size());
+    Set<IdentifierExpression> actualIds = new HashSet<>(actual.getIds());
+    List<IdentifierExpression> matchedIds = new ArrayList<>(actual.size());
     outer:
     for (String expectedId : expectedIds) {
-      for (Iterator<Identifier> iterator = actualIds.iterator(); iterator.hasNext(); ) {
-        final Identifier actualId = iterator.next();
+      for (Iterator<IdentifierExpression> iterator = actualIds.iterator(); iterator.hasNext(); ) {
+        final IdentifierExpression actualId = iterator.next();
         if (actualId.getName().startsWith(expectedId)) {
           matchedIds.add(actualId);
           iterator.remove();

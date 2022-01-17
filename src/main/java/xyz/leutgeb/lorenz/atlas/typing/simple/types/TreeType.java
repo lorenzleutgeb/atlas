@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.atlas.unification.Equivalence;
 import xyz.leutgeb.lorenz.atlas.unification.Generalizer;
@@ -30,9 +31,9 @@ public class TreeType implements Type {
   }
 
   @Override
-  public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
+  public Collection<Equivalence> decompose(Type b, Source source) throws TypeMismatch {
     if (!(b instanceof final TreeType tree)) {
-      throw new TypeMismatch(this, b);
+      throw new TypeMismatch(this, b, source);
     }
 
     if (!elementType.equals(tree.elementType)) {

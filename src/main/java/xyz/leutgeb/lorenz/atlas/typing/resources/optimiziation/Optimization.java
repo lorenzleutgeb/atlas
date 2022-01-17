@@ -123,6 +123,10 @@ public class Optimization {
               }
               final var c = e.getKey().get(e.getKey().size() - 1);
 
+              if (a + c < 1) {
+                return;
+              }
+
               final var diff = Coefficient.unknownFromPrefix("x");
 
               constraints.add(

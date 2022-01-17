@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.atlas.ast;
+package xyz.leutgeb.lorenz.atlas.ast.expressions;
 
 import static com.google.common.collect.Sets.union;
 import static java.util.Collections.singleton;
@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.Value;
+import xyz.leutgeb.lorenz.atlas.ast.Normalization;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.FunctionSignature;
@@ -25,7 +26,6 @@ import xyz.leutgeb.lorenz.atlas.typing.simple.types.FunctionType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.Substitution;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 
 @Value
@@ -33,14 +33,14 @@ import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 public class CallExpression extends Expression {
   @NonNull String moduleName;
 
-  @NonNull Identifier functionName;
+  @NonNull IdentifierExpression functionName;
 
   @NonNull List<Expression> parameters;
 
   public CallExpression(
       Source source,
       String moduleName,
-      @NonNull Identifier functionName,
+      @NonNull IdentifierExpression functionName,
       @NonNull List<Expression> parameters) {
     super(source);
     this.functionName = functionName;
@@ -50,7 +50,7 @@ public class CallExpression extends Expression {
 
   private CallExpression(
       Source source,
-      @NonNull Identifier functionName,
+      @NonNull IdentifierExpression functionName,
       @NonNull List<Expression> parameters,
       Type type,
       String moduleName) {
@@ -61,7 +61,7 @@ public class CallExpression extends Expression {
   }
 
   @Override
-  public Set<Identifier> freeVariables() {
+  public Set<IdentifierExpression> freeVariables() {
     final var result = super.freeVariables();
     result.remove(functionName);
     return result;
@@ -77,9 +77,9 @@ public class CallExpression extends Expression {
     return parameters.stream();
   }
 
-  public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
+  public Type inferInternal(UnificationContext context) throws TypeError {
     FunctionSignature signature =
-        context.getSignature(getFullyQualifiedName()).wiggle(new Substitution(), context);
+        context.getSignature(getFullyQualifiedName(), source).wiggle(new Substitution(), context);
 
     final var fTy = signature.getType();
     final var expectedArgCount = fTy.getFrom().getElements().size();
@@ -95,8 +95,8 @@ public class CallExpression extends Expression {
               + given
               + " w"
               + (given == 1 ? "as" : "ere")
-              + " given at "
-              + getSource());
+              + " given.",
+          getSource());
     }
 
     List<Type> xTy = new ArrayList<>(parameters.size());
@@ -120,7 +120,7 @@ public class CallExpression extends Expression {
     }
 
     var result = context.fresh();
-    context.addEquivalenceIfNotEqual(fTy, new FunctionType(xTy, result).wiggle(context));
+    context.addEquivalenceIfNotEqual(fTy, new FunctionType(xTy, result).wiggle(context), source);
     return result;
   }
 
@@ -142,7 +142,9 @@ public class CallExpression extends Expression {
   public Expression rename(Map<String, String> renaming) {
     if (parameters.stream()
         .anyMatch(
-            x -> !(x instanceof Identifier) || renaming.containsKey(((Identifier) x).getName()))) {
+            x ->
+                !(x instanceof IdentifierExpression)
+                    || renaming.containsKey(((IdentifierExpression) x).getName()))) {
       return new CallExpression(
           Derived.rename(this),
           functionName,
@@ -231,7 +233,7 @@ public class CallExpression extends Expression {
     boolean eqs = false;
     int a = -1, b = -1;
     for (int i = 0; i < parameters.size() - 1; i++) {
-      if (!(parameters.get(i) instanceof Identifier)) {
+      if (!(parameters.get(i) instanceof IdentifierExpression)) {
         throw new IllegalStateException("must be in anf");
       }
       for (int j = i + 1; j < parameters.size(); j++) {
@@ -252,14 +254,14 @@ public class CallExpression extends Expression {
       return this;
     }
 
-    var down = ShareExpression.clone((Identifier) parameters.get(a), idGenerator);
+    var down = ShareExpression.clone((IdentifierExpression) parameters.get(a), idGenerator);
     var newParameters = new ArrayList<>(parameters);
     newParameters.set(a, down.getLeft());
     newParameters.set(b, down.getRight());
 
     return new ShareExpression(
         this,
-        (Identifier) parameters.get(a),
+        (IdentifierExpression) parameters.get(a),
         down,
         new CallExpression(source, functionName, newParameters, type, moduleName));
   }

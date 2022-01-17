@@ -195,7 +195,7 @@ tasks.create<JavaExec>("generateExamples") {
 
 tasks.withType<JavaCompile> {
     options.encoding = StandardCharsets.UTF_8.name()
-    options.compilerArgs.addAll(arrayOf("-Xlint:unchecked", "-Xlint:deprecation", "-Aproject=atlas", "-Averbose=true"))
+    options.compilerArgs.addAll(arrayOf("--enable-preview", "-Xlint:unchecked", "-Xlint:deprecation", "-Aproject=atlas", "-Averbose=true"))
 }
 
 tasks.test {

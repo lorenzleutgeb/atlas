@@ -33,8 +33,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hipparchus.fraction.Fraction;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
-import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 
 @Slf4j
@@ -128,15 +127,13 @@ public class Util {
   }
 
   public static String undefinedText(String undefined, Iterable<String> defined) {
-    return undefinedText(undefined, defined.iterator(), null);
+    return undefinedText(undefined, defined.iterator());
   }
 
-  public static String undefinedText(String undefined, Iterator<String> defined, Source source) {
+  public static String undefinedText(String undefined, Iterator<String> defined) {
     return "'"
         + undefined
-        + "' (used at "
-        + source
-        + ") is not defined. (Did you mean "
+        + "' is not defined. (Did you mean "
         + Util.similar(undefined, defined, 0.5, 4)
         + "?)";
   }
@@ -171,10 +168,6 @@ public class Util {
         x.getBigIntNumerator().intValueExact(), x.getBigIntDenominator().intValueExact());
   }
 
-  public static boolean isInteger(Fraction fraction) {
-    return 1 == fraction.getDenominator();
-  }
-
   public static <T, U> BiFunction<T, U, T> first() {
     return (T a, U b) -> a;
   }
@@ -183,8 +176,8 @@ public class Util {
     return (T a, U b) -> b;
   }
 
-  public static boolean isAllZeroes(List<Integer> xs) {
-    return xs.stream().allMatch(x -> x == 0);
+  public static boolean isSumAtLeastOne(List<Integer> xs) {
+    return xs.stream().reduce(0, Integer::sum) > 0;
   }
 
   public static List<Integer> zero(int n) {
@@ -282,8 +275,8 @@ public class Util {
     return result;
   }
 
-  public static Set<String> setOfNames(Set<Identifier> ids) {
-    return ids.stream().map(Identifier::getName).collect(Collectors.toSet());
+  public static Set<String> setOfNames(Set<IdentifierExpression> ids) {
+    return ids.stream().map(IdentifierExpression::getName).collect(Collectors.toSet());
   }
 
   public static <E> E pick(Collection<E> set) {

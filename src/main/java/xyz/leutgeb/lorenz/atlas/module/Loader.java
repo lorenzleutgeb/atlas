@@ -211,6 +211,8 @@ public class Loader {
       throw new RuntimeException("Could not load " + dangling);
     }
 
+    // addModuleEdges(g);
+
     log.info("Loaded: {}", g.vertexSet());
 
     final var reachable =
@@ -304,8 +306,14 @@ public class Loader {
       return true;
     }
     if (g.vertexSet().size() == 1) {
-      final var fd = Util.pick(g.vertexSet());
-      return functionDefinitions.get(fd).getOcurringFunctions().contains(fd);
+      final var fqn = Util.pick(g.vertexSet());
+      final var fd = functionDefinitions.get(fqn);
+
+      if (fd == null) {
+        throw new RuntimeException("Missing function definition: " + fqn);
+      }
+
+      return fd.getOcurringFunctions().contains(fqn);
     }
     return false;
   }

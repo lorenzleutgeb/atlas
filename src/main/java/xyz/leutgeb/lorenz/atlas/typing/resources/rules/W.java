@@ -39,7 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
@@ -74,7 +74,7 @@ public class W implements Rule {
     final var p = globals.getHeuristic().generate("w" + q.getName(), q);
     final var pp = globals.getHeuristic().generate("w" + qp.getName(), qp);
 
-    final List<Identifier> ids = obligation.getContext().getIds();
+    final List<IdentifierExpression> ids = obligation.getContext().getIds();
 
     return new Rule.ApplicationResult(
         singletonList(
@@ -117,10 +117,10 @@ public class W implements Rule {
   }
 
   public static List<Constraint> compareCoefficientsLessOrEqualUsingFarkas(
-      List<Identifier> identifiers,
+      List<IdentifierExpression> identifiers,
       Annotation left,
       Annotation right,
-      Graph<Identifier, SizeEdge> sizeAnalysis,
+      Graph<IdentifierExpression, SizeEdge> sizeAnalysis,
       Map<String, String> arguments) {
     // left is P in paper.
     // right is Q in paper.
@@ -142,7 +142,8 @@ public class W implements Rule {
     final var lemma2xy = flag(W.class, arguments, "l2xy") || all;
     final var lemmap1 = flag(W.class, arguments, "lp1") || all;
     final var size = flag(W.class, arguments, "size") || all;
-    final var lemmap1y = flag(W.class, arguments, "lp1y") || size || all;
+    // TODO(lorenzleutgeb): Fix this lemma.
+    final var lemmap1y = false; // flag(W.class, arguments, "lp1y") || all;
     final var mono = flag(W.class, arguments, "mono") || size || all;
 
     final ReducedSizeAnalysis reducedSizeAnalysis;
@@ -230,13 +231,23 @@ public class W implements Rule {
                       + instance.get(1)
                       + " <= 2 * "
                       + instance.get(2)));
-      /*
       log.info(
           "lts: "
-              + knowLt.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
+              + knowLt.stream()
+                  .map(
+                      x ->
+                          new LessThanOrEqual(
+                              identifiers.get(x.smaller), identifiers.get(x.greater)))
+                  .toList());
       log.info(
           "eqs: "
-              + knowEq.stream().map(x -> x.map(identifiers::get)).collect(toUnmodifiableList()));
+              + knowEq.stream()
+                  .map(x -> new Equal(identifiers.get(x.left), identifiers.get(x.right)))
+                  .toList());
+
+      // log(t+r-1)>=log(t)
+      // [1, 0, 0] <= [1, 1, -1]
+      // [0, 1, 0] <= [1, 1, -1]
 
       log.info("monotony:");
       monotonyInstances.forEach(x -> log.info("{}", x));
@@ -250,7 +261,6 @@ public class W implements Rule {
           instance -> log.info(instance.getRight() + " <= 2 * [...0, 2] + " + instance.getLeft()));
 
       log.info(" --- ");
-       */
     }
 
     // m is the number of rows of expert knowledge.
@@ -432,27 +442,27 @@ public class W implements Rule {
       Set<LessThan<Integer>> knowLt, Set<Equal<Integer>> knowEq, Set<Integer> knowOne) {}
 
   private static ReducedSizeAnalysis reduceSizeAnalysis(
-      List<Identifier> identifiers, Graph<Identifier, SizeEdge> sizeAnalysis) {
+      List<IdentifierExpression> identifiers, Graph<IdentifierExpression, SizeEdge> sizeAnalysis) {
     Set<LessThan<Integer>> knowLt = new HashSet<>();
     Set<Equal<Integer>> knowEq = new HashSet<>();
 
-    final Predicate<GraphPath<Identifier, SizeEdge>> isGt =
+    final Predicate<GraphPath<IdentifierExpression, SizeEdge>> isGt =
         path ->
             path.getEdgeList().stream().anyMatch(edge -> SizeEdge.Kind.GT.equals(edge.getKind()));
 
-    final Predicate<GraphPath<Identifier, SizeEdge>> isEq =
+    final Predicate<GraphPath<IdentifierExpression, SizeEdge>> isEq =
         path ->
             path.getEdgeList().stream().allMatch(edge -> SizeEdge.Kind.EQ.equals(edge.getKind()));
 
     final Set<Integer> knowOne =
-        sizeAnalysis.containsVertex(Identifier.leaf())
+        sizeAnalysis.containsVertex(IdentifierExpression.leaf())
             ? identifiers.stream()
                 .filter(sizeAnalysis::containsVertex)
                 .filter(
                     identifier -> {
                       final var leafPaths =
                           new AllDirectedPaths<>(sizeAnalysis)
-                              .getAllPaths(identifier, Identifier.leaf(), true, 16);
+                              .getAllPaths(identifier, IdentifierExpression.leaf(), true, 16);
                       return !leafPaths.isEmpty() && leafPaths.stream().anyMatch(isEq);
                     })
                 .map(identifiers::indexOf)
@@ -539,18 +549,22 @@ public class W implements Rule {
    * @return Instantiations as pairs. The left element corresponds to x, the right element
    *     corresponds to x + y.
    */
+  @Deprecated
   private static List<Pair<List<Integer>, List<Integer>>> lemmaPlus1Known(
       List<List<Integer>> potentialFunctions, Set<Integer> knowOne) {
+    // TODO: Carefully check whether this is correct. Looks buggy.
     final var set = Set.copyOf(potentialFunctions);
-    return potentialFunctions.stream()
-        .filter(Predicate.not(Annotation::isUnitIndex)) // x is not unit
-        .flatMap(
-            x ->
-                knowOne.stream()
-                    .filter(one -> x.get(one) == 1)
-                    .map(one -> Pair.of(sum(x, atIndex(x.size() - 1, one, -1)), x)))
-        .filter(instance -> set.contains(instance.getLeft()))
-        .collect(Collectors.toList());
+    final var result =
+        potentialFunctions.stream()
+            .filter(Predicate.not(Annotation::isUnitIndex)) // x is not unit
+            .flatMap(
+                x ->
+                    knowOne.stream()
+                        .filter(one -> x.get(one) == 1)
+                        .map(one -> Pair.of(sum(x, atIndex(x.size() - 1, one, -1)), x)))
+            .filter(instance -> set.contains(instance.getLeft()))
+            .collect(Collectors.toList());
+    return result;
   }
 
   private static List<Pair<List<Integer>, List<Integer>>> lemmaPlus2(

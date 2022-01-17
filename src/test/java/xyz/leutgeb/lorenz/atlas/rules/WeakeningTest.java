@@ -4,6 +4,7 @@ import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.unitIndex;
+import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient.known;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.*;
 
 import java.util.Collections;
@@ -21,7 +22,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
@@ -39,10 +40,11 @@ public class WeakeningTest {
   public void constant() {
     Obligation o =
         new Obligation(
-            Collections.singletonList(Identifier.get("_", null)),
+            Collections.singletonList(IdentifierExpression.get("_", null)),
             Annotation.constant(1, "two", TWO),
-            Identifier.get("a", null),
-            Annotation.zero(1));
+            IdentifierExpression.get("a", null),
+            Annotation.zero(1),
+            true);
     final var result = W.INSTANCE.apply(o, AnnotatingGlobals.empty());
     assertEquals(1, result.obligations().size());
 
@@ -72,10 +74,10 @@ public class WeakeningTest {
   })
   @ParameterizedTest
   void withGtKnowledge(int a1, int a2, int b1, int b2, boolean expectedSolution) {
-    final var smallerTree = Identifier.predefinedTree("smallerTree");
-    final var biggerTree = Identifier.predefinedTree("biggerTree");
+    final var smallerTree = IdentifierExpression.predefinedTree("smallerTree");
+    final var biggerTree = IdentifierExpression.predefinedTree("biggerTree");
 
-    final var sizeAnalysis = new DirectedMultigraph<Identifier, SizeEdge>(SizeEdge.class);
+    final var sizeAnalysis = new DirectedMultigraph<IdentifierExpression, SizeEdge>(SizeEdge.class);
     sizeAnalysis.addVertex(smallerTree);
     sizeAnalysis.addVertex(biggerTree);
     sizeAnalysis.addEdge(biggerTree, smallerTree, SizeEdge.gt());
@@ -114,11 +116,11 @@ public class WeakeningTest {
   @Test
   @Disabled("needs P := Q3 and Q := Q2")
   void lemma17() {
-    final var cr = Identifier.predefinedTree("cr");
-    final var bl = Identifier.predefinedTree("bl");
-    final var br = Identifier.predefinedTree("br");
+    final var cr = IdentifierExpression.predefinedTree("cr");
+    final var bl = IdentifierExpression.predefinedTree("bl");
+    final var br = IdentifierExpression.predefinedTree("br");
 
-    final var sizeAnalysis = new DirectedMultigraph<Identifier, SizeEdge>(SizeEdge.class);
+    final var sizeAnalysis = new DirectedMultigraph<IdentifierExpression, SizeEdge>(SizeEdge.class);
     sizeAnalysis.addVertex(cr);
     sizeAnalysis.addVertex(bl);
     sizeAnalysis.addVertex(br);
@@ -137,12 +139,116 @@ public class WeakeningTest {
   }
 
   @Test
-  void probabilsticZigZig() {
-    final var t = Identifier.predefinedTree("t");
-    final var br = Identifier.predefinedTree("br");
-    final var cr = Identifier.predefinedTree("cr");
+  void builder2() {
+    final var x = IdentifierExpression.predefinedTree("x");
+    final var y = IdentifierExpression.predefinedTree("y");
 
-    final var sizeAnalysis = new DirectedMultigraph<Identifier, SizeEdge>(SizeEdge.class);
+    final var sizeAnalysis = new DirectedMultigraph<IdentifierExpression, SizeEdge>(SizeEdge.class);
+    sizeAnalysis.addVertex(x);
+    sizeAnalysis.addVertex(y);
+
+    final Annotation Q =
+        new Annotation(
+            List.of(known(3, 4), known(3, 4)),
+            Map.of(
+                // x y
+                List.of(0, 1, 0), known(3, 4),
+                List.of(1, 0, 0), known(3, 4),
+                List.of(1, 1, 0), known(3, 4),
+                List.of(1, 1, 1), known(3, 4),
+                List.of(1, 1, 2), known(3, 4),
+                unitIndex(2), known(6, 4)),
+            "Q");
+
+    // Q
+    //   3/4 log(y) + 3/4 log(x) + 3/4 log(x+y) + 3/4 log(x+y+1) + 3/4 log(x+y+2) + 6/4
+    //
+    // >=         (using 3/4 log(x+y+2) >= 3/4 by mono)
+    //
+    //   3/4 log(y) + 3/4 log(x) + 3/4 log(x+y) + 3/4 log(x+y+1) + ______________ + 9/4
+    // P
+
+    final Annotation P =
+        new Annotation(
+            List.of(known(3, 4), known(3, 4)),
+            Map.of(
+                // x y
+                List.of(0, 1, 0), known(3, 4),
+                List.of(1, 0, 0), known(3, 4),
+                List.of(1, 1, 0), known(3, 4),
+                List.of(1, 1, 1), known(3, 4),
+                // HOLE
+                unitIndex(2), known(9, 4)),
+            "Q");
+
+    final var solverResult =
+        Solver.solve(
+            Set.copyOf(
+                W.compareCoefficientsLessOrEqualUsingFarkas(
+                    List.of(x, y), P, Q, sizeAnalysis, Map.of("mono", "true"))));
+
+    assertTrue(solverResult.isSatisfiable());
+  }
+
+  @Test
+  void builder() {
+    final var x = IdentifierExpression.predefinedTree("x");
+    final var y = IdentifierExpression.predefinedTree("y");
+
+    final var sizeAnalysis = new DirectedMultigraph<IdentifierExpression, SizeEdge>(SizeEdge.class);
+    sizeAnalysis.addVertex(x);
+    sizeAnalysis.addVertex(y);
+
+    final Annotation Q =
+        new Annotation(
+            List.of(known(3, 4), known(3, 4)),
+            Map.of(
+                // x y
+                List.of(0, 1, 0), known(3, 4),
+                List.of(0, 1, 1), known(3, 4),
+                List.of(1, 0, 0), known(3, 4),
+                List.of(1, 1, 0), known(3, 4),
+                List.of(1, 1, 1), known(3, 4),
+                unitIndex(2), known(6, 4)),
+            "Q");
+
+    // Q
+    //   3/4 log(y) + 3/4 log(x) + 3/4 log(y+1) + 3/4 log(x+y) + 3/4 log(x+y+1) + 6/4
+    //
+    // >=         (using 3/4 log(y+1) >= 3/4 by mono)
+    //
+    //   3/4 log(y) + 3/4 log(x) + ____________ + 3/4 log(x+y) + 3/4 log(x+y+1) + 9/4
+    // P
+
+    final Annotation P =
+        new Annotation(
+            List.of(known(3, 4), known(3, 4)),
+            Map.of(
+                // x y
+                List.of(0, 1, 0), known(3, 4),
+                // HOLE
+                List.of(1, 0, 0), known(3, 4),
+                List.of(1, 1, 1), known(3, 4),
+                List.of(1, 1, 0), known(3, 4),
+                unitIndex(2), known(9, 4)),
+            "Q");
+
+    final var solverResult =
+        Solver.solve(
+            Set.copyOf(
+                W.compareCoefficientsLessOrEqualUsingFarkas(
+                    List.of(x, y), P, Q, sizeAnalysis, Map.of("mono", "true"))));
+
+    assertTrue(solverResult.isSatisfiable());
+  }
+
+  @Test
+  void probabilsticZigZig() {
+    final var t = IdentifierExpression.predefinedTree("t");
+    final var br = IdentifierExpression.predefinedTree("br");
+    final var cr = IdentifierExpression.predefinedTree("cr");
+
+    final var sizeAnalysis = new DirectedMultigraph<IdentifierExpression, SizeEdge>(SizeEdge.class);
     sizeAnalysis.addVertex(t);
     sizeAnalysis.addVertex(br);
     sizeAnalysis.addVertex(cr);
@@ -185,10 +291,10 @@ public class WeakeningTest {
 
   @Test
   void lemma17simple() {
-    final var x = Identifier.predefinedTree("x");
-    final var y = Identifier.predefinedTree("y");
+    final var x = IdentifierExpression.predefinedTree("x");
+    final var y = IdentifierExpression.predefinedTree("y");
 
-    final var sizeAnalysis = new DirectedMultigraph<Identifier, SizeEdge>(SizeEdge.class);
+    final var sizeAnalysis = new DirectedMultigraph<IdentifierExpression, SizeEdge>(SizeEdge.class);
     sizeAnalysis.addVertex(x);
     sizeAnalysis.addVertex(y);
 
@@ -211,13 +317,13 @@ public class WeakeningTest {
 
   @Test
   void lemmaPlus1Y() {
-    final var x = Identifier.predefinedTree("x");
-    final var y = Identifier.predefinedTree("y");
+    final var x = IdentifierExpression.predefinedTree("x");
+    final var y = IdentifierExpression.predefinedTree("y");
 
-    final var sizeAnalysis = new DirectedMultigraph<Identifier, SizeEdge>(SizeEdge.class);
+    final var sizeAnalysis = new DirectedMultigraph<IdentifierExpression, SizeEdge>(SizeEdge.class);
     sizeAnalysis.addVertex(x);
-    sizeAnalysis.addVertex(Identifier.leaf());
-    sizeAnalysis.addEdge(x, Identifier.leaf(), SizeEdge.eq());
+    sizeAnalysis.addVertex(IdentifierExpression.leaf());
+    sizeAnalysis.addEdge(x, IdentifierExpression.leaf(), SizeEdge.eq());
 
     // P <= Q
     final Annotation P = new Annotation(List.of(ZERO, ZERO), Map.of(List.of(1, 1, 0), ONE), "P");
@@ -235,9 +341,9 @@ public class WeakeningTest {
 
   @Test
   void lemmaPlus1() {
-    final var x = Identifier.predefinedTree("x");
+    final var x = IdentifierExpression.predefinedTree("x");
 
-    final var sizeAnalysis = new DirectedMultigraph<Identifier, SizeEdge>(SizeEdge.class);
+    final var sizeAnalysis = new DirectedMultigraph<IdentifierExpression, SizeEdge>(SizeEdge.class);
     sizeAnalysis.addVertex(x);
 
     // P <= Q
@@ -285,7 +391,7 @@ public class WeakeningTest {
         Solver.solve(
             new HashSet<>(
                 W.compareCoefficientsLessOrEqualUsingFarkas(
-                    List.of(Identifier.predefinedTree("_")),
+                    List.of(IdentifierExpression.predefinedTree("_")),
                     p,
                     q,
                     new DirectedMultigraph<>(SizeEdge.class),

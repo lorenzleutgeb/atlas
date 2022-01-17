@@ -23,7 +23,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
@@ -36,16 +36,28 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient
 public class EqualityConstraint extends Constraint {
   @NonNull protected final Coefficient left, right;
 
+  private final boolean satisfiable;
+
   public EqualityConstraint(Coefficient left, Coefficient right, String reason) {
     super(reason);
     Objects.requireNonNull(left);
     Objects.requireNonNull(right);
     this.left = left;
     this.right = right;
+
+    if (left instanceof KnownCoefficient l && right instanceof KnownCoefficient r && !l.equals(r)) {
+      satisfiable = false;
+      log.debug("Generating unsatisfiable constraint '{} = {}'.", left, right);
+    } else {
+      satisfiable = true;
+    }
   }
 
   public static List<Constraint> eqRanksDefineFromLeft(
-      Iterable<Identifier> ids, AnnotatingContext left, AnnotatingContext right, String reason) {
+      Iterable<IdentifierExpression> ids,
+      AnnotatingContext left,
+      AnnotatingContext right,
+      String reason) {
     return StreamSupport.stream(ids.spliterator(), false)
         .map(
             id ->
@@ -57,7 +69,10 @@ public class EqualityConstraint extends Constraint {
   }
 
   public static List<Constraint> eqRanks(
-      Iterable<Identifier> ids, AnnotatingContext left, AnnotatingContext right, String reason) {
+      Iterable<IdentifierExpression> ids,
+      AnnotatingContext left,
+      AnnotatingContext right,
+      String reason) {
     return StreamSupport.stream(ids.spliterator(), false)
         .map(
             id ->
@@ -131,6 +146,9 @@ public class EqualityConstraint extends Constraint {
   }
 
   public BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, RealExpr> coefficients) {
+    /*if (!satisfiable) {
+      return ctx.mkFalse();
+    }*/
     return ctx.mkEq(left.encode(ctx, coefficients), right.encode(ctx, coefficients));
   }
 

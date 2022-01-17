@@ -10,8 +10,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
-import xyz.leutgeb.lorenz.atlas.ast.NodeExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.NodeExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
@@ -26,8 +26,8 @@ public class Node implements Rule {
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = (NodeExpression) obligation.getExpression();
 
-    final var leftId = ((Identifier) expression.getLeft());
-    final var rightId = ((Identifier) expression.getRight());
+    final var leftId = ((IdentifierExpression) expression.getLeft());
+    final var rightId = ((IdentifierExpression) expression.getRight());
 
     final var qunordered = obligation.getContext();
     final var missing = Sets.difference(Set.of(leftId, rightId), Set.copyOf(qunordered.getIds()));
@@ -51,6 +51,12 @@ public class Node implements Rule {
 
     q.streamNonRankCoefficients()
         .filter(qEntry -> qEntry.getKey().get(0).equals(qEntry.getKey().get(1)))
+        .filter(
+            qEntry -> {
+              var a = qEntry.getKey().get(0);
+              var c = qEntry.getKey().get(2);
+              return a + c > 0;
+            })
         .map(
             qEntry -> {
               var a = qEntry.getKey().get(0);

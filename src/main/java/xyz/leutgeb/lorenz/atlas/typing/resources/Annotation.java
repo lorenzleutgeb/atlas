@@ -5,7 +5,6 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static java.util.function.Function.identity;
-import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -13,12 +12,7 @@ import static java.util.stream.IntStream.range;
 import static java.util.stream.Stream.concat;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ZERO;
-import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
-import static xyz.leutgeb.lorenz.atlas.util.Util.generateSubscript;
-import static xyz.leutgeb.lorenz.atlas.util.Util.generateSubscriptIndex;
-import static xyz.leutgeb.lorenz.atlas.util.Util.isAllZeroes;
-import static xyz.leutgeb.lorenz.atlas.util.Util.randomHex;
-import static xyz.leutgeb.lorenz.atlas.util.Util.repeat;
+import static xyz.leutgeb.lorenz.atlas.util.Util.*;
 
 import com.google.common.collect.Streams;
 import com.google.common.primitives.Ints;
@@ -101,6 +95,9 @@ public class Annotation {
       if (l.size() != this.size() + 1) {
         throw new IllegalArgumentException();
       }
+      if (!Util.isSumAtLeastOne(l)) {
+        throw bug("index sum is less than one");
+      }
     }
     for (var l : nonRankCoefficients) {
       this.getCoefficientOrDefine(l);
@@ -125,6 +122,9 @@ public class Annotation {
     for (var l : coefficients.keySet()) {
       if (l.size() != this.size() + 1) {
         throw new IllegalArgumentException();
+      }
+      if (!Util.isSumAtLeastOne(l)) {
+        throw bug("index sum is less than one");
       }
     }
     this.coefficients =
@@ -311,8 +311,8 @@ public class Annotation {
     if (index.size() != size() + 1) {
       throw new IllegalArgumentException();
     }
-    if (isAllZeroes(index)) {
-      throw bug("attempting to create zero index");
+    if (!isSumAtLeastOne(index)) {
+      throw bug("attempting to create index with sum less than one");
     }
     return coefficients.computeIfAbsent(index, key -> unknown(generateSubscriptIndex(key)));
   }
@@ -330,7 +330,7 @@ public class Annotation {
     if (index.size() != size() + 1) {
       throw new IllegalArgumentException();
     }
-    if (isAllZeroes(index)) {
+    if (!isSumAtLeastOne(index)) {
       throw bug("attempting to create zero index");
     }
     final var elem = coefficients.get(index);
@@ -566,7 +566,7 @@ public class Annotation {
     if (index.size() != size() + 1) {
       throw new IllegalArgumentException();
     }
-    if (isAllZeroes(index)) {
+    if (!isSumAtLeastOne(index)) {
       throw bug("attempting to access zero index");
     }
     if (!coefficients.containsKey(index)) {
@@ -873,15 +873,6 @@ public class Annotation {
       return name.substring(name.lastIndexOf("#") + 1);
     }
     return name;
-  }
-
-  public boolean isNonInteger() {
-    return Stream.concat(
-            streamNonRankCoefficients().map(Map.Entry::getValue), rankCoefficients.stream())
-        .filter(not(Objects::isNull))
-        .filter(x -> x instanceof KnownCoefficient)
-        .map(x -> ((KnownCoefficient) x).getValue())
-        .anyMatch(not(Util::isInteger));
   }
 
   public boolean isZero() {

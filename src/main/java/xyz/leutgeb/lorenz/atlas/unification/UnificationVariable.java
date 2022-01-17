@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Collections;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 
@@ -19,7 +20,7 @@ public class UnificationVariable extends TypeVariable {
   }
 
   @Override
-  public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
+  public Collection<Equivalence> decompose(Type b, Source source) throws TypeMismatch {
     return Collections.emptyList();
   }
 

@@ -4,19 +4,9 @@ import static java.util.Optional.empty;
 import static java.util.Optional.ofNullable;
 
 import java.util.Optional;
-import lombok.Value;
 import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
 
-@Value
-class Config {
-  public Optional<String> tactic;
-  public Optional<CombinedFunctionAnnotation> annotation;
-
-  public Config(Optional<String> tactic, Optional<CombinedFunctionAnnotation> annotation) {
-    this.tactic = tactic;
-    this.annotation = annotation;
-  }
-
+record Config(Optional<String> tactic, Optional<CombinedFunctionAnnotation> annotation) {
   public static Config of(String tactic) {
     return new Config(ofNullable(tactic), empty());
   }
@@ -47,7 +37,7 @@ class Config {
     }
     result += " ";
     if (annotation.isPresent()) {
-      result += annotation.get().withCost;
+      result += annotation.get(); // .withCost;
     } else {
       result += "infer";
     }

@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.atlas.unification.Equivalence;
 import xyz.leutgeb.lorenz.atlas.unification.Generalizer;
@@ -29,12 +30,12 @@ public class ProductType implements Type {
   List<Type> elements;
 
   @Override
-  public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
+  public Collection<Equivalence> decompose(Type b, Source source) throws TypeMismatch {
     if (!(b instanceof ProductType pt)) {
-      throw new TypeMismatch(this, b);
+      throw new TypeMismatch(this, b, source);
     }
     if (pt.size() != elements.size()) {
-      throw new TypeMismatch(this, b);
+      throw new TypeMismatch(this, b, source);
     }
     var result = new ArrayList<Equivalence>(elements.size());
     for (int i = 0; i < elements.size(); i++) {

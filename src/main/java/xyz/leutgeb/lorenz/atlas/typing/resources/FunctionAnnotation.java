@@ -7,7 +7,6 @@ import lombok.Value;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 
-// TODO: Maybe refactor this to a record once Java 17 is out?
 @Value
 @AllArgsConstructor
 public class FunctionAnnotation {
@@ -34,10 +33,6 @@ public class FunctionAnnotation {
 
   public FunctionAnnotation(Annotation annotation) {
     this(annotation, annotation);
-  }
-
-  public boolean isNonInteger() {
-    return from.isNonInteger() || to.isNonInteger();
   }
 
   public boolean isZero() {

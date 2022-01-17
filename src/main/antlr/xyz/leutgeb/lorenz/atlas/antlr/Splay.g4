@@ -47,7 +47,7 @@ expression : identifier # variableExpression
            | IF condition=expression THEN truthy=expression ELSE falsy=expression # iteExpression
            | MATCH test=expression WITH (PIPE LEAF ARROW leafCase=expression)? PIPE nodePattern=pattern ARROW nodeCase=expression # matchExpression
            | MATCH test=expression WITH PIPE tuplePattern ARROW body=expression # matchTupleExpression
-           | node # nodeExpression
+           | NODE left=expression middle=expression right=expression # nodeExpression
            | name=IDENTIFIER (params+=expression)* # callExpression
            | LET name=identifier ASSIGN value=expression IN body=expression # letExpression
            | PAREN_OPEN expression PAREN_CLOSE # parenthesizedExpression
@@ -55,7 +55,7 @@ expression : identifier # variableExpression
            | left=expression op right=expression # comparison
            | TILDE (numerator=NUMBER)? (denominator=NUMBER)? expression # tickExpression
            | UNDERSCORE # holeExpression
-           | CURLY_OPEN items+=expression (COMMA items+=expression)* CURLY_CLOSE # tuple
+           | PAREN_OPEN items+=expression (COMMA items+=expression)+ PAREN_CLOSE # tuple
            ;
 
 op : EQ | NE | LT | LE | GT | GE ;
@@ -63,13 +63,11 @@ op : EQ | NE | LT | LE | GT | GE ;
 // For patterns we only admit simpler tuples:
 //  - non-recursive, i.e. it is only possible to match one level of a tree
 //  - no derived identifiers
-pattern : PAREN_OPEN left=maybeAnonymousIdentifier COMMA middle=maybeAnonymousIdentifier COMMA right=maybeAnonymousIdentifier PAREN_CLOSE # deconstructionPattern
+pattern : NODE left=maybeAnonymousIdentifier middle=maybeAnonymousIdentifier right=maybeAnonymousIdentifier # deconstructionPattern
         | maybeAnonymousIdentifier # aliasingPattern
         ;
 
-tuplePattern : CURLY_OPEN items+=identifier (COMMA items+=identifier)* CURLY_CLOSE ;
-
-node: PAREN_OPEN left=expression COMMA middle=expression COMMA right=expression PAREN_CLOSE ;
+tuplePattern : PAREN_OPEN items+=identifier (COMMA items+=identifier)* PAREN_CLOSE ;
 
 identifier : LEAF | IDENTIFIER ;
 
@@ -103,6 +101,7 @@ GT : '>';
 GE : '>=' | '≥';
 
 ASSIGN : '=' | '≔';
+NODE : 'node';
 LEAF : 'leaf';
 IN : 'in';
 IF : 'if';

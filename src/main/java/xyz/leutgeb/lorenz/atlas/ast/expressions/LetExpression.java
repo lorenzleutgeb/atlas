@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.atlas.ast;
+package xyz.leutgeb.lorenz.atlas.ast.expressions;
 
 import static com.google.common.collect.Sets.intersection;
 import static xyz.leutgeb.lorenz.atlas.util.Util.indent;
@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.jgrapht.Graph;
+import xyz.leutgeb.lorenz.atlas.ast.Normalization;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Predefined;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
@@ -19,7 +20,6 @@ import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.atlas.util.Pair;
 import xyz.leutgeb.lorenz.atlas.util.SizeEdge;
@@ -27,22 +27,21 @@ import xyz.leutgeb.lorenz.atlas.util.SizeEdge;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class LetExpression extends Expression {
-  private final Identifier declared;
+  private final IdentifierExpression declared;
   private final Expression value;
 
   private final Expression body;
 
-  public LetExpression(Source source, Identifier declared, Expression value, Expression body) {
+  public LetExpression(
+      Source source, IdentifierExpression declared, Expression value, Expression body) {
     super(source);
     this.declared = declared;
     this.value = value;
     this.body = body;
   }
 
-  public LetExpression(
-      Source source, Identifier declared, Expression value, Expression body, Type type) {
-    // TODO(lorenzleutgeb): This constructor was made public only for testing purposes. Make it
-    // private again?
+  private LetExpression(
+      Source source, IdentifierExpression declared, Expression value, Expression body, Type type) {
     super(source, type);
     this.declared = declared;
     this.value = value;
@@ -50,7 +49,7 @@ public class LetExpression extends Expression {
   }
 
   public static LetExpression predefinedLet(
-      Identifier declared, Identifier value, Expression body) {
+      IdentifierExpression declared, IdentifierExpression value, Expression body) {
     return new LetExpression(Predefined.INSTANCE, declared, value, body, body.getType());
   }
 
@@ -65,15 +64,15 @@ public class LetExpression extends Expression {
   }
 
   @Override
-  public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
+  public Type inferInternal(UnificationContext context) throws TypeError {
     var declaredType = context.fresh();
-    context.addEquivalenceIfNotEqual(declaredType, value.infer(context).wiggle(context));
+    context.addEquivalenceIfNotEqual(declaredType, value.infer(context).wiggle(context), source);
     var sub = context.child();
     sub.putType(declared.getName(), declaredType, this);
-    sub.addEquivalenceIfNotEqual(declaredType, declared.infer(sub).wiggle(context));
+    sub.addEquivalenceIfNotEqual(declaredType, declared.infer(sub).wiggle(context), source);
 
     var result = context.fresh();
-    sub.addEquivalenceIfNotEqual(result, body.infer(sub).wiggle(context));
+    sub.addEquivalenceIfNotEqual(result, body.infer(sub).wiggle(context), source);
     return result;
   }
 
@@ -153,7 +152,7 @@ public class LetExpression extends Expression {
   }
 
   @Override
-  public Set<Identifier> freeVariables() {
+  public Set<IdentifierExpression> freeVariables() {
     final var result = super.freeVariables();
     result.remove(declared);
     return result;
@@ -191,7 +190,7 @@ public class LetExpression extends Expression {
   }
 
   @Override
-  public void analyzeSizes(Graph<Identifier, SizeEdge> sizeGraph) {
+  public void analyzeSizes(Graph<IdentifierExpression, SizeEdge> sizeGraph) {
     super.analyzeSizes(sizeGraph);
 
     if (!(value.getType() instanceof TreeType)) {
@@ -200,13 +199,13 @@ public class LetExpression extends Expression {
 
     if (value instanceof final NodeExpression node) {
       sizeGraph.addVertex(declared);
-      sizeGraph.addVertex((Identifier) node.getLeft());
-      sizeGraph.addVertex((Identifier) node.getRight());
-      sizeGraph.addEdge(declared, (Identifier) node.getLeft(), SizeEdge.gt());
-      sizeGraph.addEdge(declared, (Identifier) node.getRight(), SizeEdge.gt());
+      sizeGraph.addVertex((IdentifierExpression) node.getLeft());
+      sizeGraph.addVertex((IdentifierExpression) node.getRight());
+      sizeGraph.addEdge(declared, (IdentifierExpression) node.getLeft(), SizeEdge.gt());
+      sizeGraph.addEdge(declared, (IdentifierExpression) node.getRight(), SizeEdge.gt());
     }
 
-    if (value instanceof final Identifier identifier) {
+    if (value instanceof final IdentifierExpression identifier) {
       sizeGraph.addVertex(declared);
       sizeGraph.addVertex(identifier);
       sizeGraph.addEdge(declared, identifier, SizeEdge.eq());

@@ -65,12 +65,6 @@ public class CombinedFunctionAnnotation {
         withoutCost.stream().map(x -> x.substitute(solution)).collect(Collectors.toSet()));
   }
 
-  public boolean isNonInteger() {
-    return withCost.isNonInteger()
-        || (!withoutCost.isEmpty()
-            && withoutCost.stream().allMatch(FunctionAnnotation::isNonInteger));
-  }
-
   public boolean isUnknown() {
     return withCost.isUnknown()
         || (!withoutCost.isEmpty() && withoutCost.stream().anyMatch(FunctionAnnotation::isUnknown));

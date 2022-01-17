@@ -4,11 +4,12 @@ import jakarta.json.JsonValue;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
+import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.atlas.unification.*;
 
 public interface Type {
-  Collection<Equivalence> decompose(Type b) throws TypeMismatch;
+  Collection<Equivalence> decompose(Type b, Source source) throws TypeMismatch;
 
   boolean occurs(TypeVariable b);
 

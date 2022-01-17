@@ -1,0 +1,18 @@
+(match (* t *)
+  (w{mono} (* first after match *)
+    (let:tree:cf
+      leaf
+      (w{mono size} (* size because binds a leaf *)
+        (let:tree:cf
+          leaf
+          (w{mono l2xy size} (* proof leaf 2 *)
+            node
+          )
+        )
+      )
+    )
+  )
+  (w{mono} (* proof leaf 1 *)
+    var
+  )
+)

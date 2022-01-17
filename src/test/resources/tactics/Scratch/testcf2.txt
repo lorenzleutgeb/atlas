@@ -1,0 +1,6 @@
+(let:tree:cf
+  leaf
+  (w{mono} (* proof leaf 2 *)
+    node
+  )
+)

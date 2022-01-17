@@ -2,18 +2,17 @@ package xyz.leutgeb.lorenz.atlas;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static xyz.leutgeb.lorenz.atlas.ModuleTest.Qp;
-import static xyz.leutgeb.lorenz.atlas.TestUtil.loadAndNormalizeAndInferAndUnshare;
-import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.unitIndex;
-import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.zero;
+import static xyz.leutgeb.lorenz.atlas.TestUtil.*;
+import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.*;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient.known;
+import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient.unknown;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.*;
 import static xyz.leutgeb.lorenz.atlas.util.Z3Support.load;
 
-import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -72,6 +71,10 @@ public class Tactics {
         new Annotation(List.of(ZERO), Map.of(List.of(1, 0), c), "Qcf'"));
   }
 
+  private static Annotation logOnly(Coefficient c) {
+    return new Annotation(List.of(ZERO), Map.of(List.of(1, 0), c), "Q");
+  }
+
   protected static final Annotation QpwithConst =
       new Annotation(List.of(ONE), Map.of(unitIndex(1), ONE), "Q'");
 
@@ -118,6 +121,35 @@ public class Tactics {
           new Annotation(List.of(THREE_BY_FOUR), Map.of(unitIndex(1), ONE), "Q'"),
           logPlusOneToLog(known(3, 8)));
 
+  public static final CombinedFunctionAnnotation RAND_SPLAYHEAP_INSERT_EXPECTED =
+      CombinedFunctionAnnotation.of(
+          new Annotation(
+              List.of(
+                  new Annotation(List.of(known(3, 4)), Map.of(unitIndex(1), known(1, 2)), "Qp")
+                      .getRankCoefficient()),
+              Map.of(
+                  unitIndex(1),
+                  known(1, 2),
+                  List.of(1, 0),
+                  known(3, 4),
+                  List.of(1, 1),
+                  known(3, 4)),
+              "Qi"),
+          new Annotation(List.of(known(3, 4)), Map.of(unitIndex(1), known(1, 2)), "Qp"),
+          logPlusOneToLog(known(3, 8)));
+
+  public static final CombinedFunctionAnnotation RAND_SPLAYHEAP_DEL_MIN_EXPECTED =
+      CombinedFunctionAnnotation.of(
+          new Annotation(
+              List.of(
+                  new Annotation(List.of(known(3, 4)), Map.of(unitIndex(1), known(1, 2)), "Qp")
+                      .getRankCoefficient()),
+              Map.of(unitIndex(1), known(1, 2), List.of(1, 0), known(3, 4)),
+              "Qd"),
+          new Annotation(List.of(known(3, 4)), Map.of(unitIndex(1), known(1, 2)), "Qp"),
+          new FunctionAnnotation(
+              new Annotation(List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf")));
+
   public static final CombinedFunctionAnnotation SPLAYHEAP_PARTITION_EXPECTED =
       CombinedFunctionAnnotation.of(
           new Annotation(
@@ -155,64 +187,115 @@ public class Tactics {
               List.of(ONE_BY_TWO), Map.of(unitIndex(1), TWO, List.of(1, 0), ONE_BY_TWO), "Q"),
           Qp);
 
+  private static Annotation rkOnly(Coefficient c) {
+    return new Annotation(List.of(c), Map.of(), "rkonly");
+  }
+
+  public static final CombinedFunctionAnnotation RAND_TREESORT_DESCEND_EXPECTED =
+      CombinedFunctionAnnotation.of(logOnly(ONE), zero(1));
+
+  public static final CombinedFunctionAnnotation RAND_TREESORT_INSERT_EXPECTED =
+      CombinedFunctionAnnotation.of(
+          new Annotation(
+              List.of(known(1, 2)),
+              Map.of(unitIndex(1), known(1, 2), List.of(1, 0), known(3, 2)),
+              "Q"),
+          rkOnly(ONE_BY_TWO),
+          // TODO: Fix cf annotation.
+          // zero(1), zero(1),
+          logPlusOneToLog(known(1, 2))
+          // logPlusOneToLog(known(1, 4))
+          );
+
+  public static final CombinedFunctionAnnotation RAND_TREESORT_DELETE_MAX_EXPECTED =
+      CombinedFunctionAnnotation.of(
+          new Annotation(
+              List.of(known(1, 2)),
+              Map.of(unitIndex(1), known(1, 2), List.of(1, 0), known(3, 2)),
+              "Q"),
+          rkOnly(ONE_BY_TWO),
+          logOnly(known(1, 2)),
+          zero(1));
+
+  public static final CombinedFunctionAnnotation RAND_TREESORT_REMOVE_EXPECTED =
+      CombinedFunctionAnnotation.of(
+          new Annotation(
+              List.of(known(1, 2)),
+              Map.of(unitIndex(1), known(1, 2), List.of(1, 0), known(1)),
+              "Q"),
+          rkOnly(ONE_BY_TWO));
+
+  public static final CombinedFunctionAnnotation RAND_MELDABLEHEAP_MELD_EXPECTED =
+      CombinedFunctionAnnotation.of(
+          new Annotation(
+              List.of(ZERO, ZERO),
+              Map.of(
+                  List.of(1, 0, 0), ONE,
+                  List.of(0, 1, 0), ONE),
+              "Q"),
+          zero(1),
+          zero(2),
+          zero(1));
+
+  public static final CombinedFunctionAnnotation RAND_MELDABLEHEAP_INSERT_EXPECTED =
+      CombinedFunctionAnnotation.of(
+          new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE, unitIndex(1), ONE), "Q"),
+          zero(1),
+          zero(1),
+          zero(1));
+
+  public static final CombinedFunctionAnnotation RAND_MELDABLEHEAP_DEL_MIN_EXPECTED =
+      CombinedFunctionAnnotation.of(
+          new Annotation(List.of(ZERO), Map.of(List.of(1, 0), TWO), "Q"),
+          zero(1),
+          zero(1),
+          zero(1));
+
   private static Stream<Arguments> randTreeSort() {
     return Stream.of(
+        Arguments.of(Map.of("RandTreeSort.descend", Config.of(RAND_TREESORT_DESCEND_EXPECTED))),
         Arguments.of(
             Map.of(
                 "RandTreeSort.insert",
-                Config.of(
-                    "RandTreeSort/insert",
-                    CombinedFunctionAnnotation.of(
-                        SmartRangeHeuristic.DEFAULT.generate(1),
-                        /*
-                        new Annotation(
-                                List.of(Coefficient.unknown("x")),
-                                Map.of(
-                                        List.of(1, 0), Coefficient.unknown("y"),
-                                        unitIndex(1), Coefficient.unknown("c")
-                                ),
-                                "Q"
-                        ),
-                        */
-                        SmartRangeHeuristic.DEFAULT.generate(1),
-                        // new Annotation(List.of(Coefficient.unknown("x")), Map.of(unitIndex(1),
-                        // Coefficient.unknown("z")), "Q'"),
-                        SmartRangeHeuristic.DEFAULT.generate(1),
-                        SmartRangeHeuristic.DEFAULT.generate(1),
-                        SmartRangeHeuristic.DEFAULT.generate(1),
-                        SmartRangeHeuristic.DEFAULT.generate(1))))),
-        Arguments.of(
-            Map.of(
-                "RandTreeSort.insert",
-                Config.of(
-                    "RandTreeSort/insert",
-                    CombinedFunctionAnnotation.of(
-                        SmartRangeHeuristic.DEFAULT.generate(1),
-                        Qpsmall,
-                        SmartRangeHeuristic.DEFAULT.generate(1),
-                        SmartRangeHeuristic.DEFAULT.generate(1))),
-                "RandTreeSort.find",
-                Config.of("auto"),
+                Config.of(RAND_TREESORT_INSERT_EXPECTED),
                 "RandTreeSort.delete_max",
-                Config.of(
-                    "auto",
-                    CombinedFunctionAnnotation.of(
-                        SmartRangeHeuristic.DEFAULT.generate(1),
-                        Qpsmall,
-                        SmartRangeHeuristic.DEFAULT.generate(1),
-                        SmartRangeHeuristic.DEFAULT.generate(1))),
+                Config.of(RAND_TREESORT_DELETE_MAX_EXPECTED),
                 "RandTreeSort.remove",
-                Config.of(
-                    "auto",
-                    CombinedFunctionAnnotation.of(
-                        SmartRangeHeuristic.DEFAULT.generate(1),
-                        Qpsmall,
-                        SmartRangeHeuristic.DEFAULT.generate(1),
-                        SmartRangeHeuristic.DEFAULT.generate(1))))));
+                Config.of(RAND_TREESORT_REMOVE_EXPECTED))));
   }
 
   private static Stream<Arguments> scratch() {
     return Stream.of(
+        Arguments.of(
+            Map.of(
+                "Scratch.testcf2",
+                Config.of(CombinedFunctionAnnotation.of(zero(1), zero(1), logPlusOneToLog(ONE))),
+                "Scratch.dummyx",
+                Config.of(
+                    "hole",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(List.of(ZERO, ZERO), Map.of(List.of(1, 1, -1), ONE), "Q"),
+                        zero(1))),
+                "Scratch.testm1",
+                Config.of(
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(List.of(ZERO, ZERO), Map.of(List.of(1, 1, 0), ONE), "Qx"),
+                        zero(1))))),
+        Arguments.of(
+            Map.of(
+                /*
+                "Scratch.testcf3",
+                Config.of("auto", CombinedFunctionAnnotation.of(
+                        knownConstant(0, "Q", 1),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "Q'")
+                )),
+                "Scratch.testcf2",
+                Config.of("auto", CombinedFunctionAnnotation.of(
+                        logPlusOneToLog(ONE)
+                )),
+                 */
+                "Scratch.testcf",
+                Config.of("Scratch/testcf", CombinedFunctionAnnotation.of(logPlusOneToLog(ONE))))),
         Arguments.of(
             Map.of(
                 "Scratch.id1",
@@ -240,21 +323,18 @@ public class Tactics {
                     "auto",
                     CombinedFunctionAnnotation.of(
                         new Annotation(
-                            List.of(Coefficient.unknown("x1"), Coefficient.unknown("x1")),
+                            List.of(unknown("x1"), unknown("x1")),
                             Map.of(
                                 unitIndex(2),
-                                Coefficient.unknown("x2"),
+                                unknown("x2"),
                                 List.of(1, 0, 0),
-                                Coefficient.unknown("x3"),
+                                unknown("x3"),
                                 List.of(0, 1, 0),
-                                Coefficient.unknown("x5"),
+                                unknown("x5"),
                                 List.of(1, 1, 0),
-                                Coefficient.unknown("x6")),
+                                unknown("x6")),
                             "Qrec"),
-                        new Annotation(
-                            List.of(Coefficient.unknown("x1")),
-                            Map.of(unitIndex(1), ZERO),
-                            "Qrec'"),
+                        new Annotation(List.of(unknown("x1")), Map.of(unitIndex(1), ZERO), "Qrec'"),
                         SmartRangeHeuristic.DEFAULT.generate(2),
                         SmartRangeHeuristic.DEFAULT.generate(1))))),
         Arguments.of(
@@ -264,17 +344,10 @@ public class Tactics {
                     "auto",
                     CombinedFunctionAnnotation.of(
                         new Annotation(
-                            List.of(Coefficient.unknown("x1")),
-                            Map.of(
-                                unitIndex(1),
-                                Coefficient.unknown("x2"),
-                                List.of(1, 0),
-                                Coefficient.unknown("x3")),
+                            List.of(unknown("x1")),
+                            Map.of(unitIndex(1), unknown("x2"), List.of(1, 0), unknown("x3")),
                             "Qrec"),
-                        new Annotation(
-                            List.of(Coefficient.unknown("x1")),
-                            Map.of(unitIndex(1), ZERO),
-                            "Qrec'"),
+                        new Annotation(List.of(unknown("x1")), Map.of(unitIndex(1), ZERO), "Qrec'"),
                         SmartRangeHeuristic.DEFAULT.generate(1),
                         SmartRangeHeuristic.DEFAULT.generate(1))))),
 
@@ -528,7 +601,967 @@ public class Tactics {
         Arguments.of(Map.of("Rand.f", Config.of("Rand/f"))),
         Arguments.of(Map.of("Rand.g", Config.of("Rand/f"))),
         Arguments.of(Map.of("Rand.h", Config.of("Rand/h"))),
-        Arguments.of(Map.of("Rand.flip", Config.of("Rand/flip"))));
+        Arguments.of(Map.of("Rand.flip", Config.of("Rand/flip"))),
+        Arguments.of(
+            Map.of(
+                "Scratch.insert_dummy",
+                Config.of(
+                    "hole",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(
+                                unitIndex(1), known(3, 4),
+                                List.of(1, 0), known(3, 4),
+                                List.of(1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        logPlusOneToLog(known(3, 8)))),
+                "Scratch.insert_zigzig_rec",
+                Config.of(
+                    "Scratch/insert_zigzig_rec",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(3), known(3, 2), // unknown("c1"),
+                                List.of(1, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 0, 0), known(3, 4),
+                                List.of(1, 1, 1, 0), known(3, 4),
+                                List.of(1, 1, 1, 1), known(3, 4)
+                                // bl br cr
+                                /*
+                                List.of(1, 0, 0, 1), known(9, 8),
+                                List.of(1, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0), known(3, 4),
+                                List.of(0, 1, 1, 0), known(3, 8),
+                                List.of(1, 1, 1, 0), known(3, 4)
+                                 */
+                                ),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))),
+                "Scratch.insert_zigzig_build",
+                Config.of(
+                    "Scratch/insert_zigzig_build",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            // al ar br cr
+                            List.of(known(3, 4), known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(4), ONE,
+                                List.of(1, 0, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 1, 1, -1), known(3, 4),
+                                List.of(0, 0, 1, 1, 0), known(3, 8),
+                                List.of(1, 1, 0, 0, 0), known(3, 8)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1, 0), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))),
+                "Scratch.node_builder_2",
+                Config.of(
+                    "auto",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4), known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                // al ar br cr
+                                unitIndex(4), known(3, 4),
+                                List.of(1, 0, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 0, 0, 0), known(3, 4),
+                                List.of(1, 1, 1, 0, 0), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1, 0), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))),
+                "Scratch.node_builder_1",
+                Config.of(
+                    "auto",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4), known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                // al ar br cr
+                                unitIndex(4), known(5, 4),
+                                List.of(1, 0, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 0, 1, 0), known(3, 4),
+                                List.of(0, 0, 1, 1, 0), known(3, 4),
+                                List.of(0, 1, 1, 1, 0), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1, 0), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(
+                            List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))))),
+        Arguments.of(
+            Map.of(
+                "Scratch.insert_zigzig_coin",
+                Config.of(
+                    "auto",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            // al ar br cr
+                            List.of(known(3, 4), known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(4), Coefficient.unknown("c1"),
+                                List.of(1, 0, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 1, 1, -1), known(3, 4),
+                                List.of(0, 0, 1, 1, 0), known(3, 8),
+                                List.of(1, 1, 0, 0, 0), known(3, 8)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(unitIndex(1), Coefficient.unknown("c2")),
+                            "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1, 0), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))),
+                "Scratch.insert_dummy",
+                Config.of(
+                    "hole",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(
+                                unitIndex(1), unknown("c1"),
+                                List.of(1, 0), known(3, 4),
+                                List.of(1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        logPlusOneToLog(known(3, 8)))),
+                "Scratch.insert_zigzig_rec",
+                Config.of(
+                    // "Scratch/insert_zigzig_rec",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(3), unknown("c1"),
+                                List.of(1, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 0, 0), known(3, 4),
+                                List.of(1, 1, 1, 0), known(3, 4),
+                                List.of(1, 1, 1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))),
+                "Scratch.node_builder_2",
+                Config.of(
+                    "auto",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4), known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                // al ar br cr
+                                unitIndex(4), known(3, 4),
+                                List.of(1, 0, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 0, 0, 0), known(3, 4),
+                                List.of(1, 1, 1, 0, 0), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1, 0), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))),
+                "Scratch.node_builder_1",
+                Config.of(
+                    "auto",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4), known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                // al ar br cr
+                                unitIndex(4), known(5, 4),
+                                List.of(1, 0, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 0, 1, 0), known(3, 4),
+                                List.of(0, 0, 1, 1, 0), known(3, 4),
+                                List.of(0, 1, 1, 1, 0), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1, 0), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(
+                            List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))))),
+        Arguments.of(
+            Map.of(
+                "Scratch.insert_zigzig_build",
+                Config.of(
+                    "Scratch/insert_zigzig_build",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            // al ar br cr
+                            List.of(known(3, 4), known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(4), Coefficient.unknown("c1"),
+                                List.of(1, 0, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 1, 1, -1), known(3, 4),
+                                List.of(0, 0, 1, 1, 0), known(3, 8),
+                                List.of(1, 1, 0, 0, 0), known(3, 8)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(unitIndex(1), Coefficient.unknown("c2")),
+                            "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1, 0), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))),
+                "Scratch.node_builder_2",
+                Config.of(
+                    "auto",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4), known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                // al ar br cr
+                                unitIndex(4), known(3, 4),
+                                List.of(1, 0, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 0, 0, 0), known(3, 4),
+                                List.of(1, 1, 1, 0, 0), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1, 0), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))),
+                "Scratch.node_builder_1",
+                Config.of(
+                    "auto",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4), known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                // al ar br cr
+                                unitIndex(4), known(5, 4),
+                                List.of(1, 0, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 0, 1, 0), known(3, 4),
+                                List.of(0, 0, 1, 1, 0), known(3, 4),
+                                List.of(0, 1, 1, 1, 0), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1, 0), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(
+                            List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))))),
+        Arguments.of(
+            Map.of(
+                "Scratch.insert_dummy",
+                Config.of(
+                    "hole",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(
+                                unitIndex(1), unknown("c1"),
+                                List.of(1, 0), known(3, 4),
+                                List.of(1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        logPlusOneToLog(known(3, 8)))),
+                /*
+                "Scratch.insert_zigzig_coin",
+                Config.of(
+                        "hole",
+                        CombinedFunctionAnnotation.of(
+                                new Annotation(
+                                        // al ar br cr
+                                        List.of(known(3, 4), known(3, 4), known(3, 4), known(3, 4)),
+                                        Map.of(
+                                                unitIndex(4), Coefficient.unknown("c1"),
+                                                List.of(1, 0, 0, 0, 0), known(3, 4),
+                                                List.of(0, 1, 0, 0, 0), known(3, 4),
+                                                List.of(0, 0, 1, 0, 0), known(3, 4),
+                                                List.of(0, 0, 0, 1, 0), known(3, 4),
+                                                List.of(1, 1, 1, 1, -1), known(3, 4),
+                                                List.of(0, 0, 1, 1, 0), known(3, 8),
+                                                List.of(1, 1, 0, 0, 0), known(3, 8)
+                                        ),
+                                        "Q"),
+                                new Annotation(
+                                        List.of(known(3, 4)),
+                                        Map.of(unitIndex(1), Coefficient.unknown("c2")),
+                                        "Q'"),
+                                new Annotation(
+                                       List.of(ZERO, ZERO, ZERO, ZERO),
+                                        Map.of(List.of(1, 1, 1, 1, 0), known(3, 8)),
+                                        "Qcf"),
+                                new Annotation(List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))),
+                */
+
+                "Scratch.insert_zigzig_rec",
+                Config.of(
+                    "Scratch/insert_zigzig_rec",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(3), unknown("c1"),
+                                List.of(1, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 0, 0), known(3, 4),
+                                List.of(1, 1, 1, 0), known(3, 4),
+                                List.of(1, 1, 1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(
+                            List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))))),
+        Arguments.of(
+            Map.of(
+                "Scratch.insert_zigzig_coin",
+                Config.of(
+                    "auto",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            // al ar br cr
+                            List.of(known(3, 4), known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(4), Coefficient.unknown("c1"),
+                                List.of(1, 0, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 1, 1, -1), known(3, 4),
+                                List.of(0, 0, 1, 1, 0), known(3, 8),
+                                List.of(1, 1, 0, 0, 0), known(3, 8)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(unitIndex(1), Coefficient.unknown("c2")),
+                            "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1, 0), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(
+                            List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))))),
+        Arguments.of(
+            Map.of(
+                "Scratch.insert_zigzig_coin",
+                Config.of(
+                    "hole",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            // al ar br cr
+                            List.of(known(3, 4), known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(4), Coefficient.unknown("c1"),
+                                List.of(1, 0, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 1, 1, -1), known(3, 4),
+                                List.of(0, 0, 1, 1, 0), known(3, 8),
+                                List.of(1, 1, 0, 0, 0), known(3, 8)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(unitIndex(1), Coefficient.unknown("c2")),
+                            "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1, 0), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))),
+                "Scratch.insert_dummy",
+                Config.of(
+                    "hole",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(
+                                unitIndex(1), unknown("c1"),
+                                List.of(1, 0), known(3, 4),
+                                List.of(1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        logPlusOneToLog(known(3, 8)))),
+                "Scratch.insert_zigzig_rec_coin",
+                Config.of(
+                    "Scratch/insert_zigzig_rec_coin",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            // 3/4log(cr) + 3/4log(br + bl) + 3/4log(br) + 3/4log(bl) + 3/4log(br +
+                            // bl + cr) + 3/4log(br + bl + cr + 1)
+                            // bl br cr
+                            List.of(known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(3), unknown("c1"),
+                                List.of(1, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 0, 0), known(3, 4),
+                                List.of(1, 1, 1, 0), known(3, 4),
+                                List.of(1, 1, 1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(
+                            List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))))),
+
+        /*
+        Arguments.of(
+                Map.of(
+                        "Scratch.insert_zigzig_coin",
+                        Config.of(
+                                // "Scratch/insert_zigzig_coin",
+                                CombinedFunctionAnnotation.of(
+                                        new Annotation(
+                                                // al ar br cr
+                                                List.of(known(3, 4), known(3, 4), known(3, 4), known(3, 4)),
+                                                Map.of(
+                                                        unitIndex(4), Coefficient.unknown("c1"),
+                                                        List.of(1, 0, 0, 0, 0), known(3, 4),
+                                                        List.of(0, 1, 0, 0, 0), known(3, 4),
+                                                        List.of(0, 0, 1, 0, 0), known(3, 4),
+                                                        List.of(0, 0, 0, 1, 0), known(3, 4),
+                                                        List.of(1, 1, 1, 1, -1), known(3, 4),
+                                                        List.of(0, 0, 1, 1, 0), known(3, 8),
+                                                        List.of(1, 1, 0, 0, 0), known(3, 8)),
+                                                "Q"),
+                                        new Annotation(
+                                                List.of(known(3, 4)),
+                                                Map.of(unitIndex(1), Coefficient.unknown("c2")),
+                                                "Q'"),
+                                        new Annotation(
+                                                List.of(ZERO, ZERO, ZERO, ZERO),
+                                                Map.of(List.of(1, 1, 1, 1, 0), known(3, 8)),
+                                                "Qcf"),
+                                        new Annotation(
+                                                List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))))),
+         */
+
+        Arguments.of(
+            Map.of(
+                "Scratch.testx",
+                Config.of(
+                    CombinedFunctionAnnotation.of(
+                        zero(3),
+                        zero(1),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO), Map.of(List.of(1, 1, 1, 1), ONE), "Qcf"),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "Qcf'"))),
+                "Scratch.id",
+                Config.of(
+                    "hole",
+                    CombinedFunctionAnnotation.of(
+                        zero(1),
+                        zero(1),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 1), ONE), "Qcf"),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "Qcf'"))))),
+        Arguments.of(
+            Map.of(
+                "Scratch.insert_dummy",
+                Config.of(
+                    "hole",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(
+                                unitIndex(1), unknown("c1"),
+                                List.of(1, 0), known(3, 4),
+                                List.of(1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        logPlusOneToLog(known(3, 8)))),
+                "Scratch.insert_zigzig_match_cl",
+                Config.of(
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            // 3/4log(cr) + 3/4log(br + bl) + 3/4log(br) + 3/4log(bl) + 3/4log(br +
+                            // bl + cr) + 3/4log(br + bl + cr + 1)
+                            // bl br cr
+                            List.of(known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(2), unknown("c1"),
+                                List.of(1, 0, 0), known(3, 4),
+                                List.of(0, 1, 0), known(3, 4),
+                                List.of(1, 1, 0), known(3, 4),
+                                List.of(1, 1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO), Map.of(List.of(1, 1, 1), known(3, 8)), "Qcf"),
+                        new Annotation(
+                            List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))))),
+        Arguments.of(
+            Map.of(
+                "RandSplayTree.insert",
+                Config.of(
+                    "auto",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(
+                                unitIndex(1), unknown("c1"),
+                                List.of(1, 0), known(3, 4),
+                                List.of(1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        logPlusOneToLog(known(3, 8)))))),
+        Arguments.of(
+            Map.of(
+                "Scratch.insert_zigzig_coin",
+                Config.of(
+                    "hole",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            // al ar br cr
+                            List.of(known(3, 4), known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(4), Coefficient.unknown("c1"),
+                                List.of(1, 0, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 1, 1, -1), known(3, 4),
+                                List.of(0, 0, 1, 1, 0), known(3, 8),
+                                List.of(1, 1, 0, 0, 0), known(3, 8)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(unitIndex(1), Coefficient.unknown("c2")),
+                            "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1, 1), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))),
+                "Scratch.insert_dummy",
+                Config.of(
+                    "hole",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(
+                                unitIndex(1), unknown("c1"),
+                                List.of(1, 0), known(3, 4),
+                                List.of(1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        logPlusOneToLog(known(3, 8)))),
+                "Scratch.insert_zigzig_rec_coin",
+                Config.of(
+                    "Scratch/insert_zigzig_rec_coin",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            // 3/4log(cr) + 3/4log(br + bl) + 3/4log(br) + 3/4log(bl) + 3/4log(br +
+                            // bl + cr) + 3/4log(br + bl + cr + 1)
+                            // bl br cr
+                            List.of(known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(3), unknown("c1"),
+                                List.of(1, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 0, 0), known(3, 4),
+                                List.of(1, 1, 1, 0), known(3, 4),
+                                List.of(1, 1, 1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        SmartRangeHeuristic.DEFAULT.generate(3),
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'")
+                        /*
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1), known(3, 8)),
+                            "Qcf"),
+                         */
+                        )))),
+        Arguments.of(
+            Map.of(
+                "Scratch.insert_dummy",
+                Config.of(
+                    "hole",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(
+                                unitIndex(1), unknown("c1"),
+                                List.of(1, 0), known(3, 4),
+                                List.of(1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        logPlusOneToLog(known(3, 8)))),
+                "Scratch.insert_zigzig_match",
+                Config.of(
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            // 3/4log(cr) + 3/4log(br + bl) + 3/4log(br) + 3/4log(bl) + 3/4log(br +
+                            // bl + cr) + 3/4log(br + bl + cr + 1)
+                            // bl br cr
+                            List.of(known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(3), unknown("c1"),
+                                List.of(1, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 0, 0), known(3, 4),
+                                List.of(1, 1, 1, 0), known(3, 4),
+                                List.of(1, 1, 1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(
+                            List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))))),
+        Arguments.of(
+            Map.of(
+                "Scratch.insert_zigzig_match_t_empty",
+                Config.of(
+                    // "RandSplayTree/insert_zigzig_match_t_empty",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(
+                                unitIndex(1), known(3, 4),
+                                List.of(1, 0), known(3, 4),
+                                List.of(1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        logPlusOneToLog(known(3, 8))
+                        // zero(1),
+                        // zero(1)
+                        )),
+                "Scratch.insert_zigzig_match",
+                Config.of(
+                    /*
+                    CombinedFunctionAnnotation.of(
+                            new Annotation(
+                                    // 3/4log(cr) + 3/4log(br + bl) + 3/4log(br) + 3/4log(bl) + 3/4log(br +
+                                    // bl + cr) + 3/4log(br + bl + cr + 1)
+                                    // bl br cr
+                                    List.of(known(3, 4), known(3, 4)),
+                                    Map.of(
+                                            unitIndex(2), known(3, 4),
+                                            List.of(1, 0, 0), known(3, 4),
+                                            List.of(0, 1, 0), known(3, 4),
+                                            List.of(1, 1, 0), known(3, 4),
+                                            List.of(1, 1, 1), known(3, 4)),
+                                    "Q"),
+                            new Annotation(
+                                    List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                            new Annotation(
+                                    List.of(ZERO, ZERO),
+                                    Map.of(
+                                            List.of(1, 1, 1), known(3, 8)
+                                    ),
+                                    "Qcf"
+                            )
+                     */
+
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            // 3/4log(cr) + 3/4log(br + bl) + 3/4log(br) + 3/4log(bl) + 3/4log(br +
+                            // bl + cr) + 3/4log(br + bl + cr + 1)
+                            // bl br cr
+                            List.of(known(3, 4), known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(3), known(3, 4),
+                                List.of(1, 0, 0, 0), known(3, 4),
+                                List.of(0, 1, 0, 0), known(3, 4),
+                                List.of(0, 0, 1, 0), known(3, 4),
+                                List.of(1, 1, 0, 0), known(3, 4),
+                                List.of(1, 1, 1, 0), known(3, 4),
+                                List.of(1, 1, 1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        new Annotation(
+                            List.of(ZERO, ZERO, ZERO),
+                            Map.of(List.of(1, 1, 1, 1), known(3, 8)),
+                            "Qcf"),
+                        new Annotation(
+                            List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf'"))))),
+
+        /*
+                    Arguments.of(
+                            Map.of(
+                                    "Scratch.insert_dummy",
+                                    Config.of(
+                                            "hole",
+                                            CombinedFunctionAnnotation.of(
+                                                    new Annotation(
+                                                            List.of(known(3, 4)),
+                                                            Map.of(
+                                                                    unitIndex(1), unknown("c1"),
+                                                                    List.of(1, 0), known(3, 4),
+                                                                    List.of(1, 1), known(3, 4)),
+                                                            "Q"),
+                                                    new Annotation(
+                                                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                                                    logPlusOneToLog(known(3, 8)))),
+                                    "Scratch.insert_zigzig_match",
+                                    Config.of(
+                                            // "RandSplayTree/insert_zigzig_rec",
+                                            CombinedFunctionAnnotation.of(
+                                                    new Annotation(
+                                                            // 3/4log(cr) + 3/4log(br + bl) + 3/4log(br) + 3/4log(bl) + 3/4log(br +
+                                                            // bl + cr) + 3/4log(br + bl + cr + 1)
+                                                            // bl br cr
+                                                            List.of(known(3, 4), known(3, 4), known(3, 4)),
+                                                            Map.of(
+                                                                    unitIndex(3), unknown("c1"),
+                                                                    List.of(1, 0, 0, 0), known(3, 4),
+                                                                    List.of(0, 1, 0, 0), known(3, 4),
+                                                                    List.of(0, 0, 1, 0), known(3, 4),
+                                                                    List.of(1, 1, 0, 0), known(3, 4),
+                                                                    List.of(1, 1, 1, 0), known(3, 4),
+                                                                    List.of(1, 1, 1, 1), known(3, 4)),
+                                                            "Q"),
+                                                    new Annotation(
+                                                            List.of(known(3, 4)), Map.of(unitIndex(1), unknown("c2")), "Q'"),
+                                                    SmartRangeHeuristic.DEFAULT.generate(3),
+                                                    SmartRangeHeuristic.DEFAULT.generate(1))))
+                                                    ),
+        */
+
+        /*
+
+                    Arguments.of(
+                            Map.of(
+                                    "Scratch.insert_dummy",
+                                    Config.of(
+                                            "hole",
+                                            CombinedFunctionAnnotation.of(
+                                                    new Annotation(
+                                                            List.of(known(3, 4)),
+                                                            Map.of(
+                                                                    unitIndex(1), unknown("c1"),
+                                                                    List.of(1, 0), known(3, 4),
+                                                                    List.of(1, 1), known(3, 4)),
+                                                            "Q"),
+                                                    new Annotation(
+                                                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                                                    logPlusOneToLog(known(3, 8)))),
+                                    "Scratch.insert_zigzig_match_t",
+                                    Config.of(
+                                            //"RandSplayTree/insert_zigzig_match_t",
+                                            CombinedFunctionAnnotation.of(
+                                                    new Annotation(
+                                                            List.of(known(3, 4)),
+                                                            Map.of(
+                                                                    unitIndex(1), unknown("c1"),
+                                                                    List.of(1, 0), known(3, 4),
+                                                                    List.of(1, 1), known(3, 4)),
+                                                            "Q"),
+                                                    new Annotation(
+                                                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                                                    logPlusOneToLog(known(3, 8))
+                                            ))
+                            )),
+
+
+
+        */
+
+        /*
+        Arguments.of(
+                Map.of(
+                        "Scratch.insert",
+                        Config.of(
+                                "auto",
+                                CombinedFunctionAnnotation.of(
+                                        new Annotation(
+                                                List.of(known(3, 4)),
+                                                Map.of(
+                                                        unitIndex(1), known(3, 4),
+                                                        List.of(1, 0), known(3, 4),
+                                                        List.of(1, 1), known(3, 4)),
+                                                "Q"),
+                                        new Annotation(List.of(known(3, 4)), Map.of(
+                                                unitIndex(1), known(3, 4)
+                                                ), "Q'"),
+                                        logPlusOneToLog(known(3, 8)))))),
+         */
+        Arguments.of(
+            Map.of(
+                "Scratch.id_match_match",
+                Config.of(
+                    "Scratch/id_match_match",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(
+                                unitIndex(1), known(3, 4),
+                                List.of(1, 0), known(3, 4),
+                                List.of(1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(
+                                unitIndex(1), known(3, 4),
+                                List.of(1, 0), known(3, 4),
+                                List.of(1, 1), known(3, 4)),
+                            "Q'"))))),
+
+        // insert_zigzag
+        // 1/2 + 3/4rk(ar) + 3/4rk(bl) + 3/4rk(cr) + 3/4log(al) + 3/4log(ar) + 3/4log(bl) +
+        // 3/4log(al + ar + bl) + 3/4log(al + ar + bl + cr)
+
+        /*
+                    Arguments.of(
+                            Map.of(
+                                    "RandSplayTree.insert",
+                                    Config.of("auto",
+                                            CombinedFunctionAnnotation.of(
+                                                    new Annotation(
+                                                            List.of(known(3, 4)),
+                                                            Map.of(
+                                                                    unitIndex(1), Coefficient.unknown("c1"),
+                                                                    List.of(1, 0), known(3, 4),
+                                                                    List.of(1, 1), known(3, 4)),
+                                                            "Q"),
+                                                    new Annotation(List.of(known(3, 4)), Map.of(
+
+                                                            unitIndex(1), Coefficient.unknown("c2")
+
+
+                                                    ), "Q'"),
+                                                    SmartRangeHeuristic.DEFAULT.generate(1),
+                                                    SmartRangeHeuristic.DEFAULT.generate(1))))
+                            ),
+        */
+
+        Arguments.of(
+            Map.of(
+                "Scratch.insert_dummy",
+                Config.of(
+                    "hole",
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            List.of(known(3, 4)),
+                            Map.of(
+                                unitIndex(1), known(3, 4),
+                                List.of(1, 0), known(3, 4),
+                                List.of(1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        logPlusOneToLog(known(3, 8)))),
+                "Scratch.insert_zigzag_match_cl",
+                Config.of(
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(
+                            // 3/4log(cr) + 3/4log(br + bl) + 3/4log(br) + 3/4log(bl) + 3/4log(br +
+                            // bl + cr) + 3/4log(br + bl + cr + 1)
+                            // bl br cr
+                            List.of(known(3, 4), known(3, 4)),
+                            Map.of(
+                                unitIndex(2), unknown("c1"),
+                                List.of(1, 0, 0), known(3, 4),
+                                List.of(0, 1, 0), known(3, 4),
+                                List.of(1, 1, 0), known(3, 4),
+                                List.of(1, 1, 1), known(3, 4)),
+                            "Q"),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), unknown("c2")), "Q'"))))
+
+            /*
+                   new Annotation(
+                           List.of(known(3, 4), known(3, 4)),
+                           Map.of(
+                                   // cl cr
+                                   unitIndex(2), known(1),
+                                   List.of(1, 0, 0), known(3, 4),
+                                   List.of(0, 1, 0), known(3, 4),
+                                   List.of(1, 1, 0), known(3, 4),
+                                   List.of(1, 1, 1), known(3, 4)
+                           ),
+                           "Q"),
+                   new Annotation(List.of(known(3, 4)), Map.of(), "Q'"),
+                   SmartRangeHeuristic.DEFAULT.generate(2),
+                   SmartRangeHeuristic.DEFAULT.generate(1))))
+
+                   ),
+            */
+
+            ));
   }
 
   private static Stream<Arguments> todo() {
@@ -610,24 +1643,27 @@ public class Tactics {
   private static Stream<Arguments> randSplayTree() {
     return Stream.of(
         Arguments.of(
+            Map.of("RandSplayTree.insert", Config.of("auto", RAND_SPLAYTREE_INSERT_EXPECTED))),
+        Arguments.of(
             Map.of(
                 "RandSplayTree.insert",
                 Config.of(
-                    "RandSplayTree/insert",
+                    // "RandSplayTree/insert",
                     CombinedFunctionAnnotation.of(
                         new Annotation(
                             List.of(known(3, 4)),
                             Map.of(
+                                unitIndex(1), known(3, 4),
                                 List.of(1, 0), known(3, 4),
                                 List.of(1, 1), known(3, 4)),
                             "Q"),
-                        new Annotation(List.of(known(3, 4)), Map.of(), "Q'"),
-                        SmartRangeHeuristic.DEFAULT.generate(1),
-                        SmartRangeHeuristic.DEFAULT.generate(1))))),
+                        new Annotation(
+                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
+                        logPlusOneToLog(known(3, 8)))))),
         Arguments.of(
-            Map.of(
-                "RandSplayTree.insert",
-                Config.of("RandSplayTree/insert", RAND_SPLAYTREE_INSERT_EXPECTED))),
+            Map.of("Scratch.insert_zigzag", Config.of("auto", RAND_SPLAYTREE_INSERT_EXPECTED))),
+        Arguments.of(
+            Map.of("Scratch.insert_zigzig", Config.of("auto", RAND_SPLAYTREE_INSERT_EXPECTED))),
         Arguments.of(
             Map.of(
                 "RandSplayTree.splay_max",
@@ -645,40 +1681,13 @@ public class Tactics {
   }
 
   private static Stream<Arguments> randSplayHeap() {
-    final var to = new Annotation(List.of(known(3, 4)), Map.of(unitIndex(1), known(1, 2)), "Qp");
     return Stream.of(
         Arguments.of(
             Map.of(
-                "RandSplayHeap.del_min",
-                Config.of(
-                    "RandSplayHeap/del_min",
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            List.of(to.getRankCoefficient()),
-                            Map.of(unitIndex(1), known(1, 2), List.of(1, 0), known(3, 4)),
-                            "Qd"),
-                        to,
-                        new FunctionAnnotation(
-                            new Annotation(
-                                List.of(ZERO), Map.of(List.of(1, 0), known(3, 8)), "Qcf")))))),
-        Arguments.of(
-            Map.of(
                 "RandSplayHeap.insert",
-                Config.of(
-                    "RandSplayHeap/insert",
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            List.of(to.getRankCoefficient()),
-                            Map.of(
-                                unitIndex(1),
-                                known(1, 2),
-                                List.of(1, 0),
-                                known(3, 4),
-                                List.of(1, 1),
-                                known(9, 8)),
-                            "Qi"),
-                        to,
-                        logPlusOneToLog(known(3, 8)))))));
+                Config.of(RAND_SPLAYHEAP_INSERT_EXPECTED),
+                "RandSplayHeap.del_min",
+                Config.of(RAND_SPLAYHEAP_DEL_MIN_EXPECTED))));
   }
 
   private static Stream<Arguments> randMeldableHeap() {
@@ -686,14 +1695,11 @@ public class Tactics {
         Arguments.of(
             Map.of(
                 "RandMeldableHeap.meld",
-                Config.of( // "RandMeldableHeap/meld",
-                    CombinedFunctionAnnotation.of(
-                        SmartRangeHeuristic.DEFAULT.generate(2),
-                        SmartRangeHeuristic.DEFAULT.generate(1),
-                        SmartRangeHeuristic.DEFAULT.generate(2),
-                        SmartRangeHeuristic.DEFAULT.generate(1),
-                        SmartRangeHeuristic.DEFAULT.generate(2),
-                        SmartRangeHeuristic.DEFAULT.generate(1))))));
+                Config.of(RAND_MELDABLEHEAP_MELD_EXPECTED),
+                "RandMeldableHeap.insert",
+                Config.of(RAND_MELDABLEHEAP_INSERT_EXPECTED),
+                "RandMeldableHeap.del_min",
+                Config.of(RAND_MELDABLEHEAP_DEL_MIN_EXPECTED))));
   }
 
   private static Stream<Arguments> splayTree() {
@@ -704,10 +1710,7 @@ public class Tactics {
                 "SplayTree.splay_max", Config.of("SplayTree/splay_max", SPLAYTREE_SPLAY_EXPECTED),
                 "SplayTree.insert", Config.of("SplayTree/insert", SPLAYTREE_INSERT_EXPECTED),
                 "SplayTree.delete", Config.of("SplayTree/delete", SPLAYTREE_DELETE_EXPECTED))),
-        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_OLD))),
-        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_VARIANT))),
-        Arguments.of(Map.of("SplayTree.splay", Config.of(SPLAYTREE_SPLAY_EXPECTED))),
-        Arguments.of(Map.of("SplayTree.splay_max", Config.of(SPLAYTREE_SPLAY_EXPECTED))));
+        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_OLD))));
   }
 
   private static Stream<Arguments> splayHeap() {
@@ -720,11 +1723,20 @@ public class Tactics {
         Arguments.of(
             Map.of(
                 "SplayHeap.partition",
-                Config.of("SplayHeap/partition", SPLAYHEAP_PARTITION_EXPECTED),
+                Config.of("auto", SPLAYHEAP_PARTITION_EXPECTED),
+                "SplayHeap.insert",
+                Config.of("SplayHeap/insert", SPLAYHEAP_INSERT_EXPECTED))),
+        Arguments.of(
+            Map.of(
+                "SplayHeap.del_min", Config.of("SplayHeap/del_min", SPLAYHEAP_DEL_MIN_EXPECTED))),
+        Arguments.of(
+            Map.of(
+                "SplayHeap.partition",
+                Config.of("auto", SPLAYHEAP_PARTITION_EXPECTED),
                 "SplayHeap.insert",
                 Config.of("SplayHeap/insert", SPLAYHEAP_INSERT_EXPECTED),
                 "SplayHeap.del_min",
-                Config.of("SplayHeap/del_min", SPLAYHEAP_DEL_MIN_EXPECTED)))
+                Config.of("auto", SPLAYHEAP_DEL_MIN_EXPECTED)))
         // ,
         /*
         Arguments.of(
@@ -751,6 +1763,15 @@ public class Tactics {
                     )
             */
         );
+  }
+
+  private static Stream<Arguments> negative() {
+    return Stream.of(
+        Arguments.of(
+            Map.of(
+                "Scratch.singleton",
+                Config.of(
+                    CombinedFunctionAnnotation.of(zero(0), constant(1, "Q'", known(1, 2)))))));
   }
 
   private static Stream<Arguments> pairingHeap() {
@@ -910,38 +1931,26 @@ public class Tactics {
   // @Timeout(20)
   @ParameterizedTest
   @MethodSource({
+    // "negative",
+    // "scratch",
     "randSplayHeap",
     "randSplayTree",
-    "scratch",
+    "randMeldableHeap",
+    "randTreeSort",
     "splayTree",
     "splayHeap",
-    "pairingHeap"
+    "pairingHeap",
   })
   public void all(Map<String, Config> immutableAnnotations) {
     final var program = loadAndNormalizeAndInferAndUnshare(immutableAnnotations.keySet());
-
-    final var annotations =
-        immutableAnnotations.entrySet().stream()
-            .filter(entry -> entry.getValue().annotation.isPresent())
-            .collect(
-                Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().annotation.get()));
-
-    final var tactics =
-        immutableAnnotations.entrySet().stream()
-            .filter(entry -> entry.getValue().tactic.isPresent())
-            .collect(
-                Collectors.toMap(
-                    Map.Entry::getKey,
-                    entry ->
-                        Paths.get(
-                            ".",
-                            "src",
-                            "test",
-                            "resources",
-                            "tactics",
-                            entry.getValue().tactic.get() + ".txt")));
-
-    final var result = program.solve(annotations, tactics, true, false, Set.of());
+    final var result =
+        program.solve(
+            extractAnnotations(immutableAnnotations),
+            Collections.emptyMap(), // extractTactics(immutableAnnotations),
+            true,
+            false,
+            false,
+            Set.of());
     assertTrue(result.isSatisfiable());
 
     program.printAllInferredSignaturesInOrder(System.out);

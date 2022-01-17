@@ -1,0 +1,10 @@
+(match (* t *)
+  (w{mono} (* proof leaf 1 *)
+    leaf
+  )
+  (w{l2xy} (* l2xy for call not in let or tick *)
+    (shift
+      app
+    )
+  )
+)

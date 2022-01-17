@@ -7,14 +7,13 @@ import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.Value;
 import org.jgrapht.nio.Attribute;
 import org.jgrapht.nio.AttributeType;
 import org.jgrapht.nio.DefaultAttribute;
-import xyz.leutgeb.lorenz.atlas.ast.Expression;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.Expression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
@@ -23,21 +22,15 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.atlas.util.NidiAttribute;
 import xyz.leutgeb.lorenz.atlas.util.Util;
 
-// TODO(lorenzleutgeb): Maybe we need to navigate around obligations in a DAG/proof tree?
 @Value
 public class Obligation {
   AnnotatingContext context;
   Expression expression;
   Annotation annotation;
   boolean cost;
-  Optional<Obligation> parent;
 
   public Obligation(
-      AnnotatingContext context,
-      Expression expression,
-      Annotation annotation,
-      boolean cost,
-      Optional<Obligation> parent) {
+      AnnotatingContext context, Expression expression, Annotation annotation, boolean cost) {
     this.context = context;
     this.expression = expression;
 
@@ -48,53 +41,33 @@ public class Obligation {
 
     this.annotation = annotation;
     this.cost = cost;
-    this.parent = parent;
   }
 
   public Obligation(
-      List<Identifier> contextIds,
+      List<IdentifierExpression> contextIds,
       Annotation contextAnnotation,
       Expression expression,
       Annotation annotation,
-      Optional<Obligation> parent) {
-    this(contextIds, contextAnnotation, expression, annotation, true, parent);
-  }
-
-  public Obligation(
-      List<Identifier> contextIds,
-      Annotation contextAnnotation,
-      Expression expression,
-      Annotation annotation,
-      boolean cost,
-      Optional<Obligation> parent) {
-    this(
-        new AnnotatingContext(contextIds, contextAnnotation), expression, annotation, cost, parent);
-  }
-
-  public Obligation(
-      List<Identifier> contextIds,
-      Annotation contextAnnotation,
-      Expression expression,
-      Annotation annotation) {
-    this(contextIds, contextAnnotation, expression, annotation, Optional.empty());
+      boolean cost) {
+    this(new AnnotatingContext(contextIds, contextAnnotation), expression, annotation, cost);
   }
 
   public Obligation keepAnnotationAndCost(AnnotatingContext context, Expression expression) {
-    return new Obligation(context, expression, annotation, cost, Optional.of(this));
+    return new Obligation(context, expression, annotation, cost);
   }
 
   public Obligation keepCost(
       AnnotatingContext context, Expression expression, Annotation annotation) {
-    return new Obligation(context, expression, annotation, cost, Optional.of(this));
+    return new Obligation(context, expression, annotation, cost);
   }
 
   public Obligation keepContextAndAnnotationAndCost(Expression expression) {
-    return new Obligation(context, expression, annotation, cost, Optional.of(this));
+    return new Obligation(context, expression, annotation, cost);
   }
 
   public Obligation substitute(Map<Coefficient, KnownCoefficient> solution) {
     return new Obligation(
-        context.substitute(solution), expression, annotation.substitute(solution), cost, parent);
+        context.substitute(solution), expression, annotation.substitute(solution), cost);
   }
 
   public Map<String, Attribute> attributes(Prover.ProofVertexData proofVertexData) {

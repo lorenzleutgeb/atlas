@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.atlas.ast;
+package xyz.leutgeb.lorenz.atlas.ast.expressions;
 
 import static java.util.Collections.singleton;
 
@@ -12,6 +12,9 @@ import java.util.Stack;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.NonNull;
+import xyz.leutgeb.lorenz.atlas.ast.Intro;
+import xyz.leutgeb.lorenz.atlas.ast.Normalization;
+import xyz.leutgeb.lorenz.atlas.ast.SystemIntro;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Predefined;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
@@ -21,14 +24,14 @@ import xyz.leutgeb.lorenz.atlas.typing.simple.types.BoolType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.atlas.util.Util;
 
-public class Identifier extends Expression {
+public class IdentifierExpression extends Expression {
   private static final String LEAF_NAME = "leaf";
   private static final String COIN_NAME = "coin";
-  private static final Identifier UNDERSCORE = new Identifier(Predefined.INSTANCE, "_");
+  private static final IdentifierExpression UNDERSCORE =
+      new IdentifierExpression(Predefined.INSTANCE, "_");
   private static final Set<String> BOOLEAN_NAMES = Set.of("true", "false");
   private static final Set<String> SPECIAL_NAMES =
       Sets.union(BOOLEAN_NAMES, Set.of(LEAF_NAME, COIN_NAME));
@@ -36,45 +39,45 @@ public class Identifier extends Expression {
   @NonNull @Getter private final String name;
   @Getter private Intro intro;
 
-  private Identifier(Source source, @NonNull String name) {
+  private IdentifierExpression(Source source, @NonNull String name) {
     super(source);
     Objects.requireNonNull(name);
     this.name = name;
   }
 
-  public Identifier(Source source, @NonNull String name, Type type, Intro intro) {
+  public IdentifierExpression(Source source, @NonNull String name, Type type, Intro intro) {
     super(source, type);
     Objects.requireNonNull(name);
     this.name = name;
     this.intro = intro;
   }
 
-  private static Identifier predefined(String name, Type type) {
-    return new Identifier(Predefined.INSTANCE, name, type, SystemIntro.INSTANCE);
+  private static IdentifierExpression predefined(String name, Type type) {
+    return new IdentifierExpression(Predefined.INSTANCE, name, type, SystemIntro.INSTANCE);
   }
 
-  public static Identifier predefinedBase(String name, TypeVariable type) {
-    return new Identifier(Predefined.INSTANCE, name, type, SystemIntro.INSTANCE);
+  public static IdentifierExpression predefinedBase(String name, TypeVariable type) {
+    return new IdentifierExpression(Predefined.INSTANCE, name, type, SystemIntro.INSTANCE);
   }
 
-  public static Identifier predefinedBase(String name) {
+  public static IdentifierExpression predefinedBase(String name) {
     return predefinedBase(name, TypeVariable.alpha());
   }
 
-  public static Identifier predefinedTree(String name) {
+  public static IdentifierExpression predefinedTree(String name) {
     return predefinedTree(name, TypeVariable.alpha());
   }
 
-  public static Identifier predefinedTree(String name, TypeVariable typeVariable) {
+  public static IdentifierExpression predefinedTree(String name, TypeVariable typeVariable) {
     return predefined(name, new TreeType(typeVariable));
   }
 
-  public static Identifier getSugar(Source source, IntIdGenerator idGenerator) {
+  public static IdentifierExpression getSugar(Source source, IntIdGenerator idGenerator) {
     return get("z" + (idGenerator.next()), source);
   }
 
-  public static Identifier get(String name, Source source) {
-    return new Identifier(source, name);
+  public static IdentifierExpression get(String name, Source source) {
+    return new IdentifierExpression(source, name);
   }
 
   private static boolean isSpecial(String name) {
@@ -85,8 +88,8 @@ public class Identifier extends Expression {
     return get("_" + idGenerator.next(), source);
   }
 
-  public static Identifier leaf() {
-    return new Identifier(Predefined.INSTANCE, LEAF_NAME);
+  public static IdentifierExpression leaf() {
+    return new IdentifierExpression(Predefined.INSTANCE, LEAF_NAME);
   }
 
   @Override
@@ -100,7 +103,7 @@ public class Identifier extends Expression {
   }
 
   @Override
-  public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
+  public Type inferInternal(UnificationContext context) throws TypeError {
     if (name.equals(LEAF_NAME)) {
       return new TreeType(context.fresh());
     }
@@ -136,7 +139,7 @@ public class Identifier extends Expression {
       return false;
     }
 
-    Identifier that = (Identifier) o;
+    IdentifierExpression that = (IdentifierExpression) o;
 
     return name.equals(that.name) && Objects.equals(intro, that.intro);
   }
@@ -147,7 +150,7 @@ public class Identifier extends Expression {
   }
 
   @Override
-  public Set<Identifier> freeVariables() {
+  public Set<IdentifierExpression> freeVariables() {
     if (!(type instanceof TreeType) || isSpecial()) {
       return Collections.emptySet();
     }
@@ -169,11 +172,12 @@ public class Identifier extends Expression {
   }
 
   @Override
-  public Identifier rename(Map<String, String> renaming) {
+  public IdentifierExpression rename(Map<String, String> renaming) {
     if (renaming.containsValue(name)) {
       throw new IllegalArgumentException("renaming something to pre-existing name");
     }
-    return new Identifier(Derived.rename(this), renaming.getOrDefault(name, name), type, intro);
+    return new IdentifierExpression(
+        Derived.rename(this), renaming.getOrDefault(name, name), type, intro);
   }
 
   @Override
@@ -209,12 +213,12 @@ public class Identifier extends Expression {
   }
 
   public static boolean isLeaf(Expression identifier) {
-    return identifier instanceof Identifier
-        && LEAF_NAME.equals(((Identifier) identifier).getName());
+    return identifier instanceof IdentifierExpression
+        && LEAF_NAME.equals(((IdentifierExpression) identifier).getName());
   }
 
   public static boolean isCoin(Expression identifier) {
-    return identifier instanceof Identifier
-        && COIN_NAME.equals(((Identifier) identifier).getName());
+    return identifier instanceof IdentifierExpression
+        && COIN_NAME.equals(((IdentifierExpression) identifier).getName());
   }
 }

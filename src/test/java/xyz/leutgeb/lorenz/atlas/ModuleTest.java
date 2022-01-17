@@ -8,7 +8,6 @@ import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.unitIndex;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ONE_BY_TWO;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,8 +18,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
-import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 
 @Disabled
 public class ModuleTest {
@@ -46,8 +43,7 @@ public class ModuleTest {
 
   @ParameterizedTest
   @MethodSource({"modulesWithoutTactics"})
-  public void test(Set<String> fqns, boolean useTactics)
-      throws UnificationError, TypeError, IOException {
+  public void test(Set<String> fqns, boolean useTactics) {
     final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqns);
     final var result =
         program.solve(
@@ -55,6 +51,7 @@ public class ModuleTest {
             useTactics ? program.lookupTactics(emptyMap(), TACTICS) : emptyMap(),
             true,
             true,
+            false,
             emptySet());
     assertTrue(result.isSatisfiable());
     program.printAllInferredSignaturesInOrder(System.out);

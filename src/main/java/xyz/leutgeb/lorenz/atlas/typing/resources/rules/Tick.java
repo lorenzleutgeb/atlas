@@ -3,7 +3,7 @@ package xyz.leutgeb.lorenz.atlas.typing.resources.rules;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.atlas.ast.TickExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.TickExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
 

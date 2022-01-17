@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.atlas.ast;
+package xyz.leutgeb.lorenz.atlas.ast.expressions;
 
 import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
 import static xyz.leutgeb.lorenz.atlas.util.Util.indent;
@@ -14,7 +14,6 @@ import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.atlas.util.Pair;
 import xyz.leutgeb.lorenz.atlas.util.SizeEdge;
@@ -25,13 +24,16 @@ import xyz.leutgeb.lorenz.atlas.util.Util;
 public class ShareExpression extends Expression {
   private static int freshness = 1;
 
-  Identifier up;
-  Pair<Identifier, Identifier> down;
+  IdentifierExpression up;
+  Pair<IdentifierExpression, IdentifierExpression> down;
 
   Expression scope;
 
   public ShareExpression(
-      Expression source, Identifier up, Pair<Identifier, Identifier> down, Expression scope) {
+      Expression source,
+      IdentifierExpression up,
+      Pair<IdentifierExpression, IdentifierExpression> down,
+      Expression scope) {
     super(Derived.unshare(source));
     this.up = up;
     this.down = down;
@@ -39,12 +41,12 @@ public class ShareExpression extends Expression {
     /*
     this.down =
         Pair.of(
-            new Identifier(
+            new IdentifierExpression(
                 down.getLeft().source,
                 down.getLeft().getName(),
                 down.getLeft().type,
                 new Intro(down.getLeft().getIntro().getFqn(), this)),
-            new Identifier(
+            new IdentifierExpression(
                 down.getRight().source,
                 down.getRight().getName(),
                 down.getRight().type,
@@ -65,8 +67,8 @@ public class ShareExpression extends Expression {
     }
   }
 
-  public static Pair<Identifier, Identifier> clone(
-      Identifier identifier, IntIdGenerator idGenerator) {
+  public static Pair<IdentifierExpression, IdentifierExpression> clone(
+      IdentifierExpression identifier, IntIdGenerator idGenerator) {
     final var source = Derived.unshare(identifier);
     final var intro = identifier.getIntro();
     final var type = identifier.getType();
@@ -78,14 +80,16 @@ public class ShareExpression extends Expression {
             .substring(0, primeIndex < 0 ? identifier.getName().length() : primeIndex);
 
     return Pair.of(
-        new Identifier(
+        new IdentifierExpression(
             source, rawIdentifier + Util.generateSubscript(idGenerator.next()), type, intro),
-        new Identifier(
+        new IdentifierExpression(
             source, rawIdentifier + Util.generateSubscript(idGenerator.next()), type, intro));
   }
 
   public static Pair<Expression, Expression> rename(
-      Identifier up, Pair<Identifier, Identifier> down, Pair<Expression, Expression> expressions) {
+      IdentifierExpression up,
+      Pair<IdentifierExpression, IdentifierExpression> down,
+      Pair<Expression, Expression> expressions) {
     return Pair.of(
         expressions.getLeft().rename(Map.of(up.getName(), down.getLeft().getName())),
         expressions.getRight().rename(Map.of(up.getName(), down.getRight().getName())));
@@ -97,7 +101,7 @@ public class ShareExpression extends Expression {
   }
 
   @Override
-  protected Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
+  protected Type inferInternal(UnificationContext context) throws TypeError {
     var sub = context.child();
     sub.putType(down.getLeft().getName(), up.infer(sub), this);
     sub.putType(down.getRight().getName(), up.infer(sub), this);
@@ -110,7 +114,7 @@ public class ShareExpression extends Expression {
   }
 
   @Override
-  public Set<Identifier> freeVariables() {
+  public Set<IdentifierExpression> freeVariables() {
     final var result = super.freeVariables();
     result.add(up);
     // This is quite ugly. We cannot use equals, since the intro of occurrences of
@@ -150,7 +154,7 @@ public class ShareExpression extends Expression {
   }
 
   @Override
-  public void analyzeSizes(Graph<Identifier, SizeEdge> sizeGraph) {
+  public void analyzeSizes(Graph<IdentifierExpression, SizeEdge> sizeGraph) {
     super.analyzeSizes(sizeGraph);
     sizeGraph.addVertex(up);
     sizeGraph.addVertex(down.getLeft());

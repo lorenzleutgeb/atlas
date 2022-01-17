@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.atlas.ast;
+package xyz.leutgeb.lorenz.atlas.ast.expressions;
 
 import com.google.common.collect.Sets;
 import java.io.PrintStream;
@@ -10,6 +10,8 @@ import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.Value;
+import xyz.leutgeb.lorenz.atlas.ast.ComparisonOperator;
+import xyz.leutgeb.lorenz.atlas.ast.Normalization;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.FunctionSignature;
@@ -19,7 +21,6 @@ import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.BoolType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 
 @Value
@@ -56,14 +57,14 @@ public class BooleanExpression extends Expression {
   }
 
   @Override
-  public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
+  public Type inferInternal(UnificationContext context) throws TypeError {
     // The next two lines hide polymorphism in favor of the "abstract base signature".
     // context.add(right.infer(context), BaseType.INSTANCE);
     // context.add(left.infer(context), BaseType.INSTANCE);
 
     var ty = context.fresh();
-    context.addEquivalenceIfNotEqual(right.infer(context), ty);
-    context.addEquivalenceIfNotEqual(left.infer(context), ty);
+    context.addEquivalenceIfNotEqual(right.infer(context), ty, source);
+    context.addEquivalenceIfNotEqual(left.infer(context), ty, source);
 
     TypeClass tc =
         Set.of(ComparisonOperator.EQ, ComparisonOperator.NE).contains(operator)
@@ -115,21 +116,22 @@ public class BooleanExpression extends Expression {
     // Special comparison with leaf.
 
     if (operator.equals(ComparisonOperator.EQ)) {
-      if (Identifier.isLeaf(left) && Identifier.isLeaf(right)) {
+      if (IdentifierExpression.isLeaf(left) && IdentifierExpression.isLeaf(right)) {
         out.print("true");
         return;
       }
-      if (Identifier.isLeaf(left) && !Identifier.isLeaf(right)) {
-        out.print(((Identifier) right).getName() + ".isLeaf()");
+      if (IdentifierExpression.isLeaf(left) && !IdentifierExpression.isLeaf(right)) {
+        out.print(((IdentifierExpression) right).getName() + ".isLeaf()");
         return;
       }
-      if (!Identifier.isLeaf(left) && Identifier.isLeaf(right)) {
-        out.print(((Identifier) left).getName() + ".isLeaf()");
+      if (!IdentifierExpression.isLeaf(left) && IdentifierExpression.isLeaf(right)) {
+        out.print(((IdentifierExpression) left).getName() + ".isLeaf()");
         return;
       }
     }
 
-    operator.printJavaTo(((Identifier) left).getName(), ((Identifier) right).getName(), out);
+    operator.printJavaTo(
+        ((IdentifierExpression) left).getName(), ((IdentifierExpression) right).getName(), out);
   }
 
   @Override
@@ -144,7 +146,9 @@ public class BooleanExpression extends Expression {
 
   @Override
   public Expression rename(Map<String, String> renaming) {
-    if (freeVariables().stream().map(Identifier::getName).anyMatch(renaming::containsKey)) {
+    if (freeVariables().stream()
+        .map(IdentifierExpression::getName)
+        .anyMatch(renaming::containsKey)) {
       return new BooleanExpression(
           Derived.rename(this), left.rename(renaming), operator, right.rename(renaming), type);
     }

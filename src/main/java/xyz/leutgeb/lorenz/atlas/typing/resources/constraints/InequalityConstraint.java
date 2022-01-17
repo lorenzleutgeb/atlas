@@ -32,7 +32,7 @@ public class InequalityConstraint extends Constraint {
     Objects.requireNonNull(right);
     if (left.equals(right)) {
       throw new IllegalArgumentException(
-          "cannot create equality constraint for equal coefficients");
+          "cannot create inequality constraint for equal coefficients");
     }
     this.left = left;
     this.right = right;

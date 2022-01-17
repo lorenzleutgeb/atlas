@@ -8,6 +8,7 @@ import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Optional;
 import lombok.Value;
+import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 
 @Value
@@ -15,9 +16,17 @@ public class Equivalence {
   Type left;
   Type right;
 
+  Source source;
+
+  @Deprecated
   public Equivalence(Type left, Type right) {
+    this(left, right, null);
+  }
+
+  public Equivalence(Type left, Type right, Source source) {
     requireNonNull(left);
     requireNonNull(right);
+    this.source = source;
 
     if (left.equals(right)) {
       throw new IllegalArgumentException(
@@ -66,14 +75,14 @@ public class Equivalence {
     var leftSubstitute = left.substitute(variable, result);
     var rightSubstitute = right.substitute(variable, result);
     if (!leftSubstitute.equals(rightSubstitute)) {
-      return Optional.of(new Equivalence(leftSubstitute, rightSubstitute));
+      return Optional.of(new Equivalence(leftSubstitute, rightSubstitute, source));
     }
     return Optional.empty();
   }
 
   public void occurs() throws OccursError {
     if (left instanceof UnificationVariable && right.occurs((UnificationVariable) left)) {
-      throw new OccursError(left, right);
+      throw new OccursError(left, right, source);
     }
   }
 
@@ -81,7 +90,7 @@ public class Equivalence {
     if (left == right || left.equals(right)) {
       return emptyList();
     }
-    return left.decompose(right);
+    return left.decompose(right, source);
   }
 
   @Override

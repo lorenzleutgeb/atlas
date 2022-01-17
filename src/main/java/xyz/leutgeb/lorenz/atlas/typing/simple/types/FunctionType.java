@@ -14,6 +14,7 @@ import java.util.Objects;
 import java.util.Set;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.atlas.unification.Equivalence;
 import xyz.leutgeb.lorenz.atlas.unification.Generalizer;
@@ -49,13 +50,13 @@ public class FunctionType implements Type {
     return new FunctionType((ProductType) from.generalize(g), to.generalize(g));
   }
 
-  public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
+  public Collection<Equivalence> decompose(Type b, Source source) throws TypeMismatch {
     if (!(b instanceof final FunctionType ft)) {
-      throw new TypeMismatch(this, b);
+      throw new TypeMismatch(this, b, source);
     }
     // Check lengths of "from" here, to catch errors early. Not strictly necessary, but helps.
     if (from.size() != ft.from.size()) {
-      throw new TypeMismatch(from, ft.from);
+      throw new TypeMismatch(from, ft.from, source);
     }
     final var result = new ArrayList<Equivalence>(2);
     if (!from.equals(ft.from)) {

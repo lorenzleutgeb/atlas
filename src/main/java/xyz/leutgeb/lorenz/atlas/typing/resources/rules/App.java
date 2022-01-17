@@ -1,11 +1,12 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources.rules;
 
+import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.zero;
+import static xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint.eq;
 import static xyz.leutgeb.lorenz.atlas.util.Util.append;
 
 import java.util.*;
-import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.atlas.ast.CallExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.CallExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
@@ -14,7 +15,6 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.ConjunctiveConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.DisjunctiveConstraint;
-import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
 
 @Slf4j
@@ -34,86 +34,81 @@ public class App implements Rule {
         + ")";
   }
 
-  private static List<Constraint> costFree(
+  private static Constraint withoutCost(
       Obligation obligation, Set<FunctionAnnotation> candidates, Map<String, String> arguments) {
-    if (candidates == null || candidates.isEmpty()) {
-      throw new IllegalArgumentException("expected some candidate annotations (at least one)");
+    final var from = obligation.getContext().getAnnotation();
+    final var to = obligation.getAnnotation();
+
+    final var cfSize = candidates.size();
+    final var m = readM(arguments);
+    final var result = new ArrayList<Constraint>(1 + cfSize * m);
+
+    // 0 -> 0
+    result.add(
+        new ConjunctiveConstraint(
+            append(
+                eq(from, zero(from.size()), ruleName(obligation)),
+                eq(to, zero(to.size()), ruleName(obligation))),
+            ruleName(obligation)));
+
+    for (final var candidate : candidates) {
+      for (int i = 1; i <= m; i++) {
+        final var mulFrom = candidate.from.multiply(Coefficient.known(i));
+        final var mulTo = candidate.to.multiply(Coefficient.known(i));
+
+        result.add(
+            new ConjunctiveConstraint(
+                append(
+                    append(mulFrom.getRight(), mulTo.getRight()),
+                    append(
+                        eq(mulFrom.getLeft(), from, "(app:cf) Q"),
+                        eq(mulTo.getLeft(), to, "(app:cf) Q'"))),
+                "(app:cf)"));
+      }
     }
 
-    return List.of(
-        new DisjunctiveConstraint(
-            candidates.stream()
-                .flatMap(
-                    candidate ->
-                        IntStream.rangeClosed(0, readM(arguments))
-                            .mapToObj(
-                                i -> {
-                                  final var from = candidate.from.multiply(Coefficient.known(i));
-                                  final var to = candidate.to.multiply(Coefficient.known(i));
-
-                                  return (Constraint)
-                                      new ConjunctiveConstraint(
-                                          append(
-                                              append(from.getRight(), to.getRight()),
-                                              append(
-                                                  EqualityConstraint.eq(
-                                                      from.getLeft(),
-                                                      obligation.getContext().getAnnotation(),
-                                                      "(app:cf) Q"),
-                                                  EqualityConstraint.eq(
-                                                      to.getLeft(),
-                                                      obligation.getAnnotation(),
-                                                      "(app:cf) Q'"))),
-                                          "(app:cf)");
-                                }))
-                .toList(),
-            "(app:cf)"));
+    return new DisjunctiveConstraint(result, ruleName(obligation));
   }
 
-  private List<Constraint> appMinusWithCfIncludingShift(
+  private static Constraint withCost(
       Obligation obligation, CombinedFunctionAnnotation annotation, Map<String, String> arguments) {
-    return List.of(
-        new DisjunctiveConstraint(
-            annotation.withoutCost.stream()
-                .flatMap(
-                    candidate ->
-                        IntStream.rangeClosed(0, readM(arguments))
-                            .mapToObj(
-                                i -> {
-                                  final var from = candidate.from.multiply(Coefficient.known(i));
-                                  final var to = candidate.to.multiply(Coefficient.known(i));
+    final var from = obligation.getContext().getAnnotation();
+    final var to = obligation.getAnnotation();
 
-                                  final var addFrom =
-                                      Annotation.add(annotation.withCost.from, from.getLeft());
-                                  final var addTo =
-                                      Annotation.add(annotation.withCost.to, to.getLeft());
+    final var candidates = annotation.withoutCost;
+    final var cfSize = candidates.size();
+    final var m = readM(arguments);
+    final var result = new ArrayList<Constraint>(1 + cfSize * m);
 
-                                  return (Constraint)
-                                      new ConjunctiveConstraint(
-                                          append(
-                                              List.of(
-                                                  new ConjunctiveConstraint(
-                                                      append(
-                                                          append(from.getRight(), to.getRight()),
-                                                          append(
-                                                              addFrom.getRight(),
-                                                              addTo.getRight())),
-                                                      "(app) K * P + Q")),
-                                              append(
-                                                  EqualityConstraint.eq(
-                                                      addFrom.getLeft(),
-                                                      obligation.getContext().getAnnotation(),
-                                                      "(app) " + i + " * P + Qsig = Qctx"),
-                                                  EqualityConstraint.eq(
-                                                      addTo.getLeft(),
-                                                      obligation.getAnnotation(),
-                                                      "(app) " + i + " * P' + Qsig' = Qctx'"))),
-                                          "(app) " + obligation.getExpression());
-                                }))
-                .toList(),
-            "(app `"
-                + obligation.getExpression()
-                + "`)" /*+ " on line " + obligation.getExpression().getSource().getRoot()*/));
+    result.add(
+        new ConjunctiveConstraint(
+            append(
+                eq(annotation.withCost.from, from, ruleName(obligation)),
+                eq(annotation.withCost.to, to, ruleName(obligation))),
+            ruleName(obligation)));
+
+    for (final var candidate : candidates) {
+      for (int i = 1; i <= m; i++) {
+        final var mulFrom = candidate.from.multiply(Coefficient.known(i));
+        final var mulTo = candidate.to.multiply(Coefficient.known(i));
+
+        final var addFrom = Annotation.add(annotation.withCost.from, mulFrom.getLeft());
+        final var addTo = Annotation.add(annotation.withCost.to, mulTo.getLeft());
+
+        result.add(
+            new ConjunctiveConstraint(
+                append(
+                    append(
+                        append(mulFrom.getRight(), mulTo.getRight()),
+                        append(addFrom.getRight(), addTo.getRight())),
+                    append(
+                        eq(addFrom.getLeft(), from, "(app) " + i + " * Qcf + Qsig = Qctx"),
+                        eq(addTo.getLeft(), to, "(app) " + i + " * Qcf' + Qsig' = Qctx'"))),
+                ruleName(obligation)));
+      }
+    }
+
+    return new DisjunctiveConstraint(result, ruleName(obligation));
   }
 
   public Rule.ApplicationResult apply(
@@ -121,8 +116,9 @@ public class App implements Rule {
     final var expression = (CallExpression) obligation.getExpression();
     final var annotation = globals.getSignature(expression.getFullyQualifiedName());
     return Rule.ApplicationResult.onlyConstraints(
-        obligation.isCost()
-            ? appMinusWithCfIncludingShift(obligation, annotation, arguments)
-            : costFree(obligation, annotation.withoutCost, arguments));
+        List.of(
+            obligation.isCost()
+                ? withCost(obligation, annotation, arguments)
+                : withoutCost(obligation, annotation.withoutCost, arguments)));
   }
 }

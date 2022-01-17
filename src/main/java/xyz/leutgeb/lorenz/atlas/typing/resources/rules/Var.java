@@ -6,8 +6,8 @@ import static xyz.leutgeb.lorenz.atlas.util.Util.pick;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
-import xyz.leutgeb.lorenz.atlas.ast.TupleExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.TupleExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
@@ -23,7 +23,7 @@ public class Var implements Rule {
 
     final var target =
         switch (obligation.getExpression()) {
-          case Identifier id -> id.getType() instanceof TreeType
+          case IdentifierExpression id -> id.getType() instanceof TreeType
               ? Optional.of(id)
               : Optional.empty();
           case TupleExpression tuple -> tuple.getTree();

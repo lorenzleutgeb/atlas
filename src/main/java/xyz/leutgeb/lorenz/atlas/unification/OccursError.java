@@ -1,14 +1,19 @@
 package xyz.leutgeb.lorenz.atlas.unification;
 
-import lombok.RequiredArgsConstructor;
+import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 
-@RequiredArgsConstructor
 public class OccursError extends UnificationError {
   private final Type a;
   private final Type b;
 
-  public String getMessage() {
-    return "Cannot create infinite signature " + this.a.toString() + " = " + this.b.toString();
+  public OccursError(Type a, Type b, Source source) {
+    super(getMessage(a, b), source);
+    this.a = a;
+    this.b = b;
+  }
+
+  public static String getMessage(Type a, Type b) {
+    return "Cannot create infinite signature " + a.toString() + " = " + b.toString();
   }
 }

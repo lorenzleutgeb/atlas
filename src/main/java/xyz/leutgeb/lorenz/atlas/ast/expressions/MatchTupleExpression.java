@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.atlas.ast;
+package xyz.leutgeb.lorenz.atlas.ast.expressions;
 
 import static xyz.leutgeb.lorenz.atlas.util.Util.indent;
 
@@ -11,12 +11,12 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.atlas.ast.Normalization;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 
 @Data
@@ -57,18 +57,19 @@ public class MatchTupleExpression extends Expression {
   }
 
   @Override
-  public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
+  public Type inferInternal(UnificationContext context) throws TypeError {
     final var result = context.fresh();
 
     final var scrutType = context.fresh();
-    context.addEquivalenceIfNotEqual(scrutType, scrut.infer(context).wiggle(context));
+    context.addEquivalenceIfNotEqual(scrutType, scrut.infer(context).wiggle(context), source);
 
-    final UnificationContext sub = context.hide(((Identifier) scrut).getName());
+    final UnificationContext sub = context.hide(((IdentifierExpression) scrut).getName());
     for (int i = 0; i < pattern.getElements().size(); i++) {
-      sub.putType(((Identifier) pattern.getElements().get(i)).getName(), sub.fresh(), this);
+      sub.putType(
+          ((IdentifierExpression) pattern.getElements().get(i)).getName(), sub.fresh(), this);
     }
-    sub.addEquivalenceIfNotEqual(result, body.infer(sub).wiggle(sub));
-    sub.addEquivalenceIfNotEqual(scrutType, pattern.infer(sub).wiggle(sub));
+    sub.addEquivalenceIfNotEqual(result, body.infer(sub).wiggle(sub), source);
+    sub.addEquivalenceIfNotEqual(scrutType, pattern.infer(sub).wiggle(sub), source);
 
     return result;
   }
@@ -148,9 +149,9 @@ public class MatchTupleExpression extends Expression {
       indent(out, indentation + 1);
       out.println(
           "final var "
-              + ((Identifier) element).getName()
+              + ((IdentifierExpression) element).getName()
               + " = "
-              + ((Identifier) scrut).getName()
+              + ((IdentifierExpression) scrut).getName()
               + ".get("
               + i
               + ";");
@@ -179,10 +180,10 @@ public class MatchTupleExpression extends Expression {
   }
 
   @Override
-  public Set<Identifier> freeVariables() {
+  public Set<IdentifierExpression> freeVariables() {
     final var result = super.freeVariables();
     result.removeAll(pattern.freeVariables());
-    result.add((Identifier) scrut);
+    result.add((IdentifierExpression) scrut);
     return result;
   }
 
@@ -190,11 +191,11 @@ public class MatchTupleExpression extends Expression {
   public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
     final var newBody = body.unshare(idGenerator, lazy);
 
-    if (!(scrut instanceof final Identifier testName)) {
+    if (!(scrut instanceof final IdentifierExpression testName)) {
       throw new IllegalStateException("anf required");
     }
 
-    final Set<Identifier> freeBody = newBody.freeVariables();
+    final Set<IdentifierExpression> freeBody = newBody.freeVariables();
 
     if (freeBody.contains(testName)) {
       throw new IllegalStateException(

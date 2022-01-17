@@ -14,8 +14,10 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 
 @Data
 public class SmartRangeHeuristic implements AnnotationHeuristic {
-  public static final SmartRangeHeuristic DEFAULT =
-      new SmartRangeHeuristic(Set.of(0, 1), Set.of(0, 1, 2));
+  public static final Set<Integer> A_RANGE = Set.of(0, 1);
+  public static final Set<Integer> B_RANGE = Set.of(-1, 0, 1, 2);
+
+  public static final SmartRangeHeuristic DEFAULT = new SmartRangeHeuristic(A_RANGE, B_RANGE);
 
   private final List<Integer> as;
   private final List<Integer> bs;
@@ -59,24 +61,23 @@ public class SmartRangeHeuristic implements AnnotationHeuristic {
         .stream()
         .filter(
             index -> {
-              // TODO: When to allow constants, especially 1. Only when there's a leaf?
               boolean hasTree = false;
+              final Integer last = index.get(index.size() - 1);
+              int sum = last;
               if (index.size() > 1) {
                 for (int i = 0; i < index.size() - 1; i++) {
+                  sum += index.get(i);
                   if (index.get(i) > 0) {
                     hasTree = true;
-                    break;
                   }
                 }
               }
-              final Integer last = index.get(index.size() - 1);
+              /*
               if (last == 2) {
                 return !hasTree;
               }
-              if (last == -1 || last == 0) {
-                return hasTree;
-              }
-              return hasTree;
+               */
+              return sum > 0;
             });
   }
 }

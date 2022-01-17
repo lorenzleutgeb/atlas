@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.atlas.unification.Equivalence;
 import xyz.leutgeb.lorenz.atlas.unification.Generalizer;
@@ -18,9 +19,9 @@ public class BoolType implements Type {
   public static final BoolType INSTANCE = new BoolType();
 
   @Override
-  public Collection<Equivalence> decompose(Type b) throws TypeMismatch {
+  public Collection<Equivalence> decompose(Type b, Source source) throws TypeMismatch {
     if (!(b instanceof BoolType)) {
-      throw new TypeMismatch(this, b);
+      throw new TypeMismatch(this, b, source);
     }
     return Collections.emptyList();
   }

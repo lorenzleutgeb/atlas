@@ -27,12 +27,12 @@ import xyz.leutgeb.lorenz.atlas.ast.Program;
 import xyz.leutgeb.lorenz.atlas.module.Loader;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
+import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 
 public class TestUtil {
   public static Obligation fromProver(Prover prover, Predicate<Obligation> predicate) {
@@ -121,7 +121,7 @@ public class TestUtil {
   }
 
   public static Program autoloadAndNormalizeAndInferAndUnshare(Pattern pattern)
-      throws UnificationError, TypeError, IOException {
+      throws TypeError, IOException {
     final var loader = loader();
     loader.autoload();
     final var result = loader.loadMatching(pattern);
@@ -133,7 +133,7 @@ public class TestUtil {
   }
 
   public static Program loadAndNormalizeAndInferAndUnshare(Pattern pattern)
-      throws UnificationError, TypeError, IOException {
+      throws TypeError, IOException {
     final var result = loader().loadMatching(pattern);
     result.normalize();
     result.infer();
@@ -166,4 +166,20 @@ public class TestUtil {
 
   public static Path RESOURCES = Paths.get(".", "src", "test", "resources");
   public static Path TACTICS = RESOURCES.resolve("tactics");
+
+  static Map<String, Path> extractTactics(Map<String, Config> immutableAnnotations) {
+    return immutableAnnotations.entrySet().stream()
+        .filter(entry -> entry.getValue().tactic().isPresent())
+        .collect(
+            Collectors.toMap(
+                Map.Entry::getKey,
+                entry -> TACTICS.resolve(entry.getValue().tactic().get() + ".txt")));
+  }
+
+  static Map<String, CombinedFunctionAnnotation> extractAnnotations(
+      Map<String, Config> immutableAnnotations) {
+    return immutableAnnotations.entrySet().stream()
+        .filter(entry -> entry.getValue().annotation().isPresent())
+        .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().annotation().get()));
+  }
 }

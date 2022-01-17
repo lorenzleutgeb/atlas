@@ -39,6 +39,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.jgrapht.nio.AttributeType;
 import org.jgrapht.nio.DefaultAttribute;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.Expression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.module.Loader;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
@@ -58,7 +60,6 @@ import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.Generalizer;
 import xyz.leutgeb.lorenz.atlas.unification.Substitution;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.atlas.util.NidiExporter;
 import xyz.leutgeb.lorenz.atlas.util.SizeEdge;
@@ -74,7 +75,7 @@ public class FunctionDefinition {
   private FunctionSignature inferredSignature;
   private FunctionSignature annotatedSignature;
 
-  private org.jgrapht.Graph<Identifier, SizeEdge> sizeAnalysis = null;
+  private org.jgrapht.Graph<IdentifierExpression, SizeEdge> sizeAnalysis = null;
   private Obligation typingObligation;
 
   public FunctionDefinition(
@@ -99,7 +100,7 @@ public class FunctionDefinition {
                 problem.fresh()));
   }
 
-  public void infer(UnificationContext context) throws UnificationError, TypeError {
+  public void infer(UnificationContext context) throws TypeError {
     /*
     if (inferredSignature != null) {
       return inferredSignature;
@@ -170,7 +171,7 @@ public class FunctionDefinition {
             inferredSignature.getAnnotation().map(a -> a.substitute(solution)));
   }
 
-  public List<Identifier> treeLikeArguments() {
+  public List<IdentifierExpression> treeLikeArguments() {
     // NOTE(lorenzleutgeb): A declared argument that is not used in the body
     // is missing from the return value of this function, e.g.
     //
@@ -184,7 +185,8 @@ public class FunctionDefinition {
     }
     final var bodyFreeVariables = body.freeVariables();
 
-    final var bodyFreeVariablesOrdered = new ArrayList<Identifier>(bodyFreeVariables.size());
+    final var bodyFreeVariablesOrdered =
+        new ArrayList<IdentifierExpression>(bodyFreeVariables.size());
 
     var types = inferredSignature.getType().getFrom().getElements();
 
@@ -214,7 +216,7 @@ public class FunctionDefinition {
     body.analyzeSizes(sizeAnalysis);
 
     final var exporter =
-        new NidiExporter<Identifier, SizeEdge>(
+        new NidiExporter<IdentifierExpression, SizeEdge>(
             identifier ->
                 identifier.getName() + "_" + (identifier.getIntro() == null ? "null" : identifier));
     exporter.setVertexAttributeProvider(
@@ -354,8 +356,7 @@ public class FunctionDefinition {
                 treeLikeArguments(), inferredSignature.getAnnotation().get().withCost.from),
             body,
             inferredSignature.getAnnotation().get().withCost.to,
-            true,
-            Optional.empty());
+            true);
 
     return typingObligation;
   }
@@ -549,7 +550,7 @@ public class FunctionDefinition {
 
   public String getBoundString() {
     final List<String> treeArguments =
-        treeLikeArguments().stream().map(Identifier::getName).toList();
+        treeLikeArguments().stream().map(IdentifierExpression::getName).toList();
 
     return moduleName
         + "."

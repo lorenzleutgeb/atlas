@@ -8,6 +8,7 @@ import java.util.List;
 import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.atlas.antlr.SplayParser;
 import xyz.leutgeb.lorenz.atlas.ast.*;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.*;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 
 class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
@@ -59,7 +60,7 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
     return new MatchTreeExpression(
         getSource(ctx),
         visit(ctx.test),
-        ctx.leafCase != null ? visit(ctx.leafCase) : Identifier.leaf(),
+        ctx.leafCase != null ? visit(ctx.leafCase) : IdentifierExpression.leaf(),
         visit(ctx.nodePattern),
         visit(ctx.nodeCase));
   }
@@ -73,7 +74,7 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
     return new CallExpression(
         getSource(ctx),
         moduleName,
-        Identifier.get(name, getSource(ctx)),
+        IdentifierExpression.get(name, getSource(ctx)),
         ctx.params.stream().map(this::visit).collect(toList()));
   }
 
@@ -81,23 +82,14 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   public Expression visitLetExpression(SplayParser.LetExpressionContext ctx) {
     return new LetExpression(
         getSource(ctx),
-        Identifier.get(ctx.name.getText(), getSource(ctx)),
+        IdentifierExpression.get(ctx.name.getText(), getSource(ctx)),
         visit(ctx.value),
         visit(ctx.body));
   }
 
   @Override
   public Expression visitIdentifier(SplayParser.IdentifierContext ctx) {
-    return Identifier.get(ctx.getText(), getSource(ctx));
-  }
-
-  @Override
-  public NodeExpression visitNode(SplayParser.NodeContext ctx) {
-    var elements = new ArrayList<Expression>(3);
-    elements.add(visit(ctx.left));
-    elements.add(visit(ctx.middle));
-    elements.add(visit(ctx.right));
-    return new NodeExpression(getSource(ctx), elements);
+    return IdentifierExpression.get(ctx.getText(), getSource(ctx));
   }
 
   @Override
@@ -110,6 +102,15 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   }
 
   @Override
+  public Expression visitNodeExpression(SplayParser.NodeExpressionContext ctx) {
+    var elements = new ArrayList<Expression>(3);
+    elements.add(visit(ctx.left));
+    elements.add(visit(ctx.middle));
+    elements.add(visit(ctx.right));
+    return new NodeExpression(getSource(ctx), elements);
+  }
+
+  @Override
   public Expression visitDeconstructionPattern(SplayParser.DeconstructionPatternContext ctx) {
     return new NodeExpression(
         getSource(ctx), List.of(visit(ctx.left), visit(ctx.middle), visit(ctx.right)));
@@ -118,9 +119,9 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   @Override
   public Expression visitMaybeAnonymousIdentifier(SplayParser.MaybeAnonymousIdentifierContext ctx) {
     if (ctx.UNDERSCORE() != null) {
-      return Identifier.anonymous(getSource(ctx), idGenerator);
+      return IdentifierExpression.anonymous(getSource(ctx), idGenerator);
     }
-    return Identifier.get(ctx.IDENTIFIER().getText(), getSource(ctx));
+    return IdentifierExpression.get(ctx.IDENTIFIER().getText(), getSource(ctx));
   }
 
   @Override

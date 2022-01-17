@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.atlas.ast;
+package xyz.leutgeb.lorenz.atlas.ast.expressions;
 
 import static com.google.common.collect.Sets.union;
 import static xyz.leutgeb.lorenz.atlas.util.Util.mapToString;
@@ -14,6 +14,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import xyz.leutgeb.lorenz.atlas.ast.MatchPattern;
+import xyz.leutgeb.lorenz.atlas.ast.Normalization;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Predefined;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
@@ -22,7 +24,6 @@ import xyz.leutgeb.lorenz.atlas.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 
 @Value
@@ -38,9 +39,7 @@ public class NodeExpression extends Expression implements MatchPattern {
     this.elements = elements;
   }
 
-  public NodeExpression(Source source, List<Expression> elements, Type type) {
-    // TODO(lorenzleutgeb): This constructor was made public for testing purposes only. Make it
-    // private again?
+  private NodeExpression(Source source, List<Expression> elements, Type type) {
     super(source, type);
     if (elements.size() != 3) {
       throw new IllegalArgumentException("only tuples with exactly three elements are supported");
@@ -48,20 +47,28 @@ public class NodeExpression extends Expression implements MatchPattern {
     this.elements = elements;
   }
 
-  public static NodeExpression predefinedNode(Identifier left, Identifier right) {
+  public static NodeExpression predefinedNode(
+      IdentifierExpression left, IdentifierExpression right) {
     return new NodeExpression(
         Predefined.INSTANCE,
-        List.of(left, Identifier.predefinedBase(randomHex()), right),
+        List.of(left, IdentifierExpression.predefinedBase(randomHex()), right),
         new TreeType(TypeVariable.alpha()));
   }
 
   public static NodeExpression predefinedNode(
-      Identifier left, Identifier middle, Identifier right) {
-    // TODO: Check whether type of left and right matches up with type of middle.
-    return new NodeExpression(
-        Predefined.INSTANCE,
-        List.of(left, middle, right),
-        new TreeType((TypeVariable) middle.getType()));
+      IdentifierExpression left, IdentifierExpression middle, IdentifierExpression right)
+      throws TypeError {
+    if (left.getType() instanceof TreeType l
+        && right.getType() instanceof TreeType r
+        && r.equals(l)
+        && r.getElementType().equals(middle.getType())) {
+      return new NodeExpression(
+          Predefined.INSTANCE,
+          List.of(left, middle, right),
+          new TreeType((TypeVariable) middle.getType()));
+    }
+
+    throw new TypeError("Predefined node is not well-typed.", Predefined.INSTANCE);
   }
 
   public Expression getLeft() {
@@ -82,12 +89,13 @@ public class NodeExpression extends Expression implements MatchPattern {
   }
 
   @Override
-  public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
+  public Type inferInternal(UnificationContext context) throws TypeError {
     var elementType = context.fresh();
     var result = new TreeType(elementType);
-    context.addEquivalenceIfNotEqual(result, getLeft().infer(context).wiggle(context));
-    context.addEquivalenceIfNotEqual(elementType, getMiddle().infer(context).wiggle(context));
-    context.addEquivalenceIfNotEqual(result, getRight().infer(context).wiggle(context));
+    context.addEquivalenceIfNotEqual(result, getLeft().infer(context).wiggle(context), source);
+    context.addEquivalenceIfNotEqual(
+        elementType, getMiddle().infer(context).wiggle(context), source);
+    context.addEquivalenceIfNotEqual(result, getRight().infer(context).wiggle(context), source);
     return result;
   }
 
@@ -114,14 +122,13 @@ public class NodeExpression extends Expression implements MatchPattern {
 
   @Override
   public void printTo(PrintStream out, int indentation) {
-    out.print("(");
+    out.print("node ");
     for (int i = 0; i < elements.size(); i++) {
       elements.get(i).printTo(out, indentation);
       if (i < elements.size() - 1) {
-        out.print(", ");
+        out.print(" ");
       }
     }
-    out.print(")");
   }
 
   @Override
@@ -149,29 +156,30 @@ public class NodeExpression extends Expression implements MatchPattern {
 
   @Override
   public String toString() {
-    return "(" + mapToString(elements.stream()).collect(Collectors.joining(", ")) + ")";
+    return "node " + mapToString(elements.stream()).collect(Collectors.joining(" "));
   }
 
   @Override
   public Expression unshare(IntIdGenerator idGenerator, boolean lazy) {
     // NOTE: The only sharing possible is left and right, since sharing of either of the
     // two with middle would mean a type error.
-    if (!(getLeft() instanceof Identifier) || !(getRight() instanceof Identifier)) {
+    if (!(getLeft() instanceof IdentifierExpression)
+        || !(getRight() instanceof IdentifierExpression)) {
       throw new IllegalStateException("must be in anf");
     }
     if (!getLeft().equals(getRight())) {
       return this;
     }
-    var down = ShareExpression.clone((Identifier) getLeft(), idGenerator);
+    var down = ShareExpression.clone((IdentifierExpression) getLeft(), idGenerator);
     return new ShareExpression(
         this,
-        (Identifier) getLeft(),
+        (IdentifierExpression) getLeft(),
         down,
         new NodeExpression(source, List.of(down.getLeft(), getMiddle(), down.getRight()), type));
   }
 
   @Override
-  public Set<Identifier> freeVariables() {
+  public Set<IdentifierExpression> freeVariables() {
     return new HashSet<>(union(getLeft().freeVariables(), getRight().freeVariables()));
   }
 

@@ -2,30 +2,25 @@ package xyz.leutgeb.lorenz.atlas;
 
 import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static xyz.leutgeb.lorenz.atlas.TestUtil.loadAndNormalizeAndInferAndUnshare;
+import static xyz.leutgeb.lorenz.atlas.TestUtil.*;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.unitIndex;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ONE;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ONE_BY_TWO;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.TWO;
 
-import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
-import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 
 public class PairingHeapTest {
   @Test
-  @Disabled("continue after CAV")
-  public void merge() throws UnificationError, TypeError, IOException {
+  @Disabled("Continue after CAV 2021")
+  public void merge() {
 
     final Annotation qp =
         new Annotation(List.of(Coefficient.known(1, 2)), Map.of(unitIndex(1), ONE), "Q'");
@@ -84,35 +79,15 @@ public class PairingHeapTest {
 
             );
 
-    /*
-    System.setProperty(
-        "xyz.leutgeb.lorenz.atlas.typing.resources.proving.Prover.naive", String.valueOf(true));
-    System.setProperty("xyz.leutgeb.lorenz.atlas.typing.resources.rules.W.all", String.valueOf(true));
-     */
-
     final var program = loadAndNormalizeAndInferAndUnshare(immutableAnnotations.keySet());
-
-    final var annotations =
-        immutableAnnotations.entrySet().stream()
-            .filter(entry -> entry.getValue().annotation.isPresent())
-            .collect(
-                Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().annotation.get()));
-
-    final var tactics =
-        immutableAnnotations.entrySet().stream()
-            .filter(entry -> entry.getValue().tactic.isPresent())
-            .collect(
-                Collectors.toMap(
-                    Map.Entry::getKey,
-                    entry ->
-                        Paths.get(
-                            ".",
-                            "src",
-                            "test",
-                            "resources",
-                            "tactics",
-                            entry.getValue().tactic.get() + ".txt")));
-    final var result = program.solve(annotations, tactics, true, true, emptySet());
+    final var result =
+        program.solve(
+            extractAnnotations(immutableAnnotations),
+            extractTactics(immutableAnnotations),
+            true,
+            true,
+            false,
+            emptySet());
     assertTrue(result.getSolution().isPresent());
     program.printAllInferredSignaturesInOrder(System.out);
   }

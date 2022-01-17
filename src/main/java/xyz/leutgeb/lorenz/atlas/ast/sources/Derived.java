@@ -2,7 +2,7 @@ package xyz.leutgeb.lorenz.atlas.ast.sources;
 
 import lombok.EqualsAndHashCode;
 import lombok.Value;
-import xyz.leutgeb.lorenz.atlas.ast.Expression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.Expression;
 
 @Value
 @EqualsAndHashCode(callSuper = true)

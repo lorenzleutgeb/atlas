@@ -20,7 +20,7 @@ import org.hipparchus.fraction.Fraction;
 import xyz.leutgeb.lorenz.atlas.antlr.TacticBaseVisitor;
 import xyz.leutgeb.lorenz.atlas.antlr.TacticParser;
 import xyz.leutgeb.lorenz.atlas.ast.FunctionDefinition;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
@@ -144,7 +144,7 @@ public class Tactic extends TacticBaseVisitor<Object> {
       }
       result = emptyList();
     } else {
-      final List<Identifier> redundant = WVar.redundantIds(obligation).toList();
+      final List<IdentifierExpression> redundant = WVar.redundantIds(obligation).toList();
       if (obligation.getExpression().isTerminal()
           && !redundant.isEmpty()
           && Set.of("leaf", "node", "var", "app", "tick").contains(ruleName)) {

@@ -5,8 +5,8 @@ import static xyz.leutgeb.lorenz.atlas.typing.resources.rules.Rule.ApplicationRe
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
-import xyz.leutgeb.lorenz.atlas.ast.MatchTupleExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.MatchTupleExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
@@ -25,7 +25,7 @@ public class MatchTuple implements Rule {
 
     final var context = obligation.getContext();
     final var ids = context.getIds();
-    final List<Identifier> replaced = new ArrayList<>(ids.size());
+    final List<IdentifierExpression> replaced = new ArrayList<>(ids.size());
 
     for (final var id : ids) {
       replaced.add(id.equals(expression.getScrut()) ? target.get() : id);

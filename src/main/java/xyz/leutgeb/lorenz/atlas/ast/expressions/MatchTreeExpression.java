@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.atlas.ast;
+package xyz.leutgeb.lorenz.atlas.ast.expressions;
 
 import static com.google.common.collect.Sets.intersection;
 import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
@@ -17,12 +17,12 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 import org.jgrapht.Graph;
+import xyz.leutgeb.lorenz.atlas.ast.Normalization;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.atlas.util.Pair;
 import xyz.leutgeb.lorenz.atlas.util.SizeEdge;
@@ -73,7 +73,7 @@ public class MatchTreeExpression extends Expression {
   }
 
   @Override
-  public Type inferInternal(UnificationContext context) throws UnificationError, TypeError {
+  public Type inferInternal(UnificationContext context) throws TypeError {
     final var passthru = isPassthru();
     if (!passthru && !(nodePattern instanceof NodeExpression)) {
       throw bug("node expression as node pattern required");
@@ -82,24 +82,25 @@ public class MatchTreeExpression extends Expression {
     final var result = context.fresh();
 
     final var scrutType = context.fresh();
-    context.addEquivalenceIfNotEqual(scrutType, scrut.infer(context).wiggle(context));
+    context.addEquivalenceIfNotEqual(scrutType, scrut.infer(context).wiggle(context), source);
 
-    final Supplier<UnificationContext> sub = () -> context.hide(((Identifier) scrut).getName());
+    final Supplier<UnificationContext> sub =
+        () -> context.hide(((IdentifierExpression) scrut).getName());
 
     // Case: leaf
     var subLeaf = sub.get();
-    subLeaf.addEquivalenceIfNotEqual(result, leaf.infer(subLeaf).wiggle(subLeaf));
+    subLeaf.addEquivalenceIfNotEqual(result, leaf.infer(subLeaf).wiggle(subLeaf), source);
 
     // Case: node
     var subNode = passthru ? context : sub.get();
     for (int i = 0; !passthru && i < 3; i++) {
       subNode.putType(
-          ((Identifier) ((NodeExpression) nodePattern).getElements().get(i)).getName(),
+          ((IdentifierExpression) ((NodeExpression) nodePattern).getElements().get(i)).getName(),
           subNode.fresh(),
           this);
     }
-    subNode.addEquivalenceIfNotEqual(scrutType, nodePattern.infer(subNode).wiggle(subNode));
-    subNode.addEquivalenceIfNotEqual(result, node.infer(subNode).wiggle(subNode));
+    subNode.addEquivalenceIfNotEqual(scrutType, nodePattern.infer(subNode).wiggle(subNode), source);
+    subNode.addEquivalenceIfNotEqual(result, node.infer(subNode).wiggle(subNode), source);
 
     return result;
   }
@@ -109,7 +110,8 @@ public class MatchTreeExpression extends Expression {
     Expression node = this.node;
     Expression nodePattern = this.nodePattern;
 
-    if (nodePattern instanceof final Identifier nodeId && !this.scrut.equals(this.nodePattern)) {
+    if (nodePattern instanceof final IdentifierExpression nodeId
+        && !this.scrut.equals(this.nodePattern)) {
       final var source = Derived.desugar(this);
 
       if (nodeId.getName().startsWith("_")) {
@@ -117,16 +119,16 @@ public class MatchTreeExpression extends Expression {
             new NodeExpression(
                 source,
                 List.of(
-                    Identifier.anonymous(source, idGenerator),
-                    Identifier.anonymous(source, idGenerator),
-                    Identifier.anonymous(source, idGenerator)));
+                    IdentifierExpression.anonymous(source, idGenerator),
+                    IdentifierExpression.anonymous(source, idGenerator),
+                    IdentifierExpression.anonymous(source, idGenerator)));
       } else {
-        final Identifier left =
-            Identifier.get(nodeId.getName() + "_l_" + idGenerator.next(), source);
-        final Identifier middle =
-            Identifier.get(nodeId.getName() + "_x_" + idGenerator.next(), source);
-        final Identifier right =
-            Identifier.get(nodeId.getName() + "_r_" + idGenerator.next(), source);
+        final IdentifierExpression left =
+            IdentifierExpression.get(nodeId.getName() + "_l_" + idGenerator.next(), source);
+        final IdentifierExpression middle =
+            IdentifierExpression.get(nodeId.getName() + "_x_" + idGenerator.next(), source);
+        final IdentifierExpression right =
+            IdentifierExpression.get(nodeId.getName() + "_r_" + idGenerator.next(), source);
         nodePattern = new NodeExpression(source, List.of(left, middle, right));
         node = new LetExpression(source, nodeId, nodePattern, node);
       }
@@ -219,23 +221,24 @@ public class MatchTreeExpression extends Expression {
       indent(out, indentation + 1);
       out.println(
           "final var "
-              + ((Identifier) ((NodeExpression) nodePattern).getLeft()).getName()
+              + ((IdentifierExpression) ((NodeExpression) nodePattern).getLeft()).getName()
               + " = "
-              + ((Identifier) scrut).getName()
+              + ((IdentifierExpression) scrut).getName()
               + ".left;");
       indent(out, indentation + 1);
       out.println(
           "final var "
-              + ((Identifier) ((NodeExpression) nodePattern).getElements().get(1)).getName()
+              + ((IdentifierExpression) ((NodeExpression) nodePattern).getElements().get(1))
+                  .getName()
               + " = "
-              + ((Identifier) scrut).getName()
+              + ((IdentifierExpression) scrut).getName()
               + ".value;");
       indent(out, indentation + 1);
       out.println(
           "final var "
-              + ((Identifier) ((NodeExpression) nodePattern).getRight()).getName()
+              + ((IdentifierExpression) ((NodeExpression) nodePattern).getRight()).getName()
               + " = "
-              + ((Identifier) scrut).getName()
+              + ((IdentifierExpression) scrut).getName()
               + ".right;");
     }
     if (node.isTerminal()) {
@@ -264,9 +267,9 @@ public class MatchTreeExpression extends Expression {
   }
 
   @Override
-  public Set<Identifier> freeVariables() {
+  public Set<IdentifierExpression> freeVariables() {
     final var result = super.freeVariables();
-    if (!(nodePattern instanceof Identifier && scrut.equals(nodePattern))) {
+    if (!(nodePattern instanceof IdentifierExpression && scrut.equals(nodePattern))) {
       result.removeAll(nodePattern.freeVariables());
     }
     return result;
@@ -277,19 +280,19 @@ public class MatchTreeExpression extends Expression {
     final var newLeaf = leaf.unshare(idGenerator, lazy);
     final var newNode = node.unshare(idGenerator, lazy);
 
-    if (!(scrut instanceof final Identifier testName)) {
+    if (!(scrut instanceof final IdentifierExpression testName)) {
       throw new IllegalStateException("anf required");
     }
 
-    final Set<Identifier> freeLeaf = newLeaf.freeVariables();
-    final Set<Identifier> freeNode = newNode.freeVariables();
+    final Set<IdentifierExpression> freeLeaf = newLeaf.freeVariables();
+    final Set<IdentifierExpression> freeNode = newNode.freeVariables();
 
     if (freeLeaf.contains(testName) || (!isPassthru() && freeNode.contains(testName))) {
       throw new IllegalStateException(
           "test variable is destructed, so it cannot occur freely in any case expression");
     }
 
-    Sets.SetView<Identifier> intersection = intersection(freeNode, freeLeaf);
+    Sets.SetView<IdentifierExpression> intersection = intersection(freeNode, freeLeaf);
 
     if (intersection.isEmpty()) {
       return new MatchTreeExpression(source, scrut, newLeaf, nodePattern, newNode, type);
@@ -301,7 +304,7 @@ public class MatchTreeExpression extends Expression {
       return new MatchTreeExpression(source, scrut, newLeaf, nodePattern, newNode, type);
     }
 
-    Identifier up = pick(intersection);
+    IdentifierExpression up = pick(intersection);
     var down = ShareExpression.clone(up, idGenerator);
     var result = ShareExpression.rename(up, down, Pair.of(newLeaf, newNode));
 
@@ -317,17 +320,19 @@ public class MatchTreeExpression extends Expression {
   }
 
   @Override
-  public void analyzeSizes(Graph<Identifier, SizeEdge> sizeGraph) {
+  public void analyzeSizes(Graph<IdentifierExpression, SizeEdge> sizeGraph) {
     super.analyzeSizes(sizeGraph);
-    sizeGraph.addVertex((Identifier) scrut);
+    sizeGraph.addVertex((IdentifierExpression) scrut);
     if (!isPassthru()) {
-      sizeGraph.addVertex((Identifier) ((NodeExpression) nodePattern).getLeft());
-      sizeGraph.addVertex((Identifier) ((NodeExpression) nodePattern).getRight());
+      sizeGraph.addVertex((IdentifierExpression) ((NodeExpression) nodePattern).getLeft());
+      sizeGraph.addVertex((IdentifierExpression) ((NodeExpression) nodePattern).getRight());
       sizeGraph.addEdge(
-          (Identifier) scrut, (Identifier) ((NodeExpression) nodePattern).getLeft(), SizeEdge.gt());
+          (IdentifierExpression) scrut,
+          (IdentifierExpression) ((NodeExpression) nodePattern).getLeft(),
+          SizeEdge.gt());
       sizeGraph.addEdge(
-          (Identifier) scrut,
-          (Identifier) ((NodeExpression) nodePattern).getRight(),
+          (IdentifierExpression) scrut,
+          (IdentifierExpression) ((NodeExpression) nodePattern).getRight(),
           SizeEdge.gt());
     }
   }

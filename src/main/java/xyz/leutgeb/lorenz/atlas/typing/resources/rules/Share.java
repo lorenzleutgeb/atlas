@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import xyz.leutgeb.lorenz.atlas.ast.ShareExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.ShareExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsSumConstraint;

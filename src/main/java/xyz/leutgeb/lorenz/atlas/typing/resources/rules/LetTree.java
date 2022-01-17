@@ -13,7 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import xyz.leutgeb.lorenz.atlas.ast.LetExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.LetExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;

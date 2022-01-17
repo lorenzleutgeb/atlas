@@ -2,25 +2,20 @@ package xyz.leutgeb.lorenz.atlas.typing.resources.rules;
 
 import static com.google.common.collect.Sets.cartesianProduct;
 import static com.google.common.collect.Sets.intersection;
+import static java.lang.Math.max;
 import static java.util.Collections.singleton;
 import static java.util.function.Predicate.not;
-import static java.util.stream.Collectors.toList;
+import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.isUnitIndex;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.unitIndex;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ZERO;
-import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
+import static xyz.leutgeb.lorenz.atlas.util.Util.*;
 
 import com.google.common.collect.Sets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
-import xyz.leutgeb.lorenz.atlas.ast.LetExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.LetExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
@@ -31,6 +26,7 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.DisjunctiveConstrai
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.LessThanOrEqualConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.atlas.typing.resources.indices.Index;
 import xyz.leutgeb.lorenz.atlas.typing.resources.indices.MapIndex;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
@@ -40,8 +36,10 @@ import xyz.leutgeb.lorenz.atlas.util.Util;
 public class LetTreeCf implements Rule {
   public static final LetTreeCf INSTANCE = new LetTreeCf();
 
-  private static final Set<Integer> D_RANGE = Set.of(0, 1);
-  private static final Set<Integer> E_RANGE = Set.of(0, 2);
+  private static final Set<Integer> D_RANGE = SmartRangeHeuristic.A_RANGE;
+  private static final Set<Integer> E_RANGE = SmartRangeHeuristic.B_RANGE;
+
+  // NOTE(lorenzleutgeb): This possibly contains indices with a sum less than one! Needs filtering!
   private static final Set<List<Integer>> DE_RANGE = cartesianProduct(D_RANGE, E_RANGE);
 
   /**
@@ -128,53 +126,6 @@ public class LetTreeCf implements Rule {
             EqualityConstraint.eqRanksDefineFromLeft(
                 varsForGammaAsList, gammaDeltaQ, gammaP, prefix + "q_i = p_i"));
 
-    // TODO: Maybe also add that a + c != 0?
-    // Define non-rank coefficients in P from Q.
-    p.getRight()
-        .addAll(
-            gammaDeltaQ
-                .streamNonRank()
-                // Ensure that we do not point at a = 0 and c = 0.
-                .filter(
-                    entry -> {
-                      final int c = entry.getOffsetIndex();
-                      if (varsForGammaAsList.isEmpty()) {
-                        // TODO(lorenzleutgeb): Clarify what 2 does here. Maybe it is handled by
-                        // "move const"?
-                        return c != 0 && c != 2;
-                      }
-                      if (c == 0 || c == 2) {
-                        return !entry.allAssociatedIndicesMatch(varsForGammaAsList, a -> a == 0);
-                      }
-                      return true;
-                    })
-                // Ensure that b = 0 or b = ().
-                .filter(entry -> entry.allAssociatedIndicesMatch(varsForDeltaAsSet, b -> b == 0))
-                .map(
-                    entry ->
-                        new EqualityConstraint(
-                            gammaP.getCoefficientOrDefine(entry),
-                            entry.getValue(),
-                            prefix
-                                + "p_{(a⃗⃗,c)} = q_{(a⃗⃗,0⃗,c)} with (a⃗⃗,c) = "
-                                + entry.toIndexString()))
-                .collect(Collectors.toSet()));
-
-    crossConstraints.add(
-        new EqualsSumConstraint(
-            deltaxr.getAnnotation().getCoefficientOrDefine(unitIndex(deltax.size())),
-            List.of(
-                pp.getCoefficientOrDefine(unitIndex(pp.size())),
-                gammaP.getAnnotation().getCoefficientOrDefine(unitIndex(gammaP.size())).negate(),
-                gammaDeltaQ.getAnnotation().getCoefficientOrZero(unitIndex(gammaDeltaQ.size()))),
-            prefix + "move const"));
-
-    crossConstraints.add(
-        new LessThanOrEqualConstraint(
-            gammaP.getAnnotation().getCoefficientOrDefine(unitIndex(gammaP.size())),
-            gammaDeltaQ.getAnnotation().getCoefficientOrZero(unitIndex(gammaDeltaQ.size())),
-            prefix + "c_p less than c_q"));
-
     // Define rank coefficients in R from Q.
     r.getRight()
         .addAll(
@@ -190,21 +141,66 @@ public class LetTreeCf implements Rule {
             pp.getRankCoefficient(),
             prefix + "r_{k+1} = p'_{*}"));
 
+    // TODO: Maybe also add that a + c != 0?
+    // Define non-rank coefficients in P from Q.
+    p.getRight()
+        .addAll(
+            gammaDeltaQ
+                .streamNonRank()
+                // Ensure that b = 0 or b = ().
+                .filter(entry -> entry.allAssociatedIndicesMatch(varsForDeltaAsSet, b -> b == 0))
+                // Ensure that we do not point at a = 0 and c = 0.
+                .filter(
+                    entry -> {
+                      final var index = entry.instantiateWithOffset(varsForGammaAsList);
+
+                      // We skip the unit index here, because it is handled by "move const".
+                      return isSumAtLeastOne(index) && !isUnitIndex(index);
+                    })
+                .map(
+                    entry ->
+                        new EqualityConstraint(
+                            gammaP.getCoefficientOrDefine(entry),
+                            entry.getValue(),
+                            prefix
+                                + "p_{(a⃗⃗,c)} = q_{(a⃗⃗,0⃗,c)} with (a⃗⃗,c) = "
+                                + entry.toIndexString()))
+                .collect(Collectors.toSet()));
+
+    // Specifically addresses
+    // r_{(\vec{0}, 2)} = p'_{(\vec{0}, 2)} - p_{(\vec{0}, 2) + q_{(\vec{0}, 2)}
+    crossConstraints.add(
+        new EqualsSumConstraint(
+            deltaxr.getAnnotation().getCoefficientOrDefine(unitIndex(deltax.size())),
+            List.of(
+                pp.getCoefficientOrDefine(unitIndex(pp.size())),
+                gammaP.getAnnotation().getCoefficientOrDefine(unitIndex(gammaP.size())).negate(),
+                gammaDeltaQ.getAnnotation().getCoefficientOrZero(unitIndex(gammaDeltaQ.size()))),
+            prefix + "move const"));
+
+    // p_{(\vec{0}, 2)} ≤ q_{(\vec{0}, 2)}
+    crossConstraints.add(
+        new LessThanOrEqualConstraint(
+            gammaP.getAnnotation().getCoefficientOrDefine(unitIndex(gammaP.size())),
+            gammaDeltaQ.getAnnotation().getCoefficientOrZero(unitIndex(gammaDeltaQ.size())),
+            prefix + "c_p less than c_q"));
+
     // Define some non-rank coefficients in R from P'.
     // Here we do not need to check whether d + e > 0 because P' was created via heuristics.
     crossConstraints.addAll(
         pp.streamNonRankCoefficients()
-            .filter(e -> !(e.getKey().equals(List.of(0, 2))))
+            // TODO: REMOVE .filter(e -> !(e.getKey().equals(List.of(0, 2))))
             .map(
-                e -> {
-                  final var index = e.getKey();
+                entry -> {
+                  final var index = entry.getKey();
+                  final var d = index.get(0);
+                  final var e = index.get(1);
                   return new EqualityConstraint(
-                      deltaxr.getCoefficientOrDefine(
-                          id -> id.equals(x) ? index.get(0) : 0, index.get(1)),
-                      e.getValue(),
+                      deltaxr.getCoefficientOrDefine(id -> id.equals(x) ? d : 0, e),
+                      entry.getValue(),
                       prefix + "r_{(0⃗,d,e)} = p'_{(d,e)}");
                 })
-            .collect(toList()));
+            .toList());
 
     final Map<Index, Pair<Obligation, List<Constraint>>> pbdes = new HashMap<>();
 
@@ -239,19 +235,23 @@ public class LetTreeCf implements Rule {
               .streamNonRank()
               .filter(
                   entry ->
-                      // Ensure that bi is empty or nonzero.
+                      // Ensure that b is empty or nonzero.
                       varsForDeltaAsList.isEmpty()
                           || !entry.allAssociatedIndicesMatch(varsForDeltaAsList, b -> b == 0))
               .flatMap(
                   entry ->
                       DE_RANGE.stream()
-                          .filter(not(Util::isAllZeroes))
-                          .filter(de -> de.get(0) != 0 || de.get(1) >= 2)
-                          // .filter(de -> !de.equals(List.of(1, 0)))
+                          // .filter(Util::isSumAtLeastOne)
+                          .filter(index -> index.get(0) + max(index.get(1), 0) > 0)
+                          .filter(
+                              de ->
+                                  Util.isSumAtLeastOne(
+                                      append(entry.instantiate(varsForDeltaAsList), de)))
                           .map(
                               de -> {
-                                Map<Identifier, Integer> associatedIndices = new HashMap<>();
-                                for (Identifier id : varsForDeltaAsList) {
+                                Map<IdentifierExpression, Integer> associatedIndices =
+                                    new HashMap<>();
+                                for (IdentifierExpression id : varsForDeltaAsList) {
                                   associatedIndices.put(id, entry.getAssociatedIndex(id));
                                 }
                                 associatedIndices.put(x, de.get(0));
@@ -267,8 +267,7 @@ public class LetTreeCf implements Rule {
                       new AnnotatingContext(varsForGammaAsList, "P(" + x + ")(" + key + ")"),
                       value,
                       new Annotation(1, "P'(" + x + ")(" + key + ")"),
-                      false,
-                      Optional.of(obligation)),
+                      false),
                   new ArrayList<>());
 
       gammaDeltaQ
@@ -297,13 +296,26 @@ public class LetTreeCf implements Rule {
                       qEntry.getValue(),
                       bdes.stream()
                           .filter(bde -> qEntry.agreeOnAssociatedIndices(bde, varsForDeltaAsSet))
-                          .map(
+                          .filter(
                               bde ->
-                                  pbdes
+                                  isSumAtLeastOne(qEntry.instantiateWithOffset(varsForGammaAsList)))
+                          .map(
+                              bde -> {
+                                final var e = bde.getOffsetIndex();
+                                if (e == -1) {
+                                  return pbdes
                                       .computeIfAbsent(bde, pbProducer)
                                       .getLeft()
                                       .getContext()
-                                      .getCoefficientOrDefine(qEntry))
+                                      .getCoefficientOrDefine(qEntry.addToOffset(1));
+                                } else {
+                                  return pbdes
+                                      .computeIfAbsent(bde, pbProducer)
+                                      .getLeft()
+                                      .getContext()
+                                      .getCoefficientOrDefine(qEntry);
+                                }
+                              })
                           .toList(),
                       prefix + "q_{(a⃗⃗,b⃗,c)} = Σ_{(d,e)}{p^{(b⃗,d,e)}_{(a⃗⃗,c})}"))
           .forEach(crossConstraints::add);
@@ -322,49 +334,45 @@ public class LetTreeCf implements Rule {
         cfconstraints.add(
             new EqualityConstraint(
                 deltaxr.getCoefficientOrDefine(bde),
-                cfpp.getCoefficientOrDefine(d, e),
+                cfpp.getCoefficientOrDefine(d, max(e, 0)),
                 prefix + "r_{(b⃗,d,e)} = p'^{(b⃗,d,e)}_{(d,e)}"));
 
-        DE_RANGE.stream()
-            .filter(Predicate.not(Util::isAllZeroes))
-            // .filter(de -> !de.equals(List.of(1, 0)))
-            .map(Pair::of)
-            .filter(dpep -> !dpep.getLeft().equals(d) || !dpep.getRight().equals(e))
-            .map(
-                dpep ->
-                    new EqualityConstraint(
-                        cfpp.getCoefficientOrDefine(dpep.getLeft(), dpep.getRight()),
-                        ZERO,
-                        prefix + "p'^{(b⃗,d,e}_{(d',e')}=0"))
-            .forEach(cfconstraints::add);
+        // We range over (d', e') here!
+        for (final var dpep : DE_RANGE) {
+          final var dp = dpep.get(0);
+          final var ep = dpep.get(1);
+          if (!Util.isSumAtLeastOne(dpep)) {
+            continue;
+          }
+          if (Objects.equals(dp, d) && Objects.equals(ep, max(e, 0))) {
+            // (d', e') = (d, max(e, 0))
+            continue;
+          }
+          cfconstraints.add(
+              new EqualityConstraint(
+                  cfpp.getCoefficientOrDefine(dp, ep), ZERO, prefix + "p'^{(b⃗,d,e}_{(d',e')}=0"));
+        }
 
-        // \sum_(a,c) p^(b,d,e)_(a,c) >= p^(b,d,e)_(d,e)
-
-        final Predicate<Map.Entry<List<Integer>, Coefficient>> aNonZeroOrCGeq2 =
-            entry ->
-                (entry.getKey().size() == 2 && entry.getKey().get(0) != 0)
-                    || entry.getKey().get(entry.getKey().size() - 1) >= 2;
+        // \sum_(a,c) p^(b,d,e)_(a,c) >= p'^(b,d,e)_(d,e)
 
         final List<Coefficient> lemma14guard =
-            cfp.streamNonRankCoefficients()
-                // .filter(aNonZeroOrCGeq2)
-                .map(Map.Entry::getValue)
-                .collect(Collectors.toList());
+            cfp.streamNonRankCoefficients().map(Map.Entry::getValue).collect(Collectors.toList());
 
-        UnknownCoefficient u = Coefficient.unknownFromPrefix("lemma14guardsum" + x);
+        UnknownCoefficient u = Coefficient.unknownFromPrefix("l14g." + x);
 
-        cfconstraints.add(new EqualsSumConstraint(u, lemma14guard, prefix + "lemma14guard"));
+        cfconstraints.add(
+            new EqualsSumConstraint(
+                u, lemma14guard, prefix + "l14g " + bde + "Σ_{(a⃗⃗,c)} p^{(b⃗,d,e}_{(a⃗⃗,c)}"));
         cfconstraints.add(
             new LessThanOrEqualConstraint(
-                cfpp.getCoefficientOrDefine(d, e), u, prefix + "lemma 14 guard"));
+                cfpp.getCoefficientOrDefine(d, max(e, 0)),
+                u,
+                prefix
+                    + "l14g "
+                    + bde
+                    + "Σ_{(a⃗⃗,c)} p^{(b⃗,d,e}_{(a⃗⃗,c)} ≥ p'^{(b⃗,d,e}_{(d,e)}"));
 
-        // TODO: Maybe use implication instead of DisjunctiveConstraint
         cfp.streamNonRankCoefficients()
-            // .filter(entry -> entry.getKey().size() == 1 || entry.getKey().get(0) != 0)
-            .filter(
-                entry ->
-                    (entry.getKey().size() == 2 && entry.getKey().get(0) != 0)
-                        || entry.getKey().get(entry.getKey().size() - 1) >= 2)
             .map(
                 entry ->
                     new DisjunctiveConstraint(
@@ -372,10 +380,11 @@ public class LetTreeCf implements Rule {
                             new EqualityConstraint(
                                 entry.getValue(), ZERO, prefix + "p^{(b⃗,d,e}_{(a⃗⃗,c)} == 0"),
                             new LessThanOrEqualConstraint(
-                                cfpp.getCoefficientOrDefine(d, e),
+                                cfpp.getCoefficientOrDefine(d, max(e, 0)),
                                 entry.getValue(),
                                 prefix + "p'^{(b⃗,d,e}_{(d,e)} ≤ p^{(b⃗,d,e}_{(a⃗⃗,c)}")),
-                        prefix + "implication in line 3"))
+                        prefix
+                            + "p^{(b⃗,d,e}_{(a⃗⃗,c)} ِ≠ 0 ⇒ p'^{(b⃗,d,e}_{(d,e)} ≤ p^{(b⃗,d,e}_{(a⃗⃗,c)}"))
             .forEach(cfconstraints::add);
       }
     }
@@ -386,7 +395,7 @@ public class LetTreeCf implements Rule {
             .map(pbdes::get)
             .collect(Collectors.toList());
 
-    final var old = Util.append(List.of(p, r), pbdesOrdered);
+    final var old = append(List.of(p, r), pbdesOrdered);
     return new ApplicationResult(
         old.stream().map(Pair::getLeft).toList(),
         old.stream().map(Pair::getRight).toList(),

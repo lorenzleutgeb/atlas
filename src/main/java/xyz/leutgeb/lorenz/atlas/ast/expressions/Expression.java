@@ -1,4 +1,4 @@
-package xyz.leutgeb.lorenz.atlas.ast;
+package xyz.leutgeb.lorenz.atlas.ast.expressions;
 
 import static guru.nidi.graphviz.attribute.Records.turn;
 import static xyz.leutgeb.lorenz.atlas.util.Util.indent;
@@ -16,19 +16,18 @@ import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import xyz.leutgeb.lorenz.atlas.ast.Normalization;
+import xyz.leutgeb.lorenz.atlas.ast.Syntax;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.Substitution;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
-import xyz.leutgeb.lorenz.atlas.unification.UnificationError;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.atlas.util.SizeEdge;
 
-// TODO(lorenzleutgeb): Maybe #canCarryPotential would be helpful? Expressions that only contain
-// subexpressions of type Base/Bool and are of type Base/Bool cannot have any non-zero
-// potential, so when normalizing/renaming they should be much simpler to handle.
+// TODO(lorenzleutgeb): Use Type#countTrees() to speed up normalizing/renaming.
 public abstract class Expression extends Syntax {
   public static final boolean DEFAULT_LAZY = false;
 
@@ -50,10 +49,9 @@ public abstract class Expression extends Syntax {
     return getChildren();
   }
 
-  protected abstract Type inferInternal(UnificationContext context)
-      throws UnificationError, TypeError;
+  protected abstract Type inferInternal(UnificationContext context) throws TypeError;
 
-  public Type infer(UnificationContext context) throws UnificationError, TypeError {
+  public Type infer(UnificationContext context) throws TypeError {
     if (type == null) {
       type = inferInternal(context);
     }
@@ -107,19 +105,19 @@ public abstract class Expression extends Syntax {
       return this;
     }
 
-    var id = Identifier.getSugar(Derived.anf(this), idGenerator);
+    var id = IdentifierExpression.getSugar(Derived.anf(this), idGenerator);
     context.push(new Normalization(id, normalize(context, idGenerator)));
     return id;
   }
 
-  Expression normalizeAndBind(IntIdGenerator idGenerator) {
+  public Expression normalizeAndBind(IntIdGenerator idGenerator) {
     var context = new Stack<Normalization>();
     return normalize(context, idGenerator).bindAll(context);
   }
 
   public void printTo(PrintStream out, int indentation) {
     indent(out, indentation);
-    out.println(toString());
+    out.println(this);
   }
 
   public Graph toGraph(Graph graph, Node parent) {
@@ -148,8 +146,8 @@ public abstract class Expression extends Syntax {
   }
 
   /** Computes the set of free tree-typed variables in this expression. */
-  public Set<Identifier> freeVariables() {
-    final var result = new LinkedHashSet<Identifier>();
+  public Set<IdentifierExpression> freeVariables() {
+    final var result = new LinkedHashSet<IdentifierExpression>();
     getChildren().forEach(e -> result.addAll(e.freeVariables()));
     return result;
   }
@@ -160,12 +158,12 @@ public abstract class Expression extends Syntax {
 
   public void printHaskellTo(PrintStream out, int indentation, String currentFunction) {
     indent(out, indentation);
-    out.println(toString());
+    out.println(this);
   }
 
   public void printJavaTo(PrintStream out, int indentation, String currentFunction) {
     indent(out, indentation);
-    out.println(toString());
+    out.println(this);
   }
 
   public Set<String> getOccurringFunctions() {
@@ -189,7 +187,7 @@ public abstract class Expression extends Syntax {
     }
   }
 
-  public void analyzeSizes(org.jgrapht.Graph<Identifier, SizeEdge> sizeGraph) {
+  public void analyzeSizes(org.jgrapht.Graph<IdentifierExpression, SizeEdge> sizeGraph) {
     getChildren().forEach(e -> e.analyzeSizes(sizeGraph));
   }
 

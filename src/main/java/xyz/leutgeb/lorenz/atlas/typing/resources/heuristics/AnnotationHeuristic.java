@@ -2,8 +2,8 @@ package xyz.leutgeb.lorenz.atlas.typing.resources.heuristics;
 
 import java.util.Collection;
 import java.util.List;
-import xyz.leutgeb.lorenz.atlas.ast.Expression;
-import xyz.leutgeb.lorenz.atlas.ast.Identifier;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.Expression;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 
@@ -28,11 +28,11 @@ public interface AnnotationHeuristic {
     return generate(collection.size());
   }
 
-  default AnnotatingContext generateContext(String namePrefix, List<Identifier> ids) {
+  default AnnotatingContext generateContext(String namePrefix, List<IdentifierExpression> ids) {
     return new AnnotatingContext(ids, generate(namePrefix, ids));
   }
 
-  default AnnotatingContext generateContext(List<Identifier> ids) {
+  default AnnotatingContext generateContext(List<IdentifierExpression> ids) {
     return new AnnotatingContext(ids, generate(ids));
   }
 
