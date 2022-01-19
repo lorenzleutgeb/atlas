@@ -93,7 +93,7 @@ public class Tactics {
   public static final CombinedFunctionAnnotation SPLAYTREE_INSERT_EXPECTED =
       CombinedFunctionAnnotation.of(
           new Annotation(
-              List.of(ONE_BY_TWO), Map.of(unitIndex(1), FIVE_BY_TWO, List.of(1, 0), TWO), "Q"),
+              List.of(ONE_BY_TWO), Map.of(unitIndex(1), known(3, 2), List.of(1, 0), TWO), "Q"),
           Qp);
 
   public static final CombinedFunctionAnnotation SPLAYTREE_DELETE_EXPECTED =
@@ -105,20 +105,22 @@ public class Tactics {
   public static final CombinedFunctionAnnotation RAND_SPLAYTREE_SPLAY_EXPECTED =
       CombinedFunctionAnnotation.of(
           new Annotation(
-              List.of(THREE_BY_FOUR), Map.of(unitIndex(1), ONE, List.of(1, 0), known(9, 8)), "Q"),
-          new Annotation(List.of(THREE_BY_FOUR), Map.of(unitIndex(1), ONE), "Q'"),
+              List.of(THREE_BY_FOUR),
+              Map.of(unitIndex(1), known(3, 4), List.of(1, 0), known(9, 8)),
+              "Q"),
+          new Annotation(List.of(THREE_BY_FOUR), Map.of(unitIndex(1), known(3, 4)), "Q'"),
           logToLog(known(3, 8)));
 
   public static final CombinedFunctionAnnotation RAND_SPLAYTREE_INSERT_EXPECTED =
       CombinedFunctionAnnotation.of(
           new Annotation(
-              List.of(THREE_BY_FOUR),
+              List.of(known(3, 4)),
               Map.of(
-                  unitIndex(1), ONE,
-                  List.of(1, 0), known(15, 16),
+                  unitIndex(1), known(3, 4),
+                  List.of(1, 0), known(3, 4),
                   List.of(1, 1), known(3, 4)),
               "Q"),
-          new Annotation(List.of(THREE_BY_FOUR), Map.of(unitIndex(1), ONE), "Q'"),
+          new Annotation(List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
           logPlusOneToLog(known(3, 8)));
 
   public static final CombinedFunctionAnnotation RAND_SPLAYHEAP_INSERT_EXPECTED =
@@ -154,7 +156,7 @@ public class Tactics {
       CombinedFunctionAnnotation.of(
           new Annotation(
               ONE_BY_TWO,
-              Map.of(List.of(1, 0), known(3, 4), List.of(1, 1), ONE, unitIndex(1), ONE)),
+              Map.of(List.of(1, 0), known(1, 2), List.of(1, 1), ONE, unitIndex(1), ONE)),
           Qp,
           logPlusOneToLog(ONE_BY_TWO));
 
@@ -201,28 +203,18 @@ public class Tactics {
               Map.of(unitIndex(1), known(1, 2), List.of(1, 0), known(3, 2)),
               "Q"),
           rkOnly(ONE_BY_TWO),
-          // TODO: Fix cf annotation.
-          // zero(1), zero(1),
-          logPlusOneToLog(known(1, 2))
-          // logPlusOneToLog(known(1, 4))
-          );
+          logPlusOneToLog(known(1, 2)));
 
   public static final CombinedFunctionAnnotation RAND_TREESORT_DELETE_MAX_EXPECTED =
       CombinedFunctionAnnotation.of(
-          new Annotation(
-              List.of(known(1, 2)),
-              Map.of(unitIndex(1), known(1, 2), List.of(1, 0), known(3, 2)),
-              "Q"),
+          new Annotation(List.of(known(1, 2)), Map.of(List.of(1, 0), known(3, 2)), "Q"),
           rkOnly(ONE_BY_TWO),
           logOnly(known(1, 2)),
           zero(1));
 
   public static final CombinedFunctionAnnotation RAND_TREESORT_REMOVE_EXPECTED =
       CombinedFunctionAnnotation.of(
-          new Annotation(
-              List.of(known(1, 2)),
-              Map.of(unitIndex(1), known(1, 2), List.of(1, 0), known(1)),
-              "Q"),
+          new Annotation(List.of(known(1, 2)), Map.of(List.of(1, 0), known(1)), "Q"),
           rkOnly(ONE_BY_TWO));
 
   public static final CombinedFunctionAnnotation RAND_MELDABLEHEAP_MELD_EXPECTED =
@@ -1646,26 +1638,6 @@ public class Tactics {
             Map.of("RandSplayTree.insert", Config.of("auto", RAND_SPLAYTREE_INSERT_EXPECTED))),
         Arguments.of(
             Map.of(
-                "RandSplayTree.insert",
-                Config.of(
-                    // "RandSplayTree/insert",
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            List.of(known(3, 4)),
-                            Map.of(
-                                unitIndex(1), known(3, 4),
-                                List.of(1, 0), known(3, 4),
-                                List.of(1, 1), known(3, 4)),
-                            "Q"),
-                        new Annotation(
-                            List.of(known(3, 4)), Map.of(unitIndex(1), known(3, 4)), "Q'"),
-                        logPlusOneToLog(known(3, 8)))))),
-        Arguments.of(
-            Map.of("Scratch.insert_zigzag", Config.of("auto", RAND_SPLAYTREE_INSERT_EXPECTED))),
-        Arguments.of(
-            Map.of("Scratch.insert_zigzig", Config.of("auto", RAND_SPLAYTREE_INSERT_EXPECTED))),
-        Arguments.of(
-            Map.of(
                 "RandSplayTree.splay_max",
                 Config.of("RandSplayTree/splay_max", RAND_SPLAYTREE_SPLAY_EXPECTED),
                 "RandSplayTree.delete",
@@ -1673,7 +1645,11 @@ public class Tactics {
         Arguments.of(
             Map.of(
                 "RandSplayTree.splay_max",
-                Config.of("RandSplayTree/splay_max", RAND_SPLAYTREE_SPLAY_EXPECTED))),
+                Config.of("RandSplayTree/splay_max", RAND_SPLAYTREE_SPLAY_EXPECTED),
+                "RandSplayTree.delete",
+                Config.of("RandSplayTree/delete", RAND_SPLAYTREE_SPLAY_EXPECTED),
+                "RandSplayTree.insert",
+                Config.of("auto", RAND_SPLAYTREE_INSERT_EXPECTED))),
         Arguments.of(
             Map.of(
                 "RandSplayTree.splay",
@@ -1933,13 +1909,13 @@ public class Tactics {
   @MethodSource({
     // "negative",
     // "scratch",
-    "randSplayHeap",
+    // "randSplayHeap",
     "randSplayTree",
-    "randMeldableHeap",
-    "randTreeSort",
-    "splayTree",
-    "splayHeap",
-    "pairingHeap",
+    // "randMeldableHeap",
+    // "randTreeSort",
+    // "splayTree",
+    // "splayHeap",
+    // "pairingHeap",
   })
   public void all(Map<String, Config> immutableAnnotations) {
     final var program = loadAndNormalizeAndInferAndUnshare(immutableAnnotations.keySet());

@@ -20,6 +20,11 @@ public class Automation {
   private static Stream<Arguments> instances() {
     return Stream.of(
         Arguments.of(
+            "RandSplayHeap",
+            Map.of(
+                "insert", RAND_SPLAYHEAP_INSERT_EXPECTED,
+                "del_min", RAND_SPLAYHEAP_DEL_MIN_EXPECTED)),
+        Arguments.of(
             "RandMeldableHeap",
             Map.of(
                 "meld", RAND_MELDABLEHEAP_MELD_EXPECTED,
@@ -59,11 +64,10 @@ public class Automation {
                 "insert_isolated",
                 PAIRINGHEAP_INSERT_ISOLATED_EXPECTED)),
         Arguments.of("RandSplayTree", Map.of("splay", RAND_SPLAYTREE_SPLAY_EXPECTED)),
+        Arguments.of("RandSplayTree", Map.of("insert", RAND_SPLAYTREE_INSERT_EXPECTED)),
         Arguments.of(
             "RandSplayTree",
             Map.of(
-                "insert",
-                RAND_SPLAYTREE_INSERT_EXPECTED,
                 "splay_max",
                 RAND_SPLAYTREE_SPLAY_EXPECTED,
                 "delete",
@@ -82,7 +86,7 @@ public class Automation {
         program.solve(
             new HashMap<>(instance),
             tactics ? program.lookupTactics(emptyMap(), TACTICS) : Collections.emptyMap(),
-            false,
+            true,
             true,
             false,
             Collections.emptySet());

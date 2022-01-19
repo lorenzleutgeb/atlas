@@ -37,7 +37,7 @@ record Config(Optional<String> tactic, Optional<CombinedFunctionAnnotation> anno
     }
     result += " ";
     if (annotation.isPresent()) {
-      result += annotation.get(); // .withCost;
+      result += annotation.get();
     } else {
       result += "infer";
     }
