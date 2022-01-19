@@ -28,6 +28,15 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   }
 
   @Override
+  public Expression visitCoinExpression(SplayParser.CoinExpressionContext ctx) {
+    final var numerator = ctx.numerator == null ? 1 : Integer.parseInt(ctx.numerator.getText());
+    final var denominator =
+        ctx.denominator == null ? 2 : Integer.parseInt(ctx.denominator.getText());
+    final var cost = new Fraction(numerator, denominator);
+    return new CoinExpression(getSource(ctx), cost);
+  }
+
+  @Override
   public Expression visitHoleExpression(SplayParser.HoleExpressionContext ctx) {
     return new HoleExpression(getSource(ctx));
   }

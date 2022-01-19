@@ -54,6 +54,7 @@ expression : identifier # variableExpression
            | NUMBER # constant
            | left=expression op right=expression # comparison
            | TILDE (numerator=NUMBER)? (denominator=NUMBER)? expression # tickExpression
+           | COIN (numerator=NUMBER)? (denominator=NUMBER)? # coinExpression
            | UNDERSCORE # holeExpression
            | PAREN_OPEN items+=expression (COMMA items+=expression)+ PAREN_CLOSE # tuple
            ;
@@ -101,6 +102,7 @@ GT : '>';
 GE : '>=' | '≥';
 
 ASSIGN : '=' | '≔';
+COIN : 'coin';
 NODE : 'node';
 LEAF : 'leaf';
 IN : 'in';

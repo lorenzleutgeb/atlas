@@ -334,8 +334,7 @@ public class Prover {
           comments.add("tick outside let");
           mono = true;
         }
-      } else if (e instanceof IfThenElseExpression ite
-          && IdentifierExpression.isCoin(ite.getCondition())) {
+      } else if (e instanceof IfThenElseExpression ite && Expression.isCoin(ite.getCondition())) {
         comments.add("before ite:coin");
         l2xy = true;
       }

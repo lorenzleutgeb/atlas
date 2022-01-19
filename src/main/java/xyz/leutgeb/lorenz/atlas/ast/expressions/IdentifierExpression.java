@@ -195,8 +195,6 @@ public class IdentifierExpression extends Expression {
   public void printJavaTo(PrintStream out, int indentation, String currentFunction) {
     if (name.equals((LEAF_NAME))) {
       out.print("Tree.<" + type.variables().iterator().next() + ">leaf()");
-    } else if (name.equals((COIN_NAME))) {
-      out.print("coin()");
     } else {
       out.print(name);
     }
@@ -215,10 +213,5 @@ public class IdentifierExpression extends Expression {
   public static boolean isLeaf(Expression identifier) {
     return identifier instanceof IdentifierExpression
         && LEAF_NAME.equals(((IdentifierExpression) identifier).getName());
-  }
-
-  public static boolean isCoin(Expression identifier) {
-    return identifier instanceof IdentifierExpression
-        && COIN_NAME.equals(((IdentifierExpression) identifier).getName());
   }
 }

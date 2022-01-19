@@ -43,6 +43,10 @@ public abstract class Expression extends Syntax {
     this.type = type;
   }
 
+  public static boolean isCoin(Expression identifier) {
+    return identifier instanceof CoinExpression;
+  }
+
   protected abstract Stream<? extends Expression> getChildren();
 
   Stream<? extends Expression> follow() {
