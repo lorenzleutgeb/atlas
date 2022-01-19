@@ -6,7 +6,6 @@ import static java.util.Collections.unmodifiableMap;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.Optional.empty;
 import static java.util.stream.Collectors.joining;
-import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ZERO;
 import static xyz.leutgeb.lorenz.atlas.util.Util.*;
 
 import com.google.common.collect.ArrayListMultimap;
@@ -38,7 +37,6 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
-import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.InequalityConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.atlas.typing.resources.optimiziation.Optimization;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
@@ -54,7 +52,7 @@ import xyz.leutgeb.lorenz.atlas.util.Util;
 
 @Slf4j
 public class Program {
-  private static final boolean FORCE_RANK_EQUAL = false;
+  private static final boolean FORCE_RANK_EQUAL = true;
 
   @Getter private final Map<String, FunctionDefinition> functionDefinitions;
 
@@ -276,32 +274,26 @@ public class Program {
     for (var fd : fds) {
       if (FORCE_RANK_EQUAL) {
         log.warn("Adding external constraints to force rank!");
-        if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1
-            && fd.getInferredSignature().getAnnotation().get().withCost.from.size() == 1) {
-          external.add(
-              new EqualityConstraint(
-                  fd.getInferredSignature()
-                      .getAnnotation()
-                      .get()
-                      .withCost
-                      .from
-                      .getRankCoefficient(),
-                  fd.getInferredSignature().getAnnotation().get().withCost.to.getRankCoefficient(),
-                  "(force)"));
-        }
-
         if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1) {
-          external.add(
-              new InequalityConstraint(
-                  ZERO,
-                  fd.getInferredSignature().getAnnotation().get().withCost.to.getRankCoefficient(),
-                  "(force)"));
-        } else {
-          external.add(
-              new EqualityConstraint(
-                  ZERO,
-                  fd.getInferredSignature().getAnnotation().get().withCost.to.getRankCoefficient(),
-                  "(force)"));
+          for (int i = 0;
+              i < fd.getInferredSignature().getAnnotation().get().withCost.from.size();
+              i++) {
+            external.add(
+                new EqualityConstraint(
+                    fd.getInferredSignature()
+                        .getAnnotation()
+                        .get()
+                        .withCost
+                        .from
+                        .getRankCoefficient(i),
+                    fd.getInferredSignature()
+                        .getAnnotation()
+                        .get()
+                        .withCost
+                        .to
+                        .getRankCoefficient(),
+                    "(force)"));
+          }
         }
       }
 

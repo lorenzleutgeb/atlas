@@ -277,13 +277,6 @@ public class Prover {
     boolean lp1 = false;
     boolean weaken = false;
 
-    /*
-    if (e == fd.getBody()) {
-      mono = true;
-      lp1 = true;
-    }
-     */
-
     List<String> comments = new ArrayList<>();
 
     if (firstAfterCall(e)) {
@@ -293,7 +286,7 @@ public class Prover {
         l2xy = true;
         mono = true;
       } else {
-        l2xy = true;
+        // l2xy = true;
       }
     }
 
@@ -303,7 +296,6 @@ public class Prover {
 
       if (!isInLet && !isInTick) {
         comments.add("l2xy for call not in let or tick");
-        l2xy = true;
       }
     } else {
       if (e instanceof IdentifierExpression || e instanceof TupleExpression) {
@@ -332,17 +324,9 @@ public class Prover {
           l2xy = true;
           mono = true;
         } else if (letExpression.isTreeConstruction()) {
-          if (parent != null) {
-            if (parent instanceof LetExpression let && isLeaf(let.getValue())) {
-              // Makes sure we apply (w{size}) if we're constructing a tree.
-              comments.add("size because binds a leaf");
-              // TESTING size = true;
-              mono = true;
-            } else if (parent instanceof MatchTreeExpression
-                || parent instanceof IfThenElseExpression) {
-              comments.add("first after match");
-              mono = true;
-            }
+          if (parent instanceof MatchTreeExpression || parent instanceof IfThenElseExpression) {
+            comments.add("first after match");
+            mono = true;
           }
         }
       } else if (e instanceof TickExpression) {
