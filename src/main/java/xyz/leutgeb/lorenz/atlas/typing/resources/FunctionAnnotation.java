@@ -50,4 +50,8 @@ public class FunctionAnnotation {
     }
     return from.toLongString(arguments) + " - [" + to.toLongString() + "]";
   }
+
+  public boolean sameSize() {
+    return from.size() == to.size();
+  }
 }

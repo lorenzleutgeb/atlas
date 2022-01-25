@@ -11,18 +11,19 @@ program: (func)* EOF;
 // Function declaration (with list of arguments):
 func : signature? name=IDENTIFIER (args+=IDENTIFIER)* ASSIGN body=expression SEMICOLON?;
 
-signature : name=IDENTIFIER DOUBLECOLON (constraints DOUBLE_ARROW)? from=noParenProduct ARROW to=type (PIPE annotatedAnnotation=combinedFunctionAnnotation)? ;
+signature : name=IDENTIFIER DOUBLECOLON (constraints DOUBLE_ARROW)? from=type ARROW to=type (PIPE annotatedAnnotation=combinedFunctionAnnotation)? ;
 
 combinedFunctionAnnotation : SQUARE_OPEN with=functionAnnotation (COMMA CURLY_OPEN (without+=functionAnnotation (COMMA without+=functionAnnotation)*)? CURLY_CLOSE)? SQUARE_CLOSE ;
 
 functionAnnotation : from=annotation ARROW to=annotation ;
 
-type : IDENTIFIER
-     | predefinedType
-     | PAREN_OPEN items+=type (CROSS items+=type)* PAREN_CLOSE
-     ;
+flatType : IDENTIFIER
+         | predefinedType
+         ;
 
-noParenProduct : items+=type (CROSS items+=type)*;
+type : flat=flatType
+     | PAREN_OPEN items+=flatType (CROSS items+=flatType)* PAREN_CLOSE
+     ;
 
 variableType : IDENTIFIER ;
 
@@ -53,8 +54,8 @@ expression : identifier # variableExpression
            | PAREN_OPEN expression PAREN_CLOSE # parenthesizedExpression
            | NUMBER # constant
            | left=expression op right=expression # comparison
-           | TILDE (numerator=NUMBER)? (denominator=NUMBER)? expression # tickExpression
-           | COIN (numerator=NUMBER)? (denominator=NUMBER)? # coinExpression
+           | TILDE (numerator=NUMBER)? (DIV denominator=NUMBER)? expression # tickExpression
+           | COIN (numerator=NUMBER)? (DIV denominator=NUMBER)? # coinExpression
            | UNDERSCORE # holeExpression
            | PAREN_OPEN items+=expression (COMMA items+=expression)+ PAREN_CLOSE # tuple
            ;
@@ -84,7 +85,7 @@ PIPE : '|';
 PLUS : '+';
 MINUS : '-';
 CROSS : '*' | '⨯' ;
-// DIV : '/';
+DIV : '/';
 QUOTE : '"';
 
 PAREN_OPEN : '(';

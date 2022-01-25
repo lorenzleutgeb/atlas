@@ -179,6 +179,10 @@ public class Loader {
     final var definitions = ModuleParser.parse(source, "_");
 
     for (var definition : definitions) {
+      functionDefinitions.put(definition.getFullyQualifiedName(), definition);
+    }
+
+    for (var definition : definitions) {
       ingest(null, definition);
     }
 
@@ -359,29 +363,34 @@ public class Loader {
   }
 
   private void parse(Phaser phaser, String fqn) throws IOException {
+    if (functionDefinitions.containsKey(fqn)) {
+      ingest(phaser, functionDefinitions.get(fqn));
+      return;
+    }
+
     // Logical module name.
     final var moduleName = moduleName(fqn);
 
     // Actual path to module on disk.
     final var path = path(moduleName);
 
+    if ("_".equals(moduleName)) {
+      throw new RuntimeException("Could not load " + fqn);
+    }
+
     if (!Util.goodForReading(path)) {
       throw new RuntimeException("could not resolve path for function name '" + fqn + "'");
     }
 
-    if (functionDefinitions.containsKey(fqn)) {
-      ingest(phaser, functionDefinitions.get(fqn));
-    } else {
-      // Ingest all definitions that were parsed, no matter whether we actually "need"
-      // them. This implementation might be a bit too eager, since it will load
-      // all function definitions in a file even though they might not be
-      // dependencies.
-      // This could be improved.
-      // Instead, match the definitions with the requested pattern, and a list of dependencies.
-      var definitions = ModuleParser.parse(CharStreams.fromPath(path), moduleName);
-      for (var definition : definitions) {
-        ingest(phaser, definition);
-      }
+    // Ingest all definitions that were parsed, no matter whether we actually "need"
+    // them. This implementation might be a bit too eager, since it will load
+    // all function definitions in a file even though they might not be
+    // dependencies.
+    // This could be improved.
+    // Instead, match the definitions with the requested pattern, and a list of dependencies.
+    var definitions = ModuleParser.parse(CharStreams.fromPath(path), moduleName);
+    for (var definition : definitions) {
+      ingest(phaser, definition);
     }
   }
 

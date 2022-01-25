@@ -18,11 +18,6 @@ public class Equivalence {
 
   Source source;
 
-  @Deprecated
-  public Equivalence(Type left, Type right) {
-    this(left, right, null);
-  }
-
   public Equivalence(Type left, Type right, Source source) {
     requireNonNull(left);
     requireNonNull(right);

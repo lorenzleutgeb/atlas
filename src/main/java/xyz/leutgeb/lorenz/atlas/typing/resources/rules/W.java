@@ -116,6 +116,22 @@ public class W implements Rule {
         .collect(toList());
   }
 
+  public static List<Constraint> compareNonRankCoefficients(
+      Annotation left,
+      Annotation right,
+      BiFunction<Coefficient, Coefficient, Constraint> comparator) {
+    if (left.size() != right.size()) {
+      throw bug("cannot compare annotations of different size");
+    }
+    return concat(
+            nonRankIndices(left, right)
+                .map(
+                    i ->
+                        comparator.apply(
+                            left.getCoefficientOrZero(i), right.getCoefficientOrZero(i))))
+        .collect(toList());
+  }
+
   public static List<Constraint> compareCoefficientsLessOrEqualUsingFarkas(
       List<IdentifierExpression> identifiers,
       Annotation left,

@@ -12,7 +12,7 @@ annotation : SQUARE_OPEN entries+=annotationEntry (COMMA entries+=annotationEntr
 annotationEntry : index MAPSTO coefficient=number ;
 
 number : NUMBER # nat
-       | numerator=NUMBER SLASH denominator=NUMBER # rat
+       | numerator=NUMBER DIV denominator=NUMBER # rat
        ;
 
 index : NUMBER # rankIndex
@@ -21,7 +21,7 @@ index : NUMBER # rankIndex
 
 // NUMBER : ('0' .. '9' );
 NUMBER : '0' | ('1'..'9') ('0'..'9')*;
-SLASH : '/' ;
+DIV : '/' ;
 // TIMES : '*';
 CURLY_OPEN : '{';
 CURLY_CLOSE : '}';

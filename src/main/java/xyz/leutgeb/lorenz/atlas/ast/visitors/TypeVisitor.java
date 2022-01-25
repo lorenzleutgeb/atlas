@@ -27,6 +27,14 @@ class TypeVisitor extends SourceNameAwareVisitor<Type> {
     if (ctx.items != null && !ctx.items.isEmpty()) {
       return new ProductType(ctx.items.stream().map(this::visit).collect(Collectors.toList()));
     }
+    if (ctx.flat != null) {
+      return visitFlatType(ctx.flat);
+    }
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Type visitFlatType(SplayParser.FlatTypeContext ctx) {
     if (ctx.IDENTIFIER() != null) {
       return new TypeVariable(ctx.IDENTIFIER().getText());
     }
@@ -34,16 +42,6 @@ class TypeVisitor extends SourceNameAwareVisitor<Type> {
       return visitPredefinedType(ctx.predefinedType());
     }
     throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Type visitNoParenProduct(SplayParser.NoParenProductContext ctx) {
-    /*
-    if (ctx.items == null) {
-      return visitType(ctx.type);
-    }
-     */
-    return new ProductType(ctx.items.stream().map(this::visit).collect(Collectors.toList()));
   }
 
   @Override

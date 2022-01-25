@@ -243,15 +243,6 @@ public class UnificationContext {
     return signatures.containsKey(fqn);
   }
 
-  @Deprecated
-  public void addEquivalenceIfNotEqual(Type a, Type b) {
-    Objects.requireNonNull(a);
-    Objects.requireNonNull(b);
-    if (!a.equals(b)) {
-      equivalences.add(new Equivalence(a, b));
-    }
-  }
-
   public void addEquivalenceIfNotEqual(Type a, Type b, Source source) {
     Objects.requireNonNull(a);
     Objects.requireNonNull(b);

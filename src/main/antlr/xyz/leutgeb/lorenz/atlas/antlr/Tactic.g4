@@ -22,7 +22,7 @@ argumentMapEntry : key=IDENTIFIER (EQUALS value=(IDENTIFIER|NUMBER))? ;
 NUMBER : ('0' .. '9' );
 ZERO : '0';
 EQUALS : '=';
-SLASH : '/' ;
+DIV : '/' ;
 TIMES : '*';
 CURLY_OPEN : '{';
 CURLY_CLOSE : '}';

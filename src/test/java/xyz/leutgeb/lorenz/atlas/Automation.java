@@ -2,7 +2,23 @@ package xyz.leutgeb.lorenz.atlas;
 
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static xyz.leutgeb.lorenz.atlas.Tactics.*;
+import static xyz.leutgeb.lorenz.atlas.Tactics.PAIRINGHEAP_DELETE_MIN_VIA_MERGE_PAIRS_ISOLATED_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.PAIRINGHEAP_INSERT_ISOLATED_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_MELDABLEHEAP_DELETE_MIN_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_MELDABLEHEAP_INSERT_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_MELDABLEHEAP_MELD_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_SEARCHTREE_DELETE_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_SEARCHTREE_DELETE_MAX_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_SEARCHTREE_INSERT_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_SPLAYHEAP_DELETE_MIN_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_SPLAYHEAP_INSERT_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_SPLAYTREE_INSERT_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_SPLAYTREE_SPLAY_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.SPLAYHEAP_DELETE_MIN_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.SPLAYHEAP_INSERT_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.SPLAYTREE_DELETE_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.SPLAYTREE_INSERT_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.TREE_DESCEND_EXPECTED;
 import static xyz.leutgeb.lorenz.atlas.TestUtil.TACTICS;
 import static xyz.leutgeb.lorenz.atlas.TestUtil.loadAndNormalizeAndInferAndUnshare;
 
@@ -14,64 +30,59 @@ import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.impl.SimpleLogger;
 import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
 
 public class Automation {
+  static {
+    System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "warn");
+    System.setProperty(SimpleLogger.LOG_KEY_PREFIX + "xyz.leutgeb.lorenz", "debug");
+    System.setProperty(SimpleLogger.SHOW_SHORT_LOG_NAME_KEY, Boolean.TRUE.toString());
+    System.setProperty(SimpleLogger.SHOW_THREAD_NAME_KEY, Boolean.FALSE.toString());
+  }
+
   private static Stream<Arguments> instances() {
     return Stream.of(
+        Arguments.of(
+            "SplayHeap",
+            Map.of(
+                "insert", SPLAYHEAP_INSERT_EXPECTED,
+                "delete_min", SPLAYHEAP_DELETE_MIN_EXPECTED)),
         Arguments.of(
             "RandSplayHeap",
             Map.of(
                 "insert", RAND_SPLAYHEAP_INSERT_EXPECTED,
-                "del_min", RAND_SPLAYHEAP_DEL_MIN_EXPECTED)),
+                "delete_min", RAND_SPLAYHEAP_DELETE_MIN_EXPECTED)),
+        Arguments.of(
+            "SplayTree",
+            Map.of("insert", SPLAYTREE_INSERT_EXPECTED, "delete", SPLAYTREE_DELETE_EXPECTED)),
+        Arguments.of(
+            "RandSplayTree",
+            Map.of(
+                "insert", RAND_SPLAYTREE_INSERT_EXPECTED, "delete", RAND_SPLAYTREE_SPLAY_EXPECTED)),
         Arguments.of(
             "RandMeldableHeap",
             Map.of(
                 "meld", RAND_MELDABLEHEAP_MELD_EXPECTED,
                 "insert", RAND_MELDABLEHEAP_INSERT_EXPECTED,
-                "del_min", RAND_MELDABLEHEAP_DEL_MIN_EXPECTED)),
-        Arguments.of("RandTreeSort", Map.of("descend", RAND_TREESORT_DESCEND_EXPECTED)),
+                "delete_min", RAND_MELDABLEHEAP_DELETE_MIN_EXPECTED)),
+        Arguments.of("Tree", Map.of("descend", TREE_DESCEND_EXPECTED)),
         Arguments.of(
-            "RandTreeSort",
+            "CoinSearchTree",
             Map.of(
-                "insert", RAND_TREESORT_INSERT_EXPECTED,
-                "delete_max", RAND_TREESORT_DELETE_MAX_EXPECTED,
-                "remove", RAND_TREESORT_REMOVE_EXPECTED)),
-        Arguments.of(
-            "SplayTree",
-            Map.of(
-                "splay",
-                SPLAYTREE_SPLAY_EXPECTED,
                 "insert",
-                SPLAYTREE_INSERT_EXPECTED,
-                "splay_max",
-                SPLAYTREE_SPLAY_MAX_EXPECTED,
+                RAND_SEARCHTREE_INSERT_EXPECTED,
                 "delete",
-                SPLAYTREE_DELETE_EXPECTED)),
-        Arguments.of(
-            "SplayHeap",
-            Map.of(
-                "partition", SPLAYHEAP_PARTITION_EXPECTED,
-                "insert", SPLAYHEAP_INSERT_EXPECTED,
-                "del_min", SPLAYHEAP_DEL_MIN_EXPECTED)),
+                RAND_SEARCHTREE_DELETE_EXPECTED,
+                "delete_max",
+                RAND_SEARCHTREE_DELETE_MAX_EXPECTED)),
         Arguments.of(
             "PairingHeap",
             Map.of(
-                "merge_pairs_isolated",
-                PAIRINGHEAP_MERGE_PAIRS_ISOLATED_EXPECTED,
-                "del_min_via_merge_pairs_isolated",
-                PAIRINGHEAP_DEL_MIN_VIA_MERGE_PAIRS_ISOLATED_EXPECTED,
+                "delete_min_via_merge_pairs_isolated",
+                PAIRINGHEAP_DELETE_MIN_VIA_MERGE_PAIRS_ISOLATED_EXPECTED,
                 "insert_isolated",
-                PAIRINGHEAP_INSERT_ISOLATED_EXPECTED)),
-        Arguments.of("RandSplayTree", Map.of("splay", RAND_SPLAYTREE_SPLAY_EXPECTED)),
-        Arguments.of("RandSplayTree", Map.of("insert", RAND_SPLAYTREE_INSERT_EXPECTED)),
-        Arguments.of(
-            "RandSplayTree",
-            Map.of(
-                "splay_max",
-                RAND_SPLAYTREE_SPLAY_EXPECTED,
-                "delete",
-                RAND_SPLAYTREE_SPLAY_EXPECTED)));
+                PAIRINGHEAP_INSERT_ISOLATED_EXPECTED)));
   }
 
   @ParameterizedTest
@@ -86,11 +97,12 @@ public class Automation {
         program.solve(
             new HashMap<>(instance),
             tactics ? program.lookupTactics(emptyMap(), TACTICS) : Collections.emptyMap(),
-            true,
-            true,
+            false,
+            false,
             false,
             Collections.emptySet());
     assertTrue(result.isSatisfiable());
     program.printAllInferredSignaturesInOrder(System.out);
+    program.printAllBoundsInOrder(System.out);
   }
 }

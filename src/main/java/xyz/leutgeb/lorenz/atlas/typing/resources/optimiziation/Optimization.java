@@ -17,8 +17,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import lombok.AllArgsConstructor;
-import lombok.Value;
 import xyz.leutgeb.lorenz.atlas.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.atlas.ast.Program;
 import xyz.leutgeb.lorenz.atlas.typing.resources.FunctionAnnotation;
@@ -30,22 +28,16 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsProductConstr
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsSumConstraint;
 
 public class Optimization {
-  @Value
-  @AllArgsConstructor
-  public static class MultiTarget {
-    public List<UnknownCoefficient> targets;
-    public Set<Constraint> constraints;
+  public record MultiTarget(List<UnknownCoefficient> targets, Set<Constraint> constraints) {
+    public static MultiTarget uni(UnknownCoefficient target, Set<Constraint> constraints) {
+      return new MultiTarget(List.of(target), constraints);
+    }
   }
 
-  @Value
-  @AllArgsConstructor
-  public static class UniTarget {
-    public UnknownCoefficient target;
-    public Set<Constraint> constraints;
-  }
-
-  private static boolean sameSize(FunctionAnnotation functionAnnotation) {
-    return functionAnnotation.from.size() == functionAnnotation.to.size();
+  public record UniTarget(UnknownCoefficient target, Set<Constraint> constraints) {
+    public MultiTarget multi() {
+      return MultiTarget.uni(target, constraints);
+    }
   }
 
   public static Optional<UniTarget> weightedComponentWiseDifference(
@@ -54,7 +46,7 @@ public class Optimization {
       return Optional.empty();
     }
 
-    if (!sameSize(annotation)) {
+    if (!annotation.sameSize()) {
       return notSameSizeWeightedComponentWiseDifference(annotation, weight);
     }
 
@@ -195,7 +187,7 @@ public class Optimization {
   }
 
   /*
-  public static Optional<UniTarget> squareWeightedComponentWiseDifference(
+  public static Optional<MultiTarget> squareWeightedComponentWiseDifference(
       FunctionAnnotation annotation) {
     return weightedComponentWiseDifference(annotation, Annotation::indexWeight);
   }
@@ -223,6 +215,26 @@ public class Optimization {
     for (int i = 0; i < annotation.from.size(); i++) {
       sum.add(annotation.from.getRankCoefficientOrZero(i));
     }
+    annotation.from.streamNonRankCoefficients().map(Map.Entry::getValue).forEach(sum::add);
+    UnknownCoefficient sumVar = Coefficient.unknownFromPrefix("x");
+    constraints.add(new EqualsSumConstraint(sumVar, sum, "(opt)"));
+    return Optional.of(new UniTarget(sumVar, constraints));
+  }
+
+  public static Optional<UniTarget> absRank(FunctionAnnotation annotation) {
+    final Set<Constraint> constraints = new HashSet<>();
+    final var sum = new ArrayList<Coefficient>();
+    for (int i = 0; i < annotation.from.size(); i++) {
+      sum.add(annotation.from.getRankCoefficientOrZero(i));
+    }
+    UnknownCoefficient sumVar = Coefficient.unknownFromPrefix("x");
+    constraints.add(new EqualsSumConstraint(sumVar, sum, "(opt)"));
+    return Optional.of(new UniTarget(sumVar, constraints));
+  }
+
+  public static Optional<UniTarget> absNonRank(FunctionAnnotation annotation) {
+    final Set<Constraint> constraints = new HashSet<>();
+    final var sum = new ArrayList<Coefficient>();
     annotation.from.streamNonRankCoefficients().map(Map.Entry::getValue).forEach(sum::add);
     UnknownCoefficient sumVar = Coefficient.unknownFromPrefix("x");
     constraints.add(new EqualsSumConstraint(sumVar, sum, "(opt)"));
@@ -258,7 +270,7 @@ public class Optimization {
         // var it = combine(program, fqns, opt);
         var it = opt.apply(ann);
         if (it.isPresent()) {
-          sumAtLayer.add(it.get().target);
+          sumAtLayer.add(it.get().target());
           constraints.addAll(it.get().constraints);
         }
       }
@@ -277,20 +289,46 @@ public class Optimization {
     return new UniTarget(overall, constraints);
   }
 
+  @SafeVarargs
+  public static MultiTarget layeredMultiCombo(
+      Set<FunctionDefinition> functionDefinitions,
+      Function<FunctionAnnotation, Optional<UniTarget>>... optimizations) {
+    Set<Constraint> constraints = new HashSet<>();
+    List<UnknownCoefficient> targets = new ArrayList<>(optimizations.length);
+    for (var i = 0; i < optimizations.length; i++) {
+      final var opt = optimizations[i];
+
+      final var sumAtLayer = new ArrayList<Coefficient>();
+      for (var fd : functionDefinitions) {
+        final var ann = fd.getInferredSignature().getAnnotation().get().withCost;
+        // var it = combine(program, fqns, opt);
+        var it = opt.apply(ann);
+        if (it.isPresent()) {
+          sumAtLayer.add(it.get().target());
+          constraints.addAll(it.get().constraints);
+        }
+      }
+      final var levelSum = Coefficient.unknownFromPrefix("levelsum");
+      constraints.add(new EqualsSumConstraint(levelSum, sumAtLayer, "ssss"));
+      targets.add(levelSum);
+    }
+    return new MultiTarget(targets, constraints);
+  }
+
   /** Generates one target per criteria and function. First by criteria and then by function. */
   @SafeVarargs
   public static UniTarget layeredCombo(
       Program program,
       Iterable<String> fqns,
       Function<FunctionAnnotation, Optional<UniTarget>>... optimizations) {
-    return layeredCombo(program, fqns, List.of(16127, 997, 97, 2), optimizations);
+    return layeredCombo(program, fqns, List.of(179969, 16127, 997, 97, 13, 2), optimizations);
   }
 
   @SafeVarargs
   public static UniTarget layeredCombo(
       Set<FunctionDefinition> functionDefinitions,
       Function<FunctionAnnotation, Optional<UniTarget>>... optimizations) {
-    return layeredCombo(functionDefinitions, List.of(16127, 997, 97, 2), optimizations);
+    return layeredCombo(functionDefinitions, List.of(179969, 16127, 997, 97, 13, 2), optimizations);
   }
 
   @SafeVarargs
@@ -302,7 +340,7 @@ public class Optimization {
     Set<Constraint> constraints = new HashSet<>();
     for (var opt : optimizations) {
       var it = combine(program, fqns, opt);
-      targets.add(it.target);
+      targets.add(it.target());
       constraints.addAll(it.constraints);
     }
     return new MultiTarget(targets, constraints);
@@ -310,9 +348,9 @@ public class Optimization {
 
   public MultiTarget combine(UniTarget... targets) {
     return new MultiTarget(
-        Stream.of(targets).map(UniTarget::getTarget).collect(Collectors.toList()),
+        Stream.of(targets).map(UniTarget::target).collect(Collectors.toList()),
         Stream.of(targets)
-            .map(UniTarget::getConstraints)
+            .map(UniTarget::constraints)
             .flatMap(Collection::stream)
             .collect(Collectors.toSet()));
   }
@@ -362,12 +400,33 @@ public class Optimization {
     return new UniTarget(x, constraints);
   }
 
-  public static UniTarget standard(Set<FunctionDefinition> functionDefinitions) {
+  public static MultiTarget standard(Set<FunctionDefinition> functionDefinitions) {
     return Optimization.layeredCombo(
+            functionDefinitions,
+            Optimization::rankDifference,
+            Optimization::absRank,
+            Optimization::customWeightedComponentWiseDifference,
+            Optimization::constantDifference,
+            Optimization::absNonRank)
+        .multi();
+  }
+
+  public static MultiTarget direct(Set<FunctionDefinition> functionDefinitions) {
+    return Optimization.layeredCombo(
+            functionDefinitions,
+            Optimization::absRank,
+            Optimization::customWeightedComponentWiseDifference,
+            Optimization::constantDifference)
+        .multi();
+  }
+
+  public static MultiTarget progressive(Set<FunctionDefinition> functionDefinitions) {
+    return Optimization.layeredMultiCombo(
         functionDefinitions,
         Optimization::rankDifference,
+        Optimization::absRank,
         Optimization::customWeightedComponentWiseDifference,
         Optimization::constantDifference,
-        Optimization::abs);
+        Optimization::absNonRank);
   }
 }

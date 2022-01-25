@@ -37,7 +37,7 @@ public class TreeType implements Type {
     }
 
     if (!elementType.equals(tree.elementType)) {
-      return Collections.singletonList(new Equivalence(elementType, tree.elementType));
+      return Collections.singletonList(new Equivalence(elementType, tree.elementType, source));
     }
     return Collections.emptyList();
   }

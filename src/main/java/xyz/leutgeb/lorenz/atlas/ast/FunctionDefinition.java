@@ -41,6 +41,7 @@ import org.jgrapht.nio.AttributeType;
 import org.jgrapht.nio.DefaultAttribute;
 import xyz.leutgeb.lorenz.atlas.ast.expressions.Expression;
 import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
+import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.module.Loader;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
@@ -125,18 +126,19 @@ public class FunctionDefinition {
                 + expected
                 + " arguments, but "
                 + arguments.size()
-                + " are given at definition.");
+                + " are given at definition.",
+            getSource());
       }
       for (int i = 0; i < arguments.size(); i++) {
         Type ty = annotatedSignature.getType().getFrom().getElements().get(i);
         Type var = inferredSignature.getType().getFrom().getElements().get(i);
-        sub.addEquivalenceIfNotEqual(var, ty);
+        sub.addEquivalenceIfNotEqual(var, ty, getSource());
       }
       sub.addEquivalenceIfNotEqual(
-          inferredSignature.getType().getTo(), annotatedSignature.getType().getTo());
+          inferredSignature.getType().getTo(), annotatedSignature.getType().getTo(), getSource());
     }
 
-    sub.addEquivalenceIfNotEqual(inferredSignature.getType().getTo(), body.infer(sub));
+    sub.addEquivalenceIfNotEqual(inferredSignature.getType().getTo(), body.infer(sub), getSource());
   }
 
   public void resolve(Substitution solution, FunctionSignature signature)
@@ -152,7 +154,7 @@ public class FunctionDefinition {
     body.resolveType(x);
     if (annotatedSignature != null && !inferredSignature.equals(annotatedSignature)) {
       throw new TypeError.AnnotationMismatch(
-          getFullyQualifiedName(), annotatedSignature, inferredSignature);
+          getFullyQualifiedName(), annotatedSignature, inferredSignature, getSource());
     }
   }
 
@@ -362,9 +364,7 @@ public class FunctionDefinition {
   }
 
   public String getInferredSignatureString() {
-    return moduleName
-        + "."
-        + name
+    return getFullyQualifiedName()
         + " ∷ "
         + inferredSignature.getType()
         + inferredSignature
@@ -384,9 +384,7 @@ public class FunctionDefinition {
   }
 
   public String getAnnotatedSignatureString() {
-    return moduleName
-        + "."
-        + name
+    return getFullyQualifiedName()
         + " ∷ "
         + inferredSignature.getType()
         + annotatedSignature
@@ -473,9 +471,7 @@ public class FunctionDefinition {
 
   @Override
   public String toString() {
-    return moduleName
-        + "."
-        + name
+    return getFullyQualifiedName()
         + " "
         + String.join(" ", arguments)
         + " = "
@@ -483,9 +479,7 @@ public class FunctionDefinition {
   }
 
   public String getSimpleSignatureString() {
-    return moduleName
-        + "."
-        + name
+    return getFullyQualifiedName()
         + " ∷ "
         + (inferredSignature == null ? "?" : inferredSignature.getType());
   }
@@ -552,10 +546,12 @@ public class FunctionDefinition {
     final List<String> treeArguments =
         treeLikeArguments().stream().map(IdentifierExpression::getName).toList();
 
-    return moduleName
-        + "."
-        + name
+    return getFullyQualifiedName()
         + ": "
         + inferredSignature.getAnnotation().map(x -> x.getBounds(treeArguments)).orElse("?");
+  }
+
+  private Source getSource() {
+    return getBody().getSource();
   }
 }

@@ -46,7 +46,7 @@ class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature>
             : Collections.emptySet();
     Optional<CombinedFunctionAnnotation> annotation = Optional.empty();
 
-    final ProductType from = (ProductType) typeVisitor.visitNoParenProduct(ctx.from);
+    final ProductType from = ProductType.wrap(typeVisitor.visit(ctx.from));
     final Type to = typeVisitor.visit(ctx.to);
 
     if (ctx.annotatedAnnotation != null) {

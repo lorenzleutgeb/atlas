@@ -26,7 +26,8 @@ public class ModuleTest {
   private static Stream<Arguments> modulesWithoutTactics() {
     return Stream.of(
         Arguments.of(
-            Set.of("PairingHeap.insert_isolated", "PairingHeap.del_min_via_merge_pairs_isolated"),
+            Set.of(
+                "PairingHeap.insert_isolated", "PairingHeap.delete_min_via_merge_pairs_isolated"),
             false),
         Arguments.of(Set.of("SplayHeap.insert", "SplayHeap.del_min"), false),
         Arguments.of(Set.of("SplayTree.insert", "SplayTree.delete"), false));
@@ -35,7 +36,8 @@ public class ModuleTest {
   private static Stream<Arguments> modulesWithTactics() {
     return Stream.of(
         Arguments.of(
-            Set.of("PairingHeap.insert_isolated", "PairingHeap.del_min_via_merge_pairs_isolated"),
+            Set.of(
+                "PairingHeap.insert_isolated", "PairingHeap.delete_min_via_merge_pairs_isolated"),
             true),
         Arguments.of(Set.of("SplayHeap.insert", "SplayHeap.del_min"), true),
         Arguments.of(Set.of("SplayTree.insert", "SplayTree.delete"), true));

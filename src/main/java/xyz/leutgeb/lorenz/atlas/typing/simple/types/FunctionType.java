@@ -60,10 +60,10 @@ public class FunctionType implements Type {
     }
     final var result = new ArrayList<Equivalence>(2);
     if (!from.equals(ft.from)) {
-      result.add(new Equivalence(from, ft.from));
+      result.add(new Equivalence(from, ft.from, source));
     }
     if (!to.equals(ft.to)) {
-      result.add(new Equivalence(to, ft.to));
+      result.add(new Equivalence(to, ft.to, source));
     }
     return result;
   }

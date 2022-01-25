@@ -40,7 +40,7 @@ public class ProductType implements Type {
     var result = new ArrayList<Equivalence>(elements.size());
     for (int i = 0; i < elements.size(); i++) {
       if (!elements.get(i).equals(pt.elements.get(i))) {
-        result.add(new Equivalence(elements.get(i), pt.elements.get(i)));
+        result.add(new Equivalence(elements.get(i), pt.elements.get(i), source));
       }
     }
     return result;
@@ -136,5 +136,12 @@ public class ProductType implements Type {
             Optional.of(0),
             (a, b) ->
                 a.isPresent() && b.isPresent() ? Optional.of(a.get() + b.get()) : Optional.empty());
+  }
+
+  public static ProductType wrap(Type type) {
+    if (type instanceof ProductType product) {
+      return product;
+    }
+    return new ProductType(List.of(type));
   }
 }

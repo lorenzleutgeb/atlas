@@ -65,7 +65,7 @@ public class Tactics {
         new Annotation(List.of(ZERO), Map.of(List.of(1, 0), c), "Qcf'"));
   }
 
-  private static FunctionAnnotation logToLog(Coefficient c) {
+  static FunctionAnnotation logToLog(Coefficient c) {
     return new FunctionAnnotation(
         new Annotation(List.of(ZERO), Map.of(List.of(1, 0), c), "Qcf"),
         new Annotation(List.of(ZERO), Map.of(List.of(1, 0), c), "Qcf'"));
@@ -140,12 +140,10 @@ public class Tactics {
           new Annotation(List.of(known(3, 4)), Map.of(unitIndex(1), known(1, 2)), "Qp"),
           logPlusOneToLog(known(3, 8)));
 
-  public static final CombinedFunctionAnnotation RAND_SPLAYHEAP_DEL_MIN_EXPECTED =
+  public static final CombinedFunctionAnnotation RAND_SPLAYHEAP_DELETE_MIN_EXPECTED =
       CombinedFunctionAnnotation.of(
           new Annotation(
-              List.of(
-                  new Annotation(List.of(known(3, 4)), Map.of(unitIndex(1), known(1, 2)), "Qp")
-                      .getRankCoefficient()),
+              List.of(known(3, 4)),
               Map.of(unitIndex(1), known(1, 2), List.of(1, 0), known(3, 4)),
               "Qd"),
           new Annotation(List.of(known(3, 4)), Map.of(unitIndex(1), known(1, 2)), "Qp"),
@@ -164,10 +162,10 @@ public class Tactics {
       CombinedFunctionAnnotation.of(
           new Annotation(
               ONE_BY_TWO,
-              Map.of(List.of(1, 1), ONE, List.of(1, 0), known(3, 4), unitIndex(1), known(5, 2))),
+              Map.of(List.of(1, 1), ONE, List.of(1, 0), known(1, 2), unitIndex(1), known(5, 2))),
           Qp);
 
-  public static final CombinedFunctionAnnotation SPLAYHEAP_DEL_MIN_EXPECTED =
+  public static final CombinedFunctionAnnotation SPLAYHEAP_DELETE_MIN_EXPECTED =
       CombinedFunctionAnnotation.of(
           new Annotation(ONE_BY_TWO, Map.of(List.of(1, 0), ONE, unitIndex(1), ONE)),
           Qp,
@@ -177,7 +175,7 @@ public class Tactics {
       SPLAYTREE_SPLAY_EXPECTED;
 
   public static final CombinedFunctionAnnotation
-      PAIRINGHEAP_DEL_MIN_VIA_MERGE_PAIRS_ISOLATED_EXPECTED =
+      PAIRINGHEAP_DELETE_MIN_VIA_MERGE_PAIRS_ISOLATED_EXPECTED =
           CombinedFunctionAnnotation.of(
               new Annotation(
                   List.of(ONE_BY_TWO), Map.of(unitIndex(1), TWO, List.of(1, 0), ONE), "Q"),
@@ -193,10 +191,10 @@ public class Tactics {
     return new Annotation(List.of(c), Map.of(), "rkonly");
   }
 
-  public static final CombinedFunctionAnnotation RAND_TREESORT_DESCEND_EXPECTED =
+  public static final CombinedFunctionAnnotation TREE_DESCEND_EXPECTED =
       CombinedFunctionAnnotation.of(logOnly(ONE), zero(1));
 
-  public static final CombinedFunctionAnnotation RAND_TREESORT_INSERT_EXPECTED =
+  public static final CombinedFunctionAnnotation RAND_SEARCHTREE_INSERT_EXPECTED =
       CombinedFunctionAnnotation.of(
           new Annotation(
               List.of(known(1, 2)),
@@ -205,16 +203,18 @@ public class Tactics {
           rkOnly(ONE_BY_TWO),
           logPlusOneToLog(known(1, 2)));
 
-  public static final CombinedFunctionAnnotation RAND_TREESORT_DELETE_MAX_EXPECTED =
+  public static final CombinedFunctionAnnotation RAND_SEARCHTREE_DELETE_MAX_EXPECTED =
       CombinedFunctionAnnotation.of(
           new Annotation(List.of(known(1, 2)), Map.of(List.of(1, 0), known(3, 2)), "Q"),
           rkOnly(ONE_BY_TWO),
-          logOnly(known(1, 2)),
-          zero(1));
+          logToLog(known(1, 4)));
 
-  public static final CombinedFunctionAnnotation RAND_TREESORT_REMOVE_EXPECTED =
+  public static final CombinedFunctionAnnotation RAND_SEARCHTREE_DELETE_EXPECTED =
       CombinedFunctionAnnotation.of(
-          new Annotation(List.of(known(1, 2)), Map.of(List.of(1, 0), known(1)), "Q"),
+          new Annotation(
+              List.of(known(1, 2)),
+              Map.of(List.of(1, 0), known(3, 2), unitIndex(1), known(1)),
+              "Q"),
           rkOnly(ONE_BY_TWO));
 
   public static final CombinedFunctionAnnotation RAND_MELDABLEHEAP_MELD_EXPECTED =
@@ -236,24 +236,39 @@ public class Tactics {
           zero(1),
           zero(1));
 
-  public static final CombinedFunctionAnnotation RAND_MELDABLEHEAP_DEL_MIN_EXPECTED =
+  public static final CombinedFunctionAnnotation RAND_MELDABLEHEAP_DELETE_MIN_EXPECTED =
       CombinedFunctionAnnotation.of(
           new Annotation(List.of(ZERO), Map.of(List.of(1, 0), TWO), "Q"),
           zero(1),
           zero(1),
           zero(1));
 
-  private static Stream<Arguments> randTreeSort() {
+  private static Stream<Arguments> coinSearchTree() {
     return Stream.of(
-        Arguments.of(Map.of("RandTreeSort.descend", Config.of(RAND_TREESORT_DESCEND_EXPECTED))),
         Arguments.of(
             Map.of(
-                "RandTreeSort.insert",
-                Config.of(RAND_TREESORT_INSERT_EXPECTED),
-                "RandTreeSort.delete_max",
-                Config.of(RAND_TREESORT_DELETE_MAX_EXPECTED),
-                "RandTreeSort.remove",
-                Config.of(RAND_TREESORT_REMOVE_EXPECTED))));
+                "CoinSearchTree.insert",
+                Config.of(RAND_SEARCHTREE_INSERT_EXPECTED),
+                "CoinSearchTree.delete_max",
+                Config.of(RAND_SEARCHTREE_DELETE_MAX_EXPECTED),
+                "CoinSearchTree.delete",
+                Config.of(RAND_SEARCHTREE_DELETE_EXPECTED))));
+  }
+
+  private static Stream<Arguments> tree() {
+    return Stream.of(Arguments.of(Map.of("Tree.descend", Config.of(TREE_DESCEND_EXPECTED))));
+  }
+
+  private static Stream<Arguments> searchTree() {
+    return Stream.of(
+        Arguments.of(
+            Map.of(
+                "SearchTree.insert",
+                Config.of(),
+                "SearchTree.delete_max",
+                Config.of(),
+                "SearchTree.delete",
+                Config.of())));
   }
 
   private static Stream<Arguments> scratch() {
@@ -1662,8 +1677,8 @@ public class Tactics {
             Map.of(
                 "RandSplayHeap.insert",
                 Config.of(RAND_SPLAYHEAP_INSERT_EXPECTED),
-                "RandSplayHeap.del_min",
-                Config.of(RAND_SPLAYHEAP_DEL_MIN_EXPECTED))));
+                "RandSplayHeap.delete_min",
+                Config.of(RAND_SPLAYHEAP_DELETE_MIN_EXPECTED))));
   }
 
   private static Stream<Arguments> randMeldableHeap() {
@@ -1674,8 +1689,8 @@ public class Tactics {
                 Config.of(RAND_MELDABLEHEAP_MELD_EXPECTED),
                 "RandMeldableHeap.insert",
                 Config.of(RAND_MELDABLEHEAP_INSERT_EXPECTED),
-                "RandMeldableHeap.del_min",
-                Config.of(RAND_MELDABLEHEAP_DEL_MIN_EXPECTED))));
+                "RandMeldableHeap.delete_min",
+                Config.of(RAND_MELDABLEHEAP_DELETE_MIN_EXPECTED))));
   }
 
   private static Stream<Arguments> splayTree() {
@@ -1704,15 +1719,16 @@ public class Tactics {
                 Config.of("SplayHeap/insert", SPLAYHEAP_INSERT_EXPECTED))),
         Arguments.of(
             Map.of(
-                "SplayHeap.del_min", Config.of("SplayHeap/del_min", SPLAYHEAP_DEL_MIN_EXPECTED))),
+                "SplayHeap.delete_min",
+                Config.of("SplayHeap/del_min", SPLAYHEAP_DELETE_MIN_EXPECTED))),
         Arguments.of(
             Map.of(
                 "SplayHeap.partition",
                 Config.of("auto", SPLAYHEAP_PARTITION_EXPECTED),
                 "SplayHeap.insert",
                 Config.of("SplayHeap/insert", SPLAYHEAP_INSERT_EXPECTED),
-                "SplayHeap.del_min",
-                Config.of("auto", SPLAYHEAP_DEL_MIN_EXPECTED)))
+                "SplayHeap.delete_min",
+                Config.of("auto", SPLAYHEAP_DELETE_MIN_EXPECTED)))
         // ,
         /*
         Arguments.of(
@@ -1753,14 +1769,16 @@ public class Tactics {
   private static Stream<Arguments> pairingHeap() {
     return Stream.of(
         Arguments.of(
+            Map.of("PairingHeap.insert_isolated", Config.of(PAIRINGHEAP_INSERT_ISOLATED_EXPECTED))),
+        Arguments.of(
             Map.of(
                 "PairingHeap.merge_pairs_isolated",
                 Config.of(
                     "PairingHeap/merge_pairs_isolated", PAIRINGHEAP_MERGE_PAIRS_ISOLATED_EXPECTED),
-                "PairingHeap.del_min_via_merge_pairs_isolated",
+                "PairingHeap.delete_min_via_merge_pairs_isolated",
                 Config.of(
-                    "PairingHeap/del_min_via_merge_pairs_isolated",
-                    PAIRINGHEAP_DEL_MIN_VIA_MERGE_PAIRS_ISOLATED_EXPECTED),
+                    "PairingHeap/delete_min_via_merge_pairs_isolated",
+                    PAIRINGHEAP_DELETE_MIN_VIA_MERGE_PAIRS_ISOLATED_EXPECTED),
                 "PairingHeap.insert_isolated",
                 Config.of("PairingHeap/insert_isolated", PAIRINGHEAP_INSERT_ISOLATED_EXPECTED))),
         Arguments.of(
@@ -1904,31 +1922,33 @@ public class Tactics {
         );
   }
 
-  // @Timeout(20)
   @ParameterizedTest
   @MethodSource({
     // "negative",
     // "scratch",
-    // "randSplayHeap",
+    "randSplayHeap",
     "randSplayTree",
-    // "randMeldableHeap",
-    // "randTreeSort",
-    // "splayTree",
-    // "splayHeap",
-    // "pairingHeap",
+    "randMeldableHeap",
+    "coinSearchTree",
+    "searchTree",
+    "splayTree",
+    "splayHeap",
+    "pairingHeap",
   })
   public void all(Map<String, Config> immutableAnnotations) {
+    final var allowTactics = true;
     final var program = loadAndNormalizeAndInferAndUnshare(immutableAnnotations.keySet());
     final var result =
         program.solve(
             extractAnnotations(immutableAnnotations),
-            Collections.emptyMap(), // extractTactics(immutableAnnotations),
-            true,
+            allowTactics ? Collections.emptyMap() : extractTactics(immutableAnnotations),
             false,
+            true,
             false,
             Set.of());
     assertTrue(result.isSatisfiable());
 
     program.printAllInferredSignaturesInOrder(System.out);
+    program.printAllBoundsInOrder(System.out);
   }
 }

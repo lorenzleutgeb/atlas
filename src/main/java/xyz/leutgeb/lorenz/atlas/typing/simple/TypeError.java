@@ -5,14 +5,6 @@ import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 public class TypeError extends Exception {
   private Source source;
 
-  @Deprecated
-  public TypeError() {}
-
-  @Deprecated
-  public TypeError(String message) {
-    this(message, null);
-  }
-
   @Override
   public String getMessage() {
     final var result = source == null ? "" : ("At " + source.getRoot() + ": ");
@@ -27,7 +19,8 @@ public class TypeError extends Exception {
   public static class NotInContext extends TypeError {
     private final String name;
 
-    public NotInContext(String name) {
+    public NotInContext(String name, Source source) {
+      super("", source);
       this.name = name;
     }
 
@@ -42,7 +35,9 @@ public class TypeError extends Exception {
     private final FunctionSignature annotated;
     private final FunctionSignature inferred;
 
-    public AnnotationMismatch(String fqn, FunctionSignature annotated, FunctionSignature inferred) {
+    public AnnotationMismatch(
+        String fqn, FunctionSignature annotated, FunctionSignature inferred, Source source) {
+      super("", source);
       this.fqn = fqn;
       this.annotated = annotated;
       this.inferred = inferred;

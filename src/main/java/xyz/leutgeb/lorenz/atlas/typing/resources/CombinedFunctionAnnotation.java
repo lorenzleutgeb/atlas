@@ -2,7 +2,12 @@ package xyz.leutgeb.lorenz.atlas.typing.resources;
 
 import static java.util.function.Predicate.not;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Value;
@@ -82,6 +87,13 @@ public class CombinedFunctionAnnotation {
       return "?";
     }
 
+    return withCost.getBound(arguments);
+  }
+
+  public String getBoundsIncludingCf(List<String> arguments) {
+    if (isUnknown()) {
+      return "?";
+    }
     final var withCost = this.withCost.getBound(arguments);
     final var withoutCost =
         this.withoutCost.stream()

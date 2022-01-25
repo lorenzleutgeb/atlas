@@ -6,11 +6,11 @@ import static java.util.Collections.unmodifiableMap;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.Optional.empty;
 import static java.util.stream.Collectors.joining;
+import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ZERO;
 import static xyz.leutgeb.lorenz.atlas.util.Util.*;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Streams;
 import com.microsoft.z3.Status;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
@@ -37,6 +37,8 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.InequalityConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.LessThanOrEqualConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.atlas.typing.resources.optimiziation.Optimization;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
@@ -52,7 +54,14 @@ import xyz.leutgeb.lorenz.atlas.util.Util;
 
 @Slf4j
 public class Program {
+  public enum InferenceMode {
+    DIRECT,
+    PROXIED,
+    NONE
+  }
+
   private static final boolean FORCE_RANK_EQUAL = true;
+  private static final boolean FORCE_RANK_NONZERO = false;
 
   @Getter private final Map<String, FunctionDefinition> functionDefinitions;
 
@@ -165,7 +174,7 @@ public class Program {
 
     boolean ok = true;
     try {
-      var results = scheduler.run(8, 1, TimeUnit.MINUTES);
+      var results = scheduler.run(8, 10, TimeUnit.MINUTES);
       for (var result : results.values()) {
         final var optionalError = result.orElseThrow();
         if (optionalError.isPresent()) {
@@ -187,7 +196,7 @@ public class Program {
   private Solver.Result solveTogether(
       Map<String, CombinedFunctionAnnotation> annotations,
       Map<String, Path> tactics,
-      boolean infer,
+      InferenceMode infer,
       boolean forceResultPerModule,
       Set<Constraint> externalConstraints) {
     return solveInternal(
@@ -202,7 +211,7 @@ public class Program {
   private Solver.Result solveInternal(
       Map<String, CombinedFunctionAnnotation> annotations,
       Map<String, Path> tactics,
-      boolean infer,
+      InferenceMode infer,
       boolean forceResultPerModule,
       Set<Constraint> externalConstraints,
       Set<String> fqns) {
@@ -214,8 +223,9 @@ public class Program {
     }
 
     final Map<String, CombinedFunctionAnnotation> benchmark =
-        infer ? unmodifiableMap(annotations) : emptyMap();
-    final Map<String, CombinedFunctionAnnotation> actual = infer ? new HashMap<>() : annotations;
+        InferenceMode.PROXIED.equals(infer) ? unmodifiableMap(annotations) : emptyMap();
+    final Map<String, CombinedFunctionAnnotation> actual =
+        InferenceMode.PROXIED.equals(infer) ? new HashMap<>() : annotations;
 
     final var heuristic = SmartRangeHeuristic.DEFAULT;
     final var called = calledFunctionNames();
@@ -238,23 +248,31 @@ public class Program {
 
     // Stub annotations.
     for (var fd : fds) {
-      if (infer && benchmark.containsKey(fd.getFullyQualifiedName())) {
+      if (InferenceMode.PROXIED.equals(infer)
+          && benchmark.containsKey(fd.getFullyQualifiedName())) {
         final CombinedFunctionAnnotation annotation = benchmark.get(fd.getFullyQualifiedName());
         fd.stubAnnotations(
             actual,
             heuristic,
             Math.max(
                 called.contains(fd.getFullyQualifiedName()) ? 1 : 0, annotation.withoutCost.size()),
-            infer);
+            true);
 
         final var stubbed = fd.getInferredSignature().getAnnotation().get();
-        external.addAll(
-            W.compareCoefficientsLessOrEqual(
-                stubbed.withCost.from, annotation.withCost.from, "(improve)"));
-        external.addAll(
-            W.compareCoefficientsLessOrEqual(
-                annotation.withCost.to, stubbed.withCost.to, "(improve)"));
 
+        external.addAll(
+            W.compareNonRankCoefficients(
+                stubbed.withCost.from,
+                annotation.withCost.from,
+                (x, y) -> new LessThanOrEqualConstraint(x, y, "(improve) from " + x + " ≤ " + y)));
+
+        external.addAll(
+            W.compareNonRankCoefficients(
+                annotation.withCost.to,
+                stubbed.withCost.to,
+                (x, y) -> new LessThanOrEqualConstraint(x, y, "(improve) to " + x + " ≤ " + y)));
+
+        /*
         Streams.zip(
                 annotation.withoutCost.stream(),
                 stubbed.withoutCost.stream(),
@@ -263,9 +281,13 @@ public class Program {
                         W.compareCoefficientsLessOrEqual(s.from, a.from, "(improve)"),
                         W.compareCoefficientsLessOrEqual(a.to, s.to, "(improve)")))
             .forEach(external::addAll);
+         */
       } else {
         fd.stubAnnotations(
-            actual, heuristic, called.contains(fd.getFullyQualifiedName()) ? 1 : 0, infer);
+            actual,
+            heuristic,
+            called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
+            !InferenceMode.NONE.equals(infer));
       }
     }
 
@@ -293,6 +315,25 @@ public class Program {
                         .to
                         .getRankCoefficient(),
                     "(force)"));
+          }
+        }
+      }
+
+      if (FORCE_RANK_NONZERO) {
+        if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1) {
+          for (int i = 0;
+              i < fd.getInferredSignature().getAnnotation().get().withCost.from.size();
+              i++) {
+            external.add(
+                new InequalityConstraint(
+                    ZERO,
+                    fd.getInferredSignature()
+                        .getAnnotation()
+                        .get()
+                        .withCost
+                        .to
+                        .getRankCoefficient(),
+                    "(force) non-zero rank"));
           }
         }
       }
@@ -360,22 +401,29 @@ public class Program {
 
     Instant solveStart = Instant.now();
     Solver.Result result;
-    if (infer) {
-      final var optimization = Optimization.standard(fds);
-      external.addAll(optimization.getConstraints());
-      result = prover.solve(external, List.of(optimization.target));
+    if (!InferenceMode.NONE.equals(infer)) {
+      final var optimization =
+          InferenceMode.DIRECT.equals(infer)
+              ? Optimization.direct(fds)
+              : Optimization.standard(fds);
+      external.addAll(optimization.constraints());
+      result = prover.solve(external, optimization.targets());
     } else {
       result = prover.solve(external);
     }
     Instant solveStop = Instant.now();
 
     log.info(
-        "STATS for "
-            + ":"
+        "Stats for "
+            + namesAsSet(
+                fds.stream()
+                    .map(FunctionDefinition::getFullyQualifiedName)
+                    .collect(Collectors.toList()))
+            + " :"
             + (Duration.between(proveStart, proveStop))
             + " proving, and "
             + (Duration.between(solveStart, solveStop))
-            + " solving!");
+            + " solving.");
 
     if (!result.isSatisfiable()) {
       return result;
@@ -410,6 +458,22 @@ public class Program {
       Map<String, CombinedFunctionAnnotation> annotations,
       Map<String, Path> tactics,
       boolean infer,
+      boolean forceResultPerModule,
+      boolean split,
+      Set<Constraint> externalConstraints) {
+    return solve(
+        annotations,
+        tactics,
+        infer ? InferenceMode.PROXIED : InferenceMode.NONE,
+        forceResultPerModule,
+        split,
+        externalConstraints);
+  }
+
+  public Solver.Result solve(
+      Map<String, CombinedFunctionAnnotation> annotations,
+      Map<String, Path> tactics,
+      InferenceMode infer,
       boolean forceResultPerModule,
       boolean split,
       Set<Constraint> externalConstraints) {
@@ -487,6 +551,12 @@ public class Program {
     return order.stream()
         .map(x -> x.stream().sorted().map(Object::toString).collect(Collectors.joining(", ")))
         .collect(Collectors.joining("; "));
+  }
+
+  private String namesAsSet(Collection<String> names) {
+    // SCCs are split by ";" and function names within SCCs are split by ",".
+    // That's reasonably readable without brackets for sets/sequences.
+    return String.join(", ", names);
   }
 
   public Set<String> calledFunctionNames() {
