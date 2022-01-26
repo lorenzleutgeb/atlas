@@ -11,6 +11,8 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import org.sosy_lab.java_smt.api.NumeralFormula;
+import org.sosy_lab.java_smt.api.RationalFormulaManager;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 
 @Value
@@ -53,6 +55,14 @@ public class UnknownCoefficient implements Coefficient {
   public ArithExpr<RealSort> encode(Context ctx, Map<UnknownCoefficient, RealExpr> coefficients) {
     final var inner = coefficients.get(this.canonical());
     return negated ? ctx.mkUnaryMinus(inner) : inner;
+  }
+
+  @Override
+  public NumeralFormula.RationalFormula encode(
+      RationalFormulaManager manager,
+      Map<UnknownCoefficient, NumeralFormula.RationalFormula> coefficients) {
+    final var inner = coefficients.get(this.canonical());
+    return negated ? manager.negate(inner) : inner;
   }
 
   @Override

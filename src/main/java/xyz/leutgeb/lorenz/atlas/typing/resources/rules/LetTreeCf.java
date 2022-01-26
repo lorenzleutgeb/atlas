@@ -189,7 +189,7 @@ public class LetTreeCf implements Rule {
     // Here we do not need to check whether d + e > 0 because P' was created via heuristics.
     crossConstraints.addAll(
         pp.streamNonRankCoefficients()
-            // TODO: REMOVE .filter(e -> !(e.getKey().equals(List.of(0, 2))))
+            .filter(e -> !(e.getKey().equals(List.of(0, 2))))
             .map(
                 entry -> {
                   final var index = entry.getKey();

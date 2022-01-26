@@ -17,6 +17,9 @@ import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.hipparchus.fraction.Fraction;
+import org.sosy_lab.java_smt.api.BooleanFormula;
+import org.sosy_lab.java_smt.api.FormulaManager;
+import org.sosy_lab.java_smt.api.NumeralFormula;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
@@ -51,6 +54,21 @@ public class OffsetConstraint extends EqualityConstraint {
     return ctx.mkEq(
         left.encode(ctx, coefficients),
         ctx.mkAdd(right.encode(ctx, coefficients), offset.encode(ctx, coefficients)));
+  }
+
+  @Override
+  public BooleanFormula encode(
+      FormulaManager manager,
+      Map<UnknownCoefficient, NumeralFormula.RationalFormula> coefficients) {
+    return manager
+        .getRationalFormulaManager()
+        .equal(
+            left.encode(manager.getRationalFormulaManager(), coefficients),
+            manager
+                .getRationalFormulaManager()
+                .add(
+                    right.encode(manager.getRationalFormulaManager(), coefficients),
+                    offset.encode(manager.getRationalFormulaManager(), coefficients)));
   }
 
   @Override

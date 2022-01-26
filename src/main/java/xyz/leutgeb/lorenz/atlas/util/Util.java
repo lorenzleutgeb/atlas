@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hipparchus.fraction.Fraction;
+import org.sosy_lab.common.rationals.Rational;
 import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 
@@ -166,6 +167,10 @@ public class Util {
   public static Fraction toFraction(RatNum x) {
     return new Fraction(
         x.getBigIntNumerator().intValueExact(), x.getBigIntDenominator().intValueExact());
+  }
+
+  public static Fraction convert(Rational rational) {
+    return new Fraction(rational.getNum().intValueExact(), rational.getDen().intValueExact());
   }
 
   public static <T, U> BiFunction<T, U, T> first() {
@@ -380,5 +385,9 @@ public class Util {
       return arguments.get(name);
     }
     return getProperty(requester, name, fallback);
+  }
+
+  public static Rational convert(Fraction fraction) {
+    return Rational.ofLongs(fraction.getNumerator(), fraction.getDenominator());
   }
 }

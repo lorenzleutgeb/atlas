@@ -1,11 +1,15 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources.coefficients;
 
+import static xyz.leutgeb.lorenz.atlas.util.Util.convert;
+
 import com.microsoft.z3.Context;
 import com.microsoft.z3.RealExpr;
 import java.util.Map;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.hipparchus.fraction.Fraction;
+import org.sosy_lab.java_smt.api.NumeralFormula;
+import org.sosy_lab.java_smt.api.RationalFormulaManager;
 
 @Value
 @EqualsAndHashCode
@@ -37,6 +41,13 @@ public class KnownCoefficient implements Coefficient {
 
   public RealExpr encode(Context context, Map<UnknownCoefficient, RealExpr> coefficients) {
     return context.mkReal(value.getNumerator(), value.getDenominator());
+  }
+
+  @Override
+  public NumeralFormula.RationalFormula encode(
+      RationalFormulaManager manager,
+      Map<UnknownCoefficient, NumeralFormula.RationalFormula> coefficients) {
+    return manager.makeNumber(convert(value));
   }
 
   @Override

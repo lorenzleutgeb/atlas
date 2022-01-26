@@ -28,6 +28,10 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import org.sosy_lab.common.rationals.Rational;
+import org.sosy_lab.java_smt.api.BooleanFormula;
+import org.sosy_lab.java_smt.api.FormulaManager;
+import org.sosy_lab.java_smt.api.NumeralFormula;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
 
@@ -71,6 +75,30 @@ public class EqualsSumConstraint extends Constraint {
         sum.stream().map(c -> c.encode(ctx, coefficients)).toArray(ArithExpr[]::new);
 
     return ctx.mkEq(left.encode(ctx, coefficients), ctx.mkAdd(encodedSum));
+  }
+
+  @Override
+  public BooleanFormula encode(
+      FormulaManager manager,
+      Map<UnknownCoefficient, NumeralFormula.RationalFormula> coefficients) {
+    if (sum.size() == 1) {
+      return manager
+          .getRationalFormulaManager()
+          .equal(
+              left.encode(manager.getRationalFormulaManager(), coefficients),
+              pick(sum).encode(manager.getRationalFormulaManager(), coefficients));
+    }
+
+    final NumeralFormula.RationalFormula encodedSum =
+        sum.stream()
+            .map(c -> c.encode(manager.getRationalFormulaManager(), coefficients))
+            .reduce(
+                manager.getRationalFormulaManager().makeNumber(Rational.ONE),
+                manager.getRationalFormulaManager()::add);
+
+    return manager
+        .getRationalFormulaManager()
+        .equal(left.encode(manager.getRationalFormulaManager(), coefficients), encodedSum);
   }
 
   @Override

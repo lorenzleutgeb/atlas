@@ -125,7 +125,12 @@ dependencies {
     testImplementation("tech.tablesaw:tablesaw-core:0.42.0")
 
     // The Z3 Theorem Prover
-    implementation("org.sosy-lab:javasmt-solver-z3:4.8.10:com.microsoft.z3@jar")
+    implementation("org.sosy-lab:javasmt-solver-z3:4.8.14:com.microsoft.z3@jar")
+    implementation("org.sosy-lab:javasmt-solver-z3:4.8.14:com.microsoft.z3@jar")
+    implementation("org.sosy-lab:javasmt-solver-z3:4.8.14:libz3@so")
+    implementation("org.sosy-lab:javasmt-solver-z3:4.8.14:libz3java@so")
+    //implementation("org.sosy-lab:javasmt-solver-z3:4.8.14")
+    implementation("org.sosy-lab:java-smt:3.11.0")
 
     // Graph output
     implementation("guru.nidi:graphviz-java:0.18.1") {
