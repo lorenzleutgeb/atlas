@@ -51,7 +51,7 @@
         findutils
         nano
       ];
-      submission = "CAV2021_paper_294.pdf";
+      submission = "CAV_2022_paper_1.pdf";
       maintainers = [{
         name = "Lorenz Leutgeb";
         email = "lorenz@leutgeb.xyz";
@@ -65,6 +65,7 @@
 
           export JAVA_HOME="${jdk}"
           export GRAAL_HOME="${graal}"
+          export GRADLE_HOME="${gradle}"
 
           $JAVA_HOME/bin/java -version
           $GRAAL_HOME/bin/gu list
@@ -98,9 +99,11 @@
           };
         };
 
-        atlas = (pkgs.callPackage ./gradle-env.nix { }) {
-          inherit javaToolchains;
+        atlas = (pkgs.callPackage ./gradle-env.nix {
+          gradleBuildJdk = jdk;
+        }) {
           buildJdk = jdk;
+          gradlePackage = gradle;
 
           envSpec = ./gradle-env.json;
 
@@ -112,7 +115,7 @@
           LANG = "en_US.UTF-8";
           LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
           LD_LIBRARY_PATH = "${z3.lib}/lib";
-          gradleFlags = [ "nativeCompile" ];
+          gradleFlags = [ "javaToolchains" "nativeCompile" ];
           outputs = [ "out" ];
 
           # JaCoCo broken with JDK 17.

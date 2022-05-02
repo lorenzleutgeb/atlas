@@ -49,7 +49,6 @@
 , extraInit ? ""
 # Override the default JDK used to run Gradle itself.
 , buildJdk ? null
-, javaToolchains ? []
 # Override functions which fetch dependency artifacts.
 # Keys in this set are URL schemes such as "https" or "s3".
 # Values are functions which take a dependency in the form
@@ -332,6 +331,7 @@ let
   mkGradle = { version, type, url, sha256, nativeVersion }:
     let
       java = gradleBuildJdk;
+      javaToolchains = [];
     in
     stdenv.mkDerivation rec {
       pname = "gradle";
@@ -397,7 +397,7 @@ let
 
   mkProjectEnv = projectSpec: rec {
     inherit (projectSpec) name path version;
-    gradle = args.gradlePackage or mkGradle projectSpec.gradle;
+    gradle = args.gradlePackage; #or mkGradle projectSpec.gradle;
     initScript = mkInitScript projectSpec gradle;
   };
 

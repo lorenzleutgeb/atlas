@@ -25,10 +25,10 @@ plugins {
     jacoco
 
     id("com.diffplug.spotless") version "6.0.0"
-    id("com.github.jk1.dependency-license-report") version "1.13"
-    id("com.github.johnrengelman.shadow") version "5.2.0"
-    id("org.ajoberstar.reckon") version "0.13.1"
-    id("org.graalvm.buildtools.native") version "0.9.8"
+    id("com.github.jk1.dependency-license-report") version "2.0"
+    id("com.github.johnrengelman.shadow") version "7.1.2"
+    id("org.ajoberstar.reckon") version "0.16.1"
+    id("org.graalvm.buildtools.native") version "0.9.11"
 }
 
 repositories {
@@ -70,16 +70,6 @@ configurations[JavaPlugin.API_CONFIGURATION_NAME].let { apiConfiguration ->
             it.name != "antlr"
         }
     )
-}
-
-configurations {
-    create("nativeRuntimeClasspath") {
-        extendsFrom(runtimeClasspath.get())
-        dependencies {
-            exclude(group = "io.github.classgraph")
-            exclude(group = "com.google.javaformat")
-        }
-    }
 }
 
 configurations.all {
@@ -219,27 +209,13 @@ tasks.create<JavaCompile>("compileGeneratedJava") {
 }
 
 tasks.shadowJar {
-    dependsOn("compileGeneratedJava")
+    // Code generation is broken as of 2022-04
+    // dependsOn("compileGeneratedJava")
     archiveClassifier.set("shadow")
 
     manifest {
         attributes["Main-Class"] = "$rootPackage.Main"
     }
-}
-
-tasks.create<Exec>("nativeImage") {
-    dependsOn("compileJava")
-    dependsOn("processResources")
-    val outputSuffix = if ("".equals(project.version)) "" else "-" + project.version
-    val cp = "${project.configurations["nativeRuntimeClasspath"].asPath}:${sourceSets.main.get().output.asPath}"
-    commandLine(
-        "native-image",
-        "--class-path=$cp",
-        // "--static",
-        // "-H:+StaticExecutableWithDynamicLibC",
-        "$rootPackage.Main",
-        "${project.buildDir}/native-image/${project.name}$outputSuffix"
-    )
 }
 
 graalvmNative {
@@ -248,10 +224,12 @@ graalvmNative {
             imageName.set("atlas")
             mainClass.set("$rootPackage.Main")
             sharedLibrary.set(false)
+            fallback.set(false)
+            verbose.set(true)
             buildArgs.addAll(
-                "--no-fallback",
                 "-H:Log=registerResource",
                 "-H:+ReportExceptionStackTraces",
+                "-H:+PrintClassInitialization",
                 "--report-unsupported-elements-at-runtime"
             )
             javaLauncher.set(
@@ -263,8 +241,6 @@ graalvmNative {
         }
     }
 }
-
-tasks.build.get().dependsOn(tasks.get("nativeImage"))
 
 spotless {
     java {

@@ -6,6 +6,7 @@ import static xyz.leutgeb.lorenz.atlas.util.Util.pick;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.Expression;
 import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.ast.expressions.TupleExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
@@ -20,15 +21,18 @@ public class Var implements Rule {
   public Rule.ApplicationResult apply(
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var context = obligation.getContext();
+    final Expression expression = obligation.getExpression();
 
-    final var target =
-        switch (obligation.getExpression()) {
-          case IdentifierExpression id -> id.getType() instanceof TreeType
+    Optional<IdentifierExpression> target;
+    if (expression instanceof IdentifierExpression id) {
+      target = id.getType() instanceof TreeType
               ? Optional.of(id)
               : Optional.empty();
-          case TupleExpression tuple -> tuple.getTree();
-          default -> Optional.empty();
-        };
+    } else if (expression instanceof TupleExpression tuple) {
+      target = tuple.getTree();
+    } else {
+      target = Optional.empty();
+    }
 
     if (target.isPresent()) {
       if (context.size() != 1) {
