@@ -1,36 +1,36 @@
-# ATLAS: Artifact Readme
+# ARTIFACT 
 
 ## Important Notice
 
-This is the "readme" accompanying the artifact, according to "Submitting your
-artifact", item 1.2. of the "Artifact Evaluation" website at
+This is the "README" accompanying the artifact, according to
+"Packaging Guidelines", "Artifact Evaluation" website at
 
-  http://i-cav.org/2021/artifact-evaluation/
+  http://i-cav.org/2022/artifact-evaluation/
 
-This file has been named not been named `README.md` or similar, but `ARTIFACT.md`
+This file has not been named `README.md` or similar, but `ARTIFACT.md`
 instead, to avoid confusion with `README.md` in the source repository
 of the tool.
 
-This artifact, submitted as #329 for "Artifact Evaluation", is associated with
-the paper submitted as #294 for "Main track".
+Artifact submission 2 (this artifact) is associated with
+the regular paper submission 4.
 
-This artifact aims for all three badges (functional, available, reusable). For
+This artifact applies for all three badges (functional, available, reusable). For
 each badge, there is one corresponding section in this file.
 
 ## Open Virtual Appliance (OVA) vs. Docker Image
 
-The Docker image does not include any kind of package manager. It is therefore
-much more cumbersome to add additional software if the need arises during
-evaluation.
-Note that in the OVA version, the [Nix][nix] package manager is installed, so
-installation of further tools is as simple as
+The Docker image is much smaller in size compared to the
+Open Virtual Appliance, since it does not contain a graphical desktop.
 
-    $ nix-env -iA nixos.hello
+The Docker image does not include any kind of package manager, and it
+is therefore more cumbersome to add install additional software if the
+need arises during evaluation. In the OVA version, the [Nix][nix]
+package manager is installed, so installation of additional software
+is as simple as
+
+    nix-env -iA nixos.hello
 
 Refer to <https://search.nixos.org/> to search for packages.
-
-The Docker image is much smaller in size, because it does not contain a
-graphical desktop.
 
 ## Functional
 
@@ -79,8 +79,8 @@ will print function definitions in let-normal-form to the directory passed as
 without considering resource annotations, so they will not be printed to the
 resulting file.
 
-To speed up resource annotation inference/checking, tactics can be used. The
-artifact contains some tactics in
+To speed up resource annotation inference/checking, tactics can be used.
+The artifact contains some tactics in
 
     $HOME/atlas/src/test/resources/tactics/<module-name>/<function-name>.txt
 
@@ -144,11 +144,11 @@ online documentation for property names and possible values.
 
 ## Available
 
-> To get the available badge, please upload your VM to a permanent repository,
-> such as Zenodo, figshare, or Dryad and use that link in your artifact
-> submission.
+> To get the available badge, please upload your VM to a repository that
+> provides a DOI, such as Zenodo, figshare, or Dryad and use this DOI link
+> in your artifact submission.
 
-This artifact was submitted via Zenodo.
+This artifact was submitted via a DOI issued by Zenodo.
 
 ## Reusable
 

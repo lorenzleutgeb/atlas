@@ -34,6 +34,10 @@ This will show a list of (global) options and commands. Take note of the option
 
     atlas --home=src/test/resources/examples [COMMAND]
 
+The log level can be adjusted with `--log`, which takes (one of) the following
+values: trace, debug, info, warn, error, off. The default log level and the
+default log level file name are defined in `atlas.properties`.
+
 ## `atlas run`
 
 The most important command is "run". To show help, execute
