@@ -49,6 +49,8 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsProductConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualsSumConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.LessThanOrEqualConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.AnnotationHeuristic;
+import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 import xyz.leutgeb.lorenz.atlas.util.Pair;
@@ -66,12 +68,22 @@ public class W implements Rule {
   private static final boolean DEBUG_SIZE = false;
   private static final boolean DEBUG_KNOWLEDGE = false;
 
+  private static Annotation generateP(Annotation q, AnnotationHeuristic heuristic, Map<String, String> arguments) {
+    // This method contains a leaky abstraction.
+    // We should not compare the instance of the AnnotationHeuristic passed as argument.
+    if (heuristic == SmartRangeHeuristic.DEFAULT && flag(W.class, arguments, "neg")) {
+      return SmartRangeHeuristic.INCL_NEGATIVE_ONE.generate("w" + q.getName(), q);
+    } else {
+      return heuristic.generate("w" + q.getName(), q);
+    }
+  }
+
   public Rule.ApplicationResult apply(
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var q = obligation.getContext().getAnnotation();
     final var qp = obligation.getAnnotation();
 
-    final var p = globals.getHeuristic().generate("w" + q.getName(), q);
+    final var p = generateP(q, globals.getHeuristic(), arguments);
     final var pp = globals.getHeuristic().generate("w" + qp.getName(), qp);
 
     final List<IdentifierExpression> ids = obligation.getContext().getIds();

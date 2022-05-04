@@ -15,9 +15,11 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
 @Data
 public class SmartRangeHeuristic implements AnnotationHeuristic {
   public static final Set<Integer> A_RANGE = Set.of(0, 1);
-  public static final Set<Integer> B_RANGE = Set.of(-1, 0, 1, 2);
+  public static final Set<Integer> B_RANGE = Set.of(0, 1, 2);
+  public static final Set<Integer> B_RANGE_INCL_NEGATIVE_ONE = Set.of(-1, 0, 1, 2);
 
   public static final SmartRangeHeuristic DEFAULT = new SmartRangeHeuristic(A_RANGE, B_RANGE);
+  public static final SmartRangeHeuristic INCL_NEGATIVE_ONE = new SmartRangeHeuristic(A_RANGE, B_RANGE_INCL_NEGATIVE_ONE);
 
   private final List<Integer> as;
   private final List<Integer> bs;

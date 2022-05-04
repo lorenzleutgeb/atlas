@@ -276,6 +276,7 @@ public class Prover {
     boolean l2xy = false;
     boolean lp1 = false;
     boolean weaken = false;
+    boolean neg = false;
 
     List<String> comments = new ArrayList<>();
 
@@ -323,6 +324,7 @@ public class Prover {
           comments.add("binds a call/tick");
           l2xy = true;
           mono = true;
+          neg = true;
         } else if (letExpression.isTreeConstruction()) {
           if (parent instanceof MatchTreeExpression || parent instanceof IfThenElseExpression) {
             comments.add("first after match");
@@ -347,7 +349,7 @@ public class Prover {
       mono = false;
     }
 
-    if (mono || size || l2xy || weaken) {
+    if (mono || size || l2xy || lp1 || neg || weaken) {
       todo.add(
           RuleSchedule.schedule(
               RULE_W,
@@ -359,7 +361,9 @@ public class Prover {
                   "l2xy",
                   String.valueOf(l2xy),
                   "lp1",
-                  String.valueOf(lp1)),
+                  String.valueOf(lp1),
+                  "neg",
+                  String.valueOf(neg)),
               String.join(", ", comments)));
     }
 

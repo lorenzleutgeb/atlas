@@ -37,7 +37,7 @@ public class LetTreeCf implements Rule {
   public static final LetTreeCf INSTANCE = new LetTreeCf();
 
   private static final Set<Integer> D_RANGE = SmartRangeHeuristic.A_RANGE;
-  private static final Set<Integer> E_RANGE = SmartRangeHeuristic.B_RANGE;
+  private static final Set<Integer> E_RANGE = SmartRangeHeuristic.B_RANGE_INCL_NEGATIVE_ONE;
 
   // NOTE(lorenzleutgeb): This possibly contains indices with a sum less than one! Needs filtering!
   private static final Set<List<Integer>> DE_RANGE = cartesianProduct(D_RANGE, E_RANGE);
