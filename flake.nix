@@ -99,9 +99,7 @@
           };
         };
 
-        atlas = (pkgs.callPackage ./gradle-env.nix {
-          gradleBuildJdk = jdk;
-        }) {
+        atlas = (pkgs.callPackage ./gradle-env.nix { gradleBuildJdk = jdk; }) {
           buildJdk = jdk;
           gradlePackage = gradle;
 
@@ -170,6 +168,7 @@
           name = "atlas-shell";
           tag = "latest";
           contents = utils ++ [
+            atlasEnv
             packages.${system}.atlas
             packages.${system}.atlas-cav
             packages.${system}.atlas-src
@@ -248,8 +247,12 @@
                 vram = 48;
               };
             };
-            environment.systemPackages = utils
-              ++ [ self.packages.${system}.atlas pkgs.evince pkgs.vim ];
+            environment.systemPackages = utils ++ [
+              self.packages.${system}.atlas
+              pkgs.evince
+              pkgs.vim
+              atlasEnv
+            ];
             networking.hostName = "atlas";
             users.users = {
               evaluator = {
@@ -277,27 +280,54 @@
                     /home/evaluator/atlas/ARTIFACT.md
 
                   Note that `atlas` (command) is in `$PATH`, it can be executed in a terminal.
-
-                  Note that the associated paper is available at
-
-                    /home/evaluator/${submission}
                 '';
-                pdf = (self.packages.${system}.atlas-cav + "/" + submission);
+                # To place PDF:
+                #pdf = (self.packages.${system}.atlas-cav + "/" + submission);
               in {
-                ${submission}.source = pdf;
+                # To place PDF:
+                #${submission}.source = pdf;
                 "README.md".text = referText;
 
                 "Desktop/README.md".text = referText;
-                "Desktop/${submission}".source = pdf;
+                # To place PDF:
+                #"Desktop/${submission}".source = pdf;
 
                 "prepare-evaluation.sh".source =
                   pkgs.writeScript "prepare-evaluation" ''
                     #! ${pkgs.bash}/bin/bash
-                    set -xeuo pipefail
-                    mkdir --verbose --parents $HOME/.overlay/{upper,work} $HOME/atlas
-                    sudo mount --verbose --types overlay overlay --options upperdir=$HOME/.overlay/upper,workdir=$HOME/.overlay/work,lowerdir=${
-                      self.packages.${system}.atlas-src
-                    } $HOME/atlas
+                    set -euo pipefail
+
+                    OVERLAY=$HOME/.overlay
+                    MOUNTPOINT=$HOME/atlas
+                    SRC=${self.packages.${system}.atlas-src}
+
+                    echo "Creating directories..."
+                    mkdir --verbose --parents $OVERLAY/{upper,work} $MOUNTPOINT
+
+                    echo "Further logs will be printed to ''${OVERLAY}/log"
+
+                    echo "Mounting overlay filesystem..."
+                    sudo mount \
+                      --verbose \
+                      --types overlay \
+                      overlay \
+                      --options upperdir=$OVERLAY/upper,workdir=$OVERLAY/work,lowerdir=$SRC \
+                      $MOUNTPOINT >> $OVERLAY/log
+
+                    echo "Transferring file ownership..."
+                    sudo chown --verbose --recursive $(id -u):$(id -g) $MOUNTPOINT >> $OVERLAY/log
+
+                    echo "Setting file permissions..."
+                    sudo chmod --verbose --recursive ug+rw $MOUNTPOINT >> $OVERLAY/log
+
+                    echo "==="
+                    echo "Proceed with evaluation in ''${MOUNTPOINT}"
+                    echo "==="
+                    echo "In case you make changes in ''${MOUNTPOINT}"
+                    echo "and want to compare/restore a file, refer to"
+                    echo "$SRC"
+                    echo "This is the lower dir of the overlay mount."
+                    echo "See also the output of 'findmnt -n -o OPTIONS ~/atlas'"
                   '';
               };
               stateVersion = "20.09";
