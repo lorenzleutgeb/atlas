@@ -36,15 +36,12 @@ public class Matrix {
   private static String moduleName(Fraction p, Fraction rec) {
     final var rot = Fraction.ONE.subtract(rec);
 
-    return "RandSplayTreeGen"
+    return "RandSplayTreeMatrix.P"
         + p.getNumerator()
         + p.getDenominator()
-        + "x"
+        + "C"
         + rec.getNumerator()
-        + rec.getDenominator()
-        + "x"
-        + rot.getNumerator()
-        + rot.getDenominator();
+        + rec.getDenominator();
   }
 
   private static final Map<Pair<Fraction, Fraction>, CombinedFunctionAnnotation> RESULTS =
