@@ -28,9 +28,8 @@ public class Run implements Runnable {
       arity = "1",
       paramLabel = "pattern",
       description =
-          "Regular expression to select fully qualified names of functions to be checked. For example, to select all functions whose names begin with \"a\" and contain \"b\" inside a module that has a name ending in \"c\", use \".*c\\.a.*b.*\" (think carefully about escaping \"\\\").",
-      defaultValue = ".*",
-      showDefaultValue = ALWAYS)
+          "Regular expression to select fully qualified names of functions to be checked. For example, to select all functions whose names begin with \"a\" and contain \"b\" inside a module that has a name ending in \"c\", use \".*c\\.a.*b.*\" (think carefully about escaping \"\\\")."
+  )
   private Pattern pattern;
 
   @CommandLine.Option(
