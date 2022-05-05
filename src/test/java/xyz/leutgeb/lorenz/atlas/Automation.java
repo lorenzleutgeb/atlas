@@ -103,6 +103,6 @@ public class Automation {
             Collections.emptySet());
     assertTrue(result.isSatisfiable());
     program.printAllInferredSignaturesInOrder(System.out);
-    program.printAllBoundsInOrder(System.out);
+    program.printAllInferredBoundsInOrder(System.out);
   }
 }

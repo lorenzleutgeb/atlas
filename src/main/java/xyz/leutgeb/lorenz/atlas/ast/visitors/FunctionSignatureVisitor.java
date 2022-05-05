@@ -56,8 +56,6 @@ class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature>
                   new FunctionAnnotation(
                       convert(from.countTrees().get(), ctx.annotatedAnnotation.with.from),
                       convert(to.countTrees().get(), ctx.annotatedAnnotation.with.to)),
-
-                  // TODO: Parse cf-annotations.
                   ctx.annotatedAnnotation.without.stream()
                       .map(
                           cf ->
@@ -92,9 +90,9 @@ class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature>
       for (var entry : context.entries) {
         final var index = entry.index();
         final var value = convert(entry.coefficient);
-        if (index instanceof SplayParser.RankIndexContext) {
-          final var rankIndex = (SplayParser.RankIndexContext) index;
-          rankCoefficients.set(Integer.parseInt(rankIndex.NUMBER().getText()), value);
+        if (index instanceof SplayParser.RankIndexContext rankIndexContext) {
+          final var rankIndex = Integer.parseInt(rankIndexContext.NUMBER().getText());
+          rankCoefficients.set(rankIndex, value);
         } else if (index instanceof SplayParser.OtherIndexContext) {
           final var otherIndex = (SplayParser.OtherIndexContext) index;
           coeffiecients.put(
@@ -109,7 +107,10 @@ class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature>
       return new Annotation(
           rankCoefficients,
           coeffiecients,
-          "fixed at position " + start.getLine() + ":" + start.getCharPositionInLine());
+          "annotated in source at position "
+              + start.getLine()
+              + ":"
+              + start.getCharPositionInLine());
     }
     throw new IllegalArgumentException("cannot convert context");
   }

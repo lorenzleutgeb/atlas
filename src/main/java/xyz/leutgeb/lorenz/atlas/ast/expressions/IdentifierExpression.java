@@ -113,8 +113,9 @@ public class IdentifierExpression extends Expression {
     if (name.startsWith("_")) {
       return context.fresh();
     }
-    if (context.hasSignature(this.name)) {
-      return context.getSignatures().get(this.name).getType();
+    final var maybeSignature = context.maybeGetSignature(this.name);
+    if (maybeSignature.isPresent()) {
+      return maybeSignature.get().getType();
     }
     this.intro = context.getIntro(this.name);
     return context.getType(this.name, source);

@@ -46,28 +46,17 @@ subcommand
 For example, to check the type annotation of the function definition
 `PairingHeap.link`, run
 
-    atlas --home=$HOME/atlas/src/test/resources/examples run "PairingHeap.link"
-
-Note that the `--home` parameter corresponds to the module search directory, so
-the module `PairingHeap` corresponds to the file
-
-    $HOME/atlas/src/test/resources/examples/PairingHeap.ml
-
-The `--home` parameter is omitted below for brevity.
+    atlas run PairingHeap.link
 
 Note that the last positional parameter in the previous invocation is
-interpreted as a regular expression.
+interpreted as a "fully qualified name" of a function definition.
+It is possible to pass multiple such names.
 This way, resource annotations for multiple functions can be inferred/checked
-together, even if their definitions do not depend on each other. An extreme,
-unrealistic invocation is
+together, even if their definitions do not depend on each other.
 
-    atlas run '.*'
+To enable type inference, pass `--infer`:
 
-Which will attempt to infer resource annotations for all function definitions.
-However, the artifact also contains some non-terminating definitions
-(see `Infinite.ml`) and checking all at once will require a lot of time/memory.
-
-    atlas run --infer 'PairingHeap.link'
+    atlas run --infer PairingHeap.link
 
 There is another subcommand, which is helpful to understand how definitions are
 translated before constraints are generated and tactics applied:
@@ -92,31 +81,10 @@ below).
 > Document in detail how to reproduce the experimental results of the paper
 > using the artifact; [...]
 
-To verify the results presented in Table 1 on page 3 of the associated paper,
-run the following commands (and remember, that `--home` is omitted).
+#### Table 1
 
-For the first group of four lines (`SplayTree`):
+#### Table 2
 
-    atlas run --tactics [...] --infer "SplayTree\\.(splay(_max)?|insert|delete)"
-
-For the second group of three lines (`SplayHeap`):
-
-    atlas run --tactics [...] --infer "SplayHeap\\.(insert|del_min)"
-
-For the third group of four lines (`PairingHeap`) **EXCEPT** `PairingHeap.merge`:
-
-    atlas run --tactics [...] --infer "PairingHeap\\.(insert|merge_pairs|del_min_via_merge_pairs)_isolated"
-
-For `PairingHeap.merge` the implementation suffers from a regression that we
-were unable to resolve before the artifact submission deadline. In its
-current state, the tool will produce slightly different results for type
-*inference*. However, the exact result from the paper can be *checked* with
-
-    atlas run --tactics [...] "PairingHeap\\.merge_isolated"
-
-The result that differs from the paper can be observed by executing 
-
-    atlas run --tactics [...] --infer "PairingHeap\\.(insert|merge_pairs|del_min_via_merge_pairs|merge)_isolated"
 
 > [...]; keep this process simple through easy-to-use scripts and
 > provide detailed documentation assuming minimum expertise.
@@ -237,14 +205,58 @@ folder name to standard output upon invocation.
 Our examples contain tests for nonterminating programs. One case for which
 nontermination can be detected, is `Infinite.infinite_18`. Run it with
 
-    atlas run --infer 'Infinite\.infinite_18' 
+    atlas run --infer Infinite.infinite_18
+
+#### Results reported at CAV 2021
+
+See <https://doi.org/10.1007/978-3-030-81688-9_5>
+
+To verify the results presented in Table 1 on page 3 of the associated paper,
+run the following commands (and remember, that `--home` is omitted).
+
+For the first group of four lines (`SplayTree`):
+
+    atlas run --tactics [...] --infer \
+        SplayTree.splay SplayTree.splay_max SplayTree.insert SplayTree.delete
+
+For the second group of three lines (`SplayHeap`):
+
+    atlas run --tactics [...] --infer SplayHeap.insert Splayheap.del_min
+
+For the third group of four lines (`PairingHeap`) **EXCEPT** `PairingHeap.merge`:
+
+    atlas run --tactics [...] --infer \
+        PairingHeap.insert_isolated Pairingheap.merge_pairs_isolated \
+	PairingHeap.del_min_via_merge_pairs_isolated PairingHeap.merge_isolated
 
 #### Checking other annotations
 
 To check a custom resource annotation, you may define a new function (or copy
-an example definition) and lwill have to edit the corresponding `*.ml`
+an example definition) and will have to edit the corresponding `*.ml`
 file. The program will print the source of all definitions that are loaded via
 the `run` subcommand.
+
+#### The Search Path
+
+The tool will look for modules (which in turn contain function definitions)
+within a directory called the "search path". This concept is very similar
+to the "search path" of the Glasgow Haskell Compiler. One notable difference
+is that ATLAS accepts exacly one directory as search path, while GHC accepts
+a set of directories to form the search path.
+
+The search path can be set using the `--search` argument:
+
+    atlas --search=$HOME/atlas/src/test/resources/examples run PairingHeap.link
+
+Note that the `--search` parameter corresponds to the module search directory, so
+the full path to the module `PairingHeap` would in this case correspond to
+
+    $HOME/atlas/src/test/resources/examples/PairingHeap.ml
+
+In the artifact, the search path is preset via the environment variable
+`$ATLAS_SEARCH` and there is no need to modify its value to reproduce our
+results. However, it is possible to create new modules in a different directory,
+in which case changing it would be required.
 
 ### Translating Signatures to Bounds
 

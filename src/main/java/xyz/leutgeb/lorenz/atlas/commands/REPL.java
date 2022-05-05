@@ -49,7 +49,7 @@ public class REPL implements Runnable {
         append(
             this.args,
             Collections.singletonList(
-                "-R-D" + Loader.class.getName() + ".defaultHome=" + Loader.getDefaultHome()));
+                "-R-D" + Loader.class.getName() + ".defaultHome=" + Loader.getDefaultSearch()));
 
     log.info("Starting JShell with arguments: {}", args);
     try {

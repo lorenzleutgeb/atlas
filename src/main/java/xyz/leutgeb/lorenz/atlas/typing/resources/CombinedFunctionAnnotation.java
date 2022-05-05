@@ -13,7 +13,6 @@ import lombok.AllArgsConstructor;
 import lombok.Value;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
-import xyz.leutgeb.lorenz.atlas.util.Util;
 
 // TODO: Maybe refactor this to a record once Java 17 is out?
 @Value
@@ -58,11 +57,13 @@ public class CombinedFunctionAnnotation {
 
   @Override
   public String toString() {
+    /*
     if (this.withoutCost.isEmpty()
         || (this.withoutCost.size() == 1 && Util.pick(this.withoutCost).isZero())) {
       // If there are no cf-Annotations, or there is only one and it is zero, we hide them.
       return withCost.toString();
     }
+     */
 
     return "["
         + withCost

@@ -5,7 +5,6 @@ import static java.util.Collections.singleton;
 import static xyz.leutgeb.lorenz.atlas.util.Util.mapToString;
 import static xyz.leutgeb.lorenz.atlas.util.Util.notImplemented;
 
-import com.google.common.collect.Sets;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -106,17 +105,10 @@ public class CallExpression extends Expression {
 
     // functionName.infer(context);
 
-    if (!getFullyQualifiedName().equals(context.getFunctionInScope())
-        && !context.getSignatures().isEmpty()) {
-      FunctionSignature functionSignature =
-          context.getSignatures().get(context.getFunctionInScope());
+    if (!getFullyQualifiedName().equals(context.getFunctionInScope())) {
       context
-          .getSignatures()
-          .put(
-              context.getFunctionInScope(),
-              new FunctionSignature(
-                  Sets.union(functionSignature.getConstraints(), signature.getConstraints()),
-                  functionSignature.getType()));
+          .getSignature(context.getFunctionInScope(), source)
+          .addConstraints(signature.getConstraints());
     }
 
     var result = context.fresh();

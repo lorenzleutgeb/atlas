@@ -106,6 +106,18 @@ public class FunctionSignature {
     return sb.toString();
   }
 
+  public FunctionSignature sealConstraints() {
+    return new FunctionSignature(Collections.unmodifiableSet(constraints), type, annotation);
+  }
+
+  public void addConstraints(Set<TypeConstraint> constraints) {
+    this.constraints.addAll(constraints);
+  }
+
+  public void addConstraint(TypeConstraint constraint) {
+    this.constraints.add(constraint);
+  }
+
   public String toHaskell() {
     StringBuilder sb = new StringBuilder();
     if (!constraints.isEmpty()) {
@@ -124,6 +136,19 @@ public class FunctionSignature {
     return sb.toString();
   }
 
+  public boolean simplePartEquals(final Object o) {
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof final FunctionSignature other)) {
+      return false;
+    }
+    if (!Objects.equals(this.getType(), other.getType())) {
+      return false;
+    }
+    return Objects.equals(this.getConstraints(), other.getConstraints());
+  }
+
   public boolean equals(final Object o) {
     if (o == this) {
       return true;
@@ -131,14 +156,8 @@ public class FunctionSignature {
     if (!(o instanceof final FunctionSignature other)) {
       return false;
     }
-    final Object this$type = this.getType();
-    final Object other$type = other.getType();
-    if (!Objects.equals(this$type, other$type)) {
-      return false;
-    }
-    final Object this$constraints = this.getConstraints();
-    final Object other$constraints = other.getConstraints();
-    return Objects.equals(this$constraints, other$constraints);
+    return this.simplePartEquals(other)
+        && Objects.equals(this.getAnnotation(), other.getAnnotation());
   }
 
   public int hashCode() {
@@ -148,8 +167,8 @@ public class FunctionSignature {
     result = result * PRIME + ($type == null ? 43 : $type.hashCode());
     final Object $constraints = this.getConstraints();
     result = result * PRIME + ($constraints == null ? 43 : $constraints.hashCode());
-    // final Object $annotation = this.getAnnotation();
-    // result = result * PRIME + ($annotation == null ? 43 : $annotation.hashCode());
+    final Object $annotation = this.getAnnotation();
+    result = result * PRIME + ($annotation == null ? 43 : $annotation.hashCode());
     return result;
   }
 }

@@ -1,7 +1,6 @@
 package xyz.leutgeb.lorenz.atlas.unification;
 
 import static com.google.common.collect.Sets.difference;
-import static java.util.Collections.synchronizedMap;
 
 import com.google.common.collect.Iterators;
 import java.util.Arrays;
@@ -12,11 +11,14 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.atlas.ast.FunctionDefinition;
+import xyz.leutgeb.lorenz.atlas.ast.Program;
 import xyz.leutgeb.lorenz.atlas.ast.SourceIntro;
 import xyz.leutgeb.lorenz.atlas.ast.expressions.Expression;
 import xyz.leutgeb.lorenz.atlas.ast.expressions.LetExpression;
@@ -43,7 +45,7 @@ public class UnificationContext {
 
   Set<String> hidden;
 
-  Map<String, FunctionSignature> signatures;
+  Program program;
 
   String functionInScope;
 
@@ -56,7 +58,7 @@ public class UnificationContext {
       Map<String, Type> types,
       Map<String, SourceIntro> intros,
       Set<String> hidden,
-      Map<String, FunctionSignature> signatures,
+      Program program,
       String functionInScope,
       LinkedList<Equivalence> equivalences,
       IntIdGenerator intIdGenerator) {
@@ -64,19 +66,19 @@ public class UnificationContext {
     this.types = types;
     this.intros = intros;
     this.hidden = hidden;
-    this.signatures = signatures;
+    this.program = program;
     this.functionInScope = functionInScope;
     this.equivalences = equivalences;
     this.intIdGenerator = intIdGenerator;
   }
 
-  public static UnificationContext root() {
+  public static UnificationContext root(Program program) {
     return new UnificationContext(
         null,
         new LinkedHashMap<>(),
         new HashMap<>(),
         new HashSet<>(),
-        synchronizedMap(new HashMap<>()),
+        program,
         null,
         new LinkedList<>(),
         IntIdGenerator.fromZeroInclusive());
@@ -88,7 +90,7 @@ public class UnificationContext {
         new LinkedHashMap<>(),
         new HashMap<>(),
         new HashSet<>(),
-        this.getSignatures(),
+        this.program,
         this.functionInScope,
         this.equivalences,
         this.intIdGenerator);
@@ -100,7 +102,7 @@ public class UnificationContext {
         new LinkedHashMap<>(),
         new HashMap<>(),
         new HashSet<>(),
-        this.getSignatures(),
+        this.program,
         fqn,
         this.equivalences,
         this.intIdGenerator);
@@ -112,7 +114,7 @@ public class UnificationContext {
         new LinkedHashMap<>(),
         new HashMap<>(),
         new HashSet<>(),
-        this.getSignatures(),
+        this.program,
         null,
         new LinkedList<>(),
         IntIdGenerator.fromZeroInclusive());
@@ -147,12 +149,17 @@ public class UnificationContext {
   }
 
   public @Nonnull FunctionSignature getSignature(final String fqn, Source source) throws TypeError {
-    FunctionSignature t = signatures.get(fqn);
+    FunctionSignature t = program.getFunctionDefinitions().get(fqn).getInferredSignature();
     if (t != null) {
       return t;
     }
 
     throw new TypeError(Util.undefinedText(fqn, iterateIdentifiers()), source);
+  }
+
+  public Optional<FunctionSignature> maybeGetSignature(final String fqn) {
+    return Optional.ofNullable(program.getFunctionDefinitions().get(fqn))
+        .map(FunctionDefinition::getInferredSignature);
   }
 
   private Type getTypeInternal(final String key) {
@@ -232,15 +239,6 @@ public class UnificationContext {
         ? it
         : Iterators.concat(
             it, Iterators.filter(parent.iterateIdentifiers(), name -> !hidden.contains(name)));
-  }
-
-  public void putSignature(String fullyQualifiedName, FunctionSignature functionSignature) {
-    signatures.put(fullyQualifiedName, functionSignature);
-  }
-
-  // TODO(lorenzleutgeb): Find out why exactly we need this method.
-  public boolean hasSignature(String fqn) {
-    return signatures.containsKey(fqn);
   }
 
   public void addEquivalenceIfNotEqual(Type a, Type b, Source source) {

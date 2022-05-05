@@ -14,6 +14,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -91,6 +92,32 @@ public class Scheduler<T, V, E> {
     }
   }
 
+  public Scheduler(Graph<V, E> graph, Predicate<V> jump, Function<V, ? extends Callable<T>> f) {
+    this.f = f;
+    GraphTests.requireDirected(graph);
+    this.graph = graph;
+    this.inDegreeMap = new HashMap<>();
+    this.initial = new HashSet<>();
+    for (V v : graph.vertexSet()) {
+      if (jump.test(v)) {
+        initial.add(v);
+      } else {
+        int d = 0;
+        for (E e : graph.incomingEdgesOf(v)) {
+          V u = Graphs.getOppositeVertex(graph, e, v);
+          if (v.equals(u)) {
+            throw new IllegalArgumentException(GRAPH_IS_NOT_A_DAG);
+          }
+          d++;
+        }
+        inDegreeMap.put(v, new ModifiableInteger(d));
+        if (d == 0) {
+          initial.add(v);
+        }
+      }
+    }
+  }
+
   public Scheduler(Graph<V, E> graph, Function<V, ? extends Callable<T>> f) {
     this.f = f;
     GraphTests.requireDirected(graph);
@@ -144,7 +171,7 @@ public class Scheduler<T, V, E> {
 
             synchronized (inDegreeMap) {
               ModifiableInteger inDegree = inDegreeMap.get(u);
-              if (inDegree.value > 0) {
+              if (inDegree != null && inDegree.value > 0) {
                 inDegree.value--;
 
                 if (inDegree.value == 0) {

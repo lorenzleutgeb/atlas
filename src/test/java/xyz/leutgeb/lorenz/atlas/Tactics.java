@@ -9,7 +9,7 @@ import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.*;
 import static xyz.leutgeb.lorenz.atlas.util.Z3Support.load;
 
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,7 +28,7 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.SmartRangeHeuristic;
 // @Disabled
 public class Tactics {
   static {
-    System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "warn");
+    System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "debug");
     System.setProperty(SimpleLogger.LOG_KEY_PREFIX + "xyz.leutgeb.lorenz", "debug");
     System.setProperty(SimpleLogger.SHOW_SHORT_LOG_NAME_KEY, Boolean.TRUE.toString());
     System.setProperty(SimpleLogger.SHOW_THREAD_NAME_KEY, Boolean.FALSE.toString());
@@ -74,15 +74,6 @@ public class Tactics {
   private static Annotation logOnly(Coefficient c) {
     return new Annotation(List.of(ZERO), Map.of(List.of(1, 0), c), "Q");
   }
-
-  protected static final Annotation QpwithConst =
-      new Annotation(List.of(ONE), Map.of(unitIndex(1), ONE), "Q'");
-
-  private static final CombinedFunctionAnnotation SPLAY_OLD =
-      CombinedFunctionAnnotation.of(QwithConst, QpwithConst, logToLog(ONE));
-
-  private static final CombinedFunctionAnnotation SPLAY_VARIANT =
-      CombinedFunctionAnnotation.of(Qsmall, Qpsmall, logToLog(ONE));
 
   public static final CombinedFunctionAnnotation SPLAYTREE_SPLAY_EXPECTED =
       CombinedFunctionAnnotation.of(Q3by2, Qp, logToLog(ONE_BY_TWO));
@@ -187,6 +178,12 @@ public class Tactics {
               List.of(ONE_BY_TWO), Map.of(unitIndex(1), TWO, List.of(1, 0), ONE_BY_TWO), "Q"),
           Qp);
 
+  public static final CombinedFunctionAnnotation PAIRINGHEAP_MERGE_ISOLATED_EXPECTED =
+      CombinedFunctionAnnotation.of(
+          new Annotation(
+              List.of(ONE_BY_TWO, ONE_BY_TWO), Map.of(List.of(1, 1, 0), ONE_BY_TWO, unitIndex(2), THREE_BY_TWO), "Q"),
+          Qp);
+
   private static Annotation rkOnly(Coefficient c) {
     return new Annotation(List.of(c), Map.of(), "rkonly");
   }
@@ -213,7 +210,7 @@ public class Tactics {
       CombinedFunctionAnnotation.of(
           new Annotation(
               List.of(known(1, 2)),
-              Map.of(List.of(1, 0), known(3, 2), unitIndex(1), known(1)),
+              Map.of(List.of(1, 0), known(3, 2), unitIndex(1), known(1, 2)),
               "Q"),
           rkOnly(ONE_BY_TWO));
 
@@ -247,28 +244,23 @@ public class Tactics {
     return Stream.of(
         Arguments.of(
             Map.of(
-                "CoinSearchTree.insert",
-                Config.of(RAND_SEARCHTREE_INSERT_EXPECTED),
-                "CoinSearchTree.delete_max",
-                Config.of(RAND_SEARCHTREE_DELETE_MAX_EXPECTED),
-                "CoinSearchTree.delete",
-                Config.of(RAND_SEARCHTREE_DELETE_EXPECTED))));
+                "CoinSearchTree.insert", Config.of(RAND_SEARCHTREE_INSERT_EXPECTED),
+                "CoinSearchTree.delete", Config.of(RAND_SEARCHTREE_DELETE_EXPECTED))));
   }
 
   private static Stream<Arguments> tree() {
     return Stream.of(Arguments.of(Map.of("Tree.descend", Config.of(TREE_DESCEND_EXPECTED))));
   }
 
-  private static Stream<Arguments> searchTree() {
+  private static Stream<Arguments> randTree() {
     return Stream.of(
         Arguments.of(
             Map.of(
-                "SearchTree.insert",
-                Config.of(),
-                "SearchTree.delete_max",
-                Config.of(),
-                "SearchTree.delete",
-                Config.of())));
+                "RandTree.descend",
+                Config.of(
+                    CombinedFunctionAnnotation.of(
+                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "Q"),
+                        zero(1))))));
   }
 
   private static Stream<Arguments> scratch() {
@@ -1650,23 +1642,13 @@ public class Tactics {
   private static Stream<Arguments> randSplayTree() {
     return Stream.of(
         Arguments.of(
-            Map.of("RandSplayTree.insert", Config.of("auto", RAND_SPLAYTREE_INSERT_EXPECTED))),
-        Arguments.of(
-            Map.of(
-                "RandSplayTree.splay_max",
-                Config.of("RandSplayTree/splay_max", RAND_SPLAYTREE_SPLAY_EXPECTED),
-                "RandSplayTree.delete",
-                Config.of("RandSplayTree/delete", RAND_SPLAYTREE_SPLAY_EXPECTED))),
-        Arguments.of(
             Map.of(
                 "RandSplayTree.splay_max",
                 Config.of("RandSplayTree/splay_max", RAND_SPLAYTREE_SPLAY_EXPECTED),
                 "RandSplayTree.delete",
                 Config.of("RandSplayTree/delete", RAND_SPLAYTREE_SPLAY_EXPECTED),
                 "RandSplayTree.insert",
-                Config.of("auto", RAND_SPLAYTREE_INSERT_EXPECTED))),
-        Arguments.of(
-            Map.of(
+                Config.of("auto", RAND_SPLAYTREE_INSERT_EXPECTED),
                 "RandSplayTree.splay",
                 Config.of("RandSplayTree/splay", RAND_SPLAYTREE_SPLAY_EXPECTED))));
   }
@@ -1700,61 +1682,21 @@ public class Tactics {
                 "SplayTree.splay", Config.of("SplayTree/splay", SPLAYTREE_SPLAY_EXPECTED),
                 "SplayTree.splay_max", Config.of("SplayTree/splay_max", SPLAYTREE_SPLAY_EXPECTED),
                 "SplayTree.insert", Config.of("SplayTree/insert", SPLAYTREE_INSERT_EXPECTED),
-                "SplayTree.delete", Config.of("SplayTree/delete", SPLAYTREE_DELETE_EXPECTED))),
-        Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_OLD))));
+                "SplayTree.delete", Config.of("SplayTree/delete", SPLAYTREE_DELETE_EXPECTED)))
+        // Arguments.of(Map.of("SplayTree.splay", Config.of("SplayTree/splay", SPLAY_OLD)))
+        );
   }
 
   private static Stream<Arguments> splayHeap() {
     return Stream.of(
-        Arguments.of(Map.of("SplayHeap.partition", Config.of(SPLAYHEAP_PARTITION_EXPECTED))),
         Arguments.of(
             Map.of(
                 "SplayHeap.partition",
-                Config.of("SplayHeap/partition", SPLAYHEAP_PARTITION_EXPECTED))),
-        Arguments.of(
-            Map.of(
-                "SplayHeap.partition",
-                Config.of("auto", SPLAYHEAP_PARTITION_EXPECTED),
+                Config.of(SPLAYHEAP_PARTITION_EXPECTED),
                 "SplayHeap.insert",
-                Config.of("SplayHeap/insert", SPLAYHEAP_INSERT_EXPECTED))),
-        Arguments.of(
-            Map.of(
+                Config.of(SPLAYHEAP_INSERT_EXPECTED),
                 "SplayHeap.delete_min",
-                Config.of("SplayHeap/del_min", SPLAYHEAP_DELETE_MIN_EXPECTED))),
-        Arguments.of(
-            Map.of(
-                "SplayHeap.partition",
-                Config.of("auto", SPLAYHEAP_PARTITION_EXPECTED),
-                "SplayHeap.insert",
-                Config.of("SplayHeap/insert", SPLAYHEAP_INSERT_EXPECTED),
-                "SplayHeap.delete_min",
-                Config.of("auto", SPLAYHEAP_DELETE_MIN_EXPECTED)))
-        // ,
-        /*
-        Arguments.of(
-            Map.of(
-                "SplayHeap.partition",
-                Config.of(
-                    "SplayHeap/partition-nosize" // ,
-                    /*
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            ONE_BY_TWO,
-                            Map.of(
-                                List.of(1, 1),
-                                ONE,
-                                List.of(1, 0),
-                                Coefficient.of(3, 4),
-                                unitIndex(1),
-                                ONE)),
-                        Qp,
-                        SmartRangeHeuristic.DEFAULT.generate("q", 1),
-                           SmartRangeHeuristic.DEFAULT.generate("q1", 1)
-                           // new Annotation(List.of(ZERO), Map.of(List.of(1, 1), ONE_BY_TWO), "Qcf"),
-                           // new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE_BY_TWO), "Qcf'")
-                    )
-            */
-        );
+                Config.of(SPLAYHEAP_DELETE_MIN_EXPECTED))));
   }
 
   private static Stream<Arguments> negative() {
@@ -1769,47 +1711,16 @@ public class Tactics {
   private static Stream<Arguments> pairingHeap() {
     return Stream.of(
         Arguments.of(
-            Map.of("PairingHeap.insert_isolated", Config.of(PAIRINGHEAP_INSERT_ISOLATED_EXPECTED))),
-        Arguments.of(
             Map.of(
                 "PairingHeap.merge_pairs_isolated",
-                Config.of(
-                    "PairingHeap/merge_pairs_isolated", PAIRINGHEAP_MERGE_PAIRS_ISOLATED_EXPECTED),
+                Config.of(PAIRINGHEAP_MERGE_PAIRS_ISOLATED_EXPECTED),
                 "PairingHeap.delete_min_via_merge_pairs_isolated",
-                Config.of(
-                    "PairingHeap/delete_min_via_merge_pairs_isolated",
-                    PAIRINGHEAP_DELETE_MIN_VIA_MERGE_PAIRS_ISOLATED_EXPECTED),
+                Config.of(PAIRINGHEAP_DELETE_MIN_VIA_MERGE_PAIRS_ISOLATED_EXPECTED),
                 "PairingHeap.insert_isolated",
-                Config.of("PairingHeap/insert_isolated", PAIRINGHEAP_INSERT_ISOLATED_EXPECTED))),
-        Arguments.of(
-            Map.of(
-                "PairingHeap.merge_pairs_isolated",
-                Config.of(PAIRINGHEAP_MERGE_PAIRS_ISOLATED_EXPECTED))),
-        Arguments.of(
-            Map.of(
+                Config.of(PAIRINGHEAP_INSERT_ISOLATED_EXPECTED),
                 "PairingHeap.merge_isolated",
-                Config.of(
-                    "PairingHeap/merge_isolated",
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            List.of(ONE, ONE),
-                            Map.of(List.of(1, 1, 0), ONE, List.of(0, 0, 2), TWO),
-                            "Q"),
-                        new Annotation(ONE, Map.of(List.of(0, 2), ONE)),
-                        zero(2),
-                        zero(1))))),
-        Arguments.of(
-            Map.of(
-                "PairingHeap.merge_isolated",
-                Config.of(
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(
-                            List.of(ONE, ONE),
-                            Map.of(List.of(1, 1, 0), ONE, List.of(0, 0, 2), TWO),
-                            "Q"),
-                        new Annotation(ONE, Map.of(List.of(0, 2), ONE)),
-                        zero(2),
-                        zero(1))))),
+                Config.of(PAIRINGHEAP_MERGE_ISOLATED_EXPECTED))) // ,
+        /*
         Arguments.of(
             Map.of(
                 "PairingHeap.insert_isolated",
@@ -1829,6 +1740,7 @@ public class Tactics {
         Arguments.of(Map.of("PairingHeap.insert_isolated", Config.of())),
         Arguments.of(Map.of("PairingHeap.merge_isolated", Config.of())),
         Arguments.of(Map.of("PairingHeap.insert_isolated", Config.of()))
+         */
         /* Regressions?
 
             Arguments.of(
@@ -1926,29 +1838,32 @@ public class Tactics {
   @MethodSource({
     // "negative",
     // "scratch",
+    // "randTree",
     "randSplayHeap",
     "randSplayTree",
     "randMeldableHeap",
     "coinSearchTree",
-    "searchTree",
     "splayTree",
     "splayHeap",
     "pairingHeap",
   })
   public void all(Map<String, Config> immutableAnnotations) {
-    final var allowTactics = true;
     final var program = loadAndNormalizeAndInferAndUnshare(immutableAnnotations.keySet());
+    final var infer = false;
     final var result =
         program.solve(
             extractAnnotations(immutableAnnotations),
-            allowTactics ? Collections.emptyMap() : extractTactics(immutableAnnotations),
-            false,
+            new HashMap<>(),
+            infer,
             true,
-            false,
+            !infer,
             Set.of());
     assertTrue(result.isSatisfiable());
 
+    System.out.println("Annotated:");
+    program.printAllAnnotatedBoundsInOrder(System.out);
+    System.out.println("Solved:");
+    program.printAllInferredBoundsInOrder(System.out);
     program.printAllInferredSignaturesInOrder(System.out);
-    program.printAllBoundsInOrder(System.out);
   }
 }

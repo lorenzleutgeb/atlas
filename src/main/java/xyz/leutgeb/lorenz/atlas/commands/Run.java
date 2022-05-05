@@ -1,23 +1,19 @@
 package xyz.leutgeb.lorenz.atlas.commands;
 
-import static picocli.CommandLine.Help.Visibility.ALWAYS;
-
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import xyz.leutgeb.lorenz.atlas.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.atlas.ast.Program;
+import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.module.Loader;
 
 @CommandLine.Command(name = "run")
@@ -25,12 +21,10 @@ import xyz.leutgeb.lorenz.atlas.module.Loader;
 public class Run implements Runnable {
   @CommandLine.Parameters(
       index = "0",
-      arity = "1",
-      paramLabel = "pattern",
-      description =
-          "Regular expression to select fully qualified names of functions to be checked. For example, to select all functions whose names begin with \"a\" and contain \"b\" inside a module that has a name ending in \"c\", use \".*c\\.a.*b.*\" (think carefully about escaping \"\\\")."
-  )
-  private Pattern pattern;
+      arity = "1..*",
+      paramLabel = "fqn",
+      description = "Fully qualified names of functions to be checked.")
+  private Set<String> fqns;
 
   @CommandLine.Option(
       defaultValue = "false",
@@ -61,14 +55,16 @@ public class Run implements Runnable {
   public void run() {
     final var start = Instant.now();
     Loader loader = Loader.atDefaultHome();
+    /*
     try {
       loader.autoload();
     } catch (IOException e) {
       throw new RuntimeException(e);
-    }
+    }*/
     Program program;
     try {
-      program = loader.loadMatching(pattern);
+      program = loader.load(fqns);
+      // program = loader.loadMatching(pattern);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -86,20 +82,10 @@ public class Run implements Runnable {
     if (!program.infer()) {
       return;
     }
+    program.unshare(true);
     program.analyzeSizes();
     // log.info("Loaded definitions:");
     // program.printAllSimpleSignaturesInOrder(System.out);
-    Multimap<String, FunctionDefinition> output = ArrayListMultimap.create();
-    Multimap<String, String> imports = HashMultimap.create();
-    for (var entry : program.getFunctionDefinitions().entrySet()) {
-      var fd = entry.getValue();
-      if (pattern.asMatchPredicate().test(fd.getFullyQualifiedName())) {
-        output.put(fd.getModuleName(), fd);
-        imports.putAll(
-            fd.getModuleName(),
-            fd.importedFunctions().stream().map(Loader::moduleName).collect(Collectors.toSet()));
-      }
-    }
 
     System.out.println("Output Directory: " + program.getBasePath().toAbsolutePath());
     System.out.println();
@@ -107,6 +93,8 @@ public class Run implements Runnable {
     Map<String, Path> tacticsMap = new HashMap<>();
 
     // log.info(infer ? "Given for comparison:" : "Will check following types:");
+
+    log.info("Manual tactics disabled. All tactics will be automatically generated.");
 
     System.out.println("Function Definitions:");
     for (int i = 0; i < program.getOrder().size(); i++) {
@@ -126,11 +114,22 @@ public class Run implements Runnable {
 
         // log.info("\tDependencies: " + fd.getOcurringFunctionsNonRecursive());
         System.out.println("\tSource:       " + fd.getBody().getSource().getRoot());
+        System.out.println(
+            "\tBound:        "
+                + fd.getAnnotatedSignature()
+                    .getAnnotation()
+                    .map(
+                        a ->
+                            a.getBounds(
+                                fd.treeLikeArguments().stream()
+                                    .map(IdentifierExpression::getName)
+                                    .toList()))
+                    .orElse("?"));
 
         if (tactics != null) {
           final var p = tacticsMap.get(fd.getFullyQualifiedName());
           if (p == null) {
-            System.out.println("\tTactic:       n/a (will use automatic proof generation)");
+            System.out.println("\tTactic:       n/a (will be automatically generated)");
           } else {
             System.out.println("\tTactic:       " + p.toAbsolutePath());
           }
@@ -140,22 +139,23 @@ public class Run implements Runnable {
     System.out.println();
 
     final var result =
-        program.solve(new HashMap<>(), tacticsMap, infer, false, true, Collections.emptySet());
+        program.solve(new HashMap<>(), tacticsMap, infer, true, !infer, Collections.emptySet());
+
+    final var stop = Instant.now();
+    System.out.println("Elapsed Walltime: " + Duration.between(start, stop));
+    System.out.println();
+
     if (!result.isSatisfiable()) {
       System.out.println("UNSAT");
       System.exit(1);
-    } else {
+    } else if (!infer) {
       System.out.println("SAT");
+      System.out.println();
+    } else {
+      System.out.println("Results:");
+      program.printAllInferredAnnotationsAndBoundsInOrder(System.out);
+      System.out.println();
     }
-
-    System.out.println("Signatures:");
-    program.printAllInferredSignaturesInOrder(System.out);
-    System.out.println();
-
-    System.out.println("Bounds:");
-    program.printAllBoundsInOrder(System.out);
-
-    final var stop = Instant.now();
 
     /*
     if (json != null) {

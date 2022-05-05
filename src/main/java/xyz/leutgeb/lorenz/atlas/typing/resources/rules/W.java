@@ -68,10 +68,11 @@ public class W implements Rule {
   private static final boolean DEBUG_SIZE = false;
   private static final boolean DEBUG_KNOWLEDGE = false;
 
-  private static Annotation generateP(Annotation q, AnnotationHeuristic heuristic, Map<String, String> arguments) {
+  private static Annotation generateP(
+      Annotation q, AnnotationHeuristic heuristic, Map<String, String> arguments) {
     // This method contains a leaky abstraction.
     // We should not compare the instance of the AnnotationHeuristic passed as argument.
-    if (heuristic == SmartRangeHeuristic.DEFAULT && flag(W.class, arguments, "neg")) {
+    if (false && heuristic == SmartRangeHeuristic.DEFAULT && flag(W.class, arguments, "neg")) {
       return SmartRangeHeuristic.INCL_NEGATIVE_ONE.generate("w" + q.getName(), q);
     } else {
       return heuristic.generate("w" + q.getName(), q);

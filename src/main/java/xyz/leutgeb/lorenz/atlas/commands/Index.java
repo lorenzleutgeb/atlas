@@ -64,7 +64,7 @@ public class Index implements Runnable {
   }
 
   private void printTags(Program program, PrintStream out) {
-    final var beginIndex = Loader.getDefaultHome().toAbsolutePath().toString().length() + 1;
+    final var beginIndex = Loader.getDefaultSearch().toAbsolutePath().toString().length() + 1;
     final List<Map.Entry<String, FunctionDefinition>> entries =
         program.getFunctionDefinitions().entrySet().stream()
             .sorted(Map.Entry.comparingByKey())

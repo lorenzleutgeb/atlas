@@ -247,12 +247,17 @@
                 vram = 48;
               };
             };
-            environment.systemPackages = utils ++ [
-              self.packages.${system}.atlas
-              pkgs.evince
-              pkgs.vim
-              atlasEnv
-            ];
+            environment = {
+              systemPackages = utils ++ [
+                self.packages.${system}.atlas
+                pkgs.evince
+                pkgs.vim
+                atlasEnv
+              ];
+              variables = {
+                "ATLAS_HOME" = "/home/evaluator/atlas/src/resources/examples";
+              };
+            };
             networking.hostName = "atlas";
             users.users = {
               evaluator = {

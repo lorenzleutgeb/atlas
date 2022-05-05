@@ -56,9 +56,9 @@ public class Loader {
 
   Set<String> loadedModules = Collections.synchronizedSet(new HashSet<>());
 
-  @Setter private static Path defaultHome;
+  @Setter private static Path defaultSearch;
 
-  Path home;
+  Path search;
 
   private static final long BASE = System.nanoTime();
 
@@ -67,31 +67,32 @@ public class Loader {
   @Getter
   String id = Long.toHexString(System.currentTimeMillis() * 31 + (System.nanoTime() - BASE));
 
-  public Loader(Path home) {
-    if (!Files.exists(home) || !Files.isDirectory(home) || !Files.isReadable(home)) {
-      throw new IllegalArgumentException("home must be an existing readable directory");
+  public Loader(Path search) {
+    if (!Files.exists(search) || !Files.isDirectory(search) || !Files.isReadable(search)) {
+      throw new IllegalArgumentException("search path must be an existing readable directory");
     }
-    if (!home.isAbsolute()) {
-      home = home.toAbsolutePath();
+    if (!search.isAbsolute()) {
+      search = search.toAbsolutePath();
     }
-    this.home = home;
+    this.search = search;
   }
 
   public static Loader atCurrentWorkingDirectory() {
     return new Loader(currentWorkingDirectory());
   }
 
-  public static Path getDefaultHome() {
-    return ofNullable(defaultHome)
+  public static Path getDefaultSearch() {
+    return ofNullable(defaultSearch)
+        .or(() -> ofNullable(System.getenv("ATLAS_SEARCH")).map(Path::of))
         .or(
             () ->
-                ofNullable(System.getProperty(Loader.class.getName() + ".defaultHome"))
+                ofNullable(System.getProperty(Loader.class.getName() + ".defaultSearch"))
                     .map(Path::of))
         .orElse(Path.of("."));
   }
 
   public static Loader atDefaultHome() {
-    return new Loader(getDefaultHome());
+    return new Loader(getDefaultSearch());
   }
 
   private static Path currentWorkingDirectory() {
@@ -126,7 +127,7 @@ public class Loader {
       throw new IllegalArgumentException();
     }
     final var sb = new StringBuilder();
-    final var relative = home.relativize(path);
+    final var relative = search.relativize(path);
     final var len = relative.getNameCount();
     for (int i = 0; i < len - 1; i++) {
       sb.append(relative.getName(i).getFileName());
@@ -143,7 +144,7 @@ public class Loader {
   public void autoload() throws IOException {
     final var stack = new Stack<String>();
     Files.find(
-            home,
+            search,
             8,
             ((path, basicFileAttributes) ->
                 path.getFileName().toString().endsWith(DOT_EXTENSION) && Util.goodForReading(path)),
@@ -217,7 +218,7 @@ public class Loader {
 
     // addModuleEdges(g);
 
-    log.info("Loaded: {}", g.vertexSet());
+    log.debug("Loaded: {}", g.vertexSet());
 
     final var reachable =
         new AsSubgraph<>(
@@ -236,8 +237,6 @@ public class Loader {
             new KosarajuStrongConnectivityInspector<>(reachable).getCondensation());
 
     addSyntheticEdges(condensation);
-
-    log.info("Reachable: {}", reachable.vertexSet());
 
     return new Program(
         reachable.vertexSet().stream()
@@ -330,7 +329,7 @@ public class Loader {
   }
 
   private Path path(String moduleName) {
-    return path(moduleName, home);
+    return path(moduleName, search);
   }
 
   private void load(Iterable<String> roots) throws IOException {

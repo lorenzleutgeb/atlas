@@ -95,6 +95,12 @@ public class Program {
             .map(List::copyOf)
             .collect(Collectors.toList());
 
+    if (this.order.size() > 1) {
+      log.info("Structure is {}", namesAsSet());
+    } else {
+      log.info("Structure is simple, just one SCC.");
+    }
+
     this.name = flatten(this.order).stream().map(Util::fqnToFlatFilename).collect(joining("+"));
     this.basePath = basePath;
     this.roots = unmodifiableSet(roots);
@@ -121,30 +127,26 @@ public class Program {
 
   @Deprecated
   private void inferSequential() throws TypeError {
-    var root = UnificationContext.root();
+    var root = UnificationContext.root(this);
     for (List<String> component : order) {
       final var ctx = root.childWithNewProblem();
       for (var fqn : component) {
-        var fd = get(fqn);
-        ctx.putSignature(fd.getFullyQualifiedName(), fd.stubSignature(ctx));
+        get(fqn).initializeInferredSignature(ctx);
       }
 
       for (var fqn : component) {
-        var fd = get(fqn);
-        fd.infer(ctx);
+        get(fqn).infer(ctx);
       }
 
       var solution = Equivalence.solve(ctx.getEquivalences());
       for (var fqn : component) {
-        var fd = get(fqn);
-        fd.resolve(solution, ctx.getSignatures().get(fqn));
-        ctx.putSignature(fqn, fd.getInferredSignature());
+        get(fqn).resolve(solution);
       }
     }
   }
 
   private boolean inferParallel() {
-    var root = UnificationContext.root();
+    final var root = UnificationContext.root(this);
     var scheduler =
         new Scheduler<Optional<TypeError>, Graph<String, DependencyEdge>, DependencyEdge>(
             condensation,
@@ -153,18 +155,14 @@ public class Program {
                   try {
                     final var ctx = root.childWithNewProblem();
                     for (var fqn : alternative.vertexSet()) {
-                      var fd = get(fqn);
-                      ctx.putSignature(fd.getFullyQualifiedName(), fd.stubSignature(ctx));
+                      get(fqn).initializeInferredSignature(ctx);
                     }
                     for (var fqn : alternative.vertexSet()) {
-                      var fd = get(fqn);
-                      fd.infer(ctx);
+                      get(fqn).infer(ctx);
                     }
                     var solution = Equivalence.solve(ctx.getEquivalences());
                     for (var fqn : alternative.vertexSet()) {
-                      var fd = get(fqn);
-                      fd.resolve(solution, ctx.getSignatures().get(fqn));
-                      ctx.putSignature(fqn, fd.getInferredSignature());
+                      get(fqn).resolve(solution);
                     }
                   } catch (TypeError e) {
                     return Optional.of(e);
@@ -294,7 +292,7 @@ public class Program {
     Set<String> refresh = new HashSet<>();
 
     for (var fd : fds) {
-      if (FORCE_RANK_EQUAL) {
+      if (FORCE_RANK_EQUAL && !InferenceMode.NONE.equals(infer)) {
         log.warn("Adding external constraints to force rank!");
         if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1) {
           for (int i = 0;
@@ -319,7 +317,7 @@ public class Program {
         }
       }
 
-      if (FORCE_RANK_NONZERO) {
+      if (FORCE_RANK_NONZERO && !InferenceMode.NONE.equals(infer)) {
         if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1) {
           for (int i = 0;
               i < fd.getInferredSignature().getAnnotation().get().withCost.from.size();
@@ -339,7 +337,7 @@ public class Program {
       }
 
       // Set right sides equal.
-      if (forceResultPerModule && fd.returnsTree()) {
+      if (forceResultPerModule && fd.returnsTree() && !InferenceMode.NONE.equals(infer)) {
         final var module = fd.getModuleName();
         external.addAll(
             EqualityConstraint.eq(
@@ -485,6 +483,10 @@ public class Program {
         new Scheduler<>(
             this.condensation,
             (scc) ->
+                scc.vertexSet().stream()
+                    .allMatch(
+                        fqn -> this.functionDefinitions.get(fqn).getAnnotatedSignature() != null),
+            (scc) ->
                 () ->
                     solveInternal(
                         annotations,
@@ -549,8 +551,13 @@ public class Program {
     // SCCs are split by ";" and function names within SCCs are split by ",".
     // That's reasonably readable without brackets for sets/sequences.
     return order.stream()
-        .map(x -> x.stream().sorted().map(Object::toString).collect(Collectors.joining(", ")))
-        .collect(Collectors.joining("; "));
+        .map(
+            x ->
+                x.stream()
+                    .sorted()
+                    .map(Object::toString)
+                    .collect(Collectors.joining(", ", "{", "}")))
+        .collect(Collectors.joining("; ", "{", "}"));
   }
 
   private String namesAsSet(Collection<String> names) {
@@ -583,11 +590,29 @@ public class Program {
     }
   }
 
-  public void printAllBoundsInOrder(PrintStream out) {
+  public void printAllInferredAnnotationsAndBoundsInOrder(PrintStream out) {
     for (final List<String> stratum : order) {
       for (var fqn : stratum) {
         FunctionDefinition fd = functionDefinitions.get(fqn);
-        out.println(fd.getBoundString());
+        out.println(fd.getInferredAnnotationAndBoundString());
+      }
+    }
+  }
+
+  public void printAllInferredBoundsInOrder(PrintStream out) {
+    for (final List<String> stratum : order) {
+      for (var fqn : stratum) {
+        FunctionDefinition fd = functionDefinitions.get(fqn);
+        out.println(fd.getInferredBoundString());
+      }
+    }
+  }
+
+  public void printAllAnnotatedBoundsInOrder(PrintStream out) {
+    for (final List<String> stratum : order) {
+      for (var fqn : stratum) {
+        FunctionDefinition fd = functionDefinitions.get(fqn);
+        out.println(fd.getAnnotatedBoundString());
       }
     }
   }

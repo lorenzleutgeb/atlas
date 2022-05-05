@@ -1,10 +1,10 @@
 package xyz.leutgeb.lorenz.atlas.ast.expressions;
 
-import com.google.common.collect.Sets;
+import static xyz.leutgeb.lorenz.atlas.ast.ComparisonOperator.EQ;
+import static xyz.leutgeb.lorenz.atlas.ast.ComparisonOperator.NE;
+
 import java.io.PrintStream;
-import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
 import java.util.Stack;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
@@ -14,7 +14,6 @@ import xyz.leutgeb.lorenz.atlas.ast.ComparisonOperator;
 import xyz.leutgeb.lorenz.atlas.ast.Normalization;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
-import xyz.leutgeb.lorenz.atlas.typing.simple.FunctionSignature;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeClass;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
@@ -66,20 +65,11 @@ public class BooleanExpression extends Expression {
     context.addEquivalenceIfNotEqual(right.infer(context), ty, source);
     context.addEquivalenceIfNotEqual(left.infer(context), ty, source);
 
-    TypeClass tc =
-        Set.of(ComparisonOperator.EQ, ComparisonOperator.NE).contains(operator)
-            ? TypeClass.EQ
-            : TypeClass.ORD;
-    FunctionSignature functionSignature = context.getSignatures().get(context.getFunctionInScope());
+    final TypeClass tc =
+        (EQ.equals(operator) || NE.equals(operator)) ? TypeClass.EQ : TypeClass.ORD;
     context
-        .getSignatures()
-        .put(
-            context.getFunctionInScope(),
-            new FunctionSignature(
-                Sets.union(
-                    functionSignature.getConstraints(),
-                    Collections.singleton(new TypeConstraint(tc, ty))),
-                functionSignature.getType()));
+        .getSignature(context.getFunctionInScope(), source)
+        .addConstraint(new TypeConstraint(tc, ty));
     return BoolType.INSTANCE;
   }
 
@@ -115,7 +105,7 @@ public class BooleanExpression extends Expression {
   public void printJavaTo(PrintStream out, int indentation, String currentFunction) {
     // Special comparison with leaf.
 
-    if (operator.equals(ComparisonOperator.EQ)) {
+    if (operator.equals(EQ)) {
       if (IdentifierExpression.isLeaf(left) && IdentifierExpression.isLeaf(right)) {
         out.print("true");
         return;

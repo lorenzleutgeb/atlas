@@ -27,6 +27,6 @@ public class HomeMixin {
     // so we find the top-level command,
     // and store the verbosity level on our top-level command's LoggingMixin.
     ((Main) mixee.root().userObject()).homeMixin.home = home;
-    Loader.setDefaultHome(home);
+    Loader.setDefaultSearch(home);
   }
 }

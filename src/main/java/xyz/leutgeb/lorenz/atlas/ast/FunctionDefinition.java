@@ -3,7 +3,6 @@ package xyz.leutgeb.lorenz.atlas.ast;
 import static guru.nidi.graphviz.attribute.Records.turn;
 import static guru.nidi.graphviz.model.Factory.graph;
 import static guru.nidi.graphviz.model.Factory.node;
-import static java.util.Collections.emptySet;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.stream.Collectors.toList;
 import static xyz.leutgeb.lorenz.atlas.typing.simple.TypeConstraint.minimize;
@@ -73,8 +72,9 @@ public class FunctionDefinition {
   private final String name;
   private final List<String> arguments;
   private Expression body;
+
   private FunctionSignature inferredSignature;
-  private FunctionSignature annotatedSignature;
+  private final FunctionSignature annotatedSignature;
 
   private org.jgrapht.Graph<IdentifierExpression, SizeEdge> sizeAnalysis = null;
   private Obligation typingObligation;
@@ -89,13 +89,17 @@ public class FunctionDefinition {
     this.name = name;
     this.arguments = arguments;
     this.body = body;
-    this.annotatedSignature = annotatedSignature;
+    this.annotatedSignature = annotatedSignature.sealConstraints();
   }
 
-  public FunctionSignature stubSignature(UnificationContext problem) {
+  public FunctionSignature initializeInferredSignature(UnificationContext problem) {
+    if (inferredSignature != null) {
+      throw new IllegalStateException("inferred signature is already initialized");
+    }
+
     return inferredSignature =
         new FunctionSignature(
-            emptySet(),
+            new HashSet<>(),
             new FunctionType(
                 Stream.generate(problem::fresh).limit(arguments.size()).collect(toList()),
                 problem.fresh()));
@@ -141,8 +145,8 @@ public class FunctionDefinition {
     sub.addEquivalenceIfNotEqual(inferredSignature.getType().getTo(), body.infer(sub), getSource());
   }
 
-  public void resolve(Substitution solution, FunctionSignature signature)
-      throws TypeError.AnnotationMismatch {
+  public void resolve(Substitution solution) throws TypeError.AnnotationMismatch {
+    var signature = inferredSignature;
     var subsGenBase = solution.apply(signature.getType());
     var generalizer = new Generalizer();
     subsGenBase.generalize(generalizer);
@@ -152,7 +156,7 @@ public class FunctionDefinition {
     tmp = tmp.apply(x);
     inferredSignature = new FunctionSignature(minimize(tmp.getConstraints()), tmp.getType());
     body.resolveType(x);
-    if (annotatedSignature != null && !inferredSignature.equals(annotatedSignature)) {
+    if (annotatedSignature != null && !inferredSignature.simplePartEquals(annotatedSignature)) {
       throw new TypeError.AnnotationMismatch(
           getFullyQualifiedName(), annotatedSignature, inferredSignature, getSource());
     }
@@ -363,15 +367,32 @@ public class FunctionDefinition {
     return typingObligation;
   }
 
-  public String getInferredSignatureString() {
-    return getFullyQualifiedName()
-        + " ∷ "
+  private String getInferredSignatureStringPlain() {
+    var constraints = new StringBuilder();
+    if (!inferredSignature.getConstraints().isEmpty()) {
+      if (inferredSignature.getConstraints().size() > 1) {
+        constraints.append("(");
+      }
+      constraints.append(
+          inferredSignature.getConstraints().stream()
+              .map(Object::toString)
+              .collect(Collectors.joining(", ")));
+      if (inferredSignature.getConstraints().size() > 1) {
+        constraints.append(")");
+      }
+      constraints.append(" ⇒ ");
+    }
+    return constraints.toString()
         + inferredSignature.getType()
         + inferredSignature
             .getAnnotation()
             .map(Objects::toString)
             .map(x -> " | " + x)
             .orElse(" | ?");
+  }
+
+  public String getInferredSignatureString() {
+    return getFullyQualifiedName() + " ∷ " + getInferredSignatureStringPlain();
   }
 
   public JsonObject inferredSignatureToJson() {
@@ -384,9 +405,24 @@ public class FunctionDefinition {
   }
 
   public String getAnnotatedSignatureString() {
+    var constraints = new StringBuilder();
+    if (!annotatedSignature.getConstraints().isEmpty()) {
+      if (annotatedSignature.getConstraints().size() > 1) {
+        constraints.append("(");
+      }
+      constraints.append(
+          annotatedSignature.getConstraints().stream()
+              .map(Object::toString)
+              .collect(Collectors.joining(", ")));
+      if (annotatedSignature.getConstraints().size() > 1) {
+        constraints.append(")");
+      }
+      constraints.append(" ⇒ ");
+    }
     return getFullyQualifiedName()
         + " ∷ "
-        + inferredSignature.getType()
+        + constraints
+        + annotatedSignature.getType()
         + annotatedSignature
             .getAnnotation()
             .map(Objects::toString)
@@ -542,16 +578,36 @@ public class FunctionDefinition {
         getModuleName().replace(".", File.separator) + File.separator + getName() + ".txt");
   }
 
-  public String getBoundString() {
+  public String getInferredBoundString() {
+    return getBoundString(inferredSignature);
+  }
+
+  public String getAnnotatedBoundString() {
+    return getBoundString(annotatedSignature);
+  }
+
+  private String getBoundString(FunctionSignature signature) {
+    return getFullyQualifiedName() + ": " + getBoundStringPlain(signature);
+  }
+
+  private String getBoundStringPlain(FunctionSignature signature) {
+    if (signature == null) {
+      return "?";
+    }
+
     final List<String> treeArguments =
         treeLikeArguments().stream().map(IdentifierExpression::getName).toList();
 
-    return getFullyQualifiedName()
-        + ": "
-        + inferredSignature.getAnnotation().map(x -> x.getBounds(treeArguments)).orElse("?");
+    return signature.getAnnotation().map(x -> x.getBounds(treeArguments)).orElse("?");
   }
 
   private Source getSource() {
     return getBody().getSource();
+  }
+
+  public String getInferredAnnotationAndBoundString() {
+    return getInferredSignatureString()
+        + "\n\tBound:        "
+        + getBoundStringPlain(inferredSignature);
   }
 }

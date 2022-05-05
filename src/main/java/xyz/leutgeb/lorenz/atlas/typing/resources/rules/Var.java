@@ -25,9 +25,7 @@ public class Var implements Rule {
 
     Optional<IdentifierExpression> target;
     if (expression instanceof IdentifierExpression id) {
-      target = id.getType() instanceof TreeType
-              ? Optional.of(id)
-              : Optional.empty();
+      target = id.getType() instanceof TreeType ? Optional.of(id) : Optional.empty();
     } else if (expression instanceof TupleExpression tuple) {
       target = tuple.getTree();
     } else {

@@ -46,22 +46,22 @@ public class Matrix {
 
   private static final Map<Pair<Fraction, Fraction>, CombinedFunctionAnnotation> RESULTS =
       Map.of(
-          Pair.of(ONE_HALF, ONE_HALF),
-          shape(known(3, 4), known(9, 8), known(ONE_HALF)),
-          Pair.of(ONE_HALF, ONE_THIRD),
-          shape(known(2, 3), known(1), known(ONE_THIRD)),
-          Pair.of(ONE_HALF, TWO_THIRDS),
-          shape(known(5, 6), known(5, 4), known(TWO_THIRDS)),
-          Pair.of(ONE_THIRD, ONE_HALF),
-          shape(known(1), known(1), known(ONE_HALF)),
           Pair.of(ONE_THIRD, ONE_THIRD),
           shape(known(5, 6), known(5, 6), known(ONE_THIRD)),
+          Pair.of(ONE_THIRD, ONE_HALF),
+          shape(known(1), known(1), known(ONE_HALF)),
           Pair.of(ONE_THIRD, TWO_THIRDS),
           shape(known(7, 6), known(7, 6), known(TWO_THIRDS)),
-          Pair.of(TWO_THIRDS, ONE_HALF),
-          shape(known(5, 6), known(55, 36), known(ONE_HALF)),
+          Pair.of(ONE_HALF, ONE_THIRD),
+          shape(known(2, 3), known(1), known(ONE_THIRD)),
+          Pair.of(ONE_HALF, ONE_HALF),
+          shape(known(3, 4), known(9, 8), known(ONE_HALF)),
+          Pair.of(ONE_HALF, TWO_THIRDS),
+          shape(known(5, 6), known(5, 4), known(TWO_THIRDS)),
           Pair.of(TWO_THIRDS, ONE_THIRD),
           shape(known(7, 9), known(77, 54), known(ONE_THIRD)),
+          Pair.of(TWO_THIRDS, ONE_HALF),
+          shape(known(5, 6), known(55, 36), known(ONE_HALF)),
           Pair.of(TWO_THIRDS, TWO_THIRDS),
           shape(known(8, 9), known(44, 27), known(TWO_THIRDS)));
 
@@ -101,7 +101,7 @@ public class Matrix {
 
     assertTrue(result.isSatisfiable());
     program.printAllInferredSignaturesInOrder(System.out);
-    program.printAllBoundsInOrder(System.out);
+    program.printAllInferredBoundsInOrder(System.out);
   }
 
   @ParameterizedTest
@@ -141,6 +141,6 @@ public class Matrix {
 
     assertTrue(result.isSatisfiable());
     program.printAllInferredSignaturesInOrder(System.out);
-    program.printAllBoundsInOrder(System.out);
+    program.printAllInferredBoundsInOrder(System.out);
   }
 }
