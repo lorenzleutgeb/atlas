@@ -1,7 +1,0 @@
-(let:tree:cf
-  (tick app)
-  (let:tree:cf
-    (tick app)
-    node
-  )
-)

@@ -1,7 +1,5 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources;
 
-import static java.util.function.Predicate.not;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -99,7 +97,7 @@ public class CombinedFunctionAnnotation {
     final var withoutCost =
         this.withoutCost.stream()
             .map(x -> x.getBound(arguments))
-            .filter(not("0"::equals))
+            // .filter(not("0"::equals))
             .collect(Collectors.joining(", ", "{", "}"));
 
     if ("{}".equals(withoutCost)) {

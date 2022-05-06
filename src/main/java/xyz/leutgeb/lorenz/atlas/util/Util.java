@@ -366,8 +366,12 @@ public class Util {
     return Boolean.parseBoolean(getProperty(requester, name, arguments, "false"));
   }
 
+  public static String getPropertyName(Class<?> requester, String name) {
+    return requester.getName() + "." + name;
+  }
+
   public static String getProperty(Class<?> requester, String name, String fallback) {
-    return System.getProperty(requester.getName() + "." + name, fallback);
+    return System.getProperty(getPropertyName(requester, name), fallback);
   }
 
   public static String getProperty(Class<?> requester, String name) {

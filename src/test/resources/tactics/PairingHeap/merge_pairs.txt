@@ -1,10 +1,7 @@
-(match (* h *)
+(match
   (w{mono} leaf)
-  (match (* rx *)
-    (let:tree:cf
-      (w{mono} leaf)
-      (w{l2xy} node)
-    )
+  (match
+    (let:tree:cf (w{mono} leaf) (w{l2xy} node))
     (w{l2xy}
       (tick
         (w{l2xy mono}

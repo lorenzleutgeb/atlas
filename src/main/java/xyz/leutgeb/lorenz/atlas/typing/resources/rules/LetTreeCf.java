@@ -37,10 +37,9 @@ public class LetTreeCf implements Rule {
   public static final LetTreeCf INSTANCE = new LetTreeCf();
 
   private static final Set<Integer> D_RANGE = SmartRangeHeuristic.A_RANGE;
-  private static final Set<Integer> E_RANGE = SmartRangeHeuristic.B_RANGE_INCL_NEGATIVE_ONE;
-
-  // NOTE(lorenzleutgeb): This possibly contains indices with a sum less than one! Needs filtering!
-  private static final Set<List<Integer>> DE_RANGE = cartesianProduct(D_RANGE, E_RANGE);
+  private static final Set<Integer> E_RANGE = SmartRangeHeuristic.B_RANGE;
+  private static final Set<Integer> E_RANGE_INCL_NEGATIVE_ONE =
+      SmartRangeHeuristic.B_RANGE_INCL_NEGATIVE_ONE;
 
   /**
    * P wird durch Q definiert: * p_i = q_i * p_(a,c) = q_(a,0,c)
@@ -59,6 +58,10 @@ public class LetTreeCf implements Rule {
    */
   public ApplicationResult apply(
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
+    final var deRange =
+        cartesianProduct(
+            D_RANGE,
+            flag(LetTreeCf.class, arguments, "nege") ? E_RANGE_INCL_NEGATIVE_ONE : E_RANGE);
     final var expression = (LetExpression) obligation.getExpression();
     final var x = expression.getDeclared();
     final var value = expression.getValue();
@@ -240,7 +243,7 @@ public class LetTreeCf implements Rule {
                           || !entry.allAssociatedIndicesMatch(varsForDeltaAsList, b -> b == 0))
               .flatMap(
                   entry ->
-                      DE_RANGE.stream()
+                      deRange.stream()
                           // .filter(Util::isSumAtLeastOne)
                           .filter(index -> index.get(0) + max(index.get(1), 0) > 0)
                           .filter(
@@ -338,7 +341,7 @@ public class LetTreeCf implements Rule {
                 prefix + "r_{(b⃗,d,e)} = p'^{(b⃗,d,e)}_{(d,e)}"));
 
         // We range over (d', e') here!
-        for (final var dpep : DE_RANGE) {
+        for (final var dpep : deRange) {
           final var dp = dpep.get(0);
           final var ep = dpep.get(1);
           if (!Util.isSumAtLeastOne(dpep)) {

@@ -137,6 +137,8 @@ public class Matrix {
             Program.InferenceMode.DIRECT,
             false,
             false,
+            false,
+            false,
             new HashSet<>(externalConstraints));
 
     assertTrue(result.isSatisfiable());

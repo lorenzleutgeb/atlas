@@ -84,7 +84,8 @@ public class W implements Rule {
     final var q = obligation.getContext().getAnnotation();
     final var qp = obligation.getAnnotation();
 
-    final var p = generateP(q, globals.getHeuristic(), arguments);
+    // final var p = generateP(q, globals.getHeuristic(), arguments);
+    final var p = globals.getHeuristic().generate("w" + q.getName(), q);
     final var pp = globals.getHeuristic().generate("w" + qp.getName(), qp);
 
     final List<IdentifierExpression> ids = obligation.getContext().getIds();

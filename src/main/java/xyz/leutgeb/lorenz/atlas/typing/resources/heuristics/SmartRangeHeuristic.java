@@ -1,7 +1,6 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources.heuristics;
 
 import static com.google.common.collect.Lists.cartesianProduct;
-import static java.util.stream.IntStream.range;
 import static java.util.stream.Stream.concat;
 
 import java.util.List;
@@ -38,8 +37,7 @@ public class SmartRangeHeuristic implements AnnotationHeuristic {
 
   @Override
   public Annotation generate(String namePrefix, int size) {
-    return new Annotation(
-        size, range(0, size).boxed().toList(), generateInternal(size).toList(), namePrefix);
+    return new Annotation(size, generateInternal(size).toList(), namePrefix);
   }
 
   @Override
@@ -47,7 +45,6 @@ public class SmartRangeHeuristic implements AnnotationHeuristic {
     int size = shape.size();
     return new Annotation(
         size,
-        range(0, size).boxed().toList(),
         Annotation.indexUnion(
                 generateInternal(size).collect(Collectors.toList()),
                 shape
@@ -64,23 +61,27 @@ public class SmartRangeHeuristic implements AnnotationHeuristic {
         .stream()
         .filter(
             index -> {
+              // NOTE: index.size() > 0 by definition above.
+
+              // Whether one index that refers to a tree is non-zero.
               boolean hasTree = false;
-              final Integer last = index.get(index.size() - 1);
+
+              // The last index (does not refer to a tree).
+              final int last = index.get(index.size() - 1);
+
+              // Sum of all indices.
               int sum = last;
+
               if (index.size() > 1) {
                 for (int i = 0; i < index.size() - 1; i++) {
                   sum += index.get(i);
-                  if (index.get(i) > 0) {
+                  if (index.get(i) != 0) {
                     hasTree = true;
                   }
                 }
               }
-              /*
-              if (last == 2) {
-                return !hasTree;
-              }
-               */
-              return sum > 0;
+
+              return sum > 0 && (last != 1 || hasTree);
             });
   }
 }

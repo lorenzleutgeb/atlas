@@ -181,14 +181,16 @@ public class Tactics {
   public static final CombinedFunctionAnnotation PAIRINGHEAP_MERGE_ISOLATED_EXPECTED =
       CombinedFunctionAnnotation.of(
           new Annotation(
-              List.of(ONE_BY_TWO, ONE_BY_TWO), Map.of(List.of(1, 1, 0), ONE_BY_TWO, unitIndex(2), THREE_BY_TWO), "Q"),
+              List.of(ONE_BY_TWO, ONE_BY_TWO),
+              Map.of(List.of(1, 1, 0), ONE_BY_TWO, unitIndex(2), THREE_BY_TWO),
+              "Q"),
           Qp);
 
   private static Annotation rkOnly(Coefficient c) {
     return new Annotation(List.of(c), Map.of(), "rkonly");
   }
 
-  public static final CombinedFunctionAnnotation TREE_DESCEND_EXPECTED =
+  public static final CombinedFunctionAnnotation RAND_TREE_DESCEND_EXPECTED =
       CombinedFunctionAnnotation.of(logOnly(ONE), zero(1));
 
   public static final CombinedFunctionAnnotation RAND_SEARCHTREE_INSERT_EXPECTED =
@@ -249,18 +251,12 @@ public class Tactics {
   }
 
   private static Stream<Arguments> tree() {
-    return Stream.of(Arguments.of(Map.of("Tree.descend", Config.of(TREE_DESCEND_EXPECTED))));
+    return Stream.of(Arguments.of(Map.of("Tree.descend", Config.of(RAND_TREE_DESCEND_EXPECTED))));
   }
 
   private static Stream<Arguments> randTree() {
     return Stream.of(
-        Arguments.of(
-            Map.of(
-                "RandTree.descend",
-                Config.of(
-                    CombinedFunctionAnnotation.of(
-                        new Annotation(List.of(ZERO), Map.of(List.of(1, 0), ONE), "Q"),
-                        zero(1))))));
+        Arguments.of(Map.of("RandTree.descend", Config.of(RAND_TREE_DESCEND_EXPECTED))));
   }
 
   private static Stream<Arguments> scratch() {
@@ -1643,14 +1639,14 @@ public class Tactics {
     return Stream.of(
         Arguments.of(
             Map.of(
-                "RandSplayTree.splay_max",
-                Config.of("RandSplayTree/splay_max", RAND_SPLAYTREE_SPLAY_EXPECTED),
-                "RandSplayTree.delete",
-                Config.of("RandSplayTree/delete", RAND_SPLAYTREE_SPLAY_EXPECTED),
-                "RandSplayTree.insert",
-                Config.of("auto", RAND_SPLAYTREE_INSERT_EXPECTED),
-                "RandSplayTree.splay",
-                Config.of("RandSplayTree/splay", RAND_SPLAYTREE_SPLAY_EXPECTED))));
+                // "RandSplayTree.splay_max",
+                // Config.of("RandSplayTree/splay_max", RAND_SPLAYTREE_SPLAY_EXPECTED),
+                // "RandSplayTree.delete",
+                // Config.of("RandSplayTree/delete", RAND_SPLAYTREE_SPLAY_EXPECTED),
+                "RandSplayTree.insert", Config.of(RAND_SPLAYTREE_INSERT_EXPECTED) // ,
+                // "RandSplayTree.splay",
+                // Config.of("RandSplayTree/splay", RAND_SPLAYTREE_SPLAY_EXPECTED)
+                )));
   }
 
   private static Stream<Arguments> randSplayHeap() {
@@ -1839,17 +1835,17 @@ public class Tactics {
     // "negative",
     // "scratch",
     // "randTree",
-    "randSplayHeap",
-    "randSplayTree",
-    "randMeldableHeap",
+    // "randSplayHeap",
+    // "randSplayTree",
+    // "randMeldableHeap",
     "coinSearchTree",
-    "splayTree",
-    "splayHeap",
-    "pairingHeap",
+    // "splayTree",
+    // "splayHeap",
+    // "pairingHeap",
   })
   public void all(Map<String, Config> immutableAnnotations) {
     final var program = loadAndNormalizeAndInferAndUnshare(immutableAnnotations.keySet());
-    final var infer = false;
+    final var infer = true;
     final var result =
         program.solve(
             extractAnnotations(immutableAnnotations),

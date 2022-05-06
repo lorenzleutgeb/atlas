@@ -1,42 +1,50 @@
-(match (* t *)
-  leaf
+(match
+  (w leaf)
   (ite
     (match (* tbc *)
-      (let:tree:cf leaf (w{size} (let:tree:cf node (let:tree:cf leaf node))))
+      (w{mono} (let:tree:cf leaf (let:tree:cf node (let:tree:cf leaf node))))
       (ite
-        (w{mono l2xy} (let:tree:cf
-          (tick app) (* partition d p tc *)
-          (match
-            leaf
-            (w{mono} (let:tree:cf node (let:tree:cf node (w{mono} node))))
+        (w{mono l2xy}
+          (let:tree:cf{nege}
+            (tick (shift app))
+            (match
+              leaf
+              (w{l2xy mono} (let:tree:cf node (let:tree:cf node (w node))))
+            )
           )
-        ))
-        (w{mono l2xy} (let:tree:cf
-          (tick app) (* partition d p tb *)
-          (match
-            (w{mono} leaf)
-            (w{l2xy} (let:tree:cf node (let:tree:cf node (w{mono} node))))
+        )
+        (w{mono l2xy}
+          (let:tree:cf
+            (tick (shift app))
+            (match
+              (w{mono} leaf)
+              (w{l2xy mono} (let:tree:cf node (let:tree:cf node (w node))))
+            )
           )
-        ))
+        )
       )
     )
     (match (* tab *)
-      (let:tree:cf leaf (let:tree:cf leaf (w{size} (let:tree:cf node node))))
+      (w{mono} (let:tree:cf leaf (let:tree:cf leaf (let:tree:cf node node))))
       (ite
-        (w{mono l2xy} (let:tree:cf
-          (tick app) (* partition d p tb *)
-          (match
-            (w{mono} leaf)
-            (w{l2xy} (let:tree:cf node (let:tree:cf node (w{mono} node))))
+        (w{mono l2xy}
+          (let:tree:cf
+            (tick (shift app))
+            (match
+              (w{mono} leaf)
+              (w{mono l2xy} (let:tree:cf node (let:tree:cf node (w node))))
+            )
           )
-        ))
-        (w{mono l2xy} (let:tree:cf
-          (tick app) (* partition d p tc *)
-          (match
-            leaf
-            (let:tree:cf node (let:tree:cf node (w{mono} node)))
+        )
+        (w{mono l2xy}
+          (let:tree:cf{nege}
+            (tick (shift app))
+            (match
+              leaf
+              (w{mono l2xy} (let:tree:cf node (let:tree:cf node (w node))))
+            )
           )
-        ))
+        )
       )
     )
   )

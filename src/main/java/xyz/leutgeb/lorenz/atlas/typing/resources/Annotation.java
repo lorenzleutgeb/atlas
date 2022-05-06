@@ -82,15 +82,17 @@ public class Annotation {
 
   public Annotation(
       int size,
-      List<Integer> rankCoefficients,
+      // List<Integer> rankCoefficients,
       List<List<Integer>> nonRankCoefficients,
       String name) {
     this(size, name);
+    /*
     for (var i : rankCoefficients) {
       if (i >= size) {
         throw new IllegalArgumentException();
       }
     }
+     */
     for (var l : nonRankCoefficients) {
       if (l.size() != this.size() + 1) {
         throw new IllegalArgumentException();
@@ -102,7 +104,7 @@ public class Annotation {
     for (var l : nonRankCoefficients) {
       this.getCoefficientOrDefine(l);
     }
-    for (int i : rankCoefficients) {
+    for (int i = 0; i < size; i++) {
       this.getRankCoefficientOrDefine(i);
     }
   }

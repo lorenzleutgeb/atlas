@@ -21,7 +21,7 @@ public class Tick implements Rule {
             obligation.keepContextAndAnnotationAndCost(tickExpression.getBody()));
       }
       final var annotation = obligation.getAnnotation();
-      final var q = globals.getHeuristic().generate("w" + annotation.getName(), annotation);
+      final var q = globals.getHeuristic().generate("tick" + annotation.getName(), annotation);
 
       return new ApplicationResult(
           List.of(obligation.keepCost(obligation.getContext(), tickExpression.getBody(), q)),
@@ -33,7 +33,7 @@ public class Tick implements Rule {
     }
 
     final var annotation = obligation.getAnnotation();
-    final var q = globals.getHeuristic().generate("w" + annotation.getName(), annotation);
+    final var q = globals.getHeuristic().generate("tick" + annotation.getName(), annotation);
     log.warn(
         "Rule is not applied to a tick expression. Assuming a cost of 1 and continuing anyway.");
     return new ApplicationResult(

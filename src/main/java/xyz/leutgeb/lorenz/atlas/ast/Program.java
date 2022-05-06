@@ -39,6 +39,7 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.EqualityConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.InequalityConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.LessThanOrEqualConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.SimpleFunctionHeuristic;
 import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.SmartRangeHeuristic;
 import xyz.leutgeb.lorenz.atlas.typing.resources.optimiziation.Optimization;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
@@ -60,7 +61,6 @@ public class Program {
     NONE
   }
 
-  private static final boolean FORCE_RANK_EQUAL = true;
   private static final boolean FORCE_RANK_NONZERO = false;
 
   @Getter private final Map<String, FunctionDefinition> functionDefinitions;
@@ -196,12 +196,16 @@ public class Program {
       Map<String, Path> tactics,
       InferenceMode infer,
       boolean forceResultPerModule,
+      boolean forceRankEqual,
+      boolean simpleSignatures,
       Set<Constraint> externalConstraints) {
     return solveInternal(
         annotations,
         tactics,
         infer,
         forceResultPerModule,
+        forceRankEqual,
+        simpleSignatures,
         externalConstraints,
         functionDefinitions.keySet());
   }
@@ -211,6 +215,8 @@ public class Program {
       Map<String, Path> tactics,
       InferenceMode infer,
       boolean forceResultPerModule,
+      boolean forceRankEqual,
+      boolean simpleSignatures,
       Set<Constraint> externalConstraints,
       Set<String> fqns) {
     if (fqns.stream()
@@ -226,6 +232,7 @@ public class Program {
         InferenceMode.PROXIED.equals(infer) ? new HashMap<>() : annotations;
 
     final var heuristic = SmartRangeHeuristic.DEFAULT;
+    final var signatureHeuristic = simpleSignatures ? SimpleFunctionHeuristic.DEFAULT : heuristic;
     final var called = calledFunctionNames();
 
     final Map<String, Annotation> rightSidesPerModule = synchronizedMap(new HashMap<>());
@@ -251,7 +258,7 @@ public class Program {
         final CombinedFunctionAnnotation annotation = benchmark.get(fd.getFullyQualifiedName());
         fd.stubAnnotations(
             actual,
-            heuristic,
+            signatureHeuristic,
             Math.max(
                 called.contains(fd.getFullyQualifiedName()) ? 1 : 0, annotation.withoutCost.size()),
             true);
@@ -283,7 +290,7 @@ public class Program {
       } else {
         fd.stubAnnotations(
             actual,
-            heuristic,
+            signatureHeuristic,
             called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
             !InferenceMode.NONE.equals(infer));
       }
@@ -292,8 +299,8 @@ public class Program {
     Set<String> refresh = new HashSet<>();
 
     for (var fd : fds) {
-      if (FORCE_RANK_EQUAL && !InferenceMode.NONE.equals(infer)) {
-        log.warn("Adding external constraints to force rank!");
+      if (forceRankEqual && InferenceMode.NONE.equals(infer)) {
+        log.warn("Adding external constraints to set rank equal!");
         if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1) {
           for (int i = 0;
               i < fd.getInferredSignature().getAnnotation().get().withCost.from.size();
@@ -337,7 +344,8 @@ public class Program {
       }
 
       // Set right sides equal.
-      if (forceResultPerModule && fd.returnsTree() && !InferenceMode.NONE.equals(infer)) {
+      if (forceResultPerModule && fd.returnsTree()) {
+        log.warn("Adding external constraints to set right sides equal!");
         final var module = fd.getModuleName();
         external.addAll(
             EqualityConstraint.eq(
@@ -452,6 +460,7 @@ public class Program {
     return result;
   }
 
+  @Deprecated
   public Solver.Result solve(
       Map<String, CombinedFunctionAnnotation> annotations,
       Map<String, Path> tactics,
@@ -464,6 +473,28 @@ public class Program {
         tactics,
         infer ? InferenceMode.PROXIED : InferenceMode.NONE,
         forceResultPerModule,
+        false,
+        false,
+        split,
+        externalConstraints);
+  }
+
+  public Solver.Result solve(
+      Map<String, CombinedFunctionAnnotation> annotations,
+      Map<String, Path> tactics,
+      boolean infer,
+      boolean forceResultPerModule,
+      boolean forceRankEqual,
+      boolean simpleSignatures,
+      boolean split,
+      Set<Constraint> externalConstraints) {
+    return solve(
+        annotations,
+        tactics,
+        infer ? InferenceMode.PROXIED : InferenceMode.NONE,
+        forceResultPerModule,
+        forceRankEqual,
+        simpleSignatures,
         split,
         externalConstraints);
   }
@@ -473,10 +504,19 @@ public class Program {
       Map<String, Path> tactics,
       InferenceMode infer,
       boolean forceResultPerModule,
+      boolean forceRankEqual,
+      boolean simpleSignatures,
       boolean split,
       Set<Constraint> externalConstraints) {
     if (!split) {
-      return solveTogether(annotations, tactics, infer, forceResultPerModule, externalConstraints);
+      return solveTogether(
+          annotations,
+          tactics,
+          infer,
+          forceResultPerModule,
+          forceRankEqual,
+          simpleSignatures,
+          externalConstraints);
     }
 
     final var scheduler =
@@ -493,6 +533,8 @@ public class Program {
                         tactics,
                         infer,
                         forceResultPerModule,
+                        forceRankEqual,
+                        simpleSignatures,
                         externalConstraints,
                         scc.vertexSet()));
 

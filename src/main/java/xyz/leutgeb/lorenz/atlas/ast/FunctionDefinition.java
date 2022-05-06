@@ -89,7 +89,8 @@ public class FunctionDefinition {
     this.name = name;
     this.arguments = arguments;
     this.body = body;
-    this.annotatedSignature = annotatedSignature.sealConstraints();
+    this.annotatedSignature =
+        annotatedSignature == null ? null : annotatedSignature.sealConstraints();
   }
 
   public FunctionSignature initializeInferredSignature(UnificationContext problem) {
@@ -277,11 +278,14 @@ public class FunctionDefinition {
     final var treeLikeArguments = treeLikeArguments();
     var predefined = functionAnnotations.get(getFullyQualifiedName());
 
+    final var fromSize = treeLikeArguments.size();
+    final var toSize = returnsTree() ? 1 : 0;
+
     if (predefined == null) {
       var inferredAnnotation =
           new FunctionAnnotation(
-              heuristic.generate(getName() + treeLikeArguments(), treeLikeArguments.size()),
-              heuristic.generate(getName() + "[_]", returnsTree() ? 1 : 0));
+              heuristic.generate(getName() + treeLikeArguments(), fromSize),
+              heuristic.generate(getName() + "[_]", toSize));
 
       Set<FunctionAnnotation> cfAnnotations = new HashSet<>();
 
@@ -297,9 +301,8 @@ public class FunctionDefinition {
       for (int i = 1; i <= cf; i++) {
         cfAnnotations.add(
             new FunctionAnnotation(
-                heuristic.generate(
-                    getName() + treeLikeArguments() + "cf" + i, inferredAnnotation.from),
-                heuristic.generate(getName() + "[_]" + "cf" + i, inferredAnnotation.to)));
+                heuristic.generate(getName() + treeLikeArguments() + "cf" + i, fromSize),
+                heuristic.generate(getName() + "[_]" + "cf" + i, toSize)));
       }
 
       final var combined =

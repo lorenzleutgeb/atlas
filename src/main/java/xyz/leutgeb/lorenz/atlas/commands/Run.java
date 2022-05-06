@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.atlas.commands;
 
+import com.microsoft.z3.Status;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,6 +16,8 @@ import xyz.leutgeb.lorenz.atlas.ast.FunctionDefinition;
 import xyz.leutgeb.lorenz.atlas.ast.Program;
 import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.module.Loader;
+import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Prover;
+import xyz.leutgeb.lorenz.atlas.util.Util;
 
 @CommandLine.Command(name = "run")
 @Slf4j
@@ -28,23 +31,63 @@ public class Run implements Runnable {
 
   @CommandLine.Option(
       defaultValue = "false",
+      showDefaultValue = CommandLine.Help.Visibility.ALWAYS,
       names = "--infer",
       description =
           "When present cost annotations in the program source are ignored, instead a new typing is computed.")
   // TODO: Make infer the default.
   private Boolean infer;
 
+  @CommandLine.Option(
+      defaultValue = "false",
+      showDefaultValue = CommandLine.Help.Visibility.ALWAYS,
+      names = "--simple-annotations",
+      paramLabel = "true|false",
+      arity = "1",
+      description =
+          "If true, simple annotations (only single tree sizes as arguments to logarithm and constants) are used.")
+  private Boolean simpleAnnotations;
+
+  @CommandLine.Option(
+      defaultValue = "false",
+      showDefaultValue = CommandLine.Help.Visibility.ALWAYS,
+      names = "--equal-ranks",
+      paramLabel = "true|false",
+      arity = "1",
+      description =
+          "If true, rank coefficients in annotations of arguments and return value is set equal per function definition.")
+  private Boolean equalRanks;
+
+  @CommandLine.Option(
+      defaultValue = "true",
+      showDefaultValue = CommandLine.Help.Visibility.ALWAYS,
+      names = "--consistent-modules",
+      arity = "1",
+      paramLabel = "true|false",
+      description = "If true, the annotation of return values is set equal per module.")
+  private Boolean consistentModules;
+
+  @CommandLine.Option(
+      defaultValue = "false",
+      showDefaultValue = CommandLine.Help.Visibility.ALWAYS,
+      names = "--use-tick-ast",
+      arity = "1",
+      paramLabel = "true|false",
+      description = "If true, use (tick:ast) instead of (tick).")
+  private Boolean useTickAst;
+
   @CommandLine.Option(names = "--name", description = "Name of the run.")
   private String name;
 
   @CommandLine.Option(
       names = "--tactics",
+      paramLabel = "path-to-dir",
       description = "When present, tactics will be loaded from this directory.")
   private Path tactics;
 
   @CommandLine.Option(
       names = "--json",
-      paramLabel = "FILE",
+      paramLabel = "path-to-file",
       description = "If present, detailed output in JSON format will be written to this file.")
   private Path json;
 
@@ -138,23 +181,42 @@ public class Run implements Runnable {
     }
     System.out.println();
 
+    if (useTickAst) {
+      System.setProperty(Util.getPropertyName(Prover.class, "tickAst"), "true");
+    }
+
     final var result =
-        program.solve(new HashMap<>(), tacticsMap, infer, true, !infer, Collections.emptySet());
+        program.solve(
+            new HashMap<>(),
+            tacticsMap,
+            infer,
+            consistentModules,
+            equalRanks,
+            simpleAnnotations,
+            !infer,
+            Collections.emptySet());
 
     final var stop = Instant.now();
     System.out.println("Elapsed Walltime: " + Duration.between(start, stop));
     System.out.println();
 
-    if (!result.isSatisfiable()) {
+    if (Status.UNSATISFIABLE.equals(result.getStatus())) {
       System.out.println("UNSAT");
       System.exit(1);
-    } else if (!infer) {
-      System.out.println("SAT");
-      System.out.println();
+    } else if (Status.UNKNOWN.equals(result.getStatus())) {
+      System.out.println("UNKNOWN");
+      System.exit(2);
+    } else if (Status.SATISFIABLE.equals(result.getStatus())) {
+      if (!infer) {
+        System.out.println("SAT");
+        System.out.println();
+      } else {
+        System.out.println("Results:");
+        program.printAllInferredAnnotationsAndBoundsInOrder(System.out);
+        System.out.println();
+      }
     } else {
-      System.out.println("Results:");
-      program.printAllInferredAnnotationsAndBoundsInOrder(System.out);
-      System.out.println();
+      throw new RuntimeException("encountered unknown status");
     }
 
     /*

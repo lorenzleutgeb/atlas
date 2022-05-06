@@ -13,12 +13,12 @@ import xyz.leutgeb.lorenz.atlas.module.Loader;
 
 @CommandLine.Command(name = "lnf")
 public class LNF implements Runnable {
-  @CommandLine.Option(
-      defaultValue = "out",
-      names = "--out",
-      description =
-          "Where to write loaded and normalized output to. Must be an existing, writable directory.")
-  private Path out;
+  @CommandLine.Parameters(
+      index = "0",
+      arity = "1",
+      paramLabel = "path",
+      description = "Path where output should be rooted at.")
+  private Path path;
 
   @CommandLine.Spec(CommandLine.Spec.Target.SELF)
   private CommandLine.Model.CommandSpec selfSpec;
@@ -45,7 +45,7 @@ public class LNF implements Runnable {
       try {
         fd.printTo(
             new PrintStream(
-                new File(out.toFile(), fqnToFlatFilename(fd.getFullyQualifiedName()) + ".ml")
+                new File(path.toFile(), fqnToFlatFilename(fd.getFullyQualifiedName()) + ".ml")
                     .getAbsoluteFile()));
       } catch (FileNotFoundException e) {
         e.printStackTrace();

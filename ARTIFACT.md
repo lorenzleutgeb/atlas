@@ -1,7 +1,5 @@
 # ARTIFACT 
 
-## Important Notice
-
 This is the "README" accompanying the artifact, according to
 "Packaging Guidelines", "Artifact Evaluation" website at
 
@@ -14,23 +12,18 @@ of the tool.
 Artifact submission 2 (this artifact) is associated with
 the regular paper submission 4.
 
-This artifact applies for all three badges (functional, available, reusable). For
-each badge, there is one corresponding section in this file.
+This artifact applies for all three badges (functional, available, reusable).
+For each badge, there is one corresponding section in this file.
 
-## Open Virtual Appliance (OVA) vs. Docker Image
+## Installing Additional Software
 
-The Docker image is much smaller in size compared to the
-Open Virtual Appliance, since it does not contain a graphical desktop.
-
-The Docker image does not include any kind of package manager, and it
-is therefore more cumbersome to add install additional software if the
-need arises during evaluation. In the OVA version, the [Nix][nix]
-package manager is installed, so installation of additional software
-is as simple as
+The [Nix][nix] package manager comes pre-installed with the Open Virtual Appliance.
+Installation of additional software is as simple as
 
     nix-env -iA nixos.hello
 
-Refer to <https://search.nixos.org/> to search for packages.
+Refer to <https://search.nixos.org/> to search for packages and to
+<https://nixos.org/learn.html> for more information on Nix and NixOS.
 
 ## Functional
 
@@ -38,8 +31,47 @@ Please make sure to first read the section "Using" of `README.md` for general
 remarks on operating the tool, then return to this section which addresses
 reproduction of results.
 
-To verify the results in the associated paper, you will need the "run"
-subcommand
+### Results Reported in the Associated Paper
+
+The artifact comes with two scripts to aid evaluation.
+  1. The script at `$HOME/atlas/evaluate-faster.sh` will invoke ATLAS
+     to verify (by type checking), the results in the paper,
+     using proof tactics from `$HOME/atlas/src/test/resources/tactics`
+     that were improved manually.
+  2. The script at `$HOME/atlas/evaluate-fast.sh` will invoke ATLAS
+     to verify (by type checking), the results in the paper.
+  3. The script at `$HOME/atlas/evaluate.sh` will run invoke ATLAS
+     to recompute (by type inference) the results from the paper,
+     using options to speed up type inference (see below).
+  4. The script at `$HOME/atlas/evaluate-slow.sh` will run invoke ATLAS
+     to recompute (by type inference) the results from the paper,
+     without any caveats.
+
+We recommend skimming the source code of all three scripts to gain an
+intuitive understanding in how they differ.
+
+They all invoke
+
+  atlas run [--infer] [other options]
+
+which is the most important command of the tool.
+
+We suggest starting with `evaluate-fast.sh` (depending on the size of the instance,
+each invocation should take between a few seconds up to 10 minutes).
+
+All results were computed on a machine with an Intel Xeon W-1290P processor
+(10 cores, 20 threads, up to 5.2GHz) and 64GiB DDR4-ECC main memory.
+We expect that type inference within the virtual machine and on consumer
+hardware will be severly degraded, e.g. might have inacceptable runtime
+especially for larger instances like with `evaluate.sh` and `evaluate-slow.sh`.
+
+Note that the options turned on for `evaluate.sh` are orthogonal to the use of
+improved tactics.
+
+### Type Checking
+
+Verifying the results in the associated paper by type checking is done
+by invoking the "run" subcommand.
 
     atlas run --help
 
@@ -54,42 +86,14 @@ It is possible to pass multiple such names.
 This way, resource annotations for multiple functions can be inferred/checked
 together, even if their definitions do not depend on each other.
 
-To enable type inference, pass `--infer`:
+### Type Inference
+
+To recompute the results in the associated paper, enable type inference,
+by passing `--infer`:
 
     atlas run --infer PairingHeap.link
 
-There is another subcommand, which is helpful to understand how definitions are
-translated before constraints are generated and tactics applied:
-
-    atlas lnf --out=mydir
-
-will print function definitions in let-normal-form to the directory passed as
-`out` argument. This directory must exist and be writable. This command works
-without considering resource annotations, so they will not be printed to the
-resulting file.
-
-To speed up resource annotation inference/checking, tactics can be used.
-The artifact contains some tactics in
-
-    $HOME/atlas/src/test/resources/tactics/<module-name>/<function-name>.txt
-
-To enable them, use the `run` subcommand with the `--tactics` parameter (see
-below).
-
-### Results Reported in the Associated Paper
-
-> Document in detail how to reproduce the experimental results of the paper
-> using the artifact; [...]
-
-#### Table 1
-
-#### Table 2
-
-
-> [...]; keep this process simple through easy-to-use scripts and
-> provide detailed documentation assuming minimum expertise.
-
-The script at `$HOME/atlas/reproduce.sh` will run all above commands in sequence.
+Note that type inference is considerably slower than type checking.
 
 ### Source Code
 
@@ -120,59 +124,27 @@ This artifact was submitted via a DOI issued by Zenodo.
 
 ## Reusable
 
-> Ensure that your tool is usable independently of your artifact VM or
-> container, by making your source code and a set of representative experiments
-> available on a public platform (personal website, code-hosting platform…),
-> under a license that allows reuse.
+> Does the artifact have a license which allows reuse,
+> repurposing, and is easy to use?
+
+See `LICENSE`.
+
+> Are all dependencies and used libraries well documented and up to date?
+
+See `build.gradle.kts` and `gradle-env.json` (derived from `build.gradle.kts`).
+
+> Does the artifact provide documented interfaces for extensions
+> or is the artifact open source?
+
+The artifact is open source. All inputs/benchmarks are open source.
 
 The source code for this artifact is publicly available at
 
   https://github.com/lorenzleutgeb/atlas
 
-and input files and representative experiments are publicly available at
-
-  https://github.com/lorenzleutgeb/atlas-examples
-
 These two repositories are split on purpose, so that future and/or competing
 implementations may share and collaborate on the input files separated from
 this concrete implementation.
-
-The contents of both repositories are licensed to allow re-use. See
-
-  https://github.com/lorenzleutgeb/atlas/blob/main/LICENSE
-  https://github.com/lorenzleutgeb/atlas-examples/blob/main/LICENSE
-
-> Your source code release should include detailed documentation
-> (setup and usage instructions).
-
-Please refer to
-
-  https://github.com/lorenzleutgeb/atlas/blob/main/README.md
-
-Note that this file is also included in the artifact.
-
-> Ensure that the set-up process for your artifact is reproducible by including
-> a script used to build the VM or container (Vagrantfile, Docker script,
-> Bash script) that allows users to automatically reproduce your artifact’s
-> set-up.  Try to keep this script reasonably simple.
-
-Please refer to
-
-  https://github.com/lorenzleutgeb/atlas/blob/main/README.md
-
-Note that this process is highly reproducible, because it is implemented 
-using the Nix package manager. To learn more, please refer to
-
-  https://nixos.org/guides/how-nix-works.html
-  https://doi.org/10.1017/S0956796810000195
-  https://r13y.com/
-
-> Include instructions for reviewers explaining how to exercise your artifact
-> on new inputs; in particular, document what inputs your tool support.
-
-Consider the example inputs at 
-
-  https://github.com/lorenzleutgeb/atlas-examples
 
 The grammar(s) used to generate the parser for the input language can be found
 at
@@ -182,18 +154,41 @@ at
 This programming language is necessarily simple, to allow for easier analysis,
 but sufficiently complex to express self-balancing trees and heaps.
 
+The contents of both repositories are licensed to allow re-use. See
+
+  https://github.com/lorenzleutgeb/atlas/blob/main/LICENSE
+  https://github.com/lorenzleutgeb/atlas-examples/blob/main/LICENSE
+
+ATLAS uses Z3 to produce SMTLIB compatible files for the underlying
+SMT instances. Check the output folder after execution.
+
+> Can the artifact be used in a different environment (e.g., built on
+> another system, used outside of the VM or Docker image, etc.)?
+
+A Docker image build is declared in `flake.nix`, however it is not well
+tested (lack of personal resources to test both a Docker image and an OVA).
+
+The tool can be built with Gradle, which is a build tool common in the Java
+ecosystem, or using Nix, which in turn wraps the Gradle build tool.
+
+For building instructions, please refer to
+
+  https://github.com/lorenzleutgeb/atlas/blob/main/README.md
+
+Note that this file is also included in the artifact.
+
+Note that the Nix build process is highly reproducible, because it is implemented.
+To learn more, please refer to
+
+  https://nixos.org/guides/how-nix-works.html
+  https://doi.org/10.1017/S0956796810000195
+  https://r13y.com/
+
 One could implement additional functions and define them in a new Module
 (i.e. a new `*.ml` file).
 
 It is also possible to provide resource annotations for specific function
 definitions. This can also be observed in the examples.
-
-> When applicable, make sure that your tool accepts inputs in standard formats
-> (e.g. SMTLIB).
-
-We think that this is not applicable for our *input* of our tool, but indeed our
-tool provides SMTLIB as a standard *output* format. The tool prints the output
-folder name to standard output upon invocation.
 
 ### Usage beyond the Paper
 
@@ -202,32 +197,100 @@ folder name to standard output upon invocation.
 > run (a new program to feed to your compiler, a new problem for your SMT
 > solver, etc.)
 
-Our examples contain tests for nonterminating programs. One case for which
-nontermination can be detected, is `Infinite.infinite_18`. Run it with
+#### Non-Terminating Examples
 
-    atlas run --infer Infinite.infinite_18
+Our examples contain tests for non-terminating programs, see the `Infinite` module.
 
-#### Results reported at CAV 2021
+#### Speeding up Type Inference
 
-See <https://doi.org/10.1007/978-3-030-81688-9_5>
+There are two additional options that restrict the search space,
+to consider especially in case the runtime of ATLAS is not acceptable
+in the virtual machine.
 
-To verify the results presented in Table 1 on page 3 of the associated paper,
-run the following commands (and remember, that `--home` is omitted).
+##### Simple Annotations
 
-For the first group of four lines (`SplayTree`):
+The first option, `--simple-annotations=true`, will further restrict the
+templates used for annotating function definitions. While the default
+technique allows for coefficients like
+
+  q_(1, 1, 0) or q_(0, 1, 2)
+
+which correspond to
+
+  log(|t1| + |t2|) and log(|t2| + 2)
+
+the restriction to "simple annotations" disallows multiple tree-size terms
+and the combination of a constant with a tree-size term per logarithm. 
+Both above coefficients would be excluded.
+Note that the results for "(Randomised) Meldable Heap" and "Coin Search Tree",
+as well as for the introductory example, are of this form.
+
+##### Equal Ranks
+
+The second option, `--equal-ranks=true`, will impose the constraint
+
+  q* = q'*    i.e. "the rank coefficients for input and output must be equal"
+
+to all function annotations. Which forces inference of logarithmic
+cost only. We do not enable this by default to avoid the implicit assumption
+that any function definition for which annotations are to be inferred
+has logarithmic cost.
+
+##### Tactics
+
+Tactics can be used in place of ATLAS automatic tactic generation.
+This facility is especially helpful for prototyping/extending automatic
+generation.
+
+Since the automatic tactic generation has considerably improved since
+CAV 2021, the existing tactics might not give signicant acceleration
+compared to automatically generated tactics. They might even be outdated.
+
+The artifact contains some tactics in
+
+    $HOME/atlas/src/test/resources/tactics/<module-name>/<function-name>.txt
+
+To enable them, use the `run` subcommand with the `--tactics` parameter (see
+below), e.g.
 
     atlas run --tactics [...] --infer \
         SplayTree.splay SplayTree.splay_max SplayTree.insert SplayTree.delete
 
-For the second group of three lines (`SplayHeap`):
+#### Further Commands
 
-    atlas run --tactics [...] --infer SplayHeap.insert Splayheap.del_min
+These subcommands are not as well-maintained, but might still be helpful.
 
-For the third group of four lines (`PairingHeap`) **EXCEPT** `PairingHeap.merge`:
+##### Generation of Let-Normal-Form
 
-    atlas run --tactics [...] --infer \
-        PairingHeap.insert_isolated Pairingheap.merge_pairs_isolated \
-	PairingHeap.del_min_via_merge_pairs_isolated PairingHeap.merge_isolated
+This subcommand prints function definitions after translation to let-normal-form,
+i.e. the form before constraints are generated and tactics applied.
+
+    atlas lnf ...
+
+This command works without considering resource annotations,
+so they will not be printed to the resulting file.
+
+##### Generation of Haskell Code
+
+Experimental translation to Haskell.
+
+    atlas hs
+##### Generation of Java Code
+
+Experimental translation to Java. Fails if there are pairs/tuples
+in the input.
+
+    atlas java
+
+#### Results reported at CAV 2021
+
+  ATLAS: Automated Amortised Complexity Analysis of Self-adjusting Data Structures
+  Lorenz Leutgeb, Georg Moser, Florian Zuleger
+  CAV 2021
+  https://doi.org/10.1007/978-3-030-81688-9_5
+
+The script `reproduce.sh` will try to reproduce the results presented in Table 1
+on page 3 of the paper.
 
 #### Checking other annotations
 
@@ -235,6 +298,10 @@ To check a custom resource annotation, you may define a new function (or copy
 an example definition) and will have to edit the corresponding `*.ml`
 file. The program will print the source of all definitions that are loaded via
 the `run` subcommand.
+
+#### Comparing (tick) and (tick:ast)
+
+(tick:ast) can be enabled via `--use-tick-ast=true`.
 
 #### The Search Path
 
@@ -284,18 +351,18 @@ familiar from the table in our paper:
     Q(h) = rk(h) + 2 \log(2) + 2 \log(|h|)
     P(h) = rk(h) + 2 \log(2) + 1 \log(|h|)
 
-Note that $Q(h)$ annotates the argument and $P(h)$ annotates the result of `PairingHeap.link`.
-According to the design of our type system, $P(h)$ can be directly used as potential, and it relates to amortised cost and actual cost as follows:
+Note that Q(h) annotates the argument and P(h) annotates the result of `PairingHeap.link`.
+According to the design of our type system, P(h) can be directly used as potential, and it relates to amortised cost and actual cost as follows:
 
-    c_{amortised}(link) = \lambda h . c_{actual}(link)(h) + P(link(h)) - P(h)
+    c_{amortised}(link) = λ h . c_{actual}(link)(h) + P(link(h)) - P(h)
 
 And further, according to the soundness of our type system we have
 
-    Q(h) \geq P(link(h)) + c_{actual}(link)(h)
+    Q(h) ≥ P(link(h)) + c_{actual}(link)(h)
 
-To bound amortised cost, we take the difference of $Q$ and $P$:
+To bound amortised cost, we take the difference of Q and P:
 
-    D(h) = Q(h) - P(h) \geq P(link(h)) + c_{actual}(link)(h) - P(h) = c_{amortised}(link)(h)
+    D(h) = Q(h) - P(h) ≥ P(link(h)) + c_{actual}(link)(h) - P(h) = c_{amortised}(link)(h)
 
 Thus, the upper bound for amortised cost of `PairingHeap.link` that is represented by the above result, is
 
@@ -313,10 +380,6 @@ The artifact imposes following resource limits on Z3:
 
 These (and other) parameters as well as logging configuration can be changed
 in `atlas.properties`.
-
-All results were computed on a machine with an Intel Xeon W-1290P 64GiB
-processor and 64GiB main memory, and computations took on the order of less
-than a second up to fifteen minutes.
 
 ## Z3 Statistics
 

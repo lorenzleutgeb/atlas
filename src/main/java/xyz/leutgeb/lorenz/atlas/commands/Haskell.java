@@ -21,7 +21,7 @@ import xyz.leutgeb.lorenz.atlas.module.Loader;
 @Slf4j
 public class Haskell implements Runnable {
   @CommandLine.Parameters(
-      index = "0",
+      index = "1",
       arity = "1",
       paramLabel = "pattern",
       description =
@@ -31,12 +31,10 @@ public class Haskell implements Runnable {
   private Pattern pattern;
 
   @CommandLine.Parameters(
-      index = "1",
+      index = "0",
       arity = "1",
       paramLabel = "haskellSearchPath",
-      description = "Path where Haskell output should be rooted at.",
-      defaultValue = ".",
-      showDefaultValue = ALWAYS)
+      description = "Path where Haskell output should be rooted at.")
   private Path path;
 
   @Override

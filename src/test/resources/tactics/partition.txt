@@ -1,0 +1,159 @@
+(match (* t *)
+  (w{mono} (* proof leaf 1 *)
+    leaf
+  )
+  (ite (* ab ⪯ p *)
+    (match (* tbc *)
+      (w{mono} (* first after match *)
+        (let:tree:cf
+          leaf
+          (let:tree:cf
+            node
+            (let:tree:cf
+              leaf
+              (w{mono} (* proof leaf 2 *)
+                node
+              )
+            )
+          )
+        )
+      )
+      (ite (* b ⪯ p *)
+        (w{l2xy mono neg} (* binds a call/tick *)
+          (let:tree:cf{nege}
+            (tick
+              (shift
+                app
+              )
+            )
+            (match (* ~ 1 1 partition d p tc *)
+              (w{mono} (* proof leaf 1 *)
+                (w:var
+                  (w:var
+                    leaf
+                  )
+                )
+              )
+              (w{l2xy mono} (* first after call, l2xy for tree construction, first after match *)
+                (let:tree:cf
+                  node
+                  (let:tree:cf
+                    node
+                    (w{mono} (* proof leaf 2 *)
+                      node
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+        (w{l2xy mono neg} (* binds a call/tick *)
+          (let:tree:cf{nege}
+            (tick
+              (shift
+                app
+              )
+            )
+            (match (* ~ 1 1 partition d p tb *)
+              (w{mono} (* proof leaf 1 *)
+                (w:var
+                  (w:var
+                    leaf
+                  )
+                )
+              )
+              (w{l2xy mono} (* first after call, l2xy for tree construction, first after match *)
+                (let:tree:cf
+                  node
+                  (let:tree:cf
+                    node
+                    (w{mono} (* proof leaf 2 *)
+                      node
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (match (* tab *)
+      (w{mono} (* first after match *)
+        (let:tree:cf
+          leaf
+          (let:tree:cf
+            leaf
+            (let:tree:cf
+              node
+              (w{mono} (* proof leaf 2 *)
+                node
+              )
+            )
+          )
+        )
+      )
+      (ite (* a ⪯ p *)
+        (w{l2xy mono neg} (* binds a call/tick *)
+          (let:tree:cf{nege}
+            (tick
+              (shift
+                app
+              )
+            )
+            (match (* ~ 1 1 partition d p tb *)
+              (w{mono} (* proof leaf 1 *)
+                (w:var
+                  (w:var
+                    leaf
+                  )
+                )
+              )
+              (w{l2xy mono} (* first after call, l2xy for tree construction, first after match *)
+                (let:tree:cf
+                  node
+                  (let:tree:cf
+                    node
+                    (w{mono} (* proof leaf 2 *)
+                      node
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+        (w{l2xy mono neg} (* binds a call/tick *)
+          (let:tree:cf{nege}
+            (tick
+              (shift
+                app
+              )
+            )
+            (match (* ~ 1 1 partition d p ta *)
+              (w{mono} (* proof leaf 1 *)
+                (w:var
+                  (w:var
+                    leaf
+                  )
+                )
+              )
+              (w{l2xy mono} (* first after call, l2xy for tree construction, first after match *)
+                (let:tree:cf
+                  node
+                  (let:tree:cf
+                    node
+                    (w{mono} (* proof leaf 2 *)
+                      node
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)

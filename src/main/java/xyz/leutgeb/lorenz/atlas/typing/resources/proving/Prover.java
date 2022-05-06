@@ -62,6 +62,7 @@ public class Prover {
   private static final Rule RULE_LEAF = Leaf.INSTANCE;
   private static final Rule RULE_SHIFT = Shift.INSTANCE;
   private static final Rule RULE_TICK = Tick.INSTANCE;
+  private static final Rule RULE_TICK_AST = TickAst.INSTANCE;
 
   private static final Map<String, Rule> RULES_BY_NAME =
       Stream.of(
@@ -78,7 +79,8 @@ public class Prover {
               RULE_W,
               RULE_LEAF,
               RULE_SHIFT,
-              RULE_TICK)
+              RULE_TICK,
+              RULE_TICK_AST)
           .collect(toUnmodifiableMap(Rule::getName, identity()));
 
   private static final boolean DEFAULT_WEAKEN_AGGRESSIVELY = false;
@@ -177,7 +179,11 @@ public class Prover {
       }
       if (expression instanceof CallExpression && TICK_BEFORE_APP) {
         log.trace("Automatically applying (tick) to expression `{}`!", expression);
-        todo.add(RuleSchedule.schedule(RULE_TICK));
+        if (Boolean.parseBoolean(Util.getProperty(Prover.class, "tickAst", "false"))) {
+          todo.add(RuleSchedule.schedule(RULE_TICK_AST));
+        } else {
+          todo.add(RuleSchedule.schedule(RULE_TICK));
+        }
       }
       todo.add(RuleSchedule.schedule(chooseRule(expression)));
       return todo;
@@ -217,7 +223,11 @@ public class Prover {
     } else if (e instanceof ShareExpression) {
       return RULE_SHARE;
     } else if (e instanceof TickExpression) {
-      return RULE_TICK;
+      if (Boolean.parseBoolean(Util.getProperty(Prover.class, "tickAst", "false"))) {
+        return RULE_TICK_AST;
+      } else {
+        return RULE_TICK;
+      }
     }
     throw bug("could not choose a rule for expression of type " + e.getClass().getCanonicalName());
   }
@@ -324,7 +334,9 @@ public class Prover {
           comments.add("binds a call/tick");
           l2xy = true;
           mono = true;
-          neg = true;
+          if (value.getOccurringFunctions().contains(fd.getFullyQualifiedName())) {
+            neg = true;
+          }
         } else if (letExpression.isTreeConstruction()) {
           if (parent instanceof MatchTreeExpression || parent instanceof IfThenElseExpression) {
             comments.add("first after match");
@@ -349,7 +361,7 @@ public class Prover {
       mono = false;
     }
 
-    if (mono || size || l2xy || lp1 || neg || weaken) {
+    if (mono || size || l2xy || lp1 || weaken) {
       todo.add(
           RuleSchedule.schedule(
               RULE_W,
@@ -381,7 +393,12 @@ public class Prover {
       }
     }
 
-    todo.add(RuleSchedule.schedule(chooseRule(e)));
+    if (e instanceof LetExpression && neg) {
+      todo.add(RuleSchedule.schedule(RULE_LET_TREE_CF, Map.of("nege", "true")));
+    } else {
+      todo.add(RuleSchedule.schedule(chooseRule(e)));
+    }
+
     return todo;
   }
 

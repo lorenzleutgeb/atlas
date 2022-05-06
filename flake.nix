@@ -8,7 +8,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     examples = {
-      url = "github:lorenzleutgeb/atlas-examples";
+      url = "github:lorenzleutgeb/atlas-examples/v0.2.1";
       flake = false;
     };
     gradle2nix = {
@@ -43,20 +43,17 @@
         ];
       };
       utils = with pkgs; [
+        calc
         bash
         bash-completion
         coreutils
+        findutils
+        gitFull
         gnugrep
         less
-        findutils
-        nano
+        moreutils
+        vim
       ];
-      submission = "CAV_2022_paper_1.pdf";
-      maintainers = [{
-        name = "Lorenz Leutgeb";
-        email = "lorenz@leutgeb.xyz";
-        github = "lorenzleutgeb";
-      }];
     in rec {
       devShell.${system} = pkgs.mkShell {
         buildInputs = [ atlasEnv ];
@@ -79,26 +76,6 @@
       defaultPackage.${system} = packages.${system}.atlas;
 
       packages.${system} = rec {
-        atlas-cav = pkgs.fetchurl {
-          name = submission;
-          url = "https://lorenz.leutgeb.xyz/paper/${submission}";
-          sha256 = "sha256-La5oBBs1fyaiUsu6MF1S5yBOYmozXxxsCrldM8EdArU=";
-          postFetch = ''
-            mkdir $out
-            mv -v $downloadedFile $out/${submission}
-          '';
-          downloadToTemp = true;
-          recursiveHash = true;
-
-          meta = {
-            inherit maintainers;
-
-            longDescription = ''
-              The associated paper as PDF, wrapped in a directory.
-            '';
-          };
-        };
-
         atlas = (pkgs.callPackage ./gradle-env.nix { gradleBuildJdk = jdk; }) {
           buildJdk = jdk;
           gradlePackage = gradle;
@@ -148,20 +125,16 @@
             echo "xyz.leutgeb.lorenz.atlas.module.Loader.defaultHome=$out/var/atlas/resources/examples" >> $out/var/atlas/atlas.properties
           '';
 
-          meta = {
-            inherit maintainers;
+          meta.longDescription = ''
+            The atlas tool, along with some auxiliary files.
 
-            longDescription = ''
-              The atlas tool, along with some auxiliary files.
-
-              This derivation produces two outputs:
-                1. The standard output 'out' contains the binary as
-                   `/bin/atlas` and auxiliary files under `/var/atlas`.
-                2. The output 'jacoco' which contains a test coverage
-                   report in XML format.
-                   JaCoCo broken with JDK 17.
-            '';
-          };
+            This derivation produces two outputs:
+              1. The standard output 'out' contains the binary as
+                 `/bin/atlas` and auxiliary files under `/var/atlas`.
+              2. The output 'jacoco' which contains a test coverage
+                 report in XML format.
+                 JaCoCo broken with JDK 17.
+          '';
         };
 
         atlas-shell-docker = pkgs.dockerTools.buildLayeredImage {
@@ -176,8 +149,6 @@
           config = { Entrypoint = [ "${pkgs.bash}/bin/bash" ]; };
 
           /* meta = {
-               inherit maintainers;
-
                longDescription = ''
                  A Docker image that contains atlas, alongside some useful tools,
                  the associated paper, and sources.
@@ -193,7 +164,6 @@
           config.Entrypoint = [ (packages.${system}.atlas + "/bin/atlas") ];
 
           /* meta = {
-               inherit maintainers;
                longDescription = ''
                  A Docker image that contains atlas (but not much more),
                  and will run it by default.
@@ -218,15 +188,28 @@
           '';
           installPhase = "true";
 
-          meta = {
-            inherit maintainers;
-            longDescription = ''
-              Takes the contents of this repository and adds
-              examples to src/test/resources/examples as if
-              it would be initialized and updated as a Git
-              submodule.
-            '';
+          meta.longDescription = ''
+            Takes the contents of this repository and adds
+            examples to src/test/resources/examples as if
+            it would be initialized and updated as a Git
+            submodule.
+          '';
+        };
+
+        atlas-src-git = pkgs.stdenv.mkDerivation {
+          name = "atlas-src-git";
+          src = pkgs.fetchFromGitHub {
+            owner = "lorenzleutgeb";
+            repo = "atlas";
+            rev = "8c561d219ba4620f18bed35ead695bcfd2808acb";
+            hash = "sha256-aNXuchGIMh27nDIpuLWMlwStA8HKifIxIPNzm/Qx7KI=";
+            deepClone = true;
+            fetchSubmodules = true;
           };
+          buildPhase = ''
+            cp    -Rv    $src        $out
+          '';
+          installPhase = "true";
         };
       };
 
@@ -238,6 +221,15 @@
           "${nixpkgs}/nixos/modules/virtualisation/virtualbox-guest.nix"
           home-manager.nixosModules.home-manager
           ({ pkgs, ... }: {
+            nix = {
+              package = pkgs.nixFlakes;
+              extraOptions = ''
+                allow-import-from-derivation = true
+                experimental-features = nix-command flakes
+                keep-outputs = true
+              '';
+            };
+            nixpkgs.config = { allowUnfree = true; };
             virtualbox = {
               vmName = "atlas";
               vmFileName = "atlas.ova";
@@ -248,12 +240,8 @@
               };
             };
             environment = {
-              systemPackages = utils ++ [
-                self.packages.${system}.atlas
-                pkgs.evince
-                pkgs.vim
-                atlasEnv
-              ];
+              systemPackages = utils
+                ++ [ self.packages.${system}.atlas pkgs.evince atlasEnv ];
               variables = {
                 "ATLAS_HOME" = "/home/evaluator/atlas/src/resources/examples";
               };
@@ -280,22 +268,25 @@
 
                     /home/evaluator/atlas
 
-                  Then, please refer to
+                  Then, please first refer to the `README.md` of the tool itself
+
+                    /home/evaluator/atlas/README.md
+
+                  and afterwards to the "readme" of the artifact
 
                     /home/evaluator/atlas/ARTIFACT.md
 
-                  Note that `atlas` (command) is in `$PATH`, it can be executed in a terminal.
+                  Locations of some pre-installed software (all in `$PATH` as applicable):
+                    atlas   ${self.packages.${system}.atlas}
+                    git     ${pkgs.gitFull}
+                    graal   ${graal}
+                    gradle  ${gradle}
+                    jdk     ${jdk}
+                    z3      ${z3}
                 '';
-                # To place PDF:
-                #pdf = (self.packages.${system}.atlas-cav + "/" + submission);
               in {
-                # To place PDF:
-                #${submission}.source = pdf;
                 "README.md".text = referText;
-
                 "Desktop/README.md".text = referText;
-                # To place PDF:
-                #"Desktop/${submission}".source = pdf;
 
                 "prepare-evaluation.sh".source =
                   pkgs.writeScript "prepare-evaluation" ''

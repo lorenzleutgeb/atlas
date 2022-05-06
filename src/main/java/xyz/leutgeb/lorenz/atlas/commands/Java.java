@@ -23,7 +23,7 @@ import xyz.leutgeb.lorenz.atlas.module.Loader;
 @Slf4j
 public class Java implements Runnable {
   @CommandLine.Parameters(
-      index = "0",
+      index = "1",
       arity = "1",
       paramLabel = "pattern",
       description =
@@ -36,10 +36,10 @@ public class Java implements Runnable {
   private CommandLine.Model.CommandSpec selfSpec;
 
   @CommandLine.Parameters(
-      index = "1",
+      index = "0",
       arity = "1",
-      paramLabel = "haskellSearchPath",
-      description = "Path where Haskell output should be rooted at.",
+      paramLabel = "javaRoot",
+      description = "Path where Java output should be rooted at.",
       defaultValue = ".",
       showDefaultValue = ALWAYS)
   private Path path;
@@ -103,6 +103,7 @@ public class Java implements Runnable {
         stream.println();
         for (var fd : output.get(e)) {
           fd.printJavaTo(stream, true);
+          System.out.println(fd.getFullyQualifiedName());
         }
         stream.println("}");
       } catch (IOException ex) {
