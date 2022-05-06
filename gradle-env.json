@@ -1,7 +1,7 @@
 {
   "": {
     "name": "atlas",
-    "version": "0.1.0-rc.0.27+20220502T225633Z",
+    "version": "0.1.0",
     "path": "",
     "gradle": {
       "version": "7.3.3",
