@@ -19,6 +19,8 @@ src/main/gen
 result
 result-*
 
+.idea
+
 # JetBrains IDEA
 .idea/checkstyle-idea.xml
 .idea/libraries-with-intellij-classes.xml

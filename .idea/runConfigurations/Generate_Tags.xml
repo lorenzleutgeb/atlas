@@ -1,7 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Generate Tags" type="Application" factoryName="Application">
-    <option name="MAIN_CLASS_NAME" value="xyz.leutgeb.lorenz.atlas.Main" />
-    <module name="atlas.main" />
-    <option name="PROGRAM_PARAMETERS" value="--home src/test/resources/examples index src/test/resources/examples/tags" />
-  </configuration>
-</component>
