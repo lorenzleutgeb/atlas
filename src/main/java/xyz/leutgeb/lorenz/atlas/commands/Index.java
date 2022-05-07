@@ -17,7 +17,7 @@ import xyz.leutgeb.lorenz.atlas.ast.Program;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Parsed;
 import xyz.leutgeb.lorenz.atlas.module.Loader;
 
-@CommandLine.Command(name = "index")
+@CommandLine.Command(name = "index", hidden = true)
 @Slf4j
 public class Index implements Runnable {
   @CommandLine.Option(

@@ -1,7 +1,7 @@
 {
   "": {
     "name": "atlas",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "path": "",
     "gradle": {
       "version": "7.3.3",
@@ -4974,34 +4974,34 @@
           "id": {
             "group": "org.sosy-lab",
             "name": "javasmt-solver-z3",
-            "version": "4.8.10",
+            "version": "4.8.12",
             "type": "jar",
             "extension": "jar",
             "classifier": "com.microsoft.z3"
           },
-          "name": "javasmt-solver-z3-4.8.10-com.microsoft.z3.jar",
-          "path": "org/sosy-lab/javasmt-solver-z3/4.8.10",
+          "name": "javasmt-solver-z3-4.8.12-com.microsoft.z3.jar",
+          "path": "org/sosy-lab/javasmt-solver-z3/4.8.12",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/sosy-lab/javasmt-solver-z3/4.8.10/javasmt-solver-z3-4.8.10-com.microsoft.z3.jar",
-            "https://repo.maven.apache.org/maven2/org/sosy-lab/javasmt-solver-z3/4.8.10/javasmt-solver-z3-4.8.10-com.microsoft.z3.jar"
+            "https://repo.maven.apache.org/maven2/org/sosy-lab/javasmt-solver-z3/4.8.12/javasmt-solver-z3-4.8.12-com.microsoft.z3.jar",
+            "https://repo.maven.apache.org/maven2/org/sosy-lab/javasmt-solver-z3/4.8.12/javasmt-solver-z3-4.8.12-com.microsoft.z3.jar"
           ],
-          "sha256": "033f68ed96238f86c7ba5f79146c9754fd620f36b714f60fb3f49e0ac57076a9"
+          "sha256": "a658d5837b17edef47112f0117eb46e47d25e835a427fe7d4f9962e53812f056"
         },
         {
           "id": {
             "group": "org.sosy-lab",
             "name": "javasmt-solver-z3",
-            "version": "4.8.10",
+            "version": "4.8.12",
             "type": "pom",
             "extension": "pom"
           },
-          "name": "javasmt-solver-z3-4.8.10.pom",
-          "path": "org/sosy-lab/javasmt-solver-z3/4.8.10",
+          "name": "javasmt-solver-z3-4.8.12.pom",
+          "path": "org/sosy-lab/javasmt-solver-z3/4.8.12",
           "urls": [
-            "https://repo.maven.apache.org/maven2/org/sosy-lab/javasmt-solver-z3/4.8.10/javasmt-solver-z3-4.8.10.pom",
-            "https://repo.maven.apache.org/maven2/org/sosy-lab/javasmt-solver-z3/4.8.10/javasmt-solver-z3-4.8.10.pom"
+            "https://repo.maven.apache.org/maven2/org/sosy-lab/javasmt-solver-z3/4.8.12/javasmt-solver-z3-4.8.12.pom",
+            "https://repo.maven.apache.org/maven2/org/sosy-lab/javasmt-solver-z3/4.8.12/javasmt-solver-z3-4.8.12.pom"
           ],
-          "sha256": "93302fa92bab259067f46f177c336f0bf9cbcfdcad1a16403beb8d0410bb42ea"
+          "sha256": "6f6f0e98809d00c9a93a4ee0a39d01958f3aea4392f8582bd555ca66cf839bad"
         },
         {
           "id": {

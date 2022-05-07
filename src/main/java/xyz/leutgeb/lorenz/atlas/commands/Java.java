@@ -38,7 +38,7 @@ public class Java implements Runnable {
   @CommandLine.Parameters(
       index = "0",
       arity = "1",
-      paramLabel = "javaRoot",
+      paramLabel = "path-to-dir",
       description = "Path where Java output should be rooted at.",
       defaultValue = ".",
       showDefaultValue = ALWAYS)

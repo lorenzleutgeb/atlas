@@ -33,7 +33,7 @@ public class Haskell implements Runnable {
   @CommandLine.Parameters(
       index = "0",
       arity = "1",
-      paramLabel = "haskellSearchPath",
+      paramLabel = "path-to-dir",
       description = "Path where Haskell output should be rooted at.")
   private Path path;
 

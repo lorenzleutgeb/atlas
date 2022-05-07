@@ -131,7 +131,22 @@ See `LICENSE`.
 
 > Are all dependencies and used libraries well documented and up to date?
 
-See `build.gradle.kts` and `gradle-env.json` (derived from `build.gradle.kts`).
+See `build.gradle.kts`, where dependencies of the Java codebase are
+defined. These dependencies are
+["locked" using Gradle Dependency Locking][gradle-dependency-locking],
+which means that all dependencies with their concrete version number
+are documented in `{buildscript-,}gradle.lockfile`.
+
+The dependencies of the development environment, and of the artifact
+(OVA) itself are defined in `flake.nix` and "locked" with Nix,
+which means that all dependencies with the concrete repository
+and revision in which they are defined are documented in `flake.lock`.
+
+The Gradle builld is wrapped for Nix using `gradle2nix`, which
+generates `gradle-env.json` and `gradle-env.json`
+(derived from `build.gradle.kts` by executing Gradle), which means
+that also all Gradle dependencies are documented with their concrete
+URL and hash.
 
 > Does the artifact provide documented interfaces for extensions
 > or is the artifact open source?
@@ -393,3 +408,4 @@ The contents of `z3-statistics.txt` is a dump of the statistics that Z3
 provides, most notably `max_memory`.
 
 [nix]: https://nixos.org/nix
+[gradle-dependency-locking]: https://docs.gradle.org/current/userguide/dependency_locking.html	

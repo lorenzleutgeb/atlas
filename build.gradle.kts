@@ -115,7 +115,7 @@ dependencies {
     testImplementation("tech.tablesaw:tablesaw-core:0.42.0")
 
     // The Z3 Theorem Prover
-    implementation("org.sosy-lab:javasmt-solver-z3:4.8.10:com.microsoft.z3@jar")
+    implementation("org.sosy-lab:javasmt-solver-z3:4.8.12:com.microsoft.z3@jar")
 
     // Graph output
     implementation("guru.nidi:graphviz-java:0.18.1") {
@@ -180,7 +180,7 @@ tasks.create<JavaExec>("generateExamples") {
     dependsOn("compileJava")
     classpath = project.sourceSets["main"].runtimeClasspath
     mainClass.set("$rootPackage.Main")
-    args("--home=src/test/resources/examples", "java", ".*", atlasDir)
+    args("--search=src/test/resources/examples", "java", ".*", atlasDir)
 }
 
 tasks.withType<JavaCompile> {

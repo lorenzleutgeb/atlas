@@ -7,18 +7,19 @@ import picocli.CommandLine;
 import xyz.leutgeb.lorenz.atlas.Main;
 import xyz.leutgeb.lorenz.atlas.module.Loader;
 
-public class HomeMixin {
+public class SearchMixin {
   private @CommandLine.Spec(MIXEE) CommandLine.Model.CommandSpec
       mixee; // spec of the command where the @Mixin is used
 
-  Path home;
+  Path search;
 
   @CommandLine.Option(
-      names = {"--home"},
+      names = {"--search"},
       showDefaultValue = CommandLine.Help.Visibility.ALWAYS,
-      description = "Where to search for *.ml files containing function definitions.")
-  public void setHome(Path home) {
-    if (home == null) {
+      description = "Where to search for *.ml files containing function definitions.",
+      paramLabel = "path-to-dir")
+  public void setSearch(Path search) {
+    if (this.search == null) {
       return;
     }
     // Each subcommand that mixes in the LoggingMixin has its own instance
@@ -26,7 +27,7 @@ public class HomeMixin {
     // We want to store the verbosity value in a single, central place,
     // so we find the top-level command,
     // and store the verbosity level on our top-level command's LoggingMixin.
-    ((Main) mixee.root().userObject()).homeMixin.home = home;
-    Loader.setDefaultSearch(home);
+    ((Main) mixee.root().userObject()).searchMixin.search = this.search;
+    Loader.setDefaultSearch(this.search);
   }
 }

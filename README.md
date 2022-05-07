@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/lorenzleutgeb/atlas/branch/main/graph/badge.svg?token=cXfOoGOXV2)](https://codecov.io/gh/lorenzleutgeb/atlas)
 [![codebeat badge](https://codebeat.co/badges/64e5fc79-f2b7-4a49-ac3e-bf19395d1b07)](https://codebeat.co/projects/github-com-lorenzleutgeb-atlas-main)
 
-A static analysis tool for Automated Amortised Complexity Analysis.
+A static analysis tool for Automated (Expected) Amortised Complexity Analysis.
 
 ## Highlighted Files
 
@@ -30,9 +30,11 @@ Start by executing
     atlas --help
 
 This will show a list of (global) options and commands. Take note of the option
-`--home`. It defines where `atlas` will look for input files. For example
+`--search`. It defines where `atlas` will look for input files. For example
 
-    atlas --home=src/test/resources/examples [COMMAND]
+    atlas --search=src/test/resources/examples [COMMAND]
+
+The search path can also be set through the environment variable `ATLAS_SEARCH`.
 
 The log level can be adjusted with `--log`, which takes (one of) the following
 values: trace, debug, info, warn, error, off. The default log level and the
@@ -66,9 +68,6 @@ logging settings. By setting the log level to "debug" or "trace",
 much more detailled output can be obtained.
 
 Some of the above properties are exposed as command-line arugments.
-
-When inferring, set minimization target (`--minimize={roots,all}`).
-Fix right sides (`--mode={amortized,worstcase,free}`).
 
 ## Building
 
@@ -139,8 +138,8 @@ your GraalVM installation.
 
 #### Compatible GraalVM Version
 
-For development GraalVM CE 21.0.0 (build 11.0.10+8-jvmci-21.0-b06) was used.
-Any GraalVM version with a major version of 21 and a Java major version of 11
+For development, GraalVM Community JDK 17.0.1+12-jvmci-21.3-b05, was used
+Any GraalVM version with a major version of 21 and a Java major version of 17
 is expected to work.
 
 #### Gradle
@@ -189,18 +188,8 @@ a path listed in `$LD_LIBRARY_PATH` or `./lib`.
 
 ##### Compatible Z3 Version
 
-`atlas` is developed and tested to interface with Z3 v4.8.10, which is the most
-recent release as of 2021-04-24.
-
-### Building a JAR File
-
-This is done via Gradle. Execute
-
-```console
-$ gradle build
-```
-
-This will result in a new executable at `./build/native-image/atlas*`.
+`atlas` is developed and tested to interface with Z3 v4.8.12, released on
+2021-07-13. It is not the newest release, but the one packaged with Ubuntu LTS.
 
 ## Related Repositories
 
@@ -210,14 +199,24 @@ This will result in a new executable at `./build/native-image/atlas*`.
 
 ## Reading
 
+### About ATLAS
+
+ - [ATLAS: Automated Amortised Complexity Analysis of Self-Adjusting Data Structures](https://doi.org/10.1007/978-3-030-81688-9_5)
+ - [Type-based analysis of logarithmic amortised complexity](https://doi.org/10.1017/s0960129521000232)
+
+### Preparatory Works
+
  - [arXiv:1807.08242][arxiv-1]
  - [arXiv:2101.12029][arxiv-2]
+
+### Related Work
+
+ - [Raising Expectations: Automating Expected Cost Analysis with Types](https://doi.org/10.1145/3410233)
  - [Mechanically Proving Termination Using Polynomial Interpretations](https://doi.org/10.1007/s10817-005-9022-x)
  - ["Carbon Credits" for Resource-Bounded Computations Using Amortised Analysis](https://doi.org/10.1007/978-3-642-05089-3_23)
- - ...
 
-[apt-libz3]: https://packages.ubuntu.com/hirsute/libz3-4
-[apt-libz3-jni]: https://packages.ubuntu.com/hirsute/libz3-jni
+[apt-libz3]: https://packages.ubuntu.com/jammy/libz3-4
+[apt-libz3-jni]: https://packages.ubuntu.com/jammy/libz3-jni
 [arxiv-1]: https://arxiv.org/abs/1807.08242
 [arxiv-2]: https://arxiv.org/abs/2101.12029
 [git-submodules]: https://git-scm.com/book/en/v2/Git-Tools-Submodules
@@ -233,6 +232,6 @@ This will result in a new executable at `./build/native-image/atlas*`.
 [nix-install]: https://nixos.org/guides/install-nix.html
 [simplelogger]: http://www.slf4j.org/api/org/slf4j/impl/SimpleLogger.html
 [z3]: https://github.com/Z3Prover/z3
-[z3-example-java-readme]: https://github.com/Z3Prover/z3/blob/z3-4.8.10/examples/java/README
-[z3-readme-java]: https://github.com/Z3Prover/z3/blob/z3-4.8.10/README.md#java
+[z3-example-java-readme]: https://github.com/Z3Prover/z3/blob/z3-4.8.12/examples/java/README
+[z3-readme-java]: https://github.com/Z3Prover/z3/blob/z3-4.8.12/README.md#java
 [z3-releases]: https://github.com/Z3Prover/z3/releases

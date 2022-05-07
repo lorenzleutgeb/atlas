@@ -5,13 +5,13 @@ import static xyz.leutgeb.lorenz.atlas.util.Util.TOOL_NAME;
 import java.nio.file.Path;
 import picocli.CommandLine;
 import xyz.leutgeb.lorenz.atlas.commands.Haskell;
-import xyz.leutgeb.lorenz.atlas.commands.HomeMixin;
 import xyz.leutgeb.lorenz.atlas.commands.Index;
 import xyz.leutgeb.lorenz.atlas.commands.Java;
 import xyz.leutgeb.lorenz.atlas.commands.LNF;
 import xyz.leutgeb.lorenz.atlas.commands.LogLevelMixin;
 import xyz.leutgeb.lorenz.atlas.commands.REPL;
 import xyz.leutgeb.lorenz.atlas.commands.Run;
+import xyz.leutgeb.lorenz.atlas.commands.SearchMixin;
 import xyz.leutgeb.lorenz.atlas.util.Properties;
 
 @CommandLine.Command(
@@ -20,7 +20,7 @@ import xyz.leutgeb.lorenz.atlas.util.Properties;
 public class Main implements Runnable {
   @CommandLine.Mixin public LogLevelMixin logLevelMixin;
 
-  @CommandLine.Mixin public HomeMixin homeMixin;
+  @CommandLine.Mixin public SearchMixin searchMixin;
 
   private static final String PROPERTY_FILE_NAME = TOOL_NAME + ".properties";
 

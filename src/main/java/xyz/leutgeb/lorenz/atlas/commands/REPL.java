@@ -16,6 +16,7 @@ import xyz.leutgeb.lorenz.atlas.module.Loader;
 /** See also {@link REPLSubstitute}. */
 @CommandLine.Command(
     name = NAME,
+    hidden = true,
     showEndOfOptionsDelimiterInUsageHelp = true,
     description = {
       "A Wrapper around JShell preloaded with utilities.",

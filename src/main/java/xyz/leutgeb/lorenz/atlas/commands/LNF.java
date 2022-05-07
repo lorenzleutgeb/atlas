@@ -16,7 +16,7 @@ public class LNF implements Runnable {
   @CommandLine.Parameters(
       index = "0",
       arity = "1",
-      paramLabel = "path",
+      paramLabel = "path-to-dir",
       description = "Path where output should be rooted at.")
   private Path path;
 
