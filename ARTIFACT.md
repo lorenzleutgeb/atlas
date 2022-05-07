@@ -383,6 +383,12 @@ Thus, the upper bound for amortised cost of `PairingHeap.link` that is represent
 
     \log(|h|)
 
+## Git History
+
+The artifact does not include Git metadata and history of itself.
+However, it does include Git. With an internet connection, the
+repository can be cloned.
+
 ## Resource Usage and Limits
 
 The artifact imposes following resource limits on Z3:

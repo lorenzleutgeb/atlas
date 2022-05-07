@@ -257,18 +257,21 @@
               };
               root.initialHashedPassword = "";
             };
+            system.activationScripts.atlas.text = ''
+              cp -rv ${self.packages.${system}.atlas-src} /home/evaluator/atlas
+              rm -rf /home/evaluator/atlas/src/test/resources/examples
+              cp -rv ${examples} /home/evaluator/atlas/src/test/resources/examples
+              chown -R evaluator:$(id -g evaluator) /home/evaluator/atlas
+              chmod -R ug+w /home/evaluator/atlas
+            '';
             home-manager.users.evaluator.home = {
               file = let
                 referText = ''
-                  To prepare evaluation, please open a terminal and execute
-
-                    /home/evaluator/prepare-evaluation.sh
-
-                  This will mount an overlay filesystem at
+                  See
 
                     /home/evaluator/atlas
 
-                  Then, please first refer to the `README.md` of the tool itself
+                  Please first refer to the `README.md` of the tool itself
 
                     /home/evaluator/atlas/README.md
 
@@ -287,46 +290,8 @@
               in {
                 "README.md".text = referText;
                 "Desktop/README.md".text = referText;
-
-                "prepare-evaluation.sh".source =
-                  pkgs.writeScript "prepare-evaluation" ''
-                    #! ${pkgs.bash}/bin/bash
-                    set -euo pipefail
-
-                    OVERLAY=$HOME/.overlay
-                    MOUNTPOINT=$HOME/atlas
-                    SRC=${self.packages.${system}.atlas-src}
-
-                    echo "Creating directories..."
-                    mkdir --verbose --parents $OVERLAY/{upper,work} $MOUNTPOINT
-
-                    echo "Further logs will be printed to ''${OVERLAY}/log"
-
-                    echo "Mounting overlay filesystem..."
-                    sudo mount \
-                      --verbose \
-                      --types overlay \
-                      overlay \
-                      --options upperdir=$OVERLAY/upper,workdir=$OVERLAY/work,lowerdir=$SRC \
-                      $MOUNTPOINT >> $OVERLAY/log
-
-                    echo "Transferring file ownership..."
-                    sudo chown --verbose --recursive $(id -u):$(id -g) $MOUNTPOINT >> $OVERLAY/log
-
-                    echo "Setting file permissions..."
-                    sudo chmod --verbose --recursive ug+rw $MOUNTPOINT >> $OVERLAY/log
-
-                    echo "==="
-                    echo "Proceed with evaluation in ''${MOUNTPOINT}"
-                    echo "==="
-                    echo "In case you make changes in ''${MOUNTPOINT}"
-                    echo "and want to compare/restore a file, refer to"
-                    echo "$SRC"
-                    echo "This is the lower dir of the overlay mount."
-                    echo "See also the output of 'findmnt -n -o OPTIONS ~/atlas'"
-                  '';
               };
-              stateVersion = "20.09";
+              stateVersion = "22.05";
               sessionVariables.ATLAS_HOME = "${examples}";
             };
             security.sudo.wheelNeedsPassword = false;
