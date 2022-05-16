@@ -365,6 +365,7 @@ public class FunctionDefinition {
                 treeLikeArguments(), inferredSignature.getAnnotation().get().withCost.from),
             body,
             inferredSignature.getAnnotation().get().withCost.to,
+            true,
             true);
 
     return typingObligation;

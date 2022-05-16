@@ -398,7 +398,12 @@ public class Program {
 
         prover.proveFrom(
             new Obligation(
-                fd.treeLikeArguments(), cfAnnotation.from, fd.getBody(), cfAnnotation.to, false),
+                fd.treeLikeArguments(),
+                cfAnnotation.from,
+                fd.getBody(),
+                cfAnnotation.to,
+                false,
+                true),
             fd,
             typingObligation);
       }

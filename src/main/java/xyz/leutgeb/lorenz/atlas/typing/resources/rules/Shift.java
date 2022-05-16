@@ -29,7 +29,8 @@ public class Shift implements Rule {
                 new AnnotatingContext(obligation.getContext().getIds(), q),
                 obligation.getExpression(),
                 qp,
-                obligation.isCost())),
+                obligation.isCost(),
+                obligation.isCoin())),
         List.of(append(qk.increment(q, k, "(shift)"), qpk.increment(qp, k, "(shift)"))));
   }
 }

@@ -22,7 +22,7 @@ public class Ite implements Rule {
     final var expression = (IfThenElseExpression) obligation.getExpression();
     final var condition = expression.getCondition();
 
-    if (condition instanceof CoinExpression coin) {
+    if (condition instanceof CoinExpression coin && obligation.isCoin()) {
       final var u = obligation.getContext().getAnnotation();
 
       final var u1 = globals.getHeuristic().generate("u1", u);

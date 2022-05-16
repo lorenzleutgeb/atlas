@@ -27,10 +27,32 @@ public class Obligation {
   AnnotatingContext context;
   Expression expression;
   Annotation annotation;
+
+  /**
+   * Whether (tick) should be applied with non-zero cost. If the value is {@code true} then,
+   * whenever a {@link xyz.leutgeb.lorenz.atlas.ast.expressions.TickExpression} is encountered, the
+   * associated cost will be respected. If the value is {@code false}, whenever a {@link
+   * xyz.leutgeb.lorenz.atlas.ast.expressions.TickExpression} is encountered, the associated cost
+   * will be treated as if it were equal to zero, i.e. the (tick) rule is skipped.
+   */
   boolean cost;
 
+  /**
+   * Whether (ite:coin) should be applied if the condition of an {@link
+   * xyz.leutgeb.lorenz.atlas.ast.expressions.IfThenElseExpression} expression is {@code coin}. If
+   * the value is {@code true}, then (ite:coin) is applied whenever the condition is {@code coin}.
+   * If the value is {@code false}, then (ite) is applied even if the condition is {@code coin},
+   * effectively ignoring the propositional aspect of the program and replacing it with a
+   * nondeterministic choice.
+   */
+  boolean coin;
+
   public Obligation(
-      AnnotatingContext context, Expression expression, Annotation annotation, boolean cost) {
+      AnnotatingContext context,
+      Expression expression,
+      Annotation annotation,
+      boolean cost,
+      boolean coin) {
     this.context = context;
     this.expression = expression;
 
@@ -41,6 +63,7 @@ public class Obligation {
 
     this.annotation = annotation;
     this.cost = cost;
+    this.coin = coin;
   }
 
   public Obligation(
@@ -48,26 +71,27 @@ public class Obligation {
       Annotation contextAnnotation,
       Expression expression,
       Annotation annotation,
-      boolean cost) {
-    this(new AnnotatingContext(contextIds, contextAnnotation), expression, annotation, cost);
+      boolean cost,
+      boolean coin) {
+    this(new AnnotatingContext(contextIds, contextAnnotation), expression, annotation, cost, coin);
   }
 
   public Obligation keepAnnotationAndCost(AnnotatingContext context, Expression expression) {
-    return new Obligation(context, expression, annotation, cost);
+    return new Obligation(context, expression, annotation, cost, coin);
   }
 
   public Obligation keepCost(
       AnnotatingContext context, Expression expression, Annotation annotation) {
-    return new Obligation(context, expression, annotation, cost);
+    return new Obligation(context, expression, annotation, cost, coin);
   }
 
   public Obligation keepContextAndAnnotationAndCost(Expression expression) {
-    return new Obligation(context, expression, annotation, cost);
+    return new Obligation(context, expression, annotation, cost, coin);
   }
 
   public Obligation substitute(Map<Coefficient, KnownCoefficient> solution) {
     return new Obligation(
-        context.substitute(solution), expression, annotation.substitute(solution), cost);
+        context.substitute(solution), expression, annotation.substitute(solution), cost, coin);
   }
 
   public Map<String, Attribute> attributes(Prover.ProofVertexData proofVertexData) {

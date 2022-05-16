@@ -44,6 +44,7 @@ public class WeakeningTest {
             Annotation.constant(1, "two", TWO),
             IdentifierExpression.get("a", null),
             Annotation.zero(1),
+            true,
             true);
     final var result = W.INSTANCE.apply(o, AnnotatingGlobals.empty());
     assertEquals(1, result.obligations().size());
