@@ -157,6 +157,7 @@ public class W implements Rule {
 
     final List<Constraint> constraints = new ArrayList<>();
     // TODO(lorenzleutgeb): Exploit |t| > |t'| ==> rk(t) > rk(t')
+    // TODO(lorenzleutgeb): Exploit rk(t) ≥ 1
     IntStream.range(0, left.size())
         .mapToObj(
             i ->
