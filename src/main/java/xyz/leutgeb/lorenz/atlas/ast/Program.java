@@ -58,7 +58,20 @@ public class Program {
   public enum InferenceMode {
     DIRECT,
     PROXIED,
-    NONE
+    NONE;
+
+    public boolean isInfer() {
+      return this == DIRECT || this == PROXIED;
+    }
+
+    public boolean isCheck() {
+      return this == NONE;
+    }
+
+    @Deprecated
+    public static InferenceMode fromBoolean(boolean infer) {
+      return infer ? InferenceMode.PROXIED : InferenceMode.NONE;
+    }
   }
 
   private static final boolean FORCE_RANK_NONZERO = false;
@@ -194,7 +207,7 @@ public class Program {
   private Solver.Result solveTogether(
       Map<String, CombinedFunctionAnnotation> annotations,
       Map<String, Path> tactics,
-      InferenceMode infer,
+      InferenceMode inferenceMode,
       boolean forceResultPerModule,
       boolean forceRankEqual,
       boolean simpleSignatures,
@@ -202,7 +215,7 @@ public class Program {
     return solveInternal(
         annotations,
         tactics,
-        infer,
+        inferenceMode,
         forceResultPerModule,
         forceRankEqual,
         simpleSignatures,
@@ -213,7 +226,7 @@ public class Program {
   private Solver.Result solveInternal(
       Map<String, CombinedFunctionAnnotation> annotations,
       Map<String, Path> tactics,
-      InferenceMode infer,
+      InferenceMode inferenceMode,
       boolean forceResultPerModule,
       boolean forceRankEqual,
       boolean simpleSignatures,
@@ -227,9 +240,9 @@ public class Program {
     }
 
     final Map<String, CombinedFunctionAnnotation> benchmark =
-        InferenceMode.PROXIED.equals(infer) ? unmodifiableMap(annotations) : emptyMap();
+        InferenceMode.PROXIED.equals(inferenceMode) ? unmodifiableMap(annotations) : emptyMap();
     final Map<String, CombinedFunctionAnnotation> actual =
-        InferenceMode.PROXIED.equals(infer) ? new HashMap<>() : annotations;
+        InferenceMode.PROXIED.equals(inferenceMode) ? new HashMap<>() : annotations;
 
     final var heuristic = SmartRangeHeuristic.DEFAULT;
     final var signatureHeuristic = simpleSignatures ? SimpleFunctionHeuristic.DEFAULT : heuristic;
@@ -253,7 +266,7 @@ public class Program {
 
     // Stub annotations.
     for (var fd : fds) {
-      if (InferenceMode.PROXIED.equals(infer)
+      if (InferenceMode.PROXIED.equals(inferenceMode)
           && benchmark.containsKey(fd.getFullyQualifiedName())) {
         final CombinedFunctionAnnotation annotation = benchmark.get(fd.getFullyQualifiedName());
         fd.stubAnnotations(
@@ -292,14 +305,14 @@ public class Program {
             actual,
             signatureHeuristic,
             called.contains(fd.getFullyQualifiedName()) ? 1 : 0,
-            !InferenceMode.NONE.equals(infer));
+            inferenceMode.isInfer());
       }
     }
 
     Set<String> refresh = new HashSet<>();
 
     for (var fd : fds) {
-      if (forceRankEqual && InferenceMode.NONE.equals(infer)) {
+      if (forceRankEqual && inferenceMode.isInfer()) {
         log.warn("Adding external constraints to set rank equal!");
         if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1) {
           for (int i = 0;
@@ -324,7 +337,7 @@ public class Program {
         }
       }
 
-      if (FORCE_RANK_NONZERO && !InferenceMode.NONE.equals(infer)) {
+      if (FORCE_RANK_NONZERO && inferenceMode.isInfer()) {
         if (fd.getInferredSignature().getAnnotation().get().withCost.to.size() == 1) {
           for (int i = 0;
               i < fd.getInferredSignature().getAnnotation().get().withCost.from.size();
@@ -412,9 +425,9 @@ public class Program {
 
     Instant solveStart = Instant.now();
     Solver.Result result;
-    if (!InferenceMode.NONE.equals(infer)) {
+    if (inferenceMode.isInfer()) {
       final var optimization =
-          InferenceMode.DIRECT.equals(infer)
+          InferenceMode.DIRECT.equals(inferenceMode)
               ? Optimization.direct(fds)
               : Optimization.standard(fds);
       external.addAll(optimization.constraints());
@@ -476,7 +489,7 @@ public class Program {
     return solve(
         annotations,
         tactics,
-        infer ? InferenceMode.PROXIED : InferenceMode.NONE,
+        InferenceMode.fromBoolean(infer),
         forceResultPerModule,
         false,
         false,
@@ -496,7 +509,7 @@ public class Program {
     return solve(
         annotations,
         tactics,
-        infer ? InferenceMode.PROXIED : InferenceMode.NONE,
+        InferenceMode.fromBoolean(infer),
         forceResultPerModule,
         forceRankEqual,
         simpleSignatures,
@@ -507,7 +520,7 @@ public class Program {
   public Solver.Result solve(
       Map<String, CombinedFunctionAnnotation> annotations,
       Map<String, Path> tactics,
-      InferenceMode infer,
+      InferenceMode inferenceMode,
       boolean forceResultPerModule,
       boolean forceRankEqual,
       boolean simpleSignatures,
@@ -517,7 +530,7 @@ public class Program {
       return solveTogether(
           annotations,
           tactics,
-          infer,
+          inferenceMode,
           forceResultPerModule,
           forceRankEqual,
           simpleSignatures,
@@ -536,7 +549,7 @@ public class Program {
                     solveInternal(
                         annotations,
                         tactics,
-                        infer,
+                        inferenceMode,
                         forceResultPerModule,
                         forceRankEqual,
                         simpleSignatures,

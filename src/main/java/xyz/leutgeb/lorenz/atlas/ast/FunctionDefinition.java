@@ -270,7 +270,7 @@ public class FunctionDefinition {
   public void stubAnnotations(
       Map<String, CombinedFunctionAnnotation> functionAnnotations,
       AnnotationHeuristic heuristic,
-      int cf,
+      int cfAnnotationCount,
       boolean infer) {
 
     analyzeSizes();
@@ -290,7 +290,7 @@ public class FunctionDefinition {
       Set<FunctionAnnotation> cfAnnotations = new HashSet<>();
 
       /*
-      if (cf > 0) {
+      if (cfAnnotationCount > 0) {
         cfAnnotations.add(
             new FunctionAnnotation(
                 Annotation.zero(inferredAnnotation.from.size(), "Qcf0"),
@@ -298,7 +298,7 @@ public class FunctionDefinition {
       }
        */
 
-      for (int i = 1; i <= cf; i++) {
+      for (int i = 1; i <= cfAnnotationCount; i++) {
         cfAnnotations.add(
             new FunctionAnnotation(
                 heuristic.generate(getName() + treeLikeArguments() + "cf" + i, fromSize),
