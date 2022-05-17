@@ -527,7 +527,6 @@ public class Program {
       boolean split,
       Set<Constraint> externalConstraints) {
 
-
     // TODO: When not solving together, make sure that all right sides (per module)
     // are defined, and that they are all equal (per module). Otherwise, fall back
     // to solveTogether.
@@ -544,7 +543,9 @@ public class Program {
         final var fdRightSide = fd.getAnnotatedSignature().getAnnotation().map(c -> c.withCost.to);
 
         if (fdRightSide.isEmpty()) {
-          log.warn("Cannot parallelize typechecking, because function '{}' is not annotated.", fd.getFullyQualifiedName());
+          log.warn(
+              "Cannot parallelize typechecking, because function '{}' is not annotated.",
+              fd.getFullyQualifiedName());
           fallback = true;
           break;
         }

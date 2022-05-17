@@ -179,7 +179,7 @@ public class Prover {
       }
       if (expression instanceof CallExpression && TICK_BEFORE_APP) {
         log.trace("Automatically applying (tick) to expression `{}`!", expression);
-        if (Boolean.parseBoolean(Util.getProperty(Prover.class, "tickAst", "false"))) {
+        if (Boolean.parseBoolean(Util.getProperty(Prover.class, "tickAst", "true"))) {
           todo.add(RuleSchedule.schedule(RULE_TICK_AST));
         } else {
           todo.add(RuleSchedule.schedule(RULE_TICK));
@@ -223,7 +223,7 @@ public class Prover {
     } else if (e instanceof ShareExpression) {
       return RULE_SHARE;
     } else if (e instanceof TickExpression) {
-      if (Boolean.parseBoolean(Util.getProperty(Prover.class, "tickAst", "false"))) {
+      if (Boolean.parseBoolean(Util.getProperty(Prover.class, "tickAst", "true"))) {
         return RULE_TICK_AST;
       } else {
         return RULE_TICK;

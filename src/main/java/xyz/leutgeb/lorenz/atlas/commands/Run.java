@@ -182,9 +182,7 @@ public class Run implements Runnable {
     }
     System.out.println();
 
-    if (useTickAst) {
-      System.setProperty(Util.getPropertyName(Prover.class, "tickAst"), "true");
-    }
+    System.setProperty(Util.getPropertyName(Prover.class, "tickAst"), useTickAst.toString());
 
     final var result =
         program.solve(

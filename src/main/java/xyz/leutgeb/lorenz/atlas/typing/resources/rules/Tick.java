@@ -15,17 +15,26 @@ public class Tick implements Rule {
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = obligation.getExpression();
 
+    log.debug("Using (tick)!");
+
     if (expression instanceof TickExpression tickExpression) {
       if (!obligation.isCost()) {
         return ApplicationResult.onlyObligations(
             obligation.keepContextAndAnnotationAndCost(tickExpression.getBody()));
       }
-      final var annotation = obligation.getAnnotation();
-      final var q = globals.getHeuristic().generate("tick" + annotation.getName(), annotation);
+      final var qPlusCost = obligation.getContext().getAnnotation();
+      final var q = globals.getHeuristic().generate("tick" + qPlusCost.getName(), qPlusCost);
 
       return new ApplicationResult(
-          List.of(obligation.keepCost(obligation.getContext(), tickExpression.getBody(), q)),
-          List.of(q.increment(annotation, tickExpression.getCost(), "(tick)")));
+          List.of(
+              new Obligation(
+                  obligation.getContext().getIds(),
+                  q,
+                  tickExpression.getBody(),
+                  obligation.getAnnotation(),
+                  obligation.isCost(),
+                  obligation.isCoin())),
+          List.of(qPlusCost.increment(q, tickExpression.getCost(), "(tick)")));
     }
 
     if (!obligation.isCost()) {
