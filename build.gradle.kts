@@ -194,6 +194,7 @@ tasks.test {
         events("failed")
         showStackTraces = true
         exceptionFormat = TestExceptionFormat.FULL
+        showStandardStreams = true
     }
 }
 
