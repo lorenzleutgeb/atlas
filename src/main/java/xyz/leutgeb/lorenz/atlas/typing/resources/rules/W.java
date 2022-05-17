@@ -8,9 +8,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
-import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.INDEX_COMPARATOR;
-import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.constantIndex;
-import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.nonRankIndices;
+import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.*;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient.unknownMaybeNegative;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.MINUS_ONE;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.MINUS_TWO;
@@ -155,33 +153,46 @@ public class W implements Rule {
     // left is P in paper.
     // right is Q in paper.
 
+    if (left.size() != right.size()) {
+      throw new IllegalArgumentException();
+    }
+    final var size = left.size();
+
     final List<Constraint> constraints = new ArrayList<>();
-    // TODO(lorenzleutgeb): Exploit |t| > |t'| ==> rk(t) > rk(t')
-    // TODO(lorenzleutgeb): Exploit rk(t) ≥ 1
-    IntStream.range(0, left.size())
-        .mapToObj(
-            i ->
-                new LessThanOrEqualConstraint(
-                    left.getRankCoefficientOrZero(i),
-                    right.getRankCoefficientOrZero(i),
-                    "(w) rk(" + identifiers.get(i) + ") (at index " + i + ")"))
-        .forEach(constraints::add);
+    final var rk1 = flag(W.class, arguments, "rk1");
+    final var rankColumns = rk1;
+
+    if (!rankColumns) {
+      IntStream.range(0, size)
+          .mapToObj(
+              i ->
+                  new LessThanOrEqualConstraint(
+                      left.getRankCoefficientOrZero(i),
+                      right.getRankCoefficientOrZero(i),
+                      "(w) rk(" + identifiers.get(i) + ") (at index " + i + ")"))
+          .forEach(constraints::add);
+    }
 
     final var potentialFunctions = Annotation.nonRankIndices(left, right).collect(toList());
+    final var columns = potentialFunctions.size() + (rankColumns ? size : 0);
+
+    // Column numbering:
+    //  - From 0 to potentialFunctions.size() are variables for non-rank.
+    //  - From potentialFunctions.size() to potentialFunctions.size() + size are rank.
 
     final var all = flag(W.class, arguments, "all");
     final var lemma2xy = flag(W.class, arguments, "l2xy") || all;
     final var lemmap1 = flag(W.class, arguments, "lp1") || all;
-    final var size = flag(W.class, arguments, "size") || all;
+    final var useSizeAnalysis = flag(W.class, arguments, "size") || all;
     // TODO(lorenzleutgeb): Fix this lemma.
     final var lemmap1y = false; // flag(W.class, arguments, "lp1y") || all;
-    final var mono = flag(W.class, arguments, "mono") || size || all;
+    final var mono = flag(W.class, arguments, "mono") || useSizeAnalysis || all;
 
     final ReducedSizeAnalysis reducedSizeAnalysis;
     final Set<LessThan<Integer>> knowLt;
     final Set<Equal<Integer>> knowEq;
     final Set<Integer> knowOne;
-    if (size) {
+    if (useSizeAnalysis) {
       reducedSizeAnalysis = reduceSizeAnalysis(identifiers, sizeAnalysis);
       // TODO: Clarify size analysis.
       knowLt = emptySet(); // reducedSizeAnalysis.knowLt;
@@ -213,7 +224,9 @@ public class W implements Rule {
     final List<Pair<List<Integer>, List<Integer>>> lemmaPlus2Instances =
         lemmap2 ? lemmaPlus2(potentialFunctions) : emptyList();
 
-    if (DEBUG_SIZE && size && (!knowLt.isEmpty() || !knowEq.isEmpty() || !knowOne.isEmpty())) {
+    if (DEBUG_SIZE
+        && useSizeAnalysis
+        && (!knowLt.isEmpty() || !knowEq.isEmpty() || !knowOne.isEmpty())) {
       final List<LessThanOrEqual<List<Integer>>> monotonyInstancesWithoutSizeKnowledge;
       monotonyInstancesWithoutSizeKnowledge =
           monotony(potentialFunctions, emptySet(), emptySet(), emptySet());
@@ -299,7 +312,8 @@ public class W implements Rule {
         monotonyInstances.size()
             + lemma2XYInstances.size()
             + lemmaPlus1Instances.size()
-            + lemmaPlus2Instances.size();
+            + lemmaPlus2Instances.size()
+            + (rk1 ? size : 0);
 
     if (m == 0) {
       // If we have no expert knowledge, fall back to comparing coefficients.
@@ -316,10 +330,21 @@ public class W implements Rule {
         IntStream.range(0, m).mapToObj(i -> Coefficient.unknown(wid + ".f[" + i + "]")).toList();
 
     final List<List<Coefficient>> sumByColumn = new ArrayList<>(potentialFunctions.size());
+
     for (int column = 0; column < potentialFunctions.size(); column++) {
       final var tmp = new ArrayList<Coefficient>(3);
       tmp.add(q.get(column));
       sumByColumn.add(tmp);
+    }
+
+    for (int rank = 0; rankColumns && rank < size; rank++) {
+      final var tmp = new ArrayList<Coefficient>(3);
+      tmp.add(right.getRankCoefficientOrZero(rank));
+      sumByColumn.add(tmp);
+    }
+
+    if (sumByColumn.size() != columns) {
+      throw new IllegalStateException();
     }
 
     if (!monotonyInstances.isEmpty()) {
@@ -433,26 +458,57 @@ public class W implements Rule {
       }
     }
 
+    if (rk1) {
+      final var unitIndex = potentialFunctions.indexOf(unitIndex(size));
+      if (unitIndex < 0) {
+        throw new UnsupportedOperationException();
+      }
+
+      final var offset =
+          monotonyInstances.size()
+              + lemma2XYInstances.size()
+              + lemmaPlus1Instances.size()
+              + lemmaPlus2Instances.size();
+      for (var column = 0; column < columns; column++) {
+        final List<Coefficient> sum = sumByColumn.get(column);
+        for (var rank = 0; rank < size; rank++) {
+          final var fi = f.get(offset + rank);
+          if (column == unitIndex) {
+            sum.add(fi);
+          } else if (column == potentialFunctions.size() + rank) {
+            sum.add(fi.negate());
+          }
+        }
+      }
+    }
+
     // p ≤ fA + q (Note: fA is computed using matrix multiplication WITH f FROM THE LEFT.)
-    for (int i = 0; i < potentialFunctions.size(); i++) {
-      final var x = unknownMaybeNegative(wid + ".sum[" + i + "]");
+    for (int column = 0; column < columns; column++) {
+      final var columnAsString =
+          column < potentialFunctions.size()
+              ? potentialFunctions.get(column).toString()
+              : String.valueOf(column - potentialFunctions.size());
+
+      final var fAplusQ = unknownMaybeNegative(wid + ".(fA + q)[" + columnAsString + "]");
       constraints.add(
           new EqualsSumConstraint(
-              x,
-              sumByColumn.get(i),
+              fAplusQ,
+              sumByColumn.get(column),
               "(w "
                   + left.getId()
                   + " ≤ "
                   + right.getId()
                   + ") "
-                  + x
+                  + fAplusQ
                   + " = Σ... + q["
-                  + i
+                  + columnAsString
                   + "] (w)"));
       constraints.add(
           new LessThanOrEqualConstraint(
-              p.get(i),
-              x,
+              (column < potentialFunctions.size()
+                  ? p.get(column)
+                  : left.getRankCoefficientOrZero(column - potentialFunctions.size())),
+              fAplusQ,
               "(w "
                   + left.getId()
                   + " ≤ "
@@ -460,9 +516,9 @@ public class W implements Rule {
                   + ") "
                   + wid
                   + ".p["
-                  + i
+                  + columnAsString
                   + "] ≤ "
-                  + x
+                  + fAplusQ
                   + " (w)"));
     }
 

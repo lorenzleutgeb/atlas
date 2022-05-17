@@ -22,6 +22,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.impl.SimpleLogger;
 import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
@@ -36,6 +37,13 @@ import xyz.leutgeb.lorenz.atlas.util.SizeEdge;
 
 @DisplayName("Weakening")
 public class WeakeningTest {
+  static {
+    System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "debug");
+    System.setProperty(SimpleLogger.LOG_KEY_PREFIX + "xyz.leutgeb.lorenz", "debug");
+    System.setProperty(SimpleLogger.SHOW_SHORT_LOG_NAME_KEY, Boolean.TRUE.toString());
+    System.setProperty(SimpleLogger.SHOW_THREAD_NAME_KEY, Boolean.FALSE.toString());
+  }
+
   @Test
   public void constant() {
     Obligation o =
@@ -399,5 +407,26 @@ public class WeakeningTest {
                     Map.of("mono", "true"))));
 
     assertTrue(solverResult.isSatisfiable());
+  }
+
+  @ParameterizedTest
+  @CsvSource("true,false")
+  void rk1(String bool) {
+    final var x = IdentifierExpression.predefinedTree("x");
+
+    final var sizeAnalysis = new DirectedMultigraph<IdentifierExpression, SizeEdge>(SizeEdge.class);
+    sizeAnalysis.addVertex(x);
+
+    // P <= Q
+    final Annotation P = new Annotation(List.of(ZERO), Map.of(List.of(0, 2), ONE), "P");
+    final Annotation Q = new Annotation(List.of(ONE), Map.of(), "Q");
+
+    final var solverResult =
+        Solver.solve(
+            Set.copyOf(
+                W.compareCoefficientsLessOrEqualUsingFarkas(
+                    List.of(x), P, Q, sizeAnalysis, Map.of("rk1", bool))));
+
+    assertEquals(solverResult.isSatisfiable(), Boolean.valueOf(bool));
   }
 }
