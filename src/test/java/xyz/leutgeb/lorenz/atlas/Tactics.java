@@ -24,6 +24,8 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.SmartRangeHeuristic;
+import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Prover;
+import xyz.leutgeb.lorenz.atlas.util.Util;
 
 // @Disabled
 public class Tactics {
@@ -1830,6 +1832,10 @@ public class Tactics {
         );
   }
 
+  private static Stream<Arguments> infinite() {
+    return Stream.of(Arguments.of(Map.of("Infinite.infinite_2", Config.of())));
+  }
+
   @ParameterizedTest
   @MethodSource({
     // "negative",
@@ -1838,12 +1844,14 @@ public class Tactics {
     // "randSplayHeap",
     // "randSplayTree",
     // "randMeldableHeap",
-    "coinSearchTree",
+    // "coinSearchTree",
+    "infinite",
     // "splayTree",
     // "splayHeap",
     // "pairingHeap",
   })
   public void all(Map<String, Config> immutableAnnotations) {
+    System.setProperty(Util.getPropertyName(Prover.class, "tickAst"), "true");
     final var program = loadAndNormalizeAndInferAndUnshare(immutableAnnotations.keySet());
     final var infer = true;
     final var result =

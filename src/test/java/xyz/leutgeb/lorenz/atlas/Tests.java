@@ -48,6 +48,7 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.InequalityConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.LessThanOrEqualConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.OffsetConstraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.atlas.typing.resources.solving.Solver;
 import xyz.leutgeb.lorenz.atlas.typing.simple.FunctionSignature;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeConstraint;
@@ -56,6 +57,7 @@ import xyz.leutgeb.lorenz.atlas.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.util.NidiExporter;
 import xyz.leutgeb.lorenz.atlas.util.SizeEdge;
+import xyz.leutgeb.lorenz.atlas.util.Util;
 
 public class Tests {
   static final TreeType ATREE = new TreeType(alpha());
@@ -217,9 +219,10 @@ public class Tests {
   }
 
   @ParameterizedTest
-  @Disabled("assume finiteness")
+  // @Disabled("assume finiteness")
   @MethodSource("infiniteCostDefinitions")
   void infiniteCost(String fqn) throws Exception {
+    System.setProperty(Util.getPropertyName(Prover.class, "tickAst"), "true");
     final var program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
     final var solution =
         program.solve(new HashMap<>(), emptyMap(), true, false, false, new HashSet<>());

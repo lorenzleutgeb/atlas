@@ -1,0 +1,21 @@
+(w{l2xy mono neg} (* binds a call/tick *)
+  (let:tree:cf{nege}
+    (tick
+      (shift
+        app
+      )
+    )
+    (w{l2xy mono neg} (* binds a call/tick *)
+      (let:tree:cf{nege}
+        (tick
+          (shift
+            app
+          )
+        )
+        (w{mono} (* proof leaf 2 *)
+          node
+        )
+      )
+    )
+  )
+)
