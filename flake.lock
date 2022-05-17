@@ -3,16 +3,16 @@
     "examples": {
       "flake": false,
       "locked": {
-        "lastModified": 1651870686,
-        "narHash": "sha256-dCjk33namP3QeGonis6UGffM/7JMT0G8I5VjfJ5Hs6g=",
+        "lastModified": 1652789871,
+        "narHash": "sha256-M7r2k1B1UgRZ/01LBwWzxkJxYtIZjkeZHQeBbaN7XUs=",
         "owner": "lorenzleutgeb",
         "repo": "atlas-examples",
-        "rev": "dfbdf005e8992708aa7b404ce09709d1dc2df1da",
+        "rev": "7fcaf9e9f040be16247b521c1d6985ef19fd0eec",
         "type": "github"
       },
       "original": {
         "owner": "lorenzleutgeb",
-        "ref": "v0.2.1",
+        "ref": "v0.2.2",
         "repo": "atlas-examples",
         "type": "github"
       }
