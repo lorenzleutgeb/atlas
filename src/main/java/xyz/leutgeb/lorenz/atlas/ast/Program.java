@@ -526,7 +526,41 @@ public class Program {
       boolean simpleSignatures,
       boolean split,
       Set<Constraint> externalConstraints) {
-    if (!split) {
+
+
+    // TODO: When not solving together, make sure that all right sides (per module)
+    // are defined, and that they are all equal (per module). Otherwise, fall back
+    // to solveTogether.
+
+    boolean fallback = false;
+
+    if (forceResultPerModule) {
+      final Map<String, Annotation> rightSidesPerModule = new HashMap<>();
+      for (final var fd : functionDefinitions.values()) {
+        if (!fd.returnsTree()) {
+          continue;
+        }
+
+        final var fdRightSide = fd.getAnnotatedSignature().getAnnotation().map(c -> c.withCost.to);
+
+        if (fdRightSide.isEmpty()) {
+          log.warn("Cannot parallelize typechecking, because function '{}' is not annotated.", fd.getFullyQualifiedName());
+          fallback = true;
+          break;
+        }
+
+        final var module = fd.getModuleName();
+        final var moduleRightSide = rightSidesPerModule.get(module);
+        if (moduleRightSide == null) {
+          rightSidesPerModule.put(module, fdRightSide.get());
+        } else if (!moduleRightSide.equals(fdRightSide.get())) {
+          log.warn("Annotated right sides are not equal.");
+          return Solver.Result.unsat();
+        }
+      }
+    }
+
+    if (!split || fallback) {
       return solveTogether(
           annotations,
           tactics,
