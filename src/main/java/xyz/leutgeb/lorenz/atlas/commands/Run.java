@@ -88,7 +88,8 @@ public class Run implements Runnable {
   @CommandLine.Option(
       names = "--json",
       paramLabel = "path-to-file",
-      description = "If present, detailed output in JSON format will be written to this file.")
+      description = "If present, detailed output in JSON format will be written to this file.",
+      hidden = true)
   private Path json;
 
   @CommandLine.Spec(CommandLine.Spec.Target.SELF)
