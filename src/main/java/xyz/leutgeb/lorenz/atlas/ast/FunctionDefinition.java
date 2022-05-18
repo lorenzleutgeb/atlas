@@ -276,33 +276,23 @@ public class FunctionDefinition {
     final var toSize = returnsTree() ? 1 : 0;
 
     if (predefined == null) {
-      var inferredAnnotation =
-          new FunctionAnnotation(
-              heuristic.generate(getName() + treeLikeArguments(), fromSize),
-              heuristic.generate(getName() + "[_]", toSize));
-
-      Set<FunctionAnnotation> cfAnnotations = new HashSet<>();
-
-      /*
-      if (cfAnnotationCount > 0) {
-        cfAnnotations.add(
-            new FunctionAnnotation(
-                Annotation.zero(inferredAnnotation.from.size(), "Qcf0"),
-                Annotation.zero(inferredAnnotation.to.size(), "Qcf'")));
-      }
-       */
-
-      for (int i = 1; i <= cfAnnotationCount; i++) {
-        cfAnnotations.add(
-            new FunctionAnnotation(
-                heuristic.generate(getName() + treeLikeArguments() + "cf" + i, fromSize),
-                heuristic.generate(getName() + "[_]" + "cf" + i, toSize)));
-      }
-
-      final var combined =
-          new CombinedFunctionAnnotation(inferredAnnotation, unmodifiableSet(cfAnnotations));
-      // TODO: Sort this out...
       if (infer || annotatedSignature.getAnnotation().isEmpty()) {
+        var inferredAnnotation =
+            new FunctionAnnotation(
+                heuristic.generate(getName() + treeLikeArguments(), fromSize),
+                heuristic.generate(getName() + "[_]", toSize));
+
+        Set<FunctionAnnotation> cfAnnotations = new HashSet<>();
+        for (int i = 1; i <= cfAnnotationCount; i++) {
+          cfAnnotations.add(
+              new FunctionAnnotation(
+                  heuristic.generate(getName() + treeLikeArguments() + "cf" + i, fromSize),
+                  heuristic.generate(getName() + "[_]" + "cf" + i, toSize)));
+        }
+
+        final var combined =
+            new CombinedFunctionAnnotation(inferredAnnotation, unmodifiableSet(cfAnnotations));
+
         inferredSignature =
             new FunctionSignature(
                 inferredSignature.getConstraints(),
@@ -315,7 +305,7 @@ public class FunctionDefinition {
                 inferredSignature.getType(),
                 annotatedSignature.getAnnotation());
       }
-      functionAnnotations.put(getFullyQualifiedName(), combined);
+      functionAnnotations.put(getFullyQualifiedName(), inferredSignature.getAnnotation().get());
     } else {
       if (predefined.withCost.from.size() != treeLikeArguments.size()) {
         throw new IllegalArgumentException(
