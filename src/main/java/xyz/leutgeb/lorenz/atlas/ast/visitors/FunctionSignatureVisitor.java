@@ -48,38 +48,36 @@ class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature>
 
     final ProductType from = ProductType.wrap(typeVisitor.visit(ctx.from));
     final Type to = typeVisitor.visit(ctx.to);
+    final String fileName = getPath().getFileName().toString();
 
     if (ctx.annotatedAnnotation != null) {
       annotation =
           Optional.of(
               new CombinedFunctionAnnotation(
                   new FunctionAnnotation(
-                      convert(from.countTrees().get(), ctx.annotatedAnnotation.with.from),
-                      convert(to.countTrees().get(), ctx.annotatedAnnotation.with.to)),
+                      convert(from.countTrees().get(), ctx.annotatedAnnotation.with.from, fileName),
+                      convert(to.countTrees().get(), ctx.annotatedAnnotation.with.to, fileName)),
                   ctx.annotatedAnnotation.without.stream()
                       .map(
                           cf ->
                               new FunctionAnnotation(
-                                  convert(from.countTrees().get(), cf.from),
-                                  convert(to.countTrees().get(), cf.to)))
+                                  convert(from.countTrees().get(), cf.from, fileName),
+                                  convert(to.countTrees().get(), cf.to, fileName)))
                       .collect(Collectors.toSet())));
     }
 
     return new FunctionSignature(typeConstraints, new FunctionType(from, to), annotation);
   }
 
-  public static Annotation convert(int size, SplayParser.AnnotationContext annotationContext) {
+  public static Annotation convert(
+      int size, SplayParser.AnnotationContext annotationContext, String fileName) {
     // if (annotationContext instanceof SplayParser.DontCareAnnotationContext) {
     //	return Optional.empty();
     // }
     if (annotationContext instanceof SplayParser.ZeroAnnotationContext) {
       final var start = annotationContext.getStart();
       return Annotation.zero(
-          size,
-          "fixed in source code at position "
-              + start.getLine()
-              + ":"
-              + start.getCharPositionInLine());
+          size, fileName + ":" + start.getLine() + ":" + start.getCharPositionInLine());
     }
     if (annotationContext instanceof final SplayParser.NonEmptyAnnotationContext context) {
       List<Coefficient> rankCoefficients = new ArrayList<>(size);
@@ -107,10 +105,7 @@ class FunctionSignatureVisitor extends SourceNameAwareVisitor<FunctionSignature>
       return new Annotation(
           rankCoefficients,
           coeffiecients,
-          "annotated in source at position "
-              + start.getLine()
-              + ":"
-              + start.getCharPositionInLine());
+          fileName + ":" + start.getLine() + ":" + start.getCharPositionInLine());
     }
     throw new IllegalArgumentException("cannot convert context");
   }
