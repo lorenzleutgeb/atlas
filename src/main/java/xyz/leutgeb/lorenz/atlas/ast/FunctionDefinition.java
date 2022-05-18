@@ -6,7 +6,6 @@ import static guru.nidi.graphviz.model.Factory.node;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.stream.Collectors.toList;
 import static xyz.leutgeb.lorenz.atlas.typing.simple.TypeConstraint.minimize;
-import static xyz.leutgeb.lorenz.atlas.util.Util.bug;
 import static xyz.leutgeb.lorenz.atlas.util.Util.indent;
 
 import com.google.common.collect.Sets;
@@ -179,14 +178,6 @@ public class FunctionDefinition {
   }
 
   public List<IdentifierExpression> treeLikeArguments() {
-    // NOTE(lorenzleutgeb): A declared argument that is not used in the body
-    // is missing from the return value of this function, e.g.
-    //
-    //  f ∷ Tree α * α → α
-    //  f t x = x
-    //
-    // will not have `t` as a tree like argument.
-
     if (inferredSignature == null) {
       throw new IllegalStateException();
     }
@@ -199,18 +190,21 @@ public class FunctionDefinition {
 
     for (int i = 0; i < arguments.size(); i++) {
       if (types.get(i) instanceof TreeType) {
+        boolean found = false;
         for (var freeVar : bodyFreeVariables) {
           if (freeVar.getName().equals(arguments.get(i))) {
             bodyFreeVariablesOrdered.add(freeVar);
+            found = true;
             break;
           }
+        }
+        if (!found) {
+          bodyFreeVariablesOrdered.add(
+              IdentifierExpression.predefined(arguments.get(i), types.get(i)));
         }
       } else if (types.get(i) != BoolType.INSTANCE && !(types.get(i) instanceof TypeVariable)) {
         throw new RuntimeException("unknown type");
       }
-    }
-    if (bodyFreeVariablesOrdered.size() != bodyFreeVariables.size()) {
-      throw bug("hmm");
     }
     return bodyFreeVariablesOrdered;
   }

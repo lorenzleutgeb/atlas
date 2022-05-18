@@ -52,7 +52,7 @@ public class IdentifierExpression extends Expression {
     this.intro = intro;
   }
 
-  private static IdentifierExpression predefined(String name, Type type) {
+  public static IdentifierExpression predefined(String name, Type type) {
     return new IdentifierExpression(Predefined.INSTANCE, name, type, SystemIntro.INSTANCE);
   }
 
