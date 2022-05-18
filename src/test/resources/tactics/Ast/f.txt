@@ -1,0 +1,17 @@
+(match
+  (w leaf)
+  (w{l2xy}
+    (let:tree:cf
+      (tick:ast (shift app))
+      (w{l2xy}
+        (let:tree:cf
+          (tick:ast (shift app))
+          (ite
+            (w{rk1} var)
+            (w{rk1} var)
+          )
+        )
+      )
+    )
+  )
+)
