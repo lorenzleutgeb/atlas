@@ -23,7 +23,6 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import lombok.Getter;
@@ -232,11 +231,13 @@ public class Program {
       boolean simpleSignatures,
       Set<Constraint> externalConstraints,
       Set<String> fqns) {
-    if (fqns.stream()
-        .map(functionDefinitions::get)
-        .map(FunctionDefinition::runaway)
-        .anyMatch(Predicate.not(Set::isEmpty))) {
-      return new Solver.Result(Status.UNSATISFIABLE, empty(), emptyMap(), empty());
+
+    for (var fd : functionDefinitions.values()) {
+      final var runaways = fd.runaway();
+      if (!runaways.isEmpty()) {
+        log.info("Runaways: {} in {}", runaways, fd.getSimpleSignatureString());
+        return new Solver.Result(Status.UNSATISFIABLE, empty(), emptyMap(), empty());
+      }
     }
 
     final Map<String, CombinedFunctionAnnotation> benchmark =
