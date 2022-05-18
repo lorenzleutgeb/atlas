@@ -69,7 +69,7 @@ public class Program {
 
     @Deprecated
     public static InferenceMode fromBoolean(boolean infer) {
-      return infer ? InferenceMode.PROXIED : InferenceMode.NONE;
+      return infer ? InferenceMode.DIRECT : InferenceMode.NONE;
     }
   }
 
