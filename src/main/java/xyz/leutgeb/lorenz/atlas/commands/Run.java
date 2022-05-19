@@ -70,11 +70,11 @@ public class Run implements Runnable {
   @CommandLine.Option(
       defaultValue = "false",
       showDefaultValue = CommandLine.Help.Visibility.ALWAYS,
-      names = "--use-tick-ast",
+      names = "--use-tick-defer",
       arity = "1",
       paramLabel = "true|false",
-      description = "If true, use (tick:ast) instead of (tick).")
-  private Boolean useTickAst;
+      description = "If true, use (tick:defer) instead of (tick).")
+  private Boolean useTickDefer;
 
   @CommandLine.Option(names = "--name", description = "Name of the run.")
   private String name;
@@ -182,7 +182,7 @@ public class Run implements Runnable {
     }
     System.out.println();
 
-    System.setProperty(Util.getPropertyName(Prover.class, "tickAst"), useTickAst.toString());
+    System.setProperty(Util.getPropertyName(Prover.class, "tickDefer"), useTickDefer.toString());
 
     final var result =
         program.solve(

@@ -1,5 +1,6 @@
 package xyz.leutgeb.lorenz.atlas;
 
+import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static xyz.leutgeb.lorenz.atlas.ModuleTest.Qp;
 import static xyz.leutgeb.lorenz.atlas.TestUtil.*;
@@ -9,7 +10,6 @@ import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.*;
 import static xyz.leutgeb.lorenz.atlas.util.Z3Support.load;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,8 +24,6 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.CombinedFunctionAnnotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.FunctionAnnotation;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.SmartRangeHeuristic;
-import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Prover;
-import xyz.leutgeb.lorenz.atlas.util.Util;
 
 // @Disabled
 public class Tactics {
@@ -195,7 +193,7 @@ public class Tactics {
   public static final CombinedFunctionAnnotation RAND_TREE_DESCEND_EXPECTED =
       CombinedFunctionAnnotation.of(logOnly(ONE), zero(1));
 
-  public static final CombinedFunctionAnnotation RAND_SEARCHTREE_INSERT_EXPECTED =
+  public static final CombinedFunctionAnnotation COINSEARCHTREE_INSERT_EXPECTED =
       CombinedFunctionAnnotation.of(
           new Annotation(
               List.of(known(1, 2)),
@@ -210,7 +208,7 @@ public class Tactics {
           rkOnly(ONE_BY_TWO),
           logToLog(known(1, 4)));
 
-  public static final CombinedFunctionAnnotation RAND_SEARCHTREE_DELETE_EXPECTED =
+  public static final CombinedFunctionAnnotation COINSEARCHTREE_DELETE_EXPECTED =
       CombinedFunctionAnnotation.of(
           new Annotation(
               List.of(known(1, 2)),
@@ -248,12 +246,12 @@ public class Tactics {
     return Stream.of(
         Arguments.of(
             Map.of(
-                "CoinSearchTree.insert", Config.of(RAND_SEARCHTREE_INSERT_EXPECTED),
-                "CoinSearchTree.delete", Config.of(RAND_SEARCHTREE_DELETE_EXPECTED))));
-  }
-
-  private static Stream<Arguments> tree() {
-    return Stream.of(Arguments.of(Map.of("Tree.descend", Config.of(RAND_TREE_DESCEND_EXPECTED))));
+                "CoinSearchTree.insert",
+                Config.of(COINSEARCHTREE_INSERT_EXPECTED),
+                "CoinSearchTree.delete_max",
+                Config.of(),
+                "CoinSearchTree.delete",
+                Config.of(COINSEARCHTREE_DELETE_EXPECTED))));
   }
 
   private static Stream<Arguments> randTree() {
@@ -1833,7 +1831,11 @@ public class Tactics {
   }
 
   private static Stream<Arguments> infinite() {
-    return Stream.of(Arguments.of(Map.of("Infinite.infinite_2", Config.of())));
+    return Stream.of(Arguments.of(Map.of("Infinite.infinite_2a", Config.of())));
+  }
+
+  private static Stream<Arguments> defer() {
+    return Stream.of(Arguments.of(Map.of("Defer.f", Config.of("Defer/f"))));
   }
 
   @ParameterizedTest
@@ -1841,25 +1843,28 @@ public class Tactics {
     // "negative",
     // "scratch",
     // "randTree",
-    // "randSplayHeap",
-    // "randSplayTree",
-    // "randMeldableHeap",
-    // "coinSearchTree",
-    "infinite",
-    // "splayTree",
-    // "splayHeap",
-    // "pairingHeap",
+    "randSplayHeap",
+    "randSplayTree",
+    "randMeldableHeap",
+    "coinSearchTree",
+    // "infinite",
+    "splayTree",
+    "splayHeap",
+    "pairingHeap",
+    "defer"
   })
   public void all(Map<String, Config> immutableAnnotations) {
-    System.setProperty(Util.getPropertyName(Prover.class, "tickAst"), "true");
     final var program = loadAndNormalizeAndInferAndUnshare(immutableAnnotations.keySet());
-    final var infer = true;
+    final var tactics = true;
+    final var infer = false;
     final var result =
         program.solve(
             extractAnnotations(immutableAnnotations),
-            new HashMap<>(),
+            tactics ? extractTactics(immutableAnnotations) : emptyMap(),
             infer,
             true,
+            true,
+            false,
             !infer,
             Set.of());
     assertTrue(result.isSatisfiable());

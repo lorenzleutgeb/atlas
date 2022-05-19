@@ -1,6 +1,6 @@
 (w{l2xy mono}
   (let:tree:cf
-    (tick:ast
+    (tick:defer
       (shift
         app
       )
@@ -16,7 +16,7 @@
           )
           (w{l2xy mono}
             (let:tree:cf
-              (tick:ast
+              (tick:defer
                 (shift
                   app
                 )

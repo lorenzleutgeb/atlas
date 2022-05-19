@@ -2,13 +2,13 @@
   (w leaf)
   (w{l2xy}
     (let:tree:cf
-      (tick:ast (shift app))
+      (tick:defer (shift app))
       (w{l2xy}
         (let:tree:cf
-          (tick:ast (shift app))
+          (tick:defer (shift app))
           (ite
-            (w{rk1} var)
-            (w{rk1} var)
+            (w{lrk1} var)
+            (w{lrk1} var)
           )
         )
       )

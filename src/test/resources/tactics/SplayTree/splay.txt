@@ -12,7 +12,7 @@
               (w{mono} (let:tree:cf leaf (let:tree:cf node (w{mono} node))))
               (w{l2xy mono}
                 (let:tree:cf
-                  (tick:ast (shift app))
+                  (tick:defer (shift app))
                   (match
                     (w{mono}
                       leaf
@@ -36,7 +36,7 @@
               (w{mono} (let:tree:cf leaf (let:tree:cf node (w{mono} node))))
               (w{l2xy mono}
                 (let:tree:cf
-                  (tick:ast (shift app))
+                  (tick:defer (shift app))
                   (match
                     (w{mono} leaf)
                     (w{l2xy mono} (let:tree:cf node (let:tree:cf node (w{mono} node))))
@@ -56,7 +56,7 @@
               (w{mono} (let:tree:cf leaf (let:tree:cf node (w{mono} node))))
               (w{l2xy mono}
                 (let:tree:cf
-                  (tick:ast (shift app))
+                  (tick:defer (shift app))
                   (match
                     (w{mono} leaf)
                     (w{l2xy mono} (let:tree:cf node (let:tree:cf node (w{mono} node))))
@@ -68,7 +68,7 @@
               (w{mono} (let:tree:cf node (let:tree:cf leaf (w{mono} node))))
               (w{l2xy mono}
                 (let:tree:cf
-                  (tick:ast (shift app))
+                  (tick:defer (shift app))
                   (match
                     (w{mono} leaf)
                     (w{l2xy mono} (let:tree:cf node (let:tree:cf node (w{mono} node))))

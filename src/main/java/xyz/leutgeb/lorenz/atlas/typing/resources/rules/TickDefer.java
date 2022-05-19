@@ -9,14 +9,14 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingGlobals;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
 
 @Slf4j
-public class TickAst implements Rule {
-  public static final TickAst INSTANCE = new TickAst();
+public class TickDefer implements Rule {
+  public static final TickDefer INSTANCE = new TickDefer();
 
   public ApplicationResult apply(
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = obligation.getExpression();
 
-    log.trace("Using (tick:ast)!");
+    log.trace("Using (tick:defer)!");
 
     if (expression instanceof TickExpression tickExpression) {
       if (!obligation.isCost()) {
@@ -30,7 +30,7 @@ public class TickAst implements Rule {
 
       return new ApplicationResult(
           List.of(obligation.keepCost(obligation.getContext(), tickExpression.getBody(), qp)),
-          List.of(qp.increment(qpMinusCost, tickExpression.getCost(), "(tick:ast)")));
+          List.of(qp.increment(qpMinusCost, tickExpression.getCost(), "(tick:defer)")));
     }
 
     if (!obligation.isCost()) {
@@ -48,6 +48,6 @@ public class TickAst implements Rule {
                 new AnnotatingContext(context.getIds(), q),
                 expression,
                 obligation.getAnnotation())),
-        List.of(annotation.increment(q, 1, "(tick:ast)")));
+        List.of(annotation.increment(q, 1, "(tick:defer)")));
   }
 }

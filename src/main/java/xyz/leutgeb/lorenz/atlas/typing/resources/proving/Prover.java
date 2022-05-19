@@ -62,7 +62,7 @@ public class Prover {
   private static final Rule RULE_LEAF = Leaf.INSTANCE;
   private static final Rule RULE_SHIFT = Shift.INSTANCE;
   private static final Rule RULE_TICK = Tick.INSTANCE;
-  private static final Rule RULE_TICK_AST = TickAst.INSTANCE;
+  private static final Rule RULE_TICK_DEFER = TickDefer.INSTANCE;
 
   private static final Map<String, Rule> RULES_BY_NAME =
       Stream.of(
@@ -80,7 +80,7 @@ public class Prover {
               RULE_LEAF,
               RULE_SHIFT,
               RULE_TICK,
-              RULE_TICK_AST)
+              RULE_TICK_DEFER)
           .collect(toUnmodifiableMap(Rule::getName, identity()));
 
   private static final boolean DEFAULT_WEAKEN_AGGRESSIVELY = false;
@@ -179,8 +179,8 @@ public class Prover {
       }
       if (expression instanceof CallExpression && TICK_BEFORE_APP) {
         log.trace("Automatically applying (tick) to expression `{}`!", expression);
-        if (Boolean.parseBoolean(Util.getProperty(Prover.class, "tickAst", "true"))) {
-          todo.add(RuleSchedule.schedule(RULE_TICK_AST));
+        if (Boolean.parseBoolean(Util.getProperty(Prover.class, "tickDefer", "true"))) {
+          todo.add(RuleSchedule.schedule(RULE_TICK_DEFER));
         } else {
           todo.add(RuleSchedule.schedule(RULE_TICK));
         }
@@ -223,8 +223,8 @@ public class Prover {
     } else if (e instanceof ShareExpression) {
       return RULE_SHARE;
     } else if (e instanceof TickExpression) {
-      if (Boolean.parseBoolean(Util.getProperty(Prover.class, "tickAst", "true"))) {
-        return RULE_TICK_AST;
+      if (Boolean.parseBoolean(Util.getProperty(Prover.class, "tickDefer", "true"))) {
+        return RULE_TICK_DEFER;
       } else {
         return RULE_TICK;
       }

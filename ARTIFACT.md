@@ -314,9 +314,9 @@ an example definition) and will have to edit the corresponding `*.ml`
 file. The program will print the source of all definitions that are loaded via
 the `run` subcommand.
 
-#### Comparing (tick) and (tick:ast)
+#### Comparing (tick) and (tick:defer)
 
-(tick:ast) can be enabled via `--use-tick-ast=true`.
+(tick:defer) can be enabled via `--use-tick-defer=true`.
 
 #### The Search Path
 

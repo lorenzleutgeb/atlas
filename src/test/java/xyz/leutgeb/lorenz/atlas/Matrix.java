@@ -34,8 +34,6 @@ public class Matrix {
   private static List<Fraction> fracs = List.of(ONE_HALF, ONE_THIRD, TWO_THIRDS);
 
   private static String moduleName(Fraction p, Fraction rec) {
-    final var rot = Fraction.ONE.subtract(rec);
-
     return "RandSplayTreeMatrix.P"
         + p.getNumerator()
         + p.getDenominator()
@@ -84,11 +82,13 @@ public class Matrix {
     final String fqn = moduleName + ".splay";
     Program program = TestUtil.loadAndNormalizeAndInferAndUnshare(fqn);
 
-    if (!RESULTS.containsKey(Pair.of(p, rec))) {
+    final var reference = RESULTS;
+
+    if (!reference.containsKey(Pair.of(p, rec))) {
       fail("No annotation to check.");
     }
 
-    CombinedFunctionAnnotation dummy = RESULTS.get(Pair.of(p, rec));
+    CombinedFunctionAnnotation dummy = reference.get(Pair.of(p, rec));
 
     final var result =
         program.solve(

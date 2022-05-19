@@ -411,7 +411,7 @@ public class WeakeningTest {
 
   @ParameterizedTest
   @CsvSource("true,false")
-  void rk1(String bool) {
+  void lemmaRk1(String bool) {
     final var x = IdentifierExpression.predefinedTree("x");
 
     final var sizeAnalysis = new DirectedMultigraph<IdentifierExpression, SizeEdge>(SizeEdge.class);
@@ -425,7 +425,7 @@ public class WeakeningTest {
         Solver.solve(
             Set.copyOf(
                 W.compareCoefficientsLessOrEqualUsingFarkas(
-                    List.of(x), P, Q, sizeAnalysis, Map.of("rk1", bool))));
+                    List.of(x), P, Q, sizeAnalysis, Map.of("lrk1", bool))));
 
     assertEquals(solverResult.isSatisfiable(), Boolean.valueOf(bool));
   }

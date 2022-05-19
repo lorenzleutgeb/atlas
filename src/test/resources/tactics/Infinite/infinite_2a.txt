@@ -1,5 +1,5 @@
   (let:tree:cf
-    (tick:ast
+    (tick:defer
       app
     )
     (let:tree:cf

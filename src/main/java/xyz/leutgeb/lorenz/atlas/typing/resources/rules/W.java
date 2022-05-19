@@ -159,8 +159,8 @@ public class W implements Rule {
     final var size = left.size();
 
     final List<Constraint> constraints = new ArrayList<>();
-    final var rk1 = flag(W.class, arguments, "rk1");
-    final var rankColumns = rk1;
+    final var lemmaRk1 = flag(W.class, arguments, "lrk1");
+    final var rankColumns = lemmaRk1;
 
     if (!rankColumns) {
       IntStream.range(0, size)
@@ -313,7 +313,7 @@ public class W implements Rule {
             + lemma2XYInstances.size()
             + lemmaPlus1Instances.size()
             + lemmaPlus2Instances.size()
-            + (rk1 ? size : 0);
+            + (lemmaRk1 ? size : 0);
 
     if (m == 0) {
       // If we have no expert knowledge, fall back to comparing coefficients.
@@ -458,7 +458,7 @@ public class W implements Rule {
       }
     }
 
-    if (rk1) {
+    if (lemmaRk1) {
       final var unitIndex = potentialFunctions.indexOf(unitIndex(size));
       if (unitIndex < 0) {
         throw new UnsupportedOperationException();

@@ -9,7 +9,7 @@ import static xyz.leutgeb.lorenz.atlas.Tactics.PAIRINGHEAP_MERGE_PAIRS_ISOLATED_
 import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_MELDABLEHEAP_DELETE_MIN_EXPECTED;
 import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_MELDABLEHEAP_INSERT_EXPECTED;
 import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_MELDABLEHEAP_MELD_EXPECTED;
-import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_SEARCHTREE_DELETE_EXPECTED;
+import static xyz.leutgeb.lorenz.atlas.Tactics.COINSEARCHTREE_DELETE_EXPECTED;
 import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_SPLAYHEAP_DELETE_MIN_EXPECTED;
 import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_SPLAYHEAP_INSERT_EXPECTED;
 import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_SPLAYTREE_INSERT_EXPECTED;
@@ -50,7 +50,7 @@ public class Automation {
             Map.of(
                 // "insert",
                 // RAND_SEARCHTREE_INSERT_EXPECTED,
-                "delete", RAND_SEARCHTREE_DELETE_EXPECTED // ,
+                "delete", COINSEARCHTREE_DELETE_EXPECTED // ,
                 // "delete_max",
                 // RAND_SEARCHTREE_DELETE_MAX_EXPECTED
                 )),
