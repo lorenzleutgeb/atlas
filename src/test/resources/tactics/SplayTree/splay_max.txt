@@ -1,11 +1,11 @@
-(match (* t *)
+(match
   leaf
-  (match (* r *)
+  (match
     (let:tree:cf leaf (w{mono} node))
-    (match (* rr *)
+    (match
       (let:tree:cf (w node) (let:tree:cf leaf (w{mono} node)))
       (w{mono l2xy} (let:tree:cf
-        (tick app) (* splay_max rr *)
+        (tick app)
         (match
           leaf
           (let:tree:cf node (let:tree:cf node (w{mono} node)))

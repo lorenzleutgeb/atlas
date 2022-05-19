@@ -1,19 +1,45 @@
-(let:tree:cf
-  (tick app) (* splay a t *)
-  (match
-    (w leaf)
-    (ite (* a == a1 *)
-      (match (* l *)
-        (w var)
-        (w{mono l2xy} (let:tree:cf
-          (tick app)
-          (match (* splay_max l *)
-            leaf
-            (w node)
-          )
-        ))
+(w{l2xy mono}
+  (let:tree:cf
+    (tick:ast
+      (shift
+        app
       )
-      (w node)
+    )
+    (match
+      (w{mono}
+        leaf
+      )
+      (ite
+        (match
+          (w{mono}
+            var
+          )
+          (w{l2xy mono}
+            (let:tree:cf
+              (tick:ast
+                (shift
+                  app
+                )
+              )
+              (match
+                (w{mono}
+                  (w:var
+                    leaf
+                  )
+                )
+                (w{l2xy mono}
+                  (w:var
+                    node
+                  )
+                )
+              )
+            )
+          )
+        )
+        (w{mono}
+          node
+        )
+      )
     )
   )
 )

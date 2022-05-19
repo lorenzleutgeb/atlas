@@ -1,60 +1,80 @@
-(match (* t *)
-  leaf
-  (ite (* a == c *)
-    (w node)
-    (ite (* a < c *)
-      (match (* cl, zig *)
-        (let:tree:cf leaf (w node))
-        (ite (* a == b *)
-          (let:tree:cf (w node) (w{mono} node))
-          (ite (* a < b *)
-            (match (* bl, zig zig *)
-              (let:tree:cf leaf (let:tree:cf node (w{mono} node)))
-              (w{mono l2xy} (let:tree:cf
-                (tick app) (* splay_eq a bl *)
-                (match
-                  leaf
-                  (let:tree:cf node (let:tree:cf node (w{mono} node)))
+(match
+  (w{mono} leaf)
+  (ite
+    (w{mono} node)
+    (ite
+      (match
+        (w{mono} (let:tree:cf leaf (w{mono} node)))
+        (ite
+          (w{mono} (let:tree:cf node (w{mono} node)))
+          (ite
+            (match
+              (w{mono} (let:tree:cf leaf (let:tree:cf node (w{mono} node))))
+              (w{l2xy mono}
+                (let:tree:cf
+                  (tick:ast (shift app))
+                  (match
+                    (w{mono}
+                      leaf
+                    )
+                    (w{l2xy mono}
+                      (let:tree:cf
+                        node
+                        (let:tree:cf
+                          node
+                          (w{mono}
+                            node
+                          )
+                        )
+                      )
+                    )
+                  )
                 )
-              ))
+              )
             )
-            (match (* br, zig zag *)
-              (let:tree:cf leaf (let:tree:cf node (w{mono} node)))
-              (w{mono l2xy} (let:tree:cf
-                (tick app) (* splay_eq a br *)
-                (match
-                  (w{mono} leaf)
-                  (w{l2xy} (let:tree:cf node (let:tree:cf node node)))
+            (match
+              (w{mono} (let:tree:cf leaf (let:tree:cf node (w{mono} node))))
+              (w{l2xy mono}
+                (let:tree:cf
+                  (tick:ast (shift app))
+                  (match
+                    (w{mono} leaf)
+                    (w{l2xy mono} (let:tree:cf node (let:tree:cf node (w{mono} node))))
+                  )
                 )
-              ))
+              )
             )
           )
         )
       )
-      (match (* cr, zag *)
-        (let:tree:cf leaf (w node))
-        (ite (* a == b *)
-          (let:tree:cf (w node) (w{mono} node))
-          (ite (* a < b *)
-            (match (* bl, zag zig *)
-              (let:tree:cf leaf (let:tree:cf node (w{mono} node)))
-              (w{mono l2xy} (let:tree:cf
-                (tick app) (* splay_eq a bl *)
-                (match
-                  (w{mono} leaf)
-                  (w{l2xy} (let:tree:cf node (let:tree:cf node node)))
+      (match
+        (w{mono} (let:tree:cf leaf (w{mono} node)))
+        (ite
+          (w{mono} (let:tree:cf node (w{mono} node)))
+          (ite
+            (match
+              (w{mono} (let:tree:cf leaf (let:tree:cf node (w{mono} node))))
+              (w{l2xy mono}
+                (let:tree:cf
+                  (tick:ast (shift app))
+                  (match
+                    (w{mono} leaf)
+                    (w{l2xy mono} (let:tree:cf node (let:tree:cf node (w{mono} node))))
+                  )
                 )
-              ))
+              )
             )
-            (match (* br, zag zag *)
-              (let:tree:cf (w node) (let:tree:cf leaf (w{mono} node)))
-              (w{l2xy mono} (let:tree:cf
-                (tick app) (* splay_eq a br *)
-                (match
-                  leaf
-                  (let:tree:cf node (let:tree:cf node (w{mono} node)))
+            (match
+              (w{mono} (let:tree:cf node (let:tree:cf leaf (w{mono} node))))
+              (w{l2xy mono}
+                (let:tree:cf
+                  (tick:ast (shift app))
+                  (match
+                    (w{mono} leaf)
+                    (w{l2xy mono} (let:tree:cf node (let:tree:cf node (w{mono} node))))
+                  )
                 )
-              ))
+              )
             )
           )
         )
