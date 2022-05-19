@@ -16,7 +16,7 @@ public class TickAst implements Rule {
       Obligation obligation, AnnotatingGlobals globals, Map<String, String> arguments) {
     final var expression = obligation.getExpression();
 
-    log.debug("Using (tick:ast)");
+    log.trace("Using (tick:ast)!");
 
     if (expression instanceof TickExpression tickExpression) {
       if (!obligation.isCost()) {

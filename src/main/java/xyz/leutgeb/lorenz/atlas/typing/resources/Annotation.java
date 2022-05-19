@@ -935,6 +935,26 @@ public class Annotation {
     return true;
   }
 
+  public boolean equalsExceptUnit(Annotation that) {
+    if (this.size() != that.size()) {
+      return false;
+    }
+    for (int i = 0; i < this.size(); i++) {
+      if (!this.getRankCoefficientOrZero(i).equals(that.getRankCoefficientOrZero(i))) {
+        return false;
+      }
+    }
+    for (var index : Annotation.indexUnion(this, that).toList()) {
+      if (isUnitIndex(index)) {
+        continue;
+      }
+      if (!this.getCoefficientOrZero(index).equals(that.getCoefficientOrZero(index))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   @Override
   public int hashCode() {
     return Objects.hash(rankCoefficients, coefficients);

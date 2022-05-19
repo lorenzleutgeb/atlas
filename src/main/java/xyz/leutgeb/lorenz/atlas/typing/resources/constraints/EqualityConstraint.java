@@ -1,7 +1,9 @@
 package xyz.leutgeb.lorenz.atlas.typing.resources.constraints;
 
 import static guru.nidi.graphviz.model.Link.to;
+import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
+import static xyz.leutgeb.lorenz.atlas.typing.resources.Annotation.unitIndex;
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.ZERO;
 
 import com.google.common.collect.BiMap;
@@ -109,6 +111,16 @@ public class EqualityConstraint extends Constraint {
   }
 
   public static List<Constraint> eq(Annotation left, Annotation right, String reason) {
+    return eqExcept(left, right, emptySet(), reason);
+  }
+
+  public static List<Constraint> eqExceptConstant(
+      Annotation left, Annotation right, String reason) {
+    return eqExcept(left, right, singleton(unitIndex(left.size())), reason);
+  }
+
+  public static List<Constraint> eqExcept(
+      Annotation left, Annotation right, Set<List<Integer>> exceptions, String reason) {
     if (left.size() != right.size()) {
       throw new IllegalArgumentException("annotations of different sizes cannot be equal");
     }
@@ -130,14 +142,14 @@ public class EqualityConstraint extends Constraint {
     for (Map.Entry<List<Integer>, Coefficient> entry : left.getCoefficients()) {
       leftIndices.add(entry.getKey());
       var other = right.getCoefficientOrZero(entry.getKey());
-      if (entry.getValue().equals(other)) {
+      if (entry.getValue().equals(other) || exceptions.contains(entry.getKey())) {
         continue;
       }
       result.add(new EqualityConstraint(entry.getValue(), other, reason + " " + entry.getKey()));
     }
 
     for (Map.Entry<List<Integer>, Coefficient> entry : right.getCoefficients()) {
-      if (!leftIndices.contains(entry.getKey())) {
+      if (!leftIndices.contains(entry.getKey()) && !exceptions.contains(entry.getKey())) {
         result.add(new EqualityConstraint(entry.getValue(), ZERO, reason + " " + entry.getKey()));
       }
     }
