@@ -10,6 +10,7 @@ import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient
 import static xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient.*;
 import static xyz.leutgeb.lorenz.atlas.util.Z3Support.load;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1639,14 +1640,14 @@ public class Tactics {
     return Stream.of(
         Arguments.of(
             Map.of(
-                // "RandSplayTree.splay_max",
-                // Config.of("RandSplayTree/splay_max", RAND_SPLAYTREE_SPLAY_EXPECTED),
-                // "RandSplayTree.delete",
-                // Config.of("RandSplayTree/delete", RAND_SPLAYTREE_SPLAY_EXPECTED),
-                "RandSplayTree.insert", Config.of(RAND_SPLAYTREE_INSERT_EXPECTED) // ,
-                // "RandSplayTree.splay",
-                // Config.of("RandSplayTree/splay", RAND_SPLAYTREE_SPLAY_EXPECTED)
-                )));
+                "RandSplayTree.splay_max",
+                Config.of("RandSplayTree/splay_max", RAND_SPLAYTREE_SPLAY_EXPECTED),
+                "RandSplayTree.delete",
+                Config.of("RandSplayTree/delete", RAND_SPLAYTREE_SPLAY_EXPECTED),
+                "RandSplayTree.insert",
+                Config.of("RandSplayTree/insert", RAND_SPLAYTREE_INSERT_EXPECTED),
+                "RandSplayTree.splay",
+                Config.of("RandSplayTree/splay", RAND_SPLAYTREE_SPLAY_EXPECTED))));
   }
 
   private static Stream<Arguments> randSplayHeap() {
@@ -1654,9 +1655,9 @@ public class Tactics {
         Arguments.of(
             Map.of(
                 "RandSplayHeap.insert",
-                Config.of(RAND_SPLAYHEAP_INSERT_EXPECTED),
+                Config.of("RandSplayHeap/insert", RAND_SPLAYHEAP_INSERT_EXPECTED),
                 "RandSplayHeap.delete_min",
-                Config.of(RAND_SPLAYHEAP_DELETE_MIN_EXPECTED))));
+                Config.of("RandSplayHeap/delete_min", RAND_SPLAYHEAP_DELETE_MIN_EXPECTED))));
   }
 
   private static Stream<Arguments> randMeldableHeap() {
@@ -1688,11 +1689,11 @@ public class Tactics {
         Arguments.of(
             Map.of(
                 "SplayHeap.partition",
-                Config.of(SPLAYHEAP_PARTITION_EXPECTED),
+                Config.of("SplayHeap/partition", SPLAYHEAP_PARTITION_EXPECTED),
                 "SplayHeap.insert",
-                Config.of(SPLAYHEAP_INSERT_EXPECTED),
+                Config.of("SplayHeap/insert", SPLAYHEAP_INSERT_EXPECTED),
                 "SplayHeap.delete_min",
-                Config.of(SPLAYHEAP_DELETE_MIN_EXPECTED))));
+                Config.of("SplayHeap/delete_min", SPLAYHEAP_DELETE_MIN_EXPECTED))));
   }
 
   private static Stream<Arguments> negative() {
@@ -1843,23 +1844,23 @@ public class Tactics {
     // "negative",
     // "scratch",
     // "randTree",
-    "randSplayHeap",
-    "randSplayTree",
-    "randMeldableHeap",
+    // "randSplayHeap",
+    // "randSplayTree",
+    // "randMeldableHeap",
     "coinSearchTree",
     // "infinite",
-    "splayTree",
-    "splayHeap",
-    "pairingHeap",
-    "defer"
+    // "splayTree",
+    // "splayHeap",
+    // "pairingHeap",
+    // "defer"
   })
   public void all(Map<String, Config> immutableAnnotations) {
     final var program = loadAndNormalizeAndInferAndUnshare(immutableAnnotations.keySet());
-    final var tactics = true;
+    final var tactics = false;
     final var infer = false;
     final var result =
         program.solve(
-            extractAnnotations(immutableAnnotations),
+            true ? new HashMap<>() : extractAnnotations(immutableAnnotations),
             tactics ? extractTactics(immutableAnnotations) : emptyMap(),
             infer,
             true,

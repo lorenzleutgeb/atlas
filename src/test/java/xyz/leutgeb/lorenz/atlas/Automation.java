@@ -2,6 +2,7 @@ package xyz.leutgeb.lorenz.atlas;
 
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static xyz.leutgeb.lorenz.atlas.Tactics.COINSEARCHTREE_DELETE_EXPECTED;
 import static xyz.leutgeb.lorenz.atlas.Tactics.PAIRINGHEAP_DELETE_MIN_VIA_MERGE_PAIRS_ISOLATED_EXPECTED;
 import static xyz.leutgeb.lorenz.atlas.Tactics.PAIRINGHEAP_INSERT_ISOLATED_EXPECTED;
 import static xyz.leutgeb.lorenz.atlas.Tactics.PAIRINGHEAP_MERGE_ISOLATED_EXPECTED;
@@ -9,7 +10,6 @@ import static xyz.leutgeb.lorenz.atlas.Tactics.PAIRINGHEAP_MERGE_PAIRS_ISOLATED_
 import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_MELDABLEHEAP_DELETE_MIN_EXPECTED;
 import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_MELDABLEHEAP_INSERT_EXPECTED;
 import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_MELDABLEHEAP_MELD_EXPECTED;
-import static xyz.leutgeb.lorenz.atlas.Tactics.COINSEARCHTREE_DELETE_EXPECTED;
 import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_SPLAYHEAP_DELETE_MIN_EXPECTED;
 import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_SPLAYHEAP_INSERT_EXPECTED;
 import static xyz.leutgeb.lorenz.atlas.Tactics.RAND_SPLAYTREE_INSERT_EXPECTED;
