@@ -8,7 +8,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     examples = {
-      url = "github:lorenzleutgeb/atlas-examples/v0.2.3";
+      url = "github:lorenzleutgeb/atlas-examples/v0.2.4";
       flake = false;
     };
     gradle2nix = {
