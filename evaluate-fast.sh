@@ -60,8 +60,8 @@ for P in $N
 do
 	for C in $N
 	do
-		say "\n### p = ${P}, c = ${C} (zig-zig case only to be fast)\n"
-		run RandSplayTreeMatrix.P${P//\//}C${C//\//}.splay_zigzig
+		say "\n### p = ${P}, c = ${C}\n"
+		run RandSplayTreeMatrix.P${P//\//}C${C//\//}.splay
 	done
 done
 
