@@ -359,10 +359,10 @@ public class Program {
 
       // Set right sides equal.
       if (forceResultPerModule && fd.returnsTree()) {
-        log.warn("Adding external constraints to set right sides equal (except constant)!");
+        log.warn("Adding external constraints to set right sides equal!");
         final var module = fd.getModuleName();
         external.addAll(
-            EqualityConstraint.eqExceptConstant(
+            EqualityConstraint.eq(
                 fd.getInferredSignature().getAnnotation().get().withCost.to,
                 rightSidesPerModule.computeIfAbsent(
                     module,
@@ -555,7 +555,7 @@ public class Program {
         final var moduleRightSide = rightSidesPerModule.get(module);
         if (moduleRightSide == null) {
           rightSidesPerModule.put(module, fdRightSide.get());
-        } else if (!moduleRightSide.equalsExceptUnit(fdRightSide.get())) {
+        } else if (!moduleRightSide.equals(fdRightSide.get())) {
           log.warn("Annotated right sides are not equal.");
           return Solver.Result.unsat();
         }
