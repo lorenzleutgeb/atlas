@@ -6,12 +6,12 @@
       (ite
         (w{l2xy mono}
           (let:tree:cf{nege}
-            (tick (shift app))
+            (tick:defer (shift app))
             (match
               (w{mono} leaf)
               (w{l2xy}
                 (ite
-                  (w{mono} (tick (let:tree:cf node (let:tree:cf node node))))
+                  (w{mono} (tick:defer (let:tree:cf node (let:tree:cf node node))))
                   (w{mono} (let:tree:cf node (let:tree:cf node node)))
                 )
               )
@@ -20,12 +20,12 @@
         )
         (w{l2xy mono}
           (let:tree:cf
-            (tick (shift app))
+            (tick:defer (shift app))
             (match
               (w{mono} leaf)
               (w{l2xy}
                 (ite
-                  (w{mono} (tick (let:tree:cf node (let:tree:cf node node))))
+                  (w{mono} (tick:defer (let:tree:cf node (let:tree:cf node node))))
                   (w{mono} (let:tree:cf node (let:tree:cf node node)))
                 )
               )
@@ -39,12 +39,12 @@
       (ite
         (w{l2xy mono}
           (let:tree:cf
-            (tick (shift app))
+            (tick:defer (shift app))
             (match
               (w{mono} leaf)
               (w{l2xy}
                 (ite
-                  (w{mono} (tick (let:tree:cf node (let:tree:cf node node))))
+                  (w{mono} (tick:defer (let:tree:cf node (let:tree:cf node node))))
                   (w{mono} (let:tree:cf node (let:tree:cf node node)))
                 )
               )
@@ -53,12 +53,12 @@
         )
         (w{l2xy mono}
           (let:tree:cf{nege}
-            (tick (shift app))
+            (tick:defer (shift app))
             (match
               (w leaf)
               (w{l2xy}
                 (ite
-                  (w{mono} (tick (let:tree:cf node (let:tree:cf node node))))
+                  (w{mono} (tick:defer (let:tree:cf node (let:tree:cf node node))))
                   (w{mono} (let:tree:cf node (let:tree:cf node node)))
                 )
               )

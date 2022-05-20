@@ -12,12 +12,12 @@
               (w{mono} (let:tree:cf leaf (let:tree:cf node (w{mono} node))))
               (w{l2xy mono}
                 (let:tree:cf
-                  (tick (shift app))
+                  (tick:defer (shift app))
                   (match
                     (w{mono} leaf)
                     (w{l2xy}
                       (ite
-                        (w{mono} (tick (let:tree:cf node (let:tree:cf node node))))
+                        (w{mono} (tick:defer (let:tree:cf node (let:tree:cf node node))))
                         (w{mono}       (let:tree:cf node (let:tree:cf node node)))
                       )
                     )
@@ -29,12 +29,12 @@
               (w{mono} (let:tree:cf leaf (let:tree:cf node (w{mono} node))))
               (w{l2xy mono}
                 (let:tree:cf
-                  (tick (shift app))
+                  (tick:defer (shift app))
                   (match
                     (w{mono} leaf)
                     (w{l2xy}
                       (ite
-                        (w{mono} (tick (let:tree:cf node (let:tree:cf node node))))
+                        (w{mono} (tick:defer (let:tree:cf node (let:tree:cf node node))))
                         (w{mono}       (let:tree:cf node (let:tree:cf node node)))
                       )
                     )
@@ -54,12 +54,12 @@
               (w{mono} (let:tree:cf leaf (let:tree:cf node (w{mono} node))))
               (w{l2xy mono}
                 (let:tree:cf
-                  (tick (shift app))
+                  (tick:defer (shift app))
                   (match
                     (w{mono} leaf)
                     (w{l2xy}
                       (ite
-                        (w{mono} (tick (let:tree:cf node (let:tree:cf node node))))
+                        (w{mono} (tick:defer (let:tree:cf node (let:tree:cf node node))))
                         (w{mono}       (let:tree:cf node (let:tree:cf node node)))
                       )
                     )
@@ -71,11 +71,11 @@
               (w{mono} (let:tree:cf node (let:tree:cf leaf (w{mono} node))))
               (w{l2xy mono}
                 (let:tree:cf
-                  (tick (shift app))
+                  (tick:defer (shift app))
                   (match (w{mono} leaf)
                     (w{l2xy}
                       (ite
-                        (w{mono} (tick (let:tree:cf node (let:tree:cf node node))))
+                        (w{mono} (tick:defer (let:tree:cf node (let:tree:cf node node))))
                         (w{mono}       (let:tree:cf node (let:tree:cf node node)))
                       )
                     )

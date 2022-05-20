@@ -6,7 +6,7 @@
       (ite
         (w{mono l2xy}
           (let:tree:cf{nege}
-            (tick (shift app))
+            (tick:defer (shift app))
             (match
               leaf
               (w{l2xy mono} (let:tree:cf node (let:tree:cf node (w node))))
@@ -15,7 +15,7 @@
         )
         (w{mono l2xy}
           (let:tree:cf
-            (tick (shift app))
+            (tick:defer (shift app))
             (match
               (w{mono} leaf)
               (w{l2xy mono} (let:tree:cf node (let:tree:cf node (w node))))
@@ -29,7 +29,7 @@
       (ite
         (w{mono l2xy}
           (let:tree:cf
-            (tick (shift app))
+            (tick:defer (shift app))
             (match
               (w{mono} leaf)
               (w{mono l2xy} (let:tree:cf node (let:tree:cf node (w node))))
@@ -38,7 +38,7 @@
         )
         (w{mono l2xy}
           (let:tree:cf{nege}
-            (tick (shift app))
+            (tick:defer (shift app))
             (match
               leaf
               (w{mono l2xy} (let:tree:cf node (let:tree:cf node (w node))))

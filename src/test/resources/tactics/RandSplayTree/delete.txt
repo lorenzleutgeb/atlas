@@ -1,38 +1,160 @@
 (match (* t *)
-  leaf
-  (ite
-    (w{mono l2xy} (let:tree:cf app (match:tuple (w{mono} node))))
-    (ite
+  (w{mono} (* proof leaf 1 *)
+    leaf
+  )
+  (ite (* a ⩵ c *)
+    (w{l2xy mono} (* binds a call/tick *)
+      (let:tree:cf
+        (shift
+          app
+        )
+        (match:tuple
+          (w{mono} (* proof leaf 3 *)
+            node
+          )
+        )
+      )
+    )
+    (ite (* a ⪱ c *)
       (match (* cl *)
-        (let:tree:cf leaf (w node))
-        (ite
-          (w{mono} (let:tree:cf app (match:tuple (let:tree:cf node (w{mono} node)))))
-          (ite
-            (match (* bl *)
-              (let:tree:cf leaf (let:tree:cf node (w{mono} node)))
-              (w{l2xy mono}
+        (w{mono} (* first after match *)
+          (let:tree:cf
+            leaf
+            (w{mono} (* proof leaf 2 *)
+              node
+            )
+          )
+        )
+        (ite (* a ⩵ b *)
+          (w{l2xy mono} (* binds a call/tick *)
+            (let:tree:cf
+              (shift
+                app
+              )
+              (match:tuple
                 (let:tree:cf
-                  (tick app)
-                  (match
-                    (w leaf)
-                    (ite
-                      (tick (let:tree:cf node (let:tree:cf node (w{mono} node))))
-                      (let:tree:cf node (let:tree:cf node (w node)))
+                  node
+                  (w{mono} (* proof leaf 2 *)
+                    node
+                  )
+                )
+              )
+            )
+          )
+          (ite (* a ⪱ b *)
+            (match (* bl *)
+              (w{mono} (* first after match *)
+                (let:tree:cf
+                  leaf
+                  (let:tree:cf
+                    node
+                    (w{mono} (* proof leaf 2 *)
+                      node
+                    )
+                  )
+                )
+              )
+              (w{l2xy mono neg} (* binds a call/tick *)
+                (let:tree:cf{nege}
+                  (tick:defer
+                    (shift
+                      app
+                    )
+                  )
+                  (match (* ~ 1 2 delete z a bl *)
+                    (w{mono} (* proof leaf 1 *)
+                      (w:var
+                        (w:var
+                          leaf
+                        )
+                      )
+                    )
+                    (w{l2xy} (* first after call, before ite:coin *)
+                      (ite
+                        (w{mono} (* tick outside let *)
+                          (tick:defer
+                            (let:tree:cf
+                              node
+                              (let:tree:cf
+                                node
+                                (w{mono} (* proof leaf 2 *)
+                                  node
+                                )
+                              )
+                            )
+                          )
+                        )
+                        (w{mono} (* first after match *)
+                          (let:tree:cf
+                            node
+                            (let:tree:cf
+                              node
+                              (w{mono} (* proof leaf 2 *)
+                                node
+                              )
+                            )
+                          )
+                        )
+                      )
                     )
                   )
                 )
               )
             )
-            (match
-              (let:tree:cf leaf (let:tree:cf node (w{mono} node)))
-              (w{mono}
+            (match (* br *)
+              (w{mono} (* first after match *)
                 (let:tree:cf
-                  (tick app)
-                  (match
-                    (w{mono} leaf)
-                    (ite
-                      (w{l2xy} (tick (let:tree:cf node (let:tree:cf node (w{mono} node)))))
-                      (let:tree:cf node (let:tree:cf node (w node)))
+                  leaf
+                  (let:tree:cf
+                    node
+                    (w{mono} (* proof leaf 2 *)
+                      node
+                    )
+                  )
+                )
+              )
+              (w{l2xy mono neg} (* binds a call/tick *)
+                (let:tree:cf{nege}
+                  (tick:defer
+                    (shift
+                      app
+                    )
+                  )
+                  (match (* ~ 1 2 delete z a br *)
+                    (w{mono} (* proof leaf 1 *)
+                      (w:var
+                        (w:var
+                          leaf
+                        )
+                      )
+                    )
+                    (w{l2xy} (* first after call, before ite:coin *)
+                      (ite
+                        (w{mono} (* tick outside let *)
+                          (tick:defer
+                            (let:tree:cf
+                              node
+                              (let:tree:cf
+                                node
+                                (w{mono} (* proof leaf 2 *)
+                                  node
+                                )
+                              )
+                            )
+                          )
+                        )
+                        (w{mono} (* first after match *)
+                          (let:tree:cf
+                            node
+                            (let:tree:cf
+                              node
+                              (w{mono} (* proof leaf 2 *)
+                                node
+                              )
+                            )
+                          )
+                        )
+                      )
                     )
                   )
                 )
@@ -41,36 +163,145 @@
           )
         )
       )
-      (match
-        (let:tree:cf leaf (w{mono} node))
-        (ite
-          (w{mono} (let:tree:cf app (match:tuple (let:tree:cf node (w{mono} node)))))
-          (ite
-            (match
-              (let:tree:cf leaf (let:tree:cf node (w{mono} node)))
-              (w{mono}
+      (match (* cr *)
+        (w{mono} (* first after match *)
+          (let:tree:cf
+            leaf
+            (w{mono} (* proof leaf 2 *)
+              node
+            )
+          )
+        )
+        (ite (* a ⩵ b *)
+          (w{l2xy mono} (* binds a call/tick *)
+            (let:tree:cf
+              (shift
+                app
+              )
+              (match:tuple
                 (let:tree:cf
-                  (tick app)
-                  (match
-                    (w{mono} leaf)
-                    (ite
-                      (w{l2xy} (tick (let:tree:cf node (let:tree:cf node (w{mono} node)))))
-                      (let:tree:cf node (let:tree:cf node (w{mono} node)))
+                  node
+                  (w{mono} (* proof leaf 2 *)
+                    node
+                  )
+                )
+              )
+            )
+          )
+          (ite (* a ⪱ b *)
+            (match (* bl *)
+              (w{mono} (* first after match *)
+                (let:tree:cf
+                  leaf
+                  (let:tree:cf
+                    node
+                    (w{mono} (* proof leaf 2 *)
+                      node
+                    )
+                  )
+                )
+              )
+              (w{l2xy mono neg} (* binds a call/tick *)
+                (let:tree:cf{nege}
+                  (tick:defer
+                    (shift
+                      app
+                    )
+                  )
+                  (match (* ~ 1 2 delete z a bl *)
+                    (w{mono} (* proof leaf 1 *)
+                      (w:var
+                        (w:var
+                          leaf
+                        )
+                      )
+                    )
+                    (w{l2xy} (* first after call, before ite:coin *)
+                      (ite
+                        (w{mono} (* tick outside let *)
+                          (tick:defer
+                            (let:tree:cf
+                              node
+                              (let:tree:cf
+                                node
+                                (w{mono} (* proof leaf 2 *)
+                                  node
+                                )
+                              )
+                            )
+                          )
+                        )
+                        (w{mono} (* first after match *)
+                          (let:tree:cf
+                            node
+                            (let:tree:cf
+                              node
+                              (w{mono} (* proof leaf 2 *)
+                                node
+                              )
+                            )
+                          )
+                        )
+                      )
                     )
                   )
                 )
               )
             )
-            (match
-              (let:tree:cf (w node) (let:tree:cf leaf (w{mono} node)))
-              (w{l2xy mono}
+            (match (* br *)
+              (w{mono} (* first after match *)
                 (let:tree:cf
-                  (tick app)
-                  (match
-                    (w leaf)
-                    (ite
-                      (tick (let:tree:cf node (let:tree:cf node (w{mono} node))))
-                      (let:tree:cf node (let:tree:cf node (w node)))
+                  node
+                  (let:tree:cf
+                    leaf
+                    (w{mono} (* proof leaf 2 *)
+                      node
+                    )
+                  )
+                )
+              )
+              (w{l2xy mono neg} (* binds a call/tick *)
+                (let:tree:cf{nege}
+                  (tick:defer
+                    (shift
+                      app
+                    )
+                  )
+                  (match (* ~ 1 2 delete z a br *)
+                    (w{mono} (* proof leaf 1 *)
+                      (w:var
+                        (w:var
+                          leaf
+                        )
+                      )
+                    )
+                    (w{l2xy} (* first after call, before ite:coin *)
+                      (ite
+                        (w{mono} (* tick outside let *)
+                          (tick:defer
+                            (let:tree:cf
+                              node
+                              (let:tree:cf
+                                node
+                                (w{mono} (* proof leaf 2 *)
+                                  node
+                                )
+                              )
+                            )
+                          )
+                        )
+                        (w{mono} (* first after match *)
+                          (let:tree:cf
+                            node
+                            (let:tree:cf
+                              node
+                              (w{mono} (* proof leaf 2 *)
+                                node
+                              )
+                            )
+                          )
+                        )
+                      )
                     )
                   )
                 )

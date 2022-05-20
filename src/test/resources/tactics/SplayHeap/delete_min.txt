@@ -1,11 +1,11 @@
 (match (* t *)
-  leaf
+  (w leaf)
   (match (* tab *)
     (w{mono} var)
     (match (* ta *)
       (w{mono} node)
       (w{mono l2xy} (let:tree:cf
-        (tick app)
+        (tick:defer (shift app))
         (let:tree:cf node node)
       ))
     )

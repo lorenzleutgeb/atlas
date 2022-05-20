@@ -17,14 +17,14 @@
       )
       (w{l2xy mono} (* binds a call/tick *)
         (let:tree:cf
-          (tick
+          (tick:defer
             app
           )
           (match:tuple
             (w{l2xy} (* before ite:coin *) (* coin *)
               (ite (* coin *)
                 (w{mono} (* tick outside let *)
-                  (tick
+                  (tick:defer
                     (let:tree:cf
                       node
                       (let:tree:cf
