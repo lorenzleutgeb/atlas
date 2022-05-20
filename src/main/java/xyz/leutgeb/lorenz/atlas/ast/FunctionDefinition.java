@@ -394,7 +394,7 @@ public class FunctionDefinition {
 
   public String getAnnotatedSignatureString() {
     var constraints = new StringBuilder();
-    if (!annotatedSignature.getConstraints().isEmpty()) {
+    if (annotatedSignature != null && !annotatedSignature.getConstraints().isEmpty()) {
       if (annotatedSignature.getConstraints().size() > 1) {
         constraints.append("(");
       }
@@ -410,12 +410,14 @@ public class FunctionDefinition {
     return getFullyQualifiedName()
         + " ∷ "
         + constraints
-        + annotatedSignature.getType()
-        + annotatedSignature
-            .getAnnotation()
-            .map(Objects::toString)
-            .map(x -> " | " + x)
-            .orElse(" | ?");
+        + (annotatedSignature == null ? "?" : annotatedSignature.getType())
+        + (annotatedSignature == null
+            ? ""
+            : annotatedSignature
+                .getAnnotation()
+                .map(Objects::toString)
+                .map(x -> " | " + x)
+                .orElse(" | ?"));
   }
 
   public void printTo(PrintStream out) {
@@ -597,5 +599,11 @@ public class FunctionDefinition {
     return getInferredSignatureString()
         + "\n\tBound:        "
         + getBoundStringPlain(inferredSignature);
+  }
+
+  public String getAnnotatedAnnotationAndBoundString() {
+    return getAnnotatedSignatureString()
+        + "\n\tBound:        "
+        + getBoundStringPlain(annotatedSignature);
   }
 }

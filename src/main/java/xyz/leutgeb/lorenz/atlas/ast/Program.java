@@ -686,6 +686,15 @@ public class Program {
     }
   }
 
+  public void printAllAnnotatedAnnotationsAndBoundsInOrder(PrintStream out) {
+    for (final List<String> stratum : order) {
+      for (var fqn : stratum) {
+        FunctionDefinition fd = functionDefinitions.get(fqn);
+        out.println(fd.getAnnotatedAnnotationAndBoundString());
+      }
+    }
+  }
+
   public void printAllInferredAnnotationsAndBoundsInOrder(PrintStream out) {
     for (final List<String> stratum : order) {
       for (var fqn : stratum) {

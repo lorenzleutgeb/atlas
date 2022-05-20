@@ -68,7 +68,7 @@ public class Run implements Runnable {
   private Boolean consistentModules;
 
   @CommandLine.Option(
-      defaultValue = "false",
+      defaultValue = "true",
       showDefaultValue = CommandLine.Help.Visibility.ALWAYS,
       names = "--use-tick-defer",
       arity = "1",
