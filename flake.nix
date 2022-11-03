@@ -85,7 +85,7 @@
           src = ./.;
 
           nativeBuildInputs =
-            [ pkgs.bash pkgs.git pkgs.glibcLocales examples jdk z3 ];
+            [ pkgs.bash pkgs.git pkgs.glibcLocales jdk z3 ];
           ATLAS_HOME = "${examples}";
           LANG = "en_US.UTF-8";
           LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
