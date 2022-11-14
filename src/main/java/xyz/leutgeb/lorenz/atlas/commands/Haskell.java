@@ -74,6 +74,7 @@ public class Haskell implements Runnable {
         stream.println();
         stream.println("module " + lastModulePart + " where");
         stream.println("import InterpreterPrelude (Tree(Node, Leaf))");
+        stream.println("import Data.Int (Int64)");
         stream.println();
         for (String imp : imports.get(e)) {
           stream.println("import qualified " + imp);

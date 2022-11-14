@@ -96,7 +96,9 @@ public class FunctionSignature {
 
     sb.append(type.getFrom());
 
-    sb.append(" → ");
+    if (type.getFrom().size() > 0) {
+      sb.append(" → ");
+    }
     sb.append(type.getTo());
 
     if (annotation.isPresent()) {

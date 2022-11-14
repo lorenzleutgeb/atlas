@@ -1,16 +1,9 @@
 package xyz.leutgeb.lorenz.atlas.ast.expressions;
 
-import static xyz.leutgeb.lorenz.atlas.ast.ComparisonOperator.EQ;
-import static xyz.leutgeb.lorenz.atlas.ast.ComparisonOperator.NE;
-
-import java.io.PrintStream;
-import java.util.Map;
-import java.util.Stack;
-import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.Value;
-import xyz.leutgeb.lorenz.atlas.ast.ComparisonOperator;
+import xyz.leutgeb.lorenz.atlas.ast.ArithmeticOperator;
 import xyz.leutgeb.lorenz.atlas.ast.Normalization;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Derived;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
@@ -22,18 +15,23 @@ import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
 
+import java.io.PrintStream;
+import java.util.Map;
+import java.util.Stack;
+import java.util.stream.Stream;
+
 @Value
 @EqualsAndHashCode(callSuper = true)
-public class BooleanExpression extends Expression {
+public class ArithmeticExpression extends Expression {
 
   @NonNull Expression left;
-  @NonNull ComparisonOperator operator;
+  @NonNull ArithmeticOperator operator;
   @NonNull Expression right;
 
-  public BooleanExpression(
+  public ArithmeticExpression(
       Source source,
       @NonNull Expression left,
-      @NonNull ComparisonOperator operator,
+      @NonNull ArithmeticOperator operator,
       @NonNull Expression right) {
     super(source);
     this.left = left;
@@ -41,8 +39,8 @@ public class BooleanExpression extends Expression {
     this.right = right;
   }
 
-  private BooleanExpression(
-      Source source, Expression left, ComparisonOperator operator, Expression right, Type type) {
+  private ArithmeticExpression(
+      Source source, Expression left, ArithmeticOperator operator, Expression right, Type type) {
     super(source);
     this.left = left;
     this.operator = operator;
@@ -60,19 +58,16 @@ public class BooleanExpression extends Expression {
     var ty = context.fresh();
     context.addEquivalenceIfNotEqual(right.infer(context), ty, source);
     context.addEquivalenceIfNotEqual(left.infer(context), ty, source);
-
-    final TypeClass tc =
-        (EQ.equals(operator) || NE.equals(operator)) ? TypeClass.EQ : TypeClass.ORD;
     context
         .getSignature(context.getFunctionInScope(), source)
-        .addConstraint(new TypeConstraint(tc, ty));
-    return BoolType.INSTANCE;
+        .addConstraint(new TypeConstraint(TypeClass.NUM, ty));
+    return ty;
   }
 
   @Override
   public Expression normalize(Stack<Normalization> context, IntIdGenerator idGenerator) {
     // TODO(lorenzleutgeb): Only create new expression if necessary!
-    return new BooleanExpression(
+    return new ArithmeticExpression(
         Derived.anf(this),
         left.normalize(context, idGenerator),
         operator,
@@ -99,23 +94,6 @@ public class BooleanExpression extends Expression {
 
   @Override
   public void printJavaTo(PrintStream out, int indentation, String currentFunction) {
-    // Special comparison with leaf.
-
-    if (operator.equals(EQ)) {
-      if (IdentifierExpression.isLeaf(left) && IdentifierExpression.isLeaf(right)) {
-        out.print("true");
-        return;
-      }
-      if (IdentifierExpression.isLeaf(left) && !IdentifierExpression.isLeaf(right)) {
-        out.print(((IdentifierExpression) right).getName() + ".isLeaf()");
-        return;
-      }
-      if (!IdentifierExpression.isLeaf(left) && IdentifierExpression.isLeaf(right)) {
-        out.print(((IdentifierExpression) left).getName() + ".isLeaf()");
-        return;
-      }
-    }
-
     operator.printJavaTo(
         ((IdentifierExpression) left).getName(), ((IdentifierExpression) right).getName(), out);
   }
@@ -135,7 +113,7 @@ public class BooleanExpression extends Expression {
     if (freeVariables().stream()
         .map(IdentifierExpression::getName)
         .anyMatch(renaming::containsKey)) {
-      return new BooleanExpression(
+      return new ArithmeticExpression(
           Derived.rename(this), left.rename(renaming), operator, right.rename(renaming), type);
     }
     return this;

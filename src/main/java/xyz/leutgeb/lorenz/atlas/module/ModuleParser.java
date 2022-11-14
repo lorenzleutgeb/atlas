@@ -20,7 +20,7 @@ import xyz.leutgeb.lorenz.atlas.ast.visitors.ProgramVisitor;
 class ModuleParser {
   public static List<FunctionDefinition> parse(String s, String moduleName) {
     try {
-      return parse(CharStreams.fromString(s), moduleName);
+      return parse(CharStreams.fromString(s, "inline"), moduleName);
       // } catch (IOException e) {
       // In this case we assume that something went fundamentally
       // wrong when using a String as input. The caller probably

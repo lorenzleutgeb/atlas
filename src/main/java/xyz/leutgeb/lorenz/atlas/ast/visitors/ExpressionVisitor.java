@@ -65,6 +65,14 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
   }
 
   @Override
+  public Expression visitArithExpression(SplayParser.ArithExpressionContext ctx) {
+    var l = ExpressionVisitor.this.visit(ctx.left);
+    var r = ExpressionVisitor.this.visit(ctx.right);
+    return new ArithmeticExpression(
+            getSource(ctx), l, ArithmeticOperator.fromToken(ctx.arithOp().getText()), r);
+  }
+
+  @Override
   public Expression visitMatchExpression(SplayParser.MatchExpressionContext ctx) {
     return new MatchTreeExpression(
         getSource(ctx),
@@ -154,6 +162,6 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
 
   @Override
   public Expression visitConstant(SplayParser.ConstantContext ctx) {
-    throw new UnsupportedOperationException("literal numbers are not implemented");
+    return new NumberExpression(ctx.getText(), getSource(ctx));
   }
 }

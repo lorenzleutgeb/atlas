@@ -5,11 +5,14 @@ import static java.util.Collections.singleton;
 
 import java.util.Set;
 import lombok.Value;
+import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 
 @Value
 public class TypeClass {
   public static TypeClass EQ = new TypeClass("Eq", 1, emptySet());
   public static TypeClass ORD = new TypeClass("Ord", 1, singleton(TypeClass.EQ));
+
+  public static TypeClass NUM = new TypeClass("Num", 1, emptySet());
 
   String name;
   int arity;

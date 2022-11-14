@@ -19,9 +19,9 @@ import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
 @Value
 @EqualsAndHashCode(callSuper = false)
 public class TreeType implements Type {
-  TypeVariable elementType;
+  Type elementType;
 
-  public TreeType(TypeVariable elementType) {
+  public TreeType(Type elementType) {
     this.elementType = elementType;
   }
 
@@ -45,10 +45,10 @@ public class TreeType implements Type {
   @Override
   public Type substitute(TypeVariable v, Type t) {
     var substitute = elementType.substitute(v, t);
-    if (substitute instanceof TypeVariable) {
-      return new TreeType((TypeVariable) substitute);
+    if (substitute.countTrees().orElse(0) > 1) {
+      throw new RuntimeException("trees cannot contain trees");
     }
-    throw new RuntimeException("this type of tree cannot be constructed");
+    return new TreeType(substitute);
   }
 
   @Override

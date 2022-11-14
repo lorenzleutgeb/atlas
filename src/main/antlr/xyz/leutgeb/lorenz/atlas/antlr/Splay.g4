@@ -54,6 +54,7 @@ expression : identifier # variableExpression
            | PAREN_OPEN expression PAREN_CLOSE # parenthesizedExpression
            | NUMBER # constant
            | left=expression op right=expression # comparison
+           | left=expression arithOp right=expression # arithExpression
            | TILDE (numerator=NUMBER)? (DIV denominator=NUMBER)? expression # tickExpression
            | COIN (numerator=NUMBER)? (DIV denominator=NUMBER)? # coinExpression
            | UNDERSCORE # holeExpression
@@ -61,6 +62,8 @@ expression : identifier # variableExpression
            ;
 
 op : EQ | NE | LT | LE | GT | GE ;
+
+arithOp : PLUS | MINUS | CROSS | DIV ;
 
 // For patterns we only admit simpler tuples:
 //  - non-recursive, i.e. it is only possible to match one level of a tree
