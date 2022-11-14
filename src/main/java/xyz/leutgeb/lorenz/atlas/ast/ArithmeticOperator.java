@@ -1,11 +1,10 @@
 package xyz.leutgeb.lorenz.atlas.ast;
 
+import static java.util.function.Predicate.isEqual;
+
 import java.io.PrintStream;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.BiFunction;
-
-import static java.util.function.Predicate.isEqual;
 
 public enum ArithmeticOperator {
   PLUS(List.of("+")),

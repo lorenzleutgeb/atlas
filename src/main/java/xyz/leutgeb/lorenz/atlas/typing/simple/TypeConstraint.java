@@ -1,9 +1,10 @@
 package xyz.leutgeb.lorenz.atlas.typing.simple;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import static com.google.common.collect.Comparators.lexicographical;
 
 import com.google.common.collect.ComparisonChain;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.ProductType;
@@ -11,8 +12,6 @@ import xyz.leutgeb.lorenz.atlas.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.Substitution;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
-
-import static com.google.common.collect.Comparators.lexicographical;
 
 /**
  * Denotes that some signature (represented by a variable) must be a member of a signature class.
@@ -157,17 +156,19 @@ public class TypeConstraint implements Comparable<TypeConstraint> {
     return result;
   }
 
-  public static Comparator<TypeConstraint> compare(ProductType order)
-  {
-    return (x, y) -> lexicographical(Integer::compareTo).compare(x.positions(order), y.positions(order));
+  public static Comparator<TypeConstraint> compare(ProductType order) {
+    return (x, y) ->
+        lexicographical(Integer::compareTo).compare(x.positions(order), y.positions(order));
   }
 
   @Override
   public int compareTo(TypeConstraint o) {
-    return ComparisonChain.start().compare(
+    return ComparisonChain.start()
+        .compare(
             this.constrained.stream().map(Objects::toString).toList(),
             o.constrained.stream().map(Objects::toString).toList(),
-            lexicographical(String::compareTo)
-    ).compare(this.typeClass.getName(), o.typeClass.getName()).result();
+            lexicographical(String::compareTo))
+        .compare(this.typeClass.getName(), o.typeClass.getName())
+        .result();
   }
 }

@@ -87,7 +87,8 @@ public class FunctionSignature {
       if (!omitParens) {
         sb.append("(");
       }
-      sb.append(constraints.stream().map(Objects::toString).sorted().collect(Collectors.joining(", ")));
+      sb.append(
+          constraints.stream().map(Objects::toString).sorted().collect(Collectors.joining(", ")));
       if (!omitParens) {
         sb.append(")");
       }

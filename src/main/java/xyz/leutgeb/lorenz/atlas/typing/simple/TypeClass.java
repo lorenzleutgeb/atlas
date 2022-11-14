@@ -5,7 +5,6 @@ import static java.util.Collections.singleton;
 
 import java.util.Set;
 import lombok.Value;
-import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 
 @Value
 public class TypeClass {

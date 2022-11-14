@@ -35,9 +35,9 @@ public class ProductType implements Type {
     // We would like to have the following,
     // but for arguments of a function
     // we accept multiple trees.
-    //if (countTrees().orElse(0) > 1) {
+    // if (countTrees().orElse(0) > 1) {
     //  throw new UnsupportedOperationException("products may contain at most one tree");
-    //}
+    // }
   }
 
   @Override

@@ -1,5 +1,9 @@
 package xyz.leutgeb.lorenz.atlas.ast.expressions;
 
+import java.io.PrintStream;
+import java.util.Map;
+import java.util.Stack;
+import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.Value;
@@ -10,15 +14,9 @@ import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeClass;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeConstraint;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.atlas.typing.simple.types.BoolType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
 import xyz.leutgeb.lorenz.atlas.util.IntIdGenerator;
-
-import java.io.PrintStream;
-import java.util.Map;
-import java.util.Stack;
-import java.util.stream.Stream;
 
 @Value
 @EqualsAndHashCode(callSuper = true)

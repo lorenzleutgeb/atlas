@@ -1,13 +1,12 @@
 package xyz.leutgeb.lorenz.atlas.typing.simple.types;
 
-import java.util.*;
+import static jakarta.json.Json.*;
 
 import jakarta.json.JsonValue;
+import java.util.*;
 import xyz.leutgeb.lorenz.atlas.ast.sources.Source;
 import xyz.leutgeb.lorenz.atlas.typing.simple.TypeVariable;
 import xyz.leutgeb.lorenz.atlas.unification.*;
-
-import static jakarta.json.Json.*;
 
 public class Int64Type implements Type {
   public static final Int64Type INSTANCE = new Int64Type();
@@ -64,6 +63,7 @@ public class Int64Type implements Type {
   public JsonValue toJson() {
     return createObjectBuilder(Map.of("name", "Int64")).build();
   }
+
   @Override
   public Optional<Integer> countTrees() {
     return Optional.of(0);

@@ -69,7 +69,7 @@ class ExpressionVisitor extends SourceNameAwareVisitor<Expression> {
     var l = ExpressionVisitor.this.visit(ctx.left);
     var r = ExpressionVisitor.this.visit(ctx.right);
     return new ArithmeticExpression(
-            getSource(ctx), l, ArithmeticOperator.fromToken(ctx.arithOp().getText()), r);
+        getSource(ctx), l, ArithmeticOperator.fromToken(ctx.arithOp().getText()), r);
   }
 
   @Override
