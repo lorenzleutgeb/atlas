@@ -23,6 +23,10 @@ public class TreeType implements Type {
 
   public TreeType(Type elementType) {
     this.elementType = elementType;
+
+    if (elementType.countTrees().orElse(0) > 0) {
+      throw new UnsupportedOperationException("trees cannot contain trees");
+    }
   }
 
   @Override

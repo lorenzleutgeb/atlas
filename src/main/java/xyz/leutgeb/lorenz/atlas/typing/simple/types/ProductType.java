@@ -29,6 +29,17 @@ import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
 public class ProductType implements Type {
   List<Type> elements;
 
+  public ProductType(List<Type> elements) {
+    this.elements = elements;
+
+    // We would like to have the following,
+    // but for arguments of a function
+    // we accept multiple trees.
+    //if (countTrees().orElse(0) > 1) {
+    //  throw new UnsupportedOperationException("products may contain at most one tree");
+    //}
+  }
+
   @Override
   public Collection<Equivalence> decompose(Type b, Source source) throws TypeMismatch {
     if (!(b instanceof ProductType pt)) {
