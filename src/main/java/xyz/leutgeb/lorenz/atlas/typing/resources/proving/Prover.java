@@ -158,7 +158,7 @@ public class Prover {
   }
 
   public Prover(String name, AnnotatingGlobals globals, Path basePath) {
-    load(basePath.resolve("z3.log"));
+    //load(basePath.resolve("z3.log"));
     this.name = name;
     this.globals = globals;
     this.basePath = basePath;

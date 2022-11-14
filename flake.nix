@@ -30,9 +30,7 @@
       javaToolchains = [ graal ];
       gradle = (pkgs.gradle_7.override { inherit javaToolchains; });
       solvers = with pkgs; [ alt-ergo cvc4 yices opensmt ];
-      atlasEnv = pkgs.buildEnv {
-        name = "atlas-env";
-        paths = [
+      deps = [
           gradle
           z3
 
@@ -41,7 +39,6 @@
 
           gradle2nix.packages.${system}.gradle2nix
         ];
-      };
       utils = with pkgs; [
         calc
         bash
@@ -56,9 +53,10 @@
       ];
     in rec {
       devShell.${system} = pkgs.mkShell {
-        buildInputs = [ atlasEnv ];
+        buildInputs = deps;
         shellHook = ''
           export LD_LIBRARY_PATH="${z3.lib}/lib:$LD_LIBRARY_PATH"
+          echo "${z3.lib}/lib"
 
           export JAVA_HOME="${jdk}"
           export GRAAL_HOME="${graal}"
@@ -140,8 +138,7 @@
         atlas-shell-docker = pkgs.dockerTools.buildLayeredImage {
           name = "atlas-shell";
           tag = "latest";
-          contents = utils ++ [
-            atlasEnv
+          contents = utils ++ deps ++ [
             packages.${system}.atlas
             packages.${system}.atlas-cav
             packages.${system}.atlas-src
@@ -240,8 +237,8 @@
               };
             };
             environment = {
-              systemPackages = utils
-                ++ [ self.packages.${system}.atlas pkgs.evince atlasEnv ];
+              systemPackages = utils ++ deps
+                ++ [ self.packages.${system}.atlas pkgs.evince ];
               variables = {
                 "ATLAS_HOME" = "/home/evaluator/atlas/src/resources/examples";
               };

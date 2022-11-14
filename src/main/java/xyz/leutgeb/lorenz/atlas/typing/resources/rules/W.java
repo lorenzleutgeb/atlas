@@ -181,12 +181,12 @@ public class W implements Rule {
     //  - From potentialFunctions.size() to potentialFunctions.size() + size are rank.
 
     final var all = flag(W.class, arguments, "all");
-    final var lemma2xy = flag(W.class, arguments, "l2xy") || all;
-    final var lemmap1 = flag(W.class, arguments, "lp1") || all;
-    final var useSizeAnalysis = flag(W.class, arguments, "size") || all;
+    final var lemma2xy = false; //flag(W.class, arguments, "l2xy") || all;
+    final var lemmap1 = false; // flag(W.class, arguments, "lp1") || all;
+    final var useSizeAnalysis = false; // flag(W.class, arguments, "size") || all;
     // TODO(lorenzleutgeb): Fix this lemma.
     final var lemmap1y = false; // flag(W.class, arguments, "lp1y") || all;
-    final var mono = flag(W.class, arguments, "mono") || useSizeAnalysis || all;
+    final var mono = false; // flag(W.class, arguments, "mono") || useSizeAnalysis || all;
 
     final ReducedSizeAnalysis reducedSizeAnalysis;
     final Set<LessThan<Integer>> knowLt;

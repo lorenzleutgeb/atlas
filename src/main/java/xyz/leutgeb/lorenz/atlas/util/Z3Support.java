@@ -29,7 +29,7 @@ public class Z3Support {
     // Load Z3.
     Util.loadLibrary("z3");
     Util.loadLibrary("z3java");
-    log.info("{}", Version.getString());
+    //log.info("{}", Version.getString());
 
     try {
       for (var property : getProperties().entrySet()) {

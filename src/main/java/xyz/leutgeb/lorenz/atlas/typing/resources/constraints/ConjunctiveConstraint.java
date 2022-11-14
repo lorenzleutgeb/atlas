@@ -18,6 +18,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import org.sosy_lab.java_smt.api.BooleanFormula;
+import org.sosy_lab.java_smt.api.FormulaManager;
+import org.sosy_lab.java_smt.api.NumeralFormula;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
 
@@ -44,6 +47,21 @@ public class ConjunctiveConstraint extends Constraint {
         elements.stream()
             .map(element -> element.encode(ctx, coefficients))
             .toArray(BoolExpr[]::new));
+  }
+
+  @Override
+  public BooleanFormula encode(
+      FormulaManager manager,
+      Map<UnknownCoefficient, NumeralFormula.RationalFormula> coefficients) {
+    if (elements.isEmpty()) {
+      return manager.getBooleanFormulaManager().makeTrue();
+    }
+    if (elements.size() == 1) {
+      return pick(elements).encode(manager, coefficients);
+    }
+    return manager
+        .getBooleanFormulaManager()
+        .and(elements.stream().map(element -> element.encode(manager, coefficients)).toList());
   }
 
   @Override

@@ -42,6 +42,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+import org.sosy_lab.common.configuration.InvalidConfigurationException;
+import org.sosy_lab.java_smt.SolverContextFactory;
+import org.sosy_lab.java_smt.api.NumeralFormula;
+import org.sosy_lab.java_smt.api.OptimizationProverEnvironment;
+import org.sosy_lab.java_smt.api.SolverContext;
+import org.sosy_lab.java_smt.api.SolverException;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
@@ -135,6 +141,201 @@ public class Solver {
   }
 
   public static Result solve(
+      Set<Constraint> constraints, Path outPath, List<UnknownCoefficient> target) {
+    load(outPath.resolve("z3.log"));
+
+    final var dump = flag(Solver.class, emptyMap(), "dump");
+    final var wantCore = true;
+    final var optimize = wantCore ? false : !target.isEmpty() && !dump;
+    final var unsatCore = wantCore ? true : !optimize && !dump;
+
+    // This allows more accurate memory measurements, but is dangerous when running in parallel.
+    // Native.resetMemory();
+
+    Util.patchLibraryPath();
+
+    try (final var ctx =
+        SolverContextFactory.createSolverContext(SolverContextFactory.Solvers.Z3)) {
+      final var manager = ctx.getFormulaManager();
+      final var options =
+          new SolverContext.ProverOptions[] {
+            SolverContext.ProverOptions.GENERATE_MODELS,
+            SolverContext.ProverOptions.GENERATE_UNSAT_CORE
+          };
+      final var proverEnvironment =
+          optimize
+              ? ctx.newOptimizationProverEnvironment(options)
+              : ctx.newProverEnvironment(options);
+
+      // final com.microsoft.z3.Solver solver = ctx.mkSolver();
+      // final Solver solver = ctx.mkTactic("qflia").getSolver();
+      // /*domain.getLogic()*/Optional.of("LIA").map(ctx::mkSolver).orElseGet(ctx::mkSolver);
+
+      // final Optimize opt = optimize ? ctx.mkOptimize() : null;
+
+      final var generatedCoefficients =
+          HashBiMap.<NumeralFormula.RationalFormula, UnknownCoefficient>create();
+
+      final var coefficients = new HashSet<Coefficient>();
+      for (Constraint constraint : constraints) {
+        coefficients.addAll(constraint.occurringCoefficients());
+      }
+
+      final var trackNonNegative = flag(Solver.class, emptyMap(), "trackNonNegative");
+
+      for (var coefficient : coefficients) {
+        if (!(coefficient instanceof UnknownCoefficient)) {
+          continue;
+        }
+        final var unknownCoefficient = ((UnknownCoefficient) coefficient).canonical();
+        if (generatedCoefficients.inverse().containsKey(unknownCoefficient)) {
+          continue;
+        }
+        if (!generatedCoefficients.inverse().containsKey(unknownCoefficient)) {
+          final var it =
+              manager.getRationalFormulaManager().makeVariable(unknownCoefficient.getName());
+          // final var it = ctx.mkRealConst(unknownCoefficient.getName());
+          if (!unknownCoefficient.isMaybeNegative()) {
+            final var positive =
+                manager
+                    .getRationalFormulaManager()
+                    .greaterOrEquals(it, manager.getRationalFormulaManager().makeNumber(0));
+            if (proverEnvironment instanceof OptimizationProverEnvironment) {
+              proverEnvironment.addConstraint(positive);
+            } else {
+              if (unsatCore && trackNonNegative) {
+                proverEnvironment.addConstraint(positive);
+              } else {
+                proverEnvironment.addConstraint(positive);
+              }
+            }
+          }
+          generatedCoefficients.inverse().put(unknownCoefficient, it);
+        }
+      }
+
+      if (proverEnvironment
+          instanceof OptimizationProverEnvironment optimizationProverEnvironment) {
+        target.forEach(
+            x -> {
+              if (!generatedCoefficients.inverse().containsKey(x)) {
+                log.warn("Could not find generated coefficient for optimization target '{}'", x);
+              } else {
+                optimizationProverEnvironment.minimize(generatedCoefficients.inverse().get(x));
+              }
+            });
+      }
+
+      for (Constraint c : constraints) {
+        if (optimize) {
+          proverEnvironment.addConstraint(c.encode(manager, generatedCoefficients.inverse()));
+        } else {
+          if (unsatCore) {
+            proverEnvironment.addConstraint(
+                manager
+                    .getBooleanFormulaManager()
+                    .and(
+                        manager.getBooleanFormulaManager().makeVariable(c.getTracking()),
+                        c.encode(manager, generatedCoefficients.inverse())));
+            // proverEnvironment.addConstraint(c.encode(manager, generatedCoefficients.inverse()));
+          } else {
+            proverEnvironment.addConstraint(c.encode(manager, generatedCoefficients.inverse()));
+          }
+        }
+      }
+
+      /*
+      log.info(
+              "Size: "
+                      + generatedCoefficients.keySet().size()
+                      + " Coefficients, "
+                      + constraints.size()
+                      + " Constraints"
+                      + (optimize ? "" : (", " + solver.getNumScopes() + " Scopes"))
+                      + (optimize ? "" : (", " + solver.getNumAssertions() + " Assertions")));
+       */
+
+      final Path smtFile = outPath.resolve("instance.smt");
+
+      /*
+      try (final var out = new PrintWriter(output(smtFile))) {
+        out.println(proverEnvironment);
+        log.info("See {}", smtFile);
+      } catch (IOException ioException) {
+        log.warn("Failed to write SMT instance to {}.", smtFile, ioException);
+        ioException.printStackTrace();
+      }
+       */
+
+      if (dump) {
+        log.info("Exiting because dump was requested.");
+        System.exit(0);
+      }
+
+      final var unsat = proverEnvironment.isUnsat();
+
+      var result =
+          Pair.of(
+              unsat ? UNSATISFIABLE : SATISFIABLE,
+              unsat
+                  ? Optional.<org.sosy_lab.java_smt.api.Model>empty()
+                  : Optional.of(proverEnvironment.getModel()));
+
+      /*
+      var stats =
+              statisticsToMapAndFile(optimize ? opt.getStatistics() : solver.getStatistics(), outPath);
+      if (!optimize) {
+        stats.put("num scopes", String.valueOf(solver.getNumScopes()));
+        stats.put("num assertions", String.valueOf(solver.getNumAssertions()));
+      }
+       */
+
+      if (!result.getLeft().equals(SATISFIABLE)) {
+        System.out.println("UNSAT CORE");
+        for (var formula : proverEnvironment.getUnsatCore()) {
+          System.out.println(formula);
+        }
+        System.out.println("END UNSAT CORE");
+        return new Result(result.getLeft(), empty(), emptyMap(), Optional.of(smtFile));
+      }
+      final org.sosy_lab.java_smt.api.Model model = result.getRight().get();
+      final var solution = new HashMap<Coefficient, KnownCoefficient>();
+      for (final var e : generatedCoefficients.entrySet()) {
+        var x = model.evaluate(e.getKey());
+        KnownCoefficient v;
+        try {
+          var num = x.getNum();
+          if (num.intValueExact() == 0) {
+            v = KnownCoefficient.ZERO;
+          } else {
+            v = new KnownCoefficient(Util.convert(x));
+          }
+          if (v.getValue().signum() < 0 && !e.getValue().isMaybeNegative()) {
+            log.warn("Got negative coefficient!");
+          }
+          solution.put(e.getValue(), v);
+        } catch (ArithmeticException ae) {
+          log.error("Ignoring value " + x, ae);
+        }
+      }
+
+      if (solution.size() != generatedCoefficients.size()) {
+        log.warn("Partial solution!");
+      }
+
+      return new Result(result.getLeft(), Optional.of(solution), Map.of(), Optional.of(smtFile));
+    } catch (InvalidConfigurationException e) {
+      log.error("Invalid solver configuration.", e);
+      return Result.unknown();
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    } catch (SolverException e) {
+      e.printStackTrace();
+    }
+    return null;
+  }
+
+  public static Result solveOld(
       Set<Constraint> constraints, Path outPath, List<UnknownCoefficient> target) {
     load(outPath.resolve("z3.log"));
 

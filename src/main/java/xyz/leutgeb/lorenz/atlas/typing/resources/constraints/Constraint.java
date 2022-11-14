@@ -2,7 +2,6 @@ package xyz.leutgeb.lorenz.atlas.typing.resources.constraints;
 
 import static guru.nidi.graphviz.model.Factory.graph;
 import static guru.nidi.graphviz.model.Factory.node;
-import static xyz.leutgeb.lorenz.atlas.util.Util.append;
 import static xyz.leutgeb.lorenz.atlas.util.Util.output;
 import static xyz.leutgeb.lorenz.atlas.util.Util.rawObjectNode;
 
@@ -20,9 +19,7 @@ import guru.nidi.graphviz.model.Graph;
 import guru.nidi.graphviz.model.Link;
 import guru.nidi.graphviz.model.Node;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +27,9 @@ import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.sosy_lab.java_smt.api.BooleanFormula;
+import org.sosy_lab.java_smt.api.FormulaManager;
+import org.sosy_lab.java_smt.api.NumeralFormula;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
@@ -113,6 +113,9 @@ public abstract class Constraint {
 
   public abstract BoolExpr encode(Context ctx, BiMap<UnknownCoefficient, RealExpr> coefficients);
 
+  public abstract BooleanFormula encode(
+      FormulaManager manager, Map<UnknownCoefficient, NumeralFormula.RationalFormula> coefficients);
+
   /**
    * Edge colors:
    *
@@ -157,15 +160,6 @@ public abstract class Constraint {
 
   protected boolean satisfiedInternal() {
     return false;
-  }
-
-  public static Constraint implication(
-      String reason, Constraint precondition, Constraint... consequences) {
-    return new DisjunctiveConstraint(
-        append(
-            Collections.singletonList(new NegationConstraint(precondition, reason)),
-            List.of(consequences)),
-        reason);
   }
 
   public String toStringWithReason() {

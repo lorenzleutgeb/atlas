@@ -6,6 +6,8 @@ import com.microsoft.z3.RealExpr;
 import com.microsoft.z3.RealSort;
 import java.util.Map;
 import org.hipparchus.fraction.Fraction;
+import org.sosy_lab.java_smt.api.NumeralFormula;
+import org.sosy_lab.java_smt.api.RationalFormulaManager;
 
 public interface Coefficient {
 
@@ -34,6 +36,10 @@ public interface Coefficient {
   }
 
   ArithExpr<RealSort> encode(Context ctx, Map<UnknownCoefficient, RealExpr> coefficients);
+
+  NumeralFormula.RationalFormula encode(
+      RationalFormulaManager manager,
+      Map<UnknownCoefficient, NumeralFormula.RationalFormula> coefficients);
 
   Coefficient replace(Coefficient target, Coefficient replacement);
 

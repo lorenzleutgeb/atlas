@@ -115,7 +115,10 @@ dependencies {
     testImplementation("tech.tablesaw:tablesaw-core:0.42.0")
 
     // The Z3 Theorem Prover
-    implementation("org.sosy-lab:javasmt-solver-z3:4.8.12:com.microsoft.z3@jar")
+    implementation("org.sosy-lab:javasmt-solver-z3:4.10.1:com.microsoft.z3@jar")
+    implementation("org.sosy-lab:javasmt-solver-z3:4.10.1:libz3@so")
+    implementation("org.sosy-lab:javasmt-solver-z3:4.10.1:libz3java@so")
+    implementation("org.sosy-lab:java-smt:3.14.3")
 
     // Graph output
     implementation("guru.nidi:graphviz-java:0.18.1") {
@@ -196,6 +199,9 @@ tasks.test {
         exceptionFormat = TestExceptionFormat.FULL
         showStandardStreams = true
     }
+
+    //systemProperty("java.library.path", "/nix/store/l7j5p0dfwnpcvlyazipd2db73vkxlvbk-z3-4.8.15-lib/lib")
+    //systemProperty("java.library.path", "lib")
 }
 
 application {

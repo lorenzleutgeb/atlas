@@ -114,19 +114,17 @@ public class Tests {
         arguments("LeftList.cons_cons", sig(alpha(), alpha(), ATREE, ATREE), 0),
         arguments("RightList.cons", sig(alpha(), ATREE, ATREE), 0),
         arguments("RightList.cons_cons", sig(alpha(), alpha(), ATREE, ATREE), 0),
-        arguments("Scratch.singleton", sig(alpha(), ATREE), 0),
-        arguments("Bool.neg", sig(BOOL, BOOL), 0),
+        arguments("Tree.singleton", sig(alpha(), ATREE), 0),
+        arguments("Bool.not", sig(BOOL, BOOL), 0),
         arguments("Bool.or", sig(BOOL, BOOL, BOOL), 0),
         arguments("Bool.and", sig(BOOL, BOOL, BOOL), 0),
         arguments("RightList.tl", sig(ATREE, ATREE), 0),
         arguments("LeftList.tl", sig(ATREE, ATREE), 0),
-        arguments("Scratch.id_match", sig(ATREE, ATREE), 0),
-        arguments("Scratch.id_match_match", sig(ATREE, ATREE), 0),
-        arguments("Scratch.right_child", sig(ATREE, ATREE), 0),
-        arguments("Scratch.left_child", sig(ATREE, ATREE), 0),
-        arguments("Scratch.flip", sig(ATREE, ATREE), 0),
-        arguments("Scratch.empty", sig(ATREE, BOOL), 0),
-        arguments("Scratch.clone", sig(alpha(), ATREE, ATREE), 0),
+        arguments("Tree.right", sig(ATREE, ATREE), 0),
+        arguments("Tree.left", sig(ATREE, ATREE), 0),
+        arguments("Tree.flip", sig(ATREE, ATREE), 0),
+        arguments("Tree.empty", sig(ATREE, BOOL), 0),
+        arguments("Tree.clone", sig(alpha(), ATREE, ATREE), 0),
         arguments("PairingHeap.is_root", sig(ATREE, BOOL), 0),
         arguments("PairingHeap.link", sig(singleton(ord(alpha())), ATREE, ATREE), 0),
         // arguments("PairingHeap.merge", sig(singleton(ord(alpha())), ATREE, ATREE, ATREE), 1),
@@ -134,9 +132,9 @@ public class Tests {
         // arguments("Scratch.empty_1", sig(ATREE, BOOL), 1),
         // arguments("Scratch.empty_2", sig(ATREE, BOOL), 1),
         // arguments("Scratch.empty_3", sig(ATREE, BOOL), 0),
-        arguments("Scratch.id", sig(alpha(), alpha()), 0),
-        arguments("Scratch.left", sig(alpha(), beta(), alpha()), 0),
-        arguments("Scratch.right", sig(alpha(), beta(), beta()), 0)
+        arguments("Prelude.id", sig(alpha(), alpha()), 0),
+        arguments("Pair.fst", sig(alpha(), beta(), alpha()), 0),
+        arguments("Pair.snd", sig(alpha(), beta(), beta()), 0)
         // arguments("Scratch.first_nonempty_and_second_empty", sig(ATREE, BTREE, BOOL), 1)
         );
   }
@@ -193,7 +191,8 @@ public class Tests {
 
   @BeforeAll
   public static void beforeAll() {
-    load();
+    System.setProperty("z3.skipLibraryLoad", "true");
+    //load();
   }
 
   @Disabled
@@ -469,7 +468,7 @@ public class Tests {
   void fiddle() throws Exception {
     var loader = TestUtil.loader();
     loader.autoload();
-    Program program = loader.loadInline("foo t a = {(Scratch.empty t), a}");
+    Program program = loader.loadInline("foo t a = (t, a)");
     program.normalize();
     program.infer();
 

@@ -25,6 +25,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.sosy_lab.java_smt.api.BooleanFormula;
+import org.sosy_lab.java_smt.api.FormulaManager;
+import org.sosy_lab.java_smt.api.NumeralFormula;
 import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.AnnotatingContext;
 import xyz.leutgeb.lorenz.atlas.typing.resources.Annotation;
@@ -162,6 +165,17 @@ public class EqualityConstraint extends Constraint {
       return ctx.mkFalse();
     }*/
     return ctx.mkEq(left.encode(ctx, coefficients), right.encode(ctx, coefficients));
+  }
+
+  @Override
+  public BooleanFormula encode(
+      FormulaManager manager,
+      Map<UnknownCoefficient, NumeralFormula.RationalFormula> coefficients) {
+    return manager
+        .getRationalFormulaManager()
+        .equal(
+            left.encode(manager.getRationalFormulaManager(), coefficients),
+            right.encode(manager.getRationalFormulaManager(), coefficients));
   }
 
   @Override

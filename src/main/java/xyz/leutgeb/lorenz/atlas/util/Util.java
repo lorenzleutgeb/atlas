@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hipparchus.fraction.Fraction;
+import org.sosy_lab.common.rationals.Rational;
 import xyz.leutgeb.lorenz.atlas.ast.expressions.IdentifierExpression;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 
@@ -43,7 +44,7 @@ public class Util {
   private static final Random RANDOM = new Random(0L);
   private static final String LIBRARY_PATH = "java.library.path";
   private static final String LIBRARY_PATH_PREFIX =
-      "/nix/store/b2jbdw1ylw2m4m3zhwdz134p255fff88-z3-4.8.12-lib/lib:./:./lib/:../lib:/usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu/jni";
+      "/nix/store/l7j5p0dfwnpcvlyazipd2db73vkxlvbk-z3-4.8.15-lib/lib:./lib:../lib:/usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu/jni";
 
   public static String generateSubscriptIndex(List<Integer> index) {
     return index.stream().map(Util::generateSubscript).collect(joining(" ", "₍", "₎"));
@@ -138,7 +139,7 @@ public class Util {
         + "?)";
   }
 
-  private static synchronized void patchLibraryPath() {
+  public static synchronized void patchLibraryPath() {
     final String libraryPath = System.getProperty(LIBRARY_PATH);
     if (!libraryPath.startsWith(LIBRARY_PATH_PREFIX)) {
       System.setProperty(
@@ -152,14 +153,14 @@ public class Util {
     try {
       System.loadLibrary(name);
     } catch (UnsatisfiedLinkError e) {
-      log.warn(
+     log.warn(
           "The library '"
               + name
               + "' is required, but could not be loaded. Make sure that a file named '"
               + libraryName
               + " exists in one of the following paths: '"
               + System.getProperty(LIBRARY_PATH)
-              + "'. Execution will continue but may fail at a later time because of this.");
+              + "'. Execution will continue but may fail at a later time because of this.", e);
     }
   }
 
@@ -384,5 +385,13 @@ public class Util {
       return arguments.get(name);
     }
     return getProperty(requester, name, fallback);
+  }
+
+  public static Rational convert(Fraction fraction) {
+    return Rational.ofLongs(fraction.getNumerator(), fraction.getDenominator());
+  }
+
+  public static Fraction convert(Rational rational) {
+    return new Fraction(rational.getNum().intValueExact(), rational.getDen().intValueExact());
   }
 }
