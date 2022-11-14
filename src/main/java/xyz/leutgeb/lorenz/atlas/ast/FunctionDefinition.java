@@ -48,10 +48,7 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.heuristics.AnnotationHeuristic;
 import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Obligation;
-import xyz.leutgeb.lorenz.atlas.typing.simple.FunctionSignature;
-import xyz.leutgeb.lorenz.atlas.typing.simple.TypeClass;
-import xyz.leutgeb.lorenz.atlas.typing.simple.TypeError;
-import xyz.leutgeb.lorenz.atlas.typing.simple.TypeVariable;
+import xyz.leutgeb.lorenz.atlas.typing.simple.*;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.BoolType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.FunctionType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.TreeType;
@@ -363,6 +360,7 @@ public class FunctionDefinition {
       }
       constraints.append(
           inferredSignature.getConstraints().stream()
+              .sorted(TypeConstraint.compare(this.inferredSignature.getType().getFrom()))
               .map(Object::toString)
               .collect(Collectors.joining(", ")));
       if (inferredSignature.getConstraints().size() > 1) {
@@ -400,6 +398,7 @@ public class FunctionDefinition {
       }
       constraints.append(
           annotatedSignature.getConstraints().stream()
+              .sorted(TypeConstraint.compare(this.inferredSignature.getType().getFrom()))
               .map(Object::toString)
               .collect(Collectors.joining(", ")));
       if (annotatedSignature.getConstraints().size() > 1) {

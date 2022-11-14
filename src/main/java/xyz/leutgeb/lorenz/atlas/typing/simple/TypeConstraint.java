@@ -1,16 +1,18 @@
 package xyz.leutgeb.lorenz.atlas.typing.simple;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import com.google.common.collect.ComparisonChain;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+import xyz.leutgeb.lorenz.atlas.typing.simple.types.ProductType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.TreeType;
 import xyz.leutgeb.lorenz.atlas.typing.simple.types.Type;
 import xyz.leutgeb.lorenz.atlas.unification.Substitution;
 import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
+
+import static com.google.common.collect.Comparators.lexicographical;
 
 /**
  * Denotes that some signature (represented by a variable) must be a member of a signature class.
@@ -18,7 +20,7 @@ import xyz.leutgeb.lorenz.atlas.unification.UnificationContext;
  */
 @Value
 @Slf4j
-public class TypeConstraint {
+public class TypeConstraint implements Comparable<TypeConstraint> {
   TypeClass typeClass;
 
   List<Type> constrained;
@@ -137,5 +139,35 @@ public class TypeConstraint {
     return new TypeConstraint(
         typeClass,
         constrained.stream().map(t -> t.wiggle(wiggled, context)).collect(Collectors.toList()));
+  }
+
+  public List<Integer> positions(ProductType order) {
+    List<Integer> result = new ArrayList<>(constrained.size());
+    for (var x : constrained) {
+      var value = Integer.MAX_VALUE;
+      if (x instanceof TypeVariable y) {
+        for (int i = 0; i < order.getElements().size(); i++) {
+          if (order.getElements().get(i).occurs(y)) {
+            value = i;
+          }
+        }
+      }
+      result.add(value);
+    }
+    return result;
+  }
+
+  public static Comparator<TypeConstraint> compare(ProductType order)
+  {
+    return (x, y) -> lexicographical(Integer::compareTo).compare(x.positions(order), y.positions(order));
+  }
+
+  @Override
+  public int compareTo(TypeConstraint o) {
+    return ComparisonChain.start().compare(
+            this.constrained.stream().map(Objects::toString).toList(),
+            o.constrained.stream().map(Objects::toString).toList(),
+            lexicographical(String::compareTo)
+    ).compare(this.typeClass.getName(), o.typeClass.getName()).result();
   }
 }
