@@ -159,15 +159,6 @@ public abstract class Constraint {
     return false;
   }
 
-  public static Constraint implication(
-      String reason, Constraint precondition, Constraint... consequences) {
-    return new DisjunctiveConstraint(
-        append(
-            Collections.singletonList(new NegationConstraint(precondition, reason)),
-            List.of(consequences)),
-        reason);
-  }
-
   public String toStringWithReason() {
     return toString() + " ∵ " + reason;
   }

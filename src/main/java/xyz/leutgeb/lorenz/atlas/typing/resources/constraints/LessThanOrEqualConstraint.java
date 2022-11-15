@@ -18,7 +18,6 @@ import lombok.Value;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
 
-/** @see GreaterThanOrEqualConstraint */
 @Value
 @EqualsAndHashCode(callSuper = true)
 public class LessThanOrEqualConstraint extends Constraint {
