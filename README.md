@@ -1,4 +1,4 @@
-# atlas
+# ATLAS
 
 [![DOI](https://zenodo.org/badge/156873559.svg)](https://zenodo.org/badge/latestdoi/156873559)
 [![codecov](https://codecov.io/gh/lorenzleutgeb/atlas/branch/main/graph/badge.svg?token=cXfOoGOXV2)](https://codecov.io/gh/lorenzleutgeb/atlas)
@@ -201,6 +201,7 @@ a path listed in `$LD_LIBRARY_PATH` or `./lib`.
 
 ### About ATLAS
 
+ - [Automated Expected Amortised Cost Analysis of Probabilistic Data Structures](https://doi.org/10.1007/978-3-031-13188-2_4)
  - [ATLAS: Automated Amortised Complexity Analysis of Self-Adjusting Data Structures](https://doi.org/10.1007/978-3-030-81688-9_5)
  - [Type-based analysis of logarithmic amortised complexity](https://doi.org/10.1017/s0960129521000232)
 
