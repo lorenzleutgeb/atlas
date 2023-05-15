@@ -404,6 +404,16 @@ public class Program {
         log.warn("!", e);
       }
 
+      if (produceProofs) {
+        final Path proofPath =
+                basePath
+                        .resolve("proofs")
+                        .resolve(fd.getModuleName())
+                        .resolve(fqnToFlatFilename(fd.getName()) + ".txt");
+
+        prover.plot();
+      }
+
       for (var cfAnnotation : fd.getInferredSignature().getAnnotation().get().withoutCost) {
         if (cfAnnotation.isZero()) {
           log.debug("Skipping cf-Annotation: {}", cfAnnotation);

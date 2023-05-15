@@ -46,6 +46,7 @@ import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.Coefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.KnownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.coefficients.UnknownCoefficient;
 import xyz.leutgeb.lorenz.atlas.typing.resources.constraints.Constraint;
+import xyz.leutgeb.lorenz.atlas.typing.resources.proving.Prover;
 import xyz.leutgeb.lorenz.atlas.util.Pair;
 import xyz.leutgeb.lorenz.atlas.util.Util;
 

@@ -653,17 +653,12 @@ public class Prover {
   }
 
   public Solver.Result solve(Set<Constraint> outsideConstraints, List<UnknownCoefficient> target) {
+    if (Util.flag(Prover.class, emptyMap(), "produceProofs")) {
+      plot(this.proof);
+    }
     return Solver.solve(
         Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
         basePath.resolve(name),
-        target);
-  }
-
-  public Solver.Result solve(
-      Set<Constraint> outsideConstraints, List<UnknownCoefficient> target, String suffix) {
-    return Solver.solve(
-        Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
-        basePath.resolve(suffix),
         target);
   }
 
