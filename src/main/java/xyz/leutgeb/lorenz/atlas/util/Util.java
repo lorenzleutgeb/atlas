@@ -43,7 +43,7 @@ public class Util {
   private static final Random RANDOM = new Random(0L);
   private static final String LIBRARY_PATH = "java.library.path";
   private static final String LIBRARY_PATH_PREFIX =
-      "/nix/store/b2jbdw1ylw2m4m3zhwdz134p255fff88-z3-4.8.12-lib/lib:./:./lib/:../lib:/usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu/jni";
+      "/nix/store/n8phlj65ymylmzic939ixj74i0b2hzi1-z3-4.8.15-lib/lib:./:./lib/:../lib:/usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu/jni";
 
   public static String generateSubscriptIndex(List<Integer> index) {
     return index.stream().map(Util::generateSubscript).collect(joining(" ", "₍", "₎"));

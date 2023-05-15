@@ -92,6 +92,15 @@ public class Run implements Runnable {
       hidden = true)
   private Path json;
 
+  @CommandLine.Option(
+      names = "--produce-proof",
+      defaultValue = "false",
+      showDefaultValue = CommandLine.Help.Visibility.ALWAYS,
+      arity = "1",
+      paramLabel = "true|false",
+      description = "If true, produce Graphviz output of the proof attempt(s) and proof(s).")
+  private Boolean produceProofs;
+
   @CommandLine.Spec(CommandLine.Spec.Target.SELF)
   private CommandLine.Model.CommandSpec selfSpec;
 
@@ -183,6 +192,8 @@ public class Run implements Runnable {
     System.out.println();
 
     System.setProperty(Util.getPropertyName(Prover.class, "tickDefer"), useTickDefer.toString());
+    System.setProperty(
+        Util.getPropertyName(Prover.class, "produceProofs"), produceProofs.toString());
 
     final var result =
         program.solve(

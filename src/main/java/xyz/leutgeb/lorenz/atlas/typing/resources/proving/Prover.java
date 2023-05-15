@@ -12,7 +12,6 @@ import static xyz.leutgeb.lorenz.atlas.util.Z3Support.load;
 import com.google.common.collect.Sets;
 import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
-import guru.nidi.graphviz.engine.GraphvizCmdLineEngine;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
@@ -571,7 +570,7 @@ public class Prover {
     }
   }
 
-  public void plot(Obligation root) {
+  public void plot() {
     if (basePath == null) {
       log.warn("Cannot plot without base path.");
       return;
@@ -586,30 +585,28 @@ public class Prover {
 
       Graphviz transformed = Graphviz.fromGraph(exporter.transform(proof));
 
+      /*
       final var target = basePath.resolve("proof").resolve(name + ".svg");
       transformed.render(Format.SVG).toOutputStream(output(target));
       log.info("See {}", target);
+      */
 
-      /*
-      final var dotTarget = basePath.resolve(name + "-proof.dot");
-      transformed.render(Format.DOT).toOutputStream(output(dotTarget));
+      final var dotTarget = basePath.resolve("proof").resolve(name + ".xdot");
+      transformed.render(Format.XDOT).toOutputStream(output(dotTarget));
       log.info("Proof exported to {}", dotTarget);
-       */
     } catch (Throwable e) {
       log.warn("Non-critical exception thrown.", e);
     }
   }
 
-  public void plotWithSolution(
-      Map<Coefficient, KnownCoefficient> solution, Obligation root, boolean costOnly) {
+  public void plotWithSolution(Map<Coefficient, KnownCoefficient> solution, boolean costOnly) {
     if (basePath == null) {
       return;
     }
-    if (!proof.containsVertex(root)) {
-      throw new IllegalArgumentException("unknown root obligation");
-    }
     try {
-      final var descendants = proof.getDescendants(root);
+      // To filter descendants of a certain root obligation:
+      // final var descendants = proof.getDescendants(root);
+      final var descendants = proof.vertexSet();
       final var filtered =
           costOnly
               ? new AsSubgraph<>(
@@ -628,17 +625,17 @@ public class Prover {
 
       Graphviz transformed = Graphviz.fromGraph(exporter.transform(filtered));
 
-      Graphviz.useEngine(new GraphvizCmdLineEngine());
+      // Graphviz.useEngine(new GraphvizCmdLineEngine());
 
-      /*
-      final var dotTarget = basePath.resolve(name + "-proof.xdot");
+      final var dotTarget = basePath.resolve("proof").resolve(name + "-solution.xdot");
       transformed.render(Format.XDOT).toOutputStream(output(dotTarget));
       log.info("Proof exported to {}", dotTarget);
-       */
 
-      final var target = basePath.resolve("proof").resolve(name + ".svg");
+      /*
+      final var target = basePath.resolve("proof").resolve(name + "-solution.svg");
       transformed.render(Format.SVG).toOutputStream(output(target));
       log.info("See {}", target);
+      */
     } catch (Exception e) {
       log.warn("Non-critical exception thrown.", e);
     }
@@ -656,14 +653,6 @@ public class Prover {
     return Solver.solve(
         Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
         basePath.resolve(name),
-        target);
-  }
-
-  public Solver.Result solve(
-      Set<Constraint> outsideConstraints, List<UnknownCoefficient> target, String suffix) {
-    return Solver.solve(
-        Sets.union(outsideConstraints, Sets.union(accumulatedConstraints, externalConstraints)),
-        basePath.resolve(suffix),
         target);
   }
 

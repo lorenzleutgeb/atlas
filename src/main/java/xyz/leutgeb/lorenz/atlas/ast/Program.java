@@ -424,6 +424,10 @@ public class Program {
     }
     Instant proveStop = Instant.now();
 
+    if (Util.flag(Prover.class, emptyMap(), "produceProofs")) {
+      prover.plot();
+    }
+
     Instant solveStart = Instant.now();
     Solver.Result result;
     if (inferenceMode.isInfer()) {
@@ -453,6 +457,9 @@ public class Program {
     if (!result.isSatisfiable()) {
       return result;
     } else {
+      if (Util.flag(Prover.class, emptyMap(), "produceProofs")) {
+        prover.plotWithSolution(result.getSolution().get(), false);
+      }
       for (var fd : fds) {
         // prover.plotWithSolution(result.getSolution().get(), fd.getTypingObligation(), false);
       }
