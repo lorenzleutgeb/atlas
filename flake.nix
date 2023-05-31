@@ -2,7 +2,7 @@
   description = "atlas";
 
   inputs = {
-    nixpkgs.url = "nixpkgs/nixos-unstable";
+    nixpkgs.url = "nixpkgs/nixos-22.11";
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -58,7 +58,7 @@
       devShell.${system} = pkgs.mkShell {
         buildInputs = [ atlasEnv ];
         shellHook = ''
-          export LD_LIBRARY_PATH="${z3.lib}/lib:$LD_LIBRARY_PATH"
+          export LD_LIBRARY_PATH="${z3.lib}/lib"
 
           export JAVA_HOME="${jdk}"
           export GRAAL_HOME="${graal}"
@@ -84,8 +84,7 @@
 
           src = ./.;
 
-          nativeBuildInputs =
-            [ pkgs.bash pkgs.git pkgs.glibcLocales jdk z3 ];
+          nativeBuildInputs = [ pkgs.bash pkgs.git pkgs.glibcLocales jdk z3 ];
           ATLAS_HOME = "${examples}";
           LANG = "en_US.UTF-8";
           LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
@@ -147,14 +146,6 @@
             packages.${system}.atlas-src
           ];
           config = { Entrypoint = [ "${pkgs.bash}/bin/bash" ]; };
-
-          /* meta = {
-               longDescription = ''
-                 A Docker image that contains atlas, alongside some useful tools,
-                 the associated paper, and sources.
-               '';
-             };
-          */
         };
 
         atlas-docker = pkgs.dockerTools.buildLayeredImage {
@@ -162,14 +153,6 @@
           tag = "latest";
           contents = [ packages.${system}.atlas ];
           config.Entrypoint = [ (packages.${system}.atlas + "/bin/atlas") ];
-
-          /* meta = {
-               longDescription = ''
-                 A Docker image that contains atlas (but not much more),
-                 and will run it by default.
-               '';
-             };
-          */
         };
 
         atlas-ova = nixosConfigurations.atlas.config.system.build.virtualBoxOVA;
